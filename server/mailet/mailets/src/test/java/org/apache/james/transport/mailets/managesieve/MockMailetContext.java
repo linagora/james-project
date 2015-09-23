@@ -144,14 +144,12 @@ public class MockMailetContext implements MailetContext {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void sendMail(MailAddress mailaddress, Collection collection, MimeMessage mimemessage)
             throws MessagingException {
         throw new UnsupportedOperationException("Not yet implemented!");
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void sendMail(MailAddress mailaddress, Collection collection, MimeMessage mimemessage,
                          String s) throws MessagingException {
         throw new UnsupportedOperationException("Not yet implemented!");

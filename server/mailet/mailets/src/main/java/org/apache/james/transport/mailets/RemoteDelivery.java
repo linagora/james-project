@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Resource;
 import javax.inject.Inject;
 import javax.mail.Address;
 import javax.mail.MessagingException;

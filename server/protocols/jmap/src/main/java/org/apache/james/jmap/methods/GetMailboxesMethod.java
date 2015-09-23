@@ -23,7 +23,6 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
-import org.apache.james.jmap.methods.Method.Response.Name;
 import org.apache.james.jmap.model.GetMailboxesRequest;
 import org.apache.james.jmap.model.GetMailboxesResponse;
 import org.apache.james.jmap.model.Mailbox;

@@ -210,7 +210,6 @@ public class MockMail implements Mail {
     /**
      * @see Mail#setRecipients(Collection)
      */
-    @SuppressWarnings("unchecked")
     public void setRecipients(Collection arg0) {
         // TODO Auto-generated method stub
 

@@ -35,6 +35,7 @@ import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.hbase.HBaseMailboxManager;
 import org.apache.james.mailbox.hbase.HBaseMailboxSessionMapperFactory;
 import org.apache.james.mailbox.hbase.mail.HBaseModSeqProvider;
@@ -103,7 +104,12 @@ public class HBaseHostSystem extends JamesImapHostSystem {
 
         SubscriptionManager subscriptionManager = new StoreSubscriptionManager(mapperFactory);
 
-        final ImapProcessor defaultImapProcessorFactory = DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, subscriptionManager, new NoQuotaManager(), new DefaultQuotaRootResolver(mapperFactory));
+        final ImapProcessor defaultImapProcessorFactory = 
+                DefaultImapProcessorFactory.createDefaultProcessor(
+                        mailboxManager, 
+                        subscriptionManager, 
+                        new NoQuotaManager(), 
+                        new DefaultQuotaRootResolver<HBaseId>(mapperFactory));
 
         resetUserMetaData();
 

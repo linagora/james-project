@@ -35,6 +35,7 @@ import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.jpa.JPAId;
 import org.apache.james.mailbox.jpa.JPAMailboxSessionMapperFactory;
 import org.apache.james.mailbox.jpa.JPASubscriptionManager;
 import org.apache.james.mailbox.jpa.mail.JPAModSeqProvider;
@@ -127,7 +128,12 @@ public class JPAHostSystem extends JamesImapHostSystem {
 
         SubscriptionManager subscriptionManager = new JPASubscriptionManager(mf);
         
-        final ImapProcessor defaultImapProcessorFactory = DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, subscriptionManager, new NoQuotaManager(), new DefaultQuotaRootResolver(mf));
+        final ImapProcessor defaultImapProcessorFactory = 
+                DefaultImapProcessorFactory.createDefaultProcessor(
+                        mailboxManager, 
+                        subscriptionManager, 
+                        new NoQuotaManager(), 
+                        new DefaultQuotaRootResolver<JPAId>(mf));
         
         resetUserMetaData();
         

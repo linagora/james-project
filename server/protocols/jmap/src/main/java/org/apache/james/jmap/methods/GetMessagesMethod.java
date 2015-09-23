@@ -21,6 +21,7 @@ package org.apache.james.jmap.methods;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,7 +30,6 @@ import java.util.stream.StreamSupport;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.jmap.methods.Method.Response.Name;
 import org.apache.james.jmap.model.GetMessagesRequest;
 import org.apache.james.jmap.model.GetMessagesResponse;
 import org.apache.james.jmap.model.Message;
@@ -94,12 +94,12 @@ public class GetMessagesMethod<Id extends MailboxId> implements Method {
         
         Function<MessageId, Stream<Pair<org.apache.james.mailbox.store.mail.model.Message<Id>, MailboxPath>>> loadMessages = loadMessage(mailboxSession);
         Function<Pair<org.apache.james.mailbox.store.mail.model.Message<Id>, MailboxPath>, Message> convertToJmapMessage = toJmapMessage(mailboxSession);
-        Function<Message, Message> filterFields = new JmapMessageFactory(getMessagesRequest);
+        Function<Message, Message> filterFields = new JmapMessageFactory(Optional.of(Property.all()));
         
         List<Message> result = getMessagesRequest.getIds().stream()
             .flatMap(loadMessages)
             .map(convertToJmapMessage)
-//            .map(filterFields)
+            .map(filterFields)
             .collect(Collectors.toList());
 
         return GetMessagesResponse.builder().messages(result).expectedMessageIds(getMessagesRequest.getIds()).build();
@@ -154,8 +154,8 @@ public class GetMessagesMethod<Id extends MailboxId> implements Method {
         
         private final ImmutableList<Property> selectedProperties;
         
-        public JmapMessageFactory(GetMessagesRequest messagesRequest) {
-            this.selectedProperties = messagesRequest.getProperties().orElse(Property.all());
+        public JmapMessageFactory(Optional<ImmutableList<Property>> properties) {
+            this.selectedProperties = properties.orElse(Property.all());
         }
 
         @Override
