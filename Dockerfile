@@ -8,7 +8,7 @@ RUN apt-get install -y git="$GIT_VERSION"
 RUN git config --global user.email \"merge@localhost\" \
     && git config --global user.name \"Merge\"
 
-ADD ../../. /origin
+ADD . /origin
 WORKDIR /origin
 
-ENTRYPOINT ["/origin/merge.sh"]
+ENTRYPOINT ["/origin/dockerfiles/merge/merge.sh"]
