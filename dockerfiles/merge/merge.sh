@@ -15,6 +15,8 @@ fi
 SHA1=$1
 RESULTING_BRANCH=$2
 
+git fetch origin
+git checkout trunk
 git checkout $SHA1 -b SHA1_BRANCH
 git checkout trunk
 git checkout -b $RESULTING_BRANCH
