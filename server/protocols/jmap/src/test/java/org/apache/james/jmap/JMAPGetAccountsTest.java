@@ -19,58 +19,35 @@
 package org.apache.james.jmap;
 
 import static com.jayway.restassured.RestAssured.given;
-import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.isA;
+import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.UUID;
-
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-
-import org.apache.james.jmap.api.AccessTokenManager;
-import org.apache.james.jmap.api.ContinuationTokenManager;
-import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
-import org.apache.james.jmap.crypto.JamesSignatureHandlerProvider;
-import org.apache.james.jmap.crypto.SignedContinuationTokenManager;
-import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
-import org.apache.james.jmap.utils.ZonedDateTimeProvider;
-import org.apache.james.user.api.UsersRepository;
-import org.apache.james.user.api.UsersRepositoryException;
+import org.apache.james.jmap.methods.MethodDispatcher;
+import org.apache.james.jmap.model.Protocol;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.http.ContentType;
 
 public class JMAPGetAccountsTest {
 
     private static final int RANDOM_PORT = 0;
-    private static final ZonedDateTime oldDate = ZonedDateTime.parse("2011-12-03T10:15:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-    private static final ZonedDateTime newDate = ZonedDateTime.parse("2011-12-03T10:16:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-    private static final ZonedDateTime afterExpirationDate = ZonedDateTime.parse("2011-12-03T10:30:31+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
 
     private Server server;
-
-    private UsersRepository mockedUsersRepository;
-    private ContinuationTokenManager continuationTokenManager;
-    private ZonedDateTimeProvider mockedZonedDateTimeProvider;
-    private AccessTokenManager accessTokenManager;
+    private MethodDispatcher methodDispatcher;
 
     @Before
     public void setup() throws Exception {
@@ -79,20 +56,13 @@ public class JMAPGetAccountsTest {
         ServletHandler handler = new ServletHandler();
         server.setHandler(handler);
 
-        mockedUsersRepository = mock(UsersRepository.class);
-        mockedZonedDateTimeProvider = mock(ZonedDateTimeProvider.class);
-        continuationTokenManager = new SignedContinuationTokenManager(new JamesSignatureHandlerProvider().provide(), mockedZonedDateTimeProvider);
-        accessTokenManager = new AccessTokenManagerImpl(new MemoryAccessTokenRepository(100));
+        methodDispatcher = mock(MethodDispatcher.class);
 
-        Servlet jmapServlet = new JMAPServlet();
+        JMAPServlet jmapServlet = new JMAPServlet();
+        jmapServlet.setMethodDispatcher(methodDispatcher);
         ServletHolder servletHolder = new ServletHolder(jmapServlet);
         handler.addServletWithMapping(servletHolder, "/*");
 
-//        AuthenticationFilter authenticationFilter = new AuthenticationFilter(accessTokenManager);
-//        Filter getAuthenticationFilter = new BypassOnPostFilter(authenticationFilter);
-//        FilterHolder authenticationFilterHolder = new FilterHolder(getAuthenticationFilter);
-//        handler.addFilterWithMapping(authenticationFilterHolder, "/*", null);
-        
         server.start();
 
         int localPort = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
@@ -102,37 +72,68 @@ public class JMAPGetAccountsTest {
     }
 
     @Test
-    public void mustReturnInvalidArgumentOnInvalidState() {
+    public void mustReturnBadRequestOnMalformedRequest() {
+        String missingAnOpeningBracket = "[\"getAccounts\", {\"state\":false}, \"#0\"]]";
+
         given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
-            .body("[\"getAccounts\", {\"state\":false}, \"#0\"]")
+            .body(missingAnOpeningBracket)
+        .when()
+            .post("/")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    public void mustReturnInvalidArgumentOnInvalidState() {
+        ObjectNode json = new ObjectNode(new JsonNodeFactory(false));
+        json.put("type", "invalidArgument");
+
+        when(methodDispatcher.process(any()))
+            .thenReturn(new Protocol("error", json, "#0"));
+
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .body("[[\"getAccounts\", {\"state\":false}, \"#0\"]]")
         .when()
             .post("/")
         .then()
             .statusCode(200)
-            .content(containsString("[\"error\", {type: \"invalidArgument\"}, \"client-id\"]"));
+            .content(equalTo("[[\"error\",{\"type\":\"invalidArgument\"},\"#0\"]]"));
     }
 
     @Test
     public void mustReturnAccountsOnValidRequest() {
+        ObjectNode json = new ObjectNode(new JsonNodeFactory(false));
+        json.put("state", "f6a7e214");
+        ArrayNode arrayNode = json.putArray("list");
+        ObjectNode list = new ObjectNode(new JsonNodeFactory(false));
+        list.put("id", "6asf5");
+        list.put("name", "roger@barcamp");
+        arrayNode.add(list);
+
+        when(methodDispatcher.process(any()))
+            .thenReturn(new Protocol("accounts", json, "#0"));
+
         given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
-            .body("[\"getAccounts\", {}, \"#0\"]")
+            .body("[[\"getAccounts\", {}, \"#0\"]]")
         .when()
             .post("/")
         .then()
             .statusCode(200)
-            .content(containsString("[ \"accounts\", {" + 
-                    "  \"state\": \"f6a7e214\"," + 
-                    "  \"list\": [" + 
-                    "    {" + 
-                    "      \"id\": \"6asf5\"," + 
-                    "      \"name\": \"roger@barcamp\"" + 
-                    "    }" + 
-                    "  ]" + 
-                    "}, \"#0\" ]"));
+            .content(equalTo("[[\"accounts\",{" + 
+                    "\"state\":\"f6a7e214\"," + 
+                    "\"list\":[" + 
+                        "{" + 
+                        "\"id\":\"6asf5\"," + 
+                        "\"name\":\"roger@barcamp\"" + 
+                        "}" + 
+                    "]" + 
+                    "},\"#0\"]]"));
     }
     
     @After
