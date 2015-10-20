@@ -20,7 +20,9 @@ package org.apache.james.smtpserver;
 
 import org.apache.james.smtpserver.netty.OioSMTPServer;
 import org.apache.james.smtpserver.netty.SMTPServer;
+import org.junit.Ignore;
 
+@Ignore("ISSUE-22 - FIXME")
 public class OioSMTPServerTest extends SMTPServerTest {
 
     @Override

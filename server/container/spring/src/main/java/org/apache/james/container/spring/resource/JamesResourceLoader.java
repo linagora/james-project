@@ -18,40 +18,13 @@
  ****************************************************************/
 package org.apache.james.container.spring.resource;
 
+import org.apache.james.filesystem.api.JamesDirectoriesProvider;
 import org.springframework.core.io.ResourceLoader;
 
 /**
  * {@link ResourceLoader} which offer extra methods to retrieve the Path to all
  * important Directories, which are in use by JAMES.
  */
-public interface JamesResourceLoader extends ResourceLoader {
-
-    /**
-     * Return the configuration directory of the application
-     * 
-     * @return confDir
-     */
-    String getAbsoluteDirectory();
-
-    /**
-     * Return the var directory of the application
-     * 
-     * @return var
-     */
-    String getConfDirectory();
-
-    /**
-     * Return the absolute directory of the application
-     * 
-     * @return absolute
-     */
-    String getVarDirectory();
-
-    /**
-     * Return the root directory of the application
-     * 
-     * @return rootDir
-     */
-    String getRootDirectory();
+public interface JamesResourceLoader extends ResourceLoader, JamesDirectoriesProvider {
 
 }
