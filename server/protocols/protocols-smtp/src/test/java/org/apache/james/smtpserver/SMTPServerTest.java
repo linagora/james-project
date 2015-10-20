@@ -18,6 +18,13 @@
  ****************************************************************/
 package org.apache.james.smtpserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,8 +39,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+
 import org.apache.commons.net.ProtocolCommandEvent;
 import org.apache.commons.net.ProtocolCommandListener;
 import org.apache.commons.net.smtp.SMTPClient;
@@ -42,6 +51,7 @@ import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.domainlist.api.mock.SimpleDomainList;
 import org.apache.james.filesystem.api.mock.MockFileSystem;
 import org.apache.james.mailrepository.mock.MockMailRepositoryStore;
+import org.apache.james.protocols.lib.KeystoreLoader;
 import org.apache.james.protocols.lib.PortUtil;
 import org.apache.james.protocols.lib.mock.MockProtocolHandlerLoader;
 import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
@@ -55,12 +65,6 @@ import org.apache.mailet.HostAddress;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.junit.After;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -188,13 +192,16 @@ public class SMTPServerTest {
     }
 
     protected void setUpSMTPServer() {
-        
+
+        KeystoreLoader keystoreLoader = new KeystoreLoader();
+        keystoreLoader.setFileSystem(fileSystem);
+
         Logger log = LoggerFactory.getLogger("SMTP");
         // slf4j can't set programmatically any log level. It's just a facade
         // log.setLevel(SimpleLog.LOG_LEVEL_ALL);
         smtpServer = createSMTPServer();
         smtpServer.setDnsService(dnsServer);
-        smtpServer.setFileSystem(fileSystem);
+        smtpServer.setKeystoreLoader(keystoreLoader);
         smtpServer.setProtocolHandlerLoader(chain);
         smtpServer.setLog(log);
 
@@ -1333,7 +1340,7 @@ public class SMTPServerTest {
         smtpProtocol.setSender(sender);
 
         smtpProtocol.addRecipient("mail@sample.com");
-        assertEquals("reject", 550, smtpProtocol.getReplyCode());
+        assertEquals("reject", 554, smtpProtocol.getReplyCode());
 
         smtpProtocol.sendShortMessageData("Subject: test\r\n\r\nTest body testDNSRBLRejectWorks\r\n");
 

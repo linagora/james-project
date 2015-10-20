@@ -123,6 +123,10 @@
     <!--<bean id="filesystem" class="org.apache.james.container.spring.filesystem.FileSystemImpl" autowire="byName"/>-->
     <bean id="filesystem" class="org.apache.james.container.spring.filesystem.ResourceLoaderFileSystem"/>
 
+    <bean id="keystoreLoader" class="org.apache.james.protocols.lib.KeystoreLoader">
+        <property name="fileSystem" ref="filesystem"/>
+    </bean>
+
     <bean id="sieverepository" class="org.apache.james.filesystem.api.SieveFileRepository">
         <constructor-arg index="0" ref="filesystem"/>
     </bean>

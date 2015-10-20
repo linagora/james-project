@@ -31,7 +31,6 @@ import java.util.concurrent.Executor;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
-import javax.inject.Named;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.net.ssl.KeyManagerFactory;
@@ -40,10 +39,10 @@ import javax.net.ssl.SSLContext;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.protocols.api.Encryption;
+import org.apache.james.protocols.lib.KeystoreLoader;
 import org.apache.james.protocols.lib.jmx.ServerMBean;
 import org.apache.james.protocols.netty.AbstractAsyncServer;
 import org.apache.james.util.concurrent.JMXEnabledThreadPoolExecutor;
@@ -83,7 +82,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     // The X.509 certificate algorithm
     private String x509Algorithm = defaultX509algorithm;
 
-    private FileSystem fileSystem;
+    private KeystoreLoader keystoreLoader;
 
     private Logger logger;
 
@@ -117,8 +116,8 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     private MBeanServer mbeanServer;
 
     @Inject
-    public final void setFileSystem(@Named("filesystem") FileSystem filesystem) {
-        this.fileSystem = filesystem;
+    public final void setKeystoreLoader(KeystoreLoader keystoreLoader) {
+        this.keystoreLoader = keystoreLoader;
     }
 
     /**
@@ -318,15 +317,6 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         // override me
     }
 
-  
-    /**
-     * Return the FileSystem
-     * 
-     * @return fileSystem
-     */
-    protected FileSystem getFileSystem() {
-        return fileSystem;
-    }
 
     /**
      * Configure the helloName for the given Configuration
@@ -401,11 +391,8 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         if (useStartTLS || useSSL) {
             FileInputStream fis = null;
             try {
-                KeyStore ks = KeyStore.getInstance("JKS");
-                fis = new FileInputStream(fileSystem.getFile(keystore));
-                ks.load(fis, secret.toCharArray());
-
                 // Set up key manager factory to use our key store
+                KeyStore ks = keystoreLoader.load(keystore, secret);
                 KeyManagerFactory kmf = KeyManagerFactory.getInstance(x509Algorithm);
                 kmf.init(ks, secret.toCharArray());
 

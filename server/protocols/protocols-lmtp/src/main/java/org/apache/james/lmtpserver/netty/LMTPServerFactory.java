@@ -25,6 +25,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.protocols.lib.KeystoreLoader;
 import org.apache.james.protocols.lib.handler.ProtocolHandlerLoader;
 import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
 import org.apache.james.protocols.lib.netty.AbstractServerFactory;
@@ -33,7 +34,7 @@ import org.slf4j.Logger;
 public class LMTPServerFactory extends AbstractServerFactory{
 
     private ProtocolHandlerLoader loader;
-    private FileSystem fileSystem;
+    private KeystoreLoader keystoreLoader;
 
     @Inject
     public void setProtocolHandlerLoader(ProtocolHandlerLoader loader) {
@@ -41,8 +42,8 @@ public class LMTPServerFactory extends AbstractServerFactory{
     }
     
     @Inject
-    public final void setFileSystem(FileSystem filesystem) {
-        this.fileSystem = filesystem;
+    public void setKeystoreLoader(KeystoreLoader keystoreLoader) {
+        this.keystoreLoader = keystoreLoader;
     }
 
     protected LMTPServer createServer() {
@@ -57,7 +58,7 @@ public class LMTPServerFactory extends AbstractServerFactory{
         
         for (HierarchicalConfiguration serverConfig: configs) {
             LMTPServer server = createServer();
-            server.setFileSystem(fileSystem);
+            server.setKeystoreLoader(keystoreLoader);
             server.setProtocolHandlerLoader(loader);
             server.setLog(log);
             server.configure(serverConfig);

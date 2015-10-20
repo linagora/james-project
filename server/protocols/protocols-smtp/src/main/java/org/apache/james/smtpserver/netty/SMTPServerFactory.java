@@ -26,7 +26,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.dnsservice.api.DNSService;
-import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.protocols.lib.KeystoreLoader;
 import org.apache.james.protocols.lib.handler.ProtocolHandlerLoader;
 import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
 import org.apache.james.protocols.lib.netty.AbstractServerFactory;
@@ -36,7 +36,7 @@ public class SMTPServerFactory extends AbstractServerFactory {
 
     private DNSService dns;
     private ProtocolHandlerLoader loader;
-    private FileSystem fileSystem;
+    private KeystoreLoader keystoreLoader;
 
     @Inject
     public void setDnsService(DNSService dns) {
@@ -49,8 +49,8 @@ public class SMTPServerFactory extends AbstractServerFactory {
     }
 
     @Inject
-    public final void setFileSystem(FileSystem filesystem) {
-        this.fileSystem = filesystem;
+    public final void setFileSystem(KeystoreLoader keystoreLoader) {
+        this.keystoreLoader = keystoreLoader;
     }
 
     protected SMTPServer createServer() {
@@ -69,7 +69,7 @@ public class SMTPServerFactory extends AbstractServerFactory {
             server.setDnsService(dns);
             server.setProtocolHandlerLoader(loader);
             server.setLog(log);
-            server.setFileSystem(fileSystem);
+            server.setKeystoreLoader(keystoreLoader);
             server.configure(serverConfig);
             servers.add(server);
         }

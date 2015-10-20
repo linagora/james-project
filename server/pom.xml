@@ -58,13 +58,14 @@
         <module>karaf/features</module>
         <module>karaf/integration</module>
 
-        <module>container/util</module>
+        <module>container/cassandra-guice</module>
         <module>container/cli</module>
-        <module>container/spring</module>
         <module>container/core</module>
+        <module>container/filesystem-api</module>
         <module>container/lifecycle-api</module>
         <module>container/mailbox-adapter</module>
-        <module>container/filesystem-api</module>
+        <module>container/spring</module>
+        <module>container/util</module>
 
         <module>mailet/mailetcontainer-api</module>
         <module>mailet/mailetcontainer-camel</module>
@@ -79,12 +80,14 @@
         <module>data/data-jpa</module>
         <module>data/data-jcr</module>
         <module>data/data-jdbc</module>
+        <module>data/data-jmap</module>
         <module>data/data-file</module>
         <module>data/data-ldap</module>
         <module>data/data-hbase</module>
 
         <module>protocols/fetchmail</module>
         <module>protocols/protocols-imap4</module>
+        <module>protocols/jmap</module>
         <module>protocols/protocols-library</module>
         <module>protocols/protocols-lmtp</module>
         <module>protocols/protocols-pop3</module>
@@ -176,6 +179,7 @@
         <karaf.tooling.exam.container.version>2.3.0</karaf.tooling.exam.container.version>
         <pax-logging-api.version>1.6.4</pax-logging-api.version>
         <mockito-core.version>1.9.0</mockito-core.version>
+        <cassandra-driver-core.version>2.1.5</cassandra-driver-core.version>
     </properties>
 
     <dependencyManagement>
@@ -194,6 +198,11 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>james-server-spring</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-cassandra-guice</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -265,6 +274,11 @@
                 <artifactId>james-server-dnsservice-library</artifactId>
                 <type>test-jar</type>
                 <scope>test</scope>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-jmap</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -460,6 +474,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-jmap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
                 <artifactId>james-server-data-jcr</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -504,7 +523,12 @@
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-cassandra</artifactId>
                 <version>${mailbox.version}</version>
-                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-cassandra</artifactId>
+                <version>${mailbox.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
@@ -515,13 +539,17 @@
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-elasticsearch</artifactId>
                 <version>${mailbox.version}</version>
-                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-elasticsearch</artifactId>
+                <version>${mailbox.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-tika</artifactId>
                 <version>${mailbox.version}</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
@@ -680,6 +708,16 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
+                <artifactId>apache-jsieve-manager-mailet</artifactId>
+                <version>${jsieve.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-jsieve-manager-jsieve</artifactId>
+                <version>${jsieve.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
                 <artifactId>apache-jsieve-manager-api</artifactId>
                 <version>${jsieve.version}</version>
             </dependency>
@@ -725,6 +763,11 @@
                 <groupId>commons-collections</groupId>
                 <artifactId>commons-collections</artifactId>
                 <version>${commons-collections.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.0</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -854,6 +897,11 @@
                 <scope>test</scope>
             </dependency>
 
+            <dependency>
+                <groupId>com.datastax.cassandra</groupId>
+                <artifactId>cassandra-driver-core</artifactId>
+                <version>${cassandra-driver-core.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>concurrent</groupId>
@@ -1172,6 +1220,33 @@
                 <groupId>org.ops4j.pax.swissbox</groupId>
                 <artifactId>pax-swissbox-tinybundles</artifactId>
                 <version>${pax-swissbox-tinybundles.version}</version>
+            </dependency>
+
+            <!-- Guice dependencies -->
+            <dependency>
+                <groupId>com.google.inject</groupId>
+                <artifactId>guice</artifactId>
+                <version>4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.inject.extensions</groupId>
+                <artifactId>guice-servlet</artifactId>
+                <version>4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.inject.extensions</groupId>
+                <artifactId>guice-multibindings</artifactId>
+                <version>4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.onami.lifecycle</groupId>
+                <artifactId>org.apache.onami.lifecycle.jsr250</artifactId>
+                <version>0.2.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.datastax.cassandra</groupId>
+                <artifactId>cassandra-driver-core</artifactId>
+                <version>${cassandra-driver-core.version}</version>
             </dependency>
 
             <!-- Apache Felix Karaf integration -->
