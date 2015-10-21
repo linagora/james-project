@@ -26,6 +26,11 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.sieverepository.api.SieveRepository;
+import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
+import org.apache.james.sieverepository.api.exception.StorageException;
+import org.apache.james.sieverepository.api.exception.UserNotFoundException;
+import org.apache.james.sieverepository.file.SieveDefaultRepository;
 import org.apache.jsieve.mailet.ResourceLocator;
 
 /**
@@ -38,11 +43,11 @@ public class ResourceLocatorImpl implements ResourceLocator {
 
     private final boolean virtualHosting;
     
-    private FileSystem fileSystem = null;
+    private SieveRepository sieveRepository = null;
 
     public ResourceLocatorImpl(boolean virtualHosting, FileSystem fileSystem) {
         this.virtualHosting = virtualHosting;
-            this.fileSystem = fileSystem;
+        this.sieveRepository = new SieveDefaultRepository();
     }
 
     public InputStream get(String uri) throws IOException {
@@ -56,15 +61,14 @@ public class ResourceLocatorImpl implements ResourceLocator {
             username = uri.substring(0, uri.indexOf("@"));
         }
 
-        // RFC 5228 permits extensions: .siv .sieve
-        String sieveFilePrefix = FileSystem.FILE_PROTOCOL + "sieve/" + username + ".";
-        File sieveFile;
         try {
-            sieveFile = fileSystem.getFile(sieveFilePrefix + "sieve");
-        } catch (FileNotFoundException ex) {
-            sieveFile = fileSystem.getFile(sieveFilePrefix + "siv");
+            return sieveRepository.getActive(username);
+        } catch (UserNotFoundException e) {
+            throw new IOException();
+        } catch (ScriptNotFoundException e) {
+            throw new IOException();
+        } catch (StorageException e) {
+            throw new IOException();
         }
-        return new FileInputStream(sieveFile);
     }
-
 }
