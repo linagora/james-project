@@ -160,7 +160,6 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
     private static final Pattern PATTERN = Patterns.compilePatternUncheckedException(PATTERN_STRING);
 
     @Inject
-    @Resource
     private DNSService dnsServer;
 
     /**

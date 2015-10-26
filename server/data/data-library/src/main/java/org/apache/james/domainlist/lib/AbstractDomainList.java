@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import javax.annotation.Resource;
 import javax.inject.Inject;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -49,7 +48,6 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
     private String defaultDomain;
 
     @Inject
-    @Resource
     public void setDNSService(DNSService dns) {
         this.dns = dns;
     }

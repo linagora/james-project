@@ -57,7 +57,6 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
     private DomainList domainList;
 
     @Inject
-    @Resource
     public void setDomainList(DomainList domainList) {
         this.domainList = domainList;
     }
