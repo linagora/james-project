@@ -119,7 +119,6 @@ public class LocalDelivery extends GenericMailet {
         sieveMailet = new SieveMailet();
         sieveMailet.setUsersRepository(usersRepository);
         sieveMailet.setMailboxManager(mailboxManager);
-        sieveMailet.setFileSystem(fileSystem);
         sieveMailet.init(new MailetConfig() {
             /*
              * @see org.apache.mailet.MailetConfig#getInitParameter(java.lang.String)

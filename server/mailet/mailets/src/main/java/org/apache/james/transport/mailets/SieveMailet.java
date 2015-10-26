@@ -25,7 +25,6 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.core.MimeMessageInputStream;
-import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
@@ -48,7 +47,6 @@ import org.apache.mailet.MailetConfig;
 public class SieveMailet extends SieveMailboxMailet implements Poster {
     private UsersRepository usersRepos;
     private MailboxManager mailboxManager;
-    private FileSystem fileSystem;
     private String folder;
 
     @Inject
@@ -59,11 +57,6 @@ public class SieveMailet extends SieveMailboxMailet implements Poster {
     @Inject
     public void setMailboxManager(MailboxManager mailboxManager) {
         this.mailboxManager = mailboxManager;
-    }
-
-    @Inject
-    public void setFileSystem(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
     }
 
     public void setFolder(String folder) {
@@ -84,7 +77,7 @@ public class SieveMailet extends SieveMailboxMailet implements Poster {
     public void init(MailetConfig config) throws MessagingException {
         // ATM Fixed implementation
         try {
-            setLocator(new ResourceLocatorImpl(usersRepos.supportVirtualHosting(), fileSystem));
+            setLocator(new ResourceLocatorImpl(usersRepos.supportVirtualHosting()));
         } catch (UsersRepositoryException e) {
             throw new MessagingException("Unable to access UsersRepository", e);
         }

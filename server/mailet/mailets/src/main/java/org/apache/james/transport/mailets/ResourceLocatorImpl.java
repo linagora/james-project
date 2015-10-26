@@ -19,19 +19,15 @@
 
 package org.apache.james.transport.mailets;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.sieverepository.api.exception.UserNotFoundException;
 import org.apache.james.sieverepository.file.SieveDefaultRepository;
 import org.apache.jsieve.mailet.ResourceLocator;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * To maintain backwards compatibility with existing installations, this uses
@@ -45,7 +41,7 @@ public class ResourceLocatorImpl implements ResourceLocator {
     
     private SieveRepository sieveRepository = null;
 
-    public ResourceLocatorImpl(boolean virtualHosting, FileSystem fileSystem) {
+    public ResourceLocatorImpl(boolean virtualHosting) {
         this.virtualHosting = virtualHosting;
         this.sieveRepository = new SieveDefaultRepository();
     }
