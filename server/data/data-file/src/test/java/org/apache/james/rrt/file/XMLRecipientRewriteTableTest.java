@@ -18,18 +18,21 @@
  ****************************************************************/
 package org.apache.james.rrt.file;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.api.RecipientRewriteTableException;
 import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
 import org.apache.james.rrt.lib.AbstractRecipientRewriteTableTest;
-import org.apache.james.rrt.lib.RecipientRewriteTableUtil;
+import org.apache.james.rrt.lib.Mappings;
+import org.apache.james.rrt.lib.MappingsImpl;
+import org.apache.james.rrt.lib.MappingsImpl.Builder;
 import org.junit.Before;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import com.google.common.base.Optional;
 
 /**
  * Test the XML Virtual User Table implementation.
@@ -56,33 +59,34 @@ public class XMLRecipientRewriteTableTest extends AbstractRecipientRewriteTableT
     protected boolean addMapping(String user, String domain, String mapping, int type) throws
             RecipientRewriteTableException {
 
-        Collection<String> mappings = virtualUserTable.getUserDomainMappings(user, domain);
+        Mappings mappings = virtualUserTable.getUserDomainMappings(user, domain);
 
-        if (mappings == null) {
-            mappings = new ArrayList<String>();
-        } else {
+        if (mappings != null) {
             removeMappingsFromConfig(user, domain, mappings);
         }
 
+        Builder builder = MappingsImpl.from(Optional.fromNullable(mappings).or(MappingsImpl.empty()));
+        
         if (type == ERROR_TYPE) {
-            mappings.add(RecipientRewriteTable.ERROR_PREFIX + mapping);
+            builder.add(RecipientRewriteTable.ERROR_PREFIX + mapping);
         } else if (type == REGEX_TYPE) {
-            mappings.add(RecipientRewriteTable.REGEX_PREFIX + mapping);
+            builder.add(RecipientRewriteTable.REGEX_PREFIX + mapping);
         } else if (type == ADDRESS_TYPE) {
-            mappings.add(mapping);
+            builder.add(mapping);
         } else if (type == ALIASDOMAIN_TYPE) {
-            mappings.add(RecipientRewriteTable.ALIASDOMAIN_PREFIX + mapping);
+            builder.add(RecipientRewriteTable.ALIASDOMAIN_PREFIX + mapping);
         }
 
-        if (mappings.size() > 0) {
-            defaultConfiguration.addProperty("mapping", user + "@" + domain + "=" + RecipientRewriteTableUtil.
-                    CollectionToMapping(mappings));
+        Mappings updatedMappings = builder.build();
+        
+        if (!updatedMappings.isEmpty()) {
+            defaultConfiguration.addProperty("mapping", user + "@" + domain + "=" + updatedMappings.serialize());
         }
 
         try {
             virtualUserTable.configure(defaultConfiguration);
         } catch (Exception e) {
-            return mappings.size() <= 0;
+            return updatedMappings.size() <= 0;
         }
 
         return true;
@@ -93,7 +97,7 @@ public class XMLRecipientRewriteTableTest extends AbstractRecipientRewriteTableT
     protected boolean removeMapping(String user, String domain, String mapping, int type) throws
             RecipientRewriteTableException {
 
-        Collection<String> mappings = virtualUserTable.getUserDomainMappings(user, domain);
+        Mappings mappings = virtualUserTable.getUserDomainMappings(user, domain);
 
         if (mappings == null) {
             return false;
@@ -102,18 +106,17 @@ public class XMLRecipientRewriteTableTest extends AbstractRecipientRewriteTableT
         removeMappingsFromConfig(user, domain, mappings);
 
         if (type == ERROR_TYPE) {
-            mappings.remove(RecipientRewriteTable.ERROR_PREFIX + mapping);
+            mappings = mappings.remove(RecipientRewriteTable.ERROR_PREFIX + mapping);
         } else if (type == REGEX_TYPE) {
-            mappings.remove(RecipientRewriteTable.REGEX_PREFIX + mapping);
+            mappings = mappings.remove(RecipientRewriteTable.REGEX_PREFIX + mapping);
         } else if (type == ADDRESS_TYPE) {
-            mappings.remove(mapping);
+            mappings = mappings.remove(mapping);
         } else if (type == ALIASDOMAIN_TYPE) {
-            mappings.remove(RecipientRewriteTable.ALIASDOMAIN_PREFIX + mapping);
+            mappings = mappings.remove(RecipientRewriteTable.ALIASDOMAIN_PREFIX + mapping);
         }
 
         if (mappings.size() > 0) {
-            defaultConfiguration.addProperty("mapping", user + "@" + domain + "=" + RecipientRewriteTableUtil.
-                    CollectionToMapping(mappings));
+            defaultConfiguration.addProperty("mapping", user + "@" + domain + "=" + mappings.serialize());
         }
 
         try {
@@ -124,10 +127,10 @@ public class XMLRecipientRewriteTableTest extends AbstractRecipientRewriteTableT
         return true;
     }
 
-    private void removeMappingsFromConfig(String user, String domain, Collection<String> mappings) {
+    private void removeMappingsFromConfig(String user, String domain, Mappings mappings) {
         List<String> stored = new ArrayList<String>();
         for (String c : defaultConfiguration.getStringArray("mapping")) {
-            String mapping = user + "@" + domain + "=" + RecipientRewriteTableUtil.CollectionToMapping(mappings);
+            String mapping = user + "@" + domain + "=" + mappings.serialize();
             if (!c.equalsIgnoreCase(mapping)) {
                 stored.add(c);
             }
