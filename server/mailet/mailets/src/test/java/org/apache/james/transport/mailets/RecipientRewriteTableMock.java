@@ -19,6 +19,9 @@
 package org.apache.james.transport.mailets;
 
 import org.apache.james.rrt.api.RecipientRewriteTableException;
+import org.apache.james.rrt.lib.Mappings;
+import org.apache.james.rrt.lib.MappingsImpl;
+import org.apache.james.rrt.lib.MappingsImpl.Builder;
 
 import java.util.*;
 
@@ -29,9 +32,9 @@ public class RecipientRewriteTableMock implements org.apache.james.rrt.api.Recip
 
     public static class Mapping {
         public final String address;
-        public final List<String> target;
+        public final Mappings target;
 
-        public Mapping(String address, List<String> target) {
+        public Mapping(String address, Mappings target) {
             this.address = address;
             this.target = target;
         }
@@ -42,7 +45,7 @@ public class RecipientRewriteTableMock implements org.apache.james.rrt.api.Recip
         }
 
         public Mapping to(String... target) {
-            return new Mapping(address, Arrays.asList(target));
+            return new Mapping(address, MappingsImpl.fromCollection(Arrays.asList(target)));
         }
     }
 
@@ -74,11 +77,12 @@ public class RecipientRewriteTableMock implements org.apache.james.rrt.api.Recip
     }
 
     @Override
-    public Collection<String> getMappings(String user, String domain) throws ErrorMappingException, RecipientRewriteTableException {
-        List<String> recipients = new LinkedList<String>();
+    public Mappings getMappings(String user, String domain) throws ErrorMappingException, RecipientRewriteTableException {
+        Builder builder = MappingsImpl.builder();
         for (Mapping m : findUserDomain(user, domain)) {
-            recipients.addAll(m.target);
+            builder.addAll(m.target);
         }
+        Mappings recipients = builder.build();
         if (recipients.isEmpty()) {
             return null;
         } else {
@@ -117,7 +121,7 @@ public class RecipientRewriteTableMock implements org.apache.james.rrt.api.Recip
     }
 
     @Override
-    public Collection<String> getUserDomainMappings(String user, String domain) throws RecipientRewriteTableException {
+    public Mappings getUserDomainMappings(String user, String domain) throws RecipientRewriteTableException {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -132,7 +136,7 @@ public class RecipientRewriteTableMock implements org.apache.james.rrt.api.Recip
     }
 
     @Override
-    public Map<String, Collection<String>> getAllMappings() throws RecipientRewriteTableException {
+    public Map<String, Mappings> getAllMappings() throws RecipientRewriteTableException {
         throw new UnsupportedOperationException("Not implemented");
     }
 

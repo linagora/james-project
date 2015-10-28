@@ -18,14 +18,9 @@
  ****************************************************************/
 package org.apache.james.rrt.lib;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.james.lifecycle.api.LifecycleUtil;
@@ -57,16 +52,16 @@ public abstract class AbstractRecipientRewriteTableTest {
     @After
     public void tearDown() throws Exception {
 
-        Map<String, Collection<String>> mappings = virtualUserTable.getAllMappings();
+        Map<String, Mappings> mappings = virtualUserTable.getAllMappings();
 
         if (mappings != null) {
 
             for (String key : virtualUserTable.getAllMappings().keySet()) {
                 String args[] = key.split("@");
 
-                Collection<String> map = mappings.get(key);
+                Mappings map = mappings.get(key);
 
-                for (String aMap : map) {
+                for (String aMap : map.asStrings()) {
                     try {
                         removeMapping(args[0], args[1], aMap);
                     } catch (IllegalArgumentException e) {
@@ -95,27 +90,26 @@ public abstract class AbstractRecipientRewriteTableTest {
 
         try {
 
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
 
-            assertTrue("Added virtual mapping", addMapping(user, domain, regex, REGEX_TYPE));
-            assertTrue("Added virtual mapping", addMapping(user, domain, regex2, REGEX_TYPE));
-            assertEquals("Two mappings", virtualUserTable.getMappings(user, domain).size(), 2);
-            assertEquals("One mappingline", virtualUserTable.getAllMappings().size(), 1);
-
-            assertTrue("remove virtual mapping", removeMapping(user, domain, regex, REGEX_TYPE));
-
+            assertThat(addMapping(user, domain, regex, REGEX_TYPE)).describedAs("Added virtual mapping").isTrue();
+            assertThat(addMapping(user, domain, regex2, REGEX_TYPE)).describedAs("Added virtual mapping").isTrue();
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("Two mappings").hasSize(2);
+            assertThat(virtualUserTable.getAllMappings()).describedAs("One mappingline").hasSize(1);
+            assertThat(removeMapping(user, domain, regex, REGEX_TYPE)).describedAs("remove virtual mapping").isTrue();
+            
             try {
                 virtualUserTable.addRegexMapping(user, domain, invalidRegex);
             } catch (RecipientRewriteTableException e) {
                 catched = true;
             }
-            assertTrue("Invalid Mapping throw exception", catched);
+            
+            assertThat(catched).describedAs("Invalid Mapping throw exception").isTrue();
+            assertThat(removeMapping(user, domain, regex2, REGEX_TYPE)).describedAs("remove virtual mapping").isTrue();
 
-            assertTrue("remove virtual mapping", removeMapping(user, domain, regex2, REGEX_TYPE));
-
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
-
-            assertNull("No mappings", virtualUserTable.getAllMappings());
+            
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
+            assertThat(virtualUserTable.getAllMappings()).describedAs("No mapping").isNull();
 
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
@@ -134,15 +128,15 @@ public abstract class AbstractRecipientRewriteTableTest {
 
         try {
 
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
 
-            assertTrue("Added virtual mapping", addMapping(user, domain, address, ADDRESS_TYPE));
-            assertTrue("Added virtual mapping", addMapping(user, domain, address2, ADDRESS_TYPE));
+            assertThat(addMapping(user, domain, address, ADDRESS_TYPE)).describedAs("Added virtual mapping").isTrue();
+            assertThat(addMapping(user, domain, address2, ADDRESS_TYPE)).describedAs("Added virtual mapping").isTrue();
 
-            assertEquals("Two mappings", virtualUserTable.getMappings(user, domain).size(), 2);
-            assertEquals("One mappingline", virtualUserTable.getAllMappings().size(), 1);
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("Two mappings").hasSize(2);
+            assertThat(virtualUserTable.getAllMappings()).describedAs("One mappingline").hasSize(1);
 
-            assertTrue("remove virtual mapping", removeMapping(user, domain, address, ADDRESS_TYPE));
+            assertThat(removeMapping(user, domain, address, ADDRESS_TYPE)).describedAs("remove virtual mapping").isTrue();
 
             /*
              * TEMPORARILY REMOVE JDBC specific test String invalidAddress=
@@ -154,10 +148,11 @@ public abstract class AbstractRecipientRewriteTableTest {
              * assertTrue("Invalid Mapping throw exception" , catched); }
              */
 
-            assertTrue("remove virtual mapping", removeMapping(user, domain, address2, ADDRESS_TYPE));
+            
+            assertThat(removeMapping(user, domain, address2, ADDRESS_TYPE)).describedAs("remove virtual mapping").isTrue();
 
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
-            assertNull("No mappings", virtualUserTable.getAllMappings());
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
+            assertThat(virtualUserTable.getAllMappings()).describedAs("No mapping").isNull();
 
         } catch (IllegalArgumentException e) {
             fail("Storing failed");
@@ -174,23 +169,22 @@ public abstract class AbstractRecipientRewriteTableTest {
         boolean catched = false;
 
         try {
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
 
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
-
-            assertTrue("Added virtual mapping", addMapping(user, domain, error, ERROR_TYPE));
-            assertEquals("One mappingline", virtualUserTable.getAllMappings().size(), 1);
+            assertThat(addMapping(user, domain, error, ERROR_TYPE)).describedAs("Added virtual mapping").isTrue();
+            assertThat(virtualUserTable.getAllMappings()).describedAs("One mappingline").hasSize(1);
 
             try {
                 virtualUserTable.getMappings(user, domain);
             } catch (ErrorMappingException e) {
                 catched = true;
             }
-            assertTrue("Error Mapping throw exception", catched);
+            assertThat(catched).describedAs("Error Mapping throw exception").isTrue();
 
-            assertTrue("remove virtual mapping", removeMapping(user, domain, error, ERROR_TYPE));
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
-            assertNull("No mappings", virtualUserTable.getAllMappings());
+            assertThat(removeMapping(user, domain, error, ERROR_TYPE)).describedAs("remove virtual mapping").isTrue();
 
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
+            assertThat(virtualUserTable.getAllMappings()).describedAs("No mapping").isNull();
         } catch (IllegalArgumentException e) {
             fail("Storing failed");
         }
@@ -209,20 +203,19 @@ public abstract class AbstractRecipientRewriteTableTest {
 
         try {
 
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
 
-            assertTrue("Added virtual mapping",
-                    addMapping(RecipientRewriteTable.WILDCARD, domain, address, ADDRESS_TYPE));
-            assertTrue("Added virtual mapping", addMapping(user, domain, address2, ADDRESS_TYPE));
+            assertThat(addMapping(RecipientRewriteTable.WILDCARD, domain, address, ADDRESS_TYPE)).describedAs("Added virtual mapping").isTrue();
+            assertThat(addMapping(user, domain, address2, ADDRESS_TYPE)).describedAs("Added virtual mapping").isTrue();
 
-            assertEquals("One mappings", 1, virtualUserTable.getMappings(user, domain).size());
-            assertEquals("One mappings", 1, virtualUserTable.getMappings(user2, domain).size());
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("One mappings").hasSize(1);
+            assertThat(virtualUserTable.getMappings(user2, domain)).describedAs("One mappings").hasSize(1);
 
-            assertTrue("remove virtual mapping", removeMapping(user, domain, address2, ADDRESS_TYPE));
-            assertTrue("remove virtual mapping", removeMapping(RecipientRewriteTable.WILDCARD, domain, address,
-                    ADDRESS_TYPE));
-            assertNull("No mapping", virtualUserTable.getMappings(user, domain));
-            assertNull("No mapping", virtualUserTable.getMappings(user2, domain));
+            assertThat(removeMapping(user, domain, address2, ADDRESS_TYPE)).describedAs("remove virtual mapping").isTrue();
+            assertThat(removeMapping(RecipientRewriteTable.WILDCARD, domain, address, ADDRESS_TYPE)).describedAs("remove virtual mapping").isTrue();
+            
+            assertThat(virtualUserTable.getMappings(user, domain)).describedAs("No mapping").isNull();
+            assertThat(virtualUserTable.getMappings(user2, domain)).describedAs("No mapping").isNull();
 
         } catch (IllegalArgumentException e) {
             fail("Storing failed");
@@ -244,25 +237,23 @@ public abstract class AbstractRecipientRewriteTableTest {
         virtualUserTable.setRecursiveMapping(true);
 
         try {
-            assertNull("No mappings", virtualUserTable.getAllMappings());
+            assertThat(virtualUserTable.getAllMappings()).describedAs("No mapping").isNull();
 
-            assertTrue("Add mapping", addMapping(user1, domain1, user2 + "@" + domain2, ADDRESS_TYPE));
-            assertTrue("Add mapping", addMapping(user2, domain2, user3 + "@" + domain3, ADDRESS_TYPE));
-            assertEquals("Recursive mapped", virtualUserTable.getMappings(user1, domain1).iterator().next(),
-                    user3 + "@" + domain3);
-
-            assertTrue("Add mapping", addMapping(user3, domain3, user1 + "@" + domain1, ADDRESS_TYPE));
+            assertThat(addMapping(user1, domain1, user2 + "@" + domain2, ADDRESS_TYPE)).describedAs("Added mapping").isTrue();
+            assertThat(addMapping(user2, domain2, user3 + "@" + domain3, ADDRESS_TYPE)).describedAs("Added mapping").isTrue();
+            assertThat(virtualUserTable.getMappings(user1, domain1)).containsOnly(MappingImpl.address(user3 + "@" + domain3));
+            assertThat(addMapping(user3, domain3, user1 + "@" + domain1, ADDRESS_TYPE)).describedAs("Added mapping").isTrue();
+            
             try {
                 virtualUserTable.getMappings(user1, domain1);
             } catch (ErrorMappingException e) {
                 exception1 = true;
             }
-            assertTrue("Exception thrown on to many mappings", exception1);
+            assertThat(exception1).describedAs("Exception thrown on to many mappings").isTrue();
 
             // disable recursive mapping
             virtualUserTable.setRecursiveMapping(false);
-            assertEquals("Not recursive mapped", virtualUserTable.getMappings(user1, domain1).iterator().next(),
-                    user2 + "@" + domain2);
+            assertThat(virtualUserTable.getMappings(user1, domain1)).describedAs("Not recursive mapped").containsExactly(MappingImpl.address(user2 + "@" + domain2));
 
         } catch (IllegalArgumentException e) {
             fail("Storing failed");
@@ -277,61 +268,64 @@ public abstract class AbstractRecipientRewriteTableTest {
         String user = "user";
         String user2 = "user2";
 
-        assertNull("No mappings", virtualUserTable.getAllMappings());
+        assertThat(virtualUserTable.getAllMappings()).describedAs("No mappings").isNull();
 
         try {
 
-            assertTrue("Add mapping", addMapping(RecipientRewriteTable.WILDCARD, aliasDomain, user2 + "@" + domain,
-                    ADDRESS_TYPE));
-            assertTrue("Add aliasDomain mapping", addMapping(RecipientRewriteTable.WILDCARD, aliasDomain, domain,
-                    ALIASDOMAIN_TYPE));
+            assertThat(addMapping(RecipientRewriteTable.WILDCARD, aliasDomain, user2 + "@" + domain,
+                    ADDRESS_TYPE)).describedAs("Add mapping").isTrue();
+            assertThat(addMapping(RecipientRewriteTable.WILDCARD, aliasDomain, domain,
+                    ALIASDOMAIN_TYPE)).describedAs("Add aliasDomain mapping").isTrue();
 
-            Iterator<String> mappings = virtualUserTable.getMappings(user, aliasDomain).iterator();
-            assertEquals("Domain mapped as first ", mappings.next(), user + "@" + domain);
-            assertEquals("Address mapped as second ", mappings.next(), user2 + "@" + domain);
+            assertThat(virtualUserTable.getMappings(user, aliasDomain))
+                .describedAs("Domain mapped as first, Address mapped as second")
+                .containsExactly(MappingImpl.address(user + "@" + domain), MappingImpl.address(user2 + "@" + domain));
 
-            assertTrue("Remove mapping", removeMapping(RecipientRewriteTable.WILDCARD, aliasDomain, user2 + "@" + domain,
-                    ADDRESS_TYPE));
-            assertTrue("Remove aliasDomain mapping", removeMapping(RecipientRewriteTable.WILDCARD, aliasDomain, domain,
-                    ALIASDOMAIN_TYPE));
+            assertThat(removeMapping(RecipientRewriteTable.WILDCARD, aliasDomain, user2 + "@" + domain,
+                    ADDRESS_TYPE)).describedAs("Remove mapping").isTrue();
+
+            assertThat(removeMapping(RecipientRewriteTable.WILDCARD, aliasDomain, domain,
+                    ALIASDOMAIN_TYPE)).describedAs("Remove aliasDomain mapping").isTrue();
 
         } catch (IllegalArgumentException e) {
             fail("Storing failed");
         }
 
     }
-    
-    @Test
-    public void sortMappingsShouldReturnNullWhenNull() {
-        assertNull(AbstractRecipientRewriteTable.sortMappings(null));
-    }
 
     @Test
     public void sortMappingsShouldReturnEmptyWhenEmpty() {
-        assertEquals("", AbstractRecipientRewriteTable.sortMappings(""));
+        assertThat(AbstractRecipientRewriteTable.sortMappings(MappingsImpl.empty())).isEmpty();
     }
 
     @Test
     public void sortMappingsShouldReturnSameStringWhenSingleDomainAlias() {
         String singleDomainAlias = RecipientRewriteTable.ALIASDOMAIN_PREFIX + "first";
-        assertEquals(singleDomainAlias, AbstractRecipientRewriteTable.sortMappings(singleDomainAlias));
+        assertThat(AbstractRecipientRewriteTable.sortMappings(MappingsImpl.fromRawString(singleDomainAlias))).containsExactly(MappingImpl.domain("first"));
     }
      
     @Test
     public void sortMappingsShouldReturnSameStringWhenTwoDomainAliases() {
-        String firstAliasMapping = RecipientRewriteTable.ALIASDOMAIN_PREFIX + "first";
-        String secondAliasMapping = RecipientRewriteTable.ALIASDOMAIN_PREFIX + "second";
-        String mappings = RecipientRewriteTableUtil.CollectionToMapping(Arrays.asList(firstAliasMapping, secondAliasMapping));
-        assertEquals(mappings, AbstractRecipientRewriteTable.sortMappings(mappings));
+        MappingsImpl mappings = MappingsImpl.builder()
+                .add(RecipientRewriteTable.ALIASDOMAIN_PREFIX + "first")
+                .add(RecipientRewriteTable.ALIASDOMAIN_PREFIX + "second")
+                .build();
+        assertThat(AbstractRecipientRewriteTable.sortMappings(mappings)).isEqualTo(mappings);
     }
     
     @Test
     public void sortMappingsShouldPutDomainAliasFirstWhenVariousMappings() {
         String regexMapping = RecipientRewriteTable.REGEX_PREFIX + "first";
         String domainMapping = RecipientRewriteTable.ALIASDOMAIN_PREFIX + "second";
-        String inputMappings = RecipientRewriteTableUtil.CollectionToMapping(Arrays.asList(regexMapping, domainMapping));
-        String expectedMappings = RecipientRewriteTableUtil.CollectionToMapping(Arrays.asList(domainMapping, regexMapping));
-        assertEquals(expectedMappings, AbstractRecipientRewriteTable.sortMappings(inputMappings));
+        MappingsImpl mappings = MappingsImpl.builder()
+                .add(regexMapping)
+                .add(domainMapping)
+                .build();
+        assertThat(AbstractRecipientRewriteTable.sortMappings(mappings))
+                .isEqualTo(MappingsImpl.builder()
+                        .add(domainMapping)
+                        .add(regexMapping)
+                        .build());
     }
 
 

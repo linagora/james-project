@@ -21,7 +21,6 @@ package org.apache.james.rrt.lib;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
@@ -30,6 +29,8 @@ import java.util.regex.PatternSyntaxException;
 
 import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.mailet.MailAddress;
+
+import com.google.common.base.Joiner;
 
 /**
  * This helper class contains methods for the RecipientRewriteTable implementations
@@ -208,53 +209,6 @@ public class RecipientRewriteTableUtil {
             mappings.put(virtual, real);
         }
         return mappings;
-    }
-
-    /**
-     * Return a Collection which holds the extracted mappings of the given
-     * String
-     * 
-     * @param rawMapping
-     * @deprecated Use mappingToCollection(String rawMapping)
-     */
-    public static Collection<String> getMappings(String rawMapping) {
-        return mappingToCollection(rawMapping);
-    }
-
-    /**
-     * Convert a raw mapping String to a Collection
-     * 
-     * @param rawMapping
-     *            the mapping String
-     * @return map a collection which holds all mappings
-     */
-    public static ArrayList<String> mappingToCollection(String rawMapping) {
-        ArrayList<String> map = new ArrayList<String>();
-        StringTokenizer tokenizer = new StringTokenizer(rawMapping, RecipientRewriteTableUtil.getSeparator(rawMapping));
-        while (tokenizer.hasMoreTokens()) {
-            final String raw = tokenizer.nextToken().trim();
-            map.add(raw);
-        }
-        return map;
-    }
-
-    /**
-     * Convert a Collection which holds mappings to a raw mapping String
-     * 
-     * @param map
-     *            the Collection
-     * @return mapping the mapping String
-     */
-    public static String CollectionToMapping(Collection<String> map) {
-        StringBuilder mapping = new StringBuilder();
-        Iterator<String> mappings = map.iterator();
-        while (mappings.hasNext()) {
-            mapping.append(mappings.next());
-            if (mappings.hasNext()) {
-                mapping.append(";");
-            }
-        }
-        return mapping.toString();
     }
 
 }
