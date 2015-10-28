@@ -23,9 +23,11 @@ import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.sieverepository.api.exception.UserNotFoundException;
-import org.apache.james.sieverepository.file.SieveDefaultRepository;
 import org.apache.jsieve.mailet.ResourceLocator;
 
+import javax.annotation.Resource;
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -43,7 +45,12 @@ public class ResourceLocatorImpl implements ResourceLocator {
 
     public ResourceLocatorImpl(boolean virtualHosting) {
         this.virtualHosting = virtualHosting;
-        this.sieveRepository = new SieveDefaultRepository();
+    }
+
+    @Inject
+    @Resource(name = "sieverepository")
+    public void setSieveRepository(@Named("sieverepository") SieveRepository sieveRepository) {
+        this.sieveRepository = sieveRepository;
     }
 
     public InputStream get(String uri) throws IOException {
