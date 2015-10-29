@@ -17,24 +17,54 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.backends.cassandra.init;
 
+import java.util.Arrays;
+import java.util.List;
+
+import static com.datastax.driver.core.DataType.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import com.google.common.collect.ImmutableList;
+import org.apache.james.backends.cassandra.CassandraClusterSingleton;
+import org.apache.james.backends.cassandra.components.CassandraIndex;
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.components.CassandraTable;
+import org.apache.james.backends.cassandra.components.CassandraType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class CassandraTypeProviderTest {
 
+    private static final String TYPE_NAME = "typename";
+    private static final String PROPERTY = "property";
+    
     private CassandraClusterSingleton cassandra;
+    private CassandraModule module;
 
     @Before
     public void setUp() {
-        cassandra = CassandraClusterSingleton.build();
-        cassandra.getTypesProvider().initializeTypes();
+        module = new CassandraModule() {
+            @Override public List<CassandraTable> moduleTables() {
+                return ImmutableList.of();
+            }
+
+            @Override public List<CassandraIndex> moduleIndex() {
+                return ImmutableList.of();
+            }
+
+            @Override public List<CassandraType> moduleTypes() {
+                return ImmutableList.copyOf(
+                    Arrays.asList(new CassandraType(TYPE_NAME, SchemaBuilder.createType(TYPE_NAME)
+                        .ifNotExists()
+                        .addColumn(PROPERTY, text()))));
+            }
+        };
+        cassandra = CassandraClusterSingleton.create(module);
+        cassandra.getTypesProvider();
         cassandra.ensureAllTables();
     }
 
@@ -44,30 +74,29 @@ public class CassandraTypeProviderTest {
 
     @Test
     public void getDefinedUserTypeShouldNotReturnNullNorFailWhenTypeIsDefined() {
-        assertThat(cassandra.getTypesProvider().getDefinedUserType(CassandraTypesProvider.TYPE.MailboxBase))
+        assertThat(cassandra.getTypesProvider().getDefinedUserType(TYPE_NAME))
             .isNotNull();
     }
 
     @Test
     public void initializeTypesShouldCreateTheTypes() {
         deleteMailboxBaseType();
-        CassandraTypesProvider cassandraTypesProviderTest = new CassandraTypesProvider(cassandra.getConf());
-        assertThat(cassandraTypesProviderTest.getDefinedUserType(CassandraTypesProvider.TYPE.MailboxBase))
+        new CassandraTypesCreator(module, cassandra.getConf()).initializeTypes();
+        CassandraTypesProvider cassandraTypesProviderTest = new CassandraTypesProvider(module, cassandra.getConf());
+        assertThat(cassandraTypesProviderTest.getDefinedUserType(TYPE_NAME))
             .isNotNull();
     }
 
     @Test
     public void initializeTypesShouldNotFailIfCalledTwice() {
-        new CassandraTypesProvider(cassandra.getConf());
-        assertThat(cassandra.getTypesProvider().getDefinedUserType(CassandraTypesProvider.TYPE.MailboxBase))
+        new CassandraTypesProvider(module, cassandra.getConf());
+        assertThat(cassandra.getTypesProvider().getDefinedUserType(TYPE_NAME))
             .isNotNull();
     }
 
     private void deleteMailboxBaseType() {
         try {
-            // We need to drop the tables using the type we want to delete
-            cassandra.getConf().execute(SchemaBuilder.dropTable(CassandraTableManager.TABLE.Mailbox.name()));
-            cassandra.getConf().execute(SchemaBuilder.dropType(CassandraTypesProvider.TYPE.MailboxBase.getName()));
+            cassandra.getConf().execute(SchemaBuilder.dropType(TYPE_NAME));
         } catch (Exception exception) {
             exception.printStackTrace();
             fail("Exception is thrown on Type deletion");

@@ -17,24 +17,17 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.backends.cassandra.utils;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-public class SessionFactory {
-    private final static String DEFAULT_KEYSPACE_NAME = "apache_james";
+public class CassandraUtils {
 
-    public static Session createSession(Cluster cluster, String keyspace) {
-        Session session = cluster.connect(keyspace);
-        new CassandraTypesProvider(session);
-        new CassandraTableManager(session)
-            .ensureAllTables();
-        return session;
-    }
-
-    public static Session createSession(Cluster cluster) {
-        return createSession(cluster, DEFAULT_KEYSPACE_NAME);
+    public static Stream<Row> convertToStream(ResultSet resultSet) {
+        return StreamSupport.stream(resultSet.spliterator(), true);
     }
 
 }
