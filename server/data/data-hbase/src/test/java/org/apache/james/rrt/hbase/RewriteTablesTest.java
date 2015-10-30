@@ -16,25 +16,17 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.rrt.hbase;
 
-package org.apache.james.mailbox.cassandra;
+import org.junit.runner.RunWith;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import cucumber.api.CucumberOptions;
+import cucumber.api.junit.Cucumber;
 
-public class SessionFactory {
-    private final static String DEFAULT_KEYSPACE_NAME = "apache_james";
-
-    public static Session createSession(Cluster cluster, String keyspace) {
-        Session session = cluster.connect(keyspace);
-        new CassandraTypesProvider(session);
-        new CassandraTableManager(session)
-            .ensureAllTables();
-        return session;
-    }
-
-    public static Session createSession(Cluster cluster) {
-        return createSession(cluster, DEFAULT_KEYSPACE_NAME);
-    }
-
+@RunWith(Cucumber.class)
+@CucumberOptions(
+        features = { "classpath:cucumber/" },
+        glue = { "org.apache.james.rrt.lib", "org.apache.james.rrt.hbase" }
+    )
+public class RewriteTablesTest {
 }

@@ -16,23 +16,25 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.cassandra;
-
+package org.apache.james.backends.cassandra;
 
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import com.google.common.base.Throwables;
-import org.apache.james.mailbox.cassandra.mail.utils.FunctionRunnerWithRetry;
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.init.CassandraTableManager;
+import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
+import org.apache.james.backends.cassandra.init.ClusterFactory;
+import org.apache.james.backends.cassandra.init.ClusterWithKeyspaceCreatedFactory;
+import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
+import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
-/**
- * Class that will creates a single instance of Cassandra session.
- */
 public final class CassandraClusterSingleton {
     private static final String CLUSTER_IP = "localhost";
     private static final int CLUSTER_PORT_TEST = 9142;
@@ -44,29 +46,25 @@ public final class CassandraClusterSingleton {
 
     private static final Logger LOG = LoggerFactory.getLogger(CassandraClusterSingleton.class);
     private static CassandraClusterSingleton cluster = null;
+    private final CassandraModule module;
     private Session session;
     private CassandraTypesProvider typesProvider;
 
-    /**
-     * Builds a MiniCluster instance.
-     *
-     * @return the {@link CassandraClusterSingleton} instance
-     * @throws RuntimeException
-     */
-    public static synchronized CassandraClusterSingleton build() throws RuntimeException {
+    public static synchronized CassandraClusterSingleton create(CassandraModule module) throws RuntimeException {
         LOG.info("Retrieving cluster instance.");
         if (cluster == null) {
-            cluster = new CassandraClusterSingleton();
+            cluster = new CassandraClusterSingleton(module);
         }
         return cluster;
     }
 
-    private CassandraClusterSingleton() throws RuntimeException {
+    private CassandraClusterSingleton(CassandraModule module) throws RuntimeException {
+        this.module = module;
         try {
             EmbeddedCassandraServerHelper.startEmbeddedCassandra();
             session = new FunctionRunnerWithRetry(MAX_RETRY)
                 .executeAndRetrieveObject(CassandraClusterSingleton.this::tryInitializeSession);
-            typesProvider = new CassandraTypesProvider(session);
+            typesProvider = new CassandraTypesProvider(module, session);
         } catch(Exception exception) {
             Throwables.propagate(exception);
         }
@@ -77,11 +75,11 @@ public final class CassandraClusterSingleton {
     }
 
     public void ensureAllTables() {
-        new CassandraTableManager(session).ensureAllTables();
+        new CassandraTableManager(module, session).ensureAllTables();
     }
 
     public void clearAllTables() {
-        new CassandraTableManager(session).clearAllTables();
+        new CassandraTableManager(module, session).clearAllTables();
     }
 
     private Optional<Session> tryInitializeSession() {
@@ -89,7 +87,7 @@ public final class CassandraClusterSingleton {
             Cluster cluster = ClusterFactory.createClusterForSingleServerWithoutPassWord(CLUSTER_IP, CLUSTER_PORT_TEST);
             Cluster clusterWithInitializedKeyspace = ClusterWithKeyspaceCreatedFactory
                 .clusterWithInitializedKeyspace(cluster, KEYSPACE_NAME, REPLICATION_FACTOR);
-            return Optional.of(SessionFactory.createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME));
+            return Optional.of(new SessionWithInitializedTablesFactory(module).createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME));
         } catch (NoHostAvailableException exception) {
             sleep(SLEEP_BEFORE_RETRY);
             return Optional.empty();

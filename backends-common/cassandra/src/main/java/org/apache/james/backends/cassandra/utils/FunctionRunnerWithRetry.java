@@ -17,10 +17,9 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+package org.apache.james.backends.cassandra.utils;
 
 import com.google.common.base.Preconditions;
-import org.apache.james.mailbox.exception.MailboxException;
 
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
@@ -40,19 +39,19 @@ public class FunctionRunnerWithRetry {
         this.maxRetry = maxRetry;
     }
 
-    public void execute(BooleanSupplier functionNotifyingSuccess) throws MailboxException {
+    public void execute(BooleanSupplier functionNotifyingSuccess) throws LightweightTransactionException {
         IntStream.range(0, maxRetry)
             .filter((x) -> functionNotifyingSuccess.getAsBoolean())
             .findFirst()
-            .orElseThrow(() -> new MailboxException("Can not execute Boolean Supplier."));
+            .orElseThrow(() -> new LightweightTransactionException(maxRetry));
     }
 
-    public <T> T executeAndRetrieveObject(OptionalSupplier<T> functionNotifyingSuccess) throws MailboxException {
+    public <T> T executeAndRetrieveObject(OptionalSupplier<T> functionNotifyingSuccess) throws LightweightTransactionException {
         return IntStream.range(0, maxRetry)
             .mapToObj((x) -> functionNotifyingSuccess.getAsOptional())
             .filter(Optional::isPresent)
             .findFirst()
-            .orElseThrow(() -> new MailboxException("Can not execute Optional Supplier. " + maxRetry + " retries."))
+            .orElseThrow(() -> new LightweightTransactionException(maxRetry))
             .get();
     }
 }

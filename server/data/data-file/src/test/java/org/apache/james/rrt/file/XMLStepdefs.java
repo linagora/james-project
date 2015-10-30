@@ -16,9 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.rrt.file;
 
-package org.apache.james.mailbox.cassandra;
+import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
+import org.apache.james.rrt.lib.RewriteTablesStepdefs;
+import org.slf4j.LoggerFactory;
 
-public interface CassandraConstants {
-    int LIGHTWEIGHT_TRANSACTION_APPLIED = 0;
+import cucumber.api.java.Before;
+
+public class XMLStepdefs {
+
+    private RewriteTablesStepdefs mainStepdefs;
+
+    public XMLStepdefs(RewriteTablesStepdefs mainStepdefs) {
+        this.mainStepdefs = mainStepdefs;
+    }
+
+    @Before
+    public void setup() throws Throwable {
+        mainStepdefs.rewriteTable = getRecipientRewriteTable(); 
+    }
+
+    private AbstractRecipientRewriteTable getRecipientRewriteTable() throws Exception {
+        XMLRecipientRewriteTable localVirtualUserTable = new XMLRecipientRewriteTable();
+        localVirtualUserTable.setLog(LoggerFactory.getLogger("MockLog"));
+        return localVirtualUserTable;
+    }
 }
