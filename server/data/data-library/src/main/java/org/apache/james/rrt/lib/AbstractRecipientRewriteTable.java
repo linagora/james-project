@@ -18,10 +18,6 @@
  ****************************************************************/
 package org.apache.james.rrt.lib;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -39,6 +35,7 @@ import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.api.RecipientRewriteTableException;
+import org.apache.james.rrt.lib.Mapping.Type;
 import org.apache.mailet.MailAddress;
 import org.slf4j.Logger;
 
@@ -112,28 +109,27 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
      * @see org.apache.james.rrt.api.RecipientRewriteTable#getMappings(String,
      *      String)
      */
-    public Collection<String> getMappings(String user, String domain) throws ErrorMappingException, RecipientRewriteTableException {
+    public Mappings getMappings(String user, String domain) throws ErrorMappingException, RecipientRewriteTableException {
         return getMappings(user, domain, mappingLimit);
     }
 
-    public Collection<String> getMappings(String user, String domain, int mappingLimit) throws ErrorMappingException, RecipientRewriteTableException {
+    public Mappings getMappings(String user, String domain, int mappingLimit) throws ErrorMappingException, RecipientRewriteTableException {
 
         // We have to much mappings throw ErrorMappingException to avoid
         // infinity loop
         if (mappingLimit == 0)
             throw new ErrorMappingException("554 Too many mappings to process");
 
-        String targetString = mapAddress(user, domain);
+        Mappings targetMappings = mapAddress(user, domain);
 
         // Only non-null mappings are translated
-        if (targetString != null) {
-            Collection<String> mappings = new ArrayList<String>();
-            if (targetString.startsWith(RecipientRewriteTable.ERROR_PREFIX)) {
-                throw new ErrorMappingException(targetString.substring(RecipientRewriteTable.ERROR_PREFIX.length()));
-
+        if (targetMappings != null) {
+            if (targetMappings.contains(Type.Error)) {
+                throw new ErrorMappingException(targetMappings.getError().getErrorMessage());
             } else {
+                MappingsImpl.Builder mappings = MappingsImpl.builder();
 
-                for (String target : RecipientRewriteTableUtil.mappingToCollection(targetString)) {
+                for (String target : targetMappings.asStrings()) {
                     if (target.startsWith(RecipientRewriteTable.REGEX_PREFIX)) {
                         try {
                             target = RecipientRewriteTableUtil.regexMap(new MailAddress(user, domain), target);
@@ -175,23 +171,21 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
                             return null;
                         }
 
-                        Collection<String> childMappings = getMappings(userName, domainName, mappingLimit - 1);
+                        Mappings childMappings = getMappings(userName, domainName, mappingLimit - 1);
 
                         if (childMappings == null) {
                             // add mapping
                             mappings.add(target);
                         } else {
-                            mappings.addAll(childMappings);
+                            mappings = mappings.addAll(childMappings);
                         }
 
                     } else {
                         mappings.add(target);
                     }
                 }
+                return mappings.build();
             }
-
-            return mappings;
-
         }
 
         return null;
@@ -329,9 +323,9 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
     /**
      * @see org.apache.james.rrt.api.RecipientRewriteTable#getAllMappings()
      */
-    public Map<String, Collection<String>> getAllMappings() throws RecipientRewriteTableException {
+    public Map<String, Mappings> getAllMappings() throws RecipientRewriteTableException {
         int count = 0;
-        Map<String, Collection<String>> mappings = getAllMappingsInternal();
+        Map<String, Mappings> mappings = getAllMappingsInternal();
 
         if (mappings != null) {
             count = mappings.size();
@@ -344,7 +338,7 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
      * @see org.apache.james.rrt.api.RecipientRewriteTable#getUserDomainMappings(java.lang.String,
      *      java.lang.String)
      */
-    public Collection<String> getUserDomainMappings(String user, String domain) throws RecipientRewriteTableException {
+    public Mappings getUserDomainMappings(String user, String domain) throws RecipientRewriteTableException {
         return getUserDomainMappingsInternal(user, domain);
     }
 
@@ -405,14 +399,14 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
      *            the domain
      * @return Collection which hold the mappings
      */
-    protected abstract Collection<String> getUserDomainMappingsInternal(String user, String domain) throws RecipientRewriteTableException;
+    protected abstract Mappings getUserDomainMappingsInternal(String user, String domain) throws RecipientRewriteTableException;
 
     /**
      * Return a Map which holds all Mappings
      * 
      * @return Map
      */
-    protected abstract Map<String, Collection<String>> getAllMappingsInternal() throws RecipientRewriteTableException;
+    protected abstract Map<String, Mappings> getAllMappingsInternal() throws RecipientRewriteTableException;
 
     /**
      * Override to map virtual recipients to real recipients, both local and
@@ -441,41 +435,31 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
      *            the domain
      * @return the mappings
      */
-    private String mapAddress(String user, String domain) throws RecipientRewriteTableException {
+    private Mappings mapAddress(String user, String domain) throws RecipientRewriteTableException {
 
         String mappings = mapAddressInternal(user, domain);
 
-        return sortMappings(mappings);
+        if (mappings != null) {
+            return sortMappings(MappingsImpl.fromRawString(mappings));
+        } else {
+            return null;
+        }
     }
 
-    @VisibleForTesting static String sortMappings(String mappings) {
-        // check if we need to sort
-        // TODO: Maybe we should just return the aliasdomain mapping
-        if (mappings != null && mappings.contains(RecipientRewriteTable.ALIASDOMAIN_PREFIX)) {
-            Collection<String> mapCol = RecipientRewriteTableUtil.mappingToCollection(mappings);
-            Iterator<String> mapIt = mapCol.iterator();
-
-            List<String> col = new ArrayList<String>(mapCol.size());
-
-            int i = 0;
-            while (mapIt.hasNext()) {
-                String mapping = mapIt.next();
-
-                if (mapping.startsWith(RecipientRewriteTable.ALIASDOMAIN_PREFIX)) {
-                    col.add(i, mapping);
-                    i++;
-                } else {
-                    col.add(mapping);
-                }
-            }
-            return RecipientRewriteTableUtil.CollectionToMapping(col);
+    @VisibleForTesting static Mappings sortMappings(Mappings mappings) {
+        if (mappings.contains(Mapping.Type.Domain)) {
+            return
+                    MappingsImpl.builder()
+                        .addAll(mappings.select(Mapping.Type.Domain))
+                        .addAll(mappings.exclude(Mapping.Type.Domain))
+                        .build();
         } else {
             return mappings;
         }
     }
 
     private void checkMapping(String user, String domain, String mapping) throws RecipientRewriteTableException {
-        Collection<String> mappings = getUserDomainMappings(user, domain);
+        Mappings mappings = getUserDomainMappings(user, domain);
         if (mappings != null && mappings.contains(mapping)) {
             throw new RecipientRewriteTableException("Mapping " + mapping + " for user " + user + " domain " + domain + " already exist!");
         }

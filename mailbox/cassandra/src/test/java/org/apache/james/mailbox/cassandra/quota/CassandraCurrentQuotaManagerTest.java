@@ -21,7 +21,8 @@ package org.apache.james.mailbox.cassandra.quota;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.mailbox.cassandra.CassandraClusterSingleton;
+import org.apache.james.backends.cassandra.CassandraCluster;
+import org.apache.james.mailbox.cassandra.CassandraMailboxModule;
 import org.apache.james.mailbox.model.QuotaRoot;
 import org.apache.james.mailbox.store.quota.QuotaRootImpl;
 import org.junit.After;
@@ -32,12 +33,12 @@ public class CassandraCurrentQuotaManagerTest {
 
     private static final QuotaRoot QUOTA_ROOT = QuotaRootImpl.quotaRoot("value");
 
-    private CassandraClusterSingleton cassandra;
+    private CassandraCluster cassandra;
     private CassandraCurrentQuotaManager currentQuotaManager;
 
     @Before
     public void setUp() {
-        cassandra = CassandraClusterSingleton.build();
+        cassandra = CassandraCluster.create(new CassandraMailboxModule());
         cassandra.ensureAllTables();
         currentQuotaManager = new CassandraCurrentQuotaManager(cassandra.getConf());
     }
