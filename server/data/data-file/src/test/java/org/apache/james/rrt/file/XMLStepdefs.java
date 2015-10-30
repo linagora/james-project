@@ -16,25 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.rrt.file;
 
-package org.apache.james.mailbox.cassandra;
+import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
+import org.apache.james.rrt.lib.RewriteTablesStepdefs;
+import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import cucumber.api.java.Before;
 
-public class SessionFactory {
-    private final static String DEFAULT_KEYSPACE_NAME = "apache_james";
+public class XMLStepdefs {
 
-    public static Session createSession(Cluster cluster, String keyspace) {
-        Session session = cluster.connect(keyspace);
-        new CassandraTypesProvider(session);
-        new CassandraTableManager(session)
-            .ensureAllTables();
-        return session;
+    private RewriteTablesStepdefs mainStepdefs;
+
+    public XMLStepdefs(RewriteTablesStepdefs mainStepdefs) {
+        this.mainStepdefs = mainStepdefs;
     }
 
-    public static Session createSession(Cluster cluster) {
-        return createSession(cluster, DEFAULT_KEYSPACE_NAME);
+    @Before
+    public void setup() throws Throwable {
+        mainStepdefs.rewriteTable = getRecipientRewriteTable(); 
     }
 
+    private AbstractRecipientRewriteTable getRecipientRewriteTable() throws Exception {
+        XMLRecipientRewriteTable localVirtualUserTable = new XMLRecipientRewriteTable();
+        localVirtualUserTable.setLog(LoggerFactory.getLogger("MockLog"));
+        return localVirtualUserTable;
+    }
 }

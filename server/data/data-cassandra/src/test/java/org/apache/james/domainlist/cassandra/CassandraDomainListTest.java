@@ -17,8 +17,26 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.domainlist.cassandra;
 
-public interface CassandraConstants {
-    int LIGHTWEIGHT_TRANSACTION_APPLIED = 0;
+import org.apache.james.backends.cassandra.CassandraClusterSingleton;
+import org.apache.james.domainlist.api.DomainList;
+import org.apache.james.domainlist.lib.AbstractDomainListTest;
+import org.slf4j.LoggerFactory;
+
+public class CassandraDomainListTest extends AbstractDomainListTest {
+
+    private static final CassandraClusterSingleton cassandra = CassandraClusterSingleton.create(new CassandraDomainListModule());
+
+    @Override
+    protected DomainList createDomainList() {
+        CassandraDomainList testee = new CassandraDomainList();
+        testee.setSession(cassandra.getConf());
+        testee.setLog(LoggerFactory.getLogger(getClass()));
+        testee.setDNSService(getDNSServer("localhost"));
+        testee.setAutoDetect(false);
+        testee.setAutoDetectIP(false);
+        return testee;
+    }
+
 }

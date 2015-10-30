@@ -17,13 +17,13 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.backends.cassandra.init;
+
+import java.util.List;
 
 import com.datastax.driver.core.Cluster;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-
-import java.util.List;
 
 public class ClusterFactory {
 
