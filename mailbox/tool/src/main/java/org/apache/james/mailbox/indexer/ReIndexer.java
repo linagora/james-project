@@ -17,24 +17,15 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.mailbox.indexer;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxPath;
 
-public class SessionFactory {
-    private final static String DEFAULT_KEYSPACE_NAME = "apache_james";
+public interface ReIndexer {
 
-    public static Session createSession(Cluster cluster, String keyspace) {
-        Session session = cluster.connect(keyspace);
-        new CassandraTypesProvider(session);
-        new CassandraTableManager(session)
-            .ensureAllTables();
-        return session;
-    }
+    void reIndex(MailboxPath path) throws MailboxException;
 
-    public static Session createSession(Cluster cluster) {
-        return createSession(cluster, DEFAULT_KEYSPACE_NAME);
-    }
+    void reIndex() throws MailboxException;
 
 }

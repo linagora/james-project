@@ -17,8 +17,26 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.backends.cassandra.components;
 
-public interface CassandraConstants {
-    int LIGHTWEIGHT_TRANSACTION_APPLIED = 0;
+import com.datastax.driver.core.schemabuilder.CreateType;
+
+public class CassandraType {
+
+    private final String name;
+    private final CreateType createStatement;
+
+    public CassandraType(String name, CreateType createStatement) {
+        this.name = name;
+        this.createStatement = createStatement;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public CreateType getCreateStatement() {
+        return createStatement;
+    }
+
 }

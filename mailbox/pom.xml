@@ -97,7 +97,7 @@
         <jmock.version>2.5.1</jmock.version>
         <hbase.version>0.94.27</hbase.version>
         <hadoop.version>1.0.1</hadoop.version>
-        <spring.version>3.2.13.RELEASE</spring.version>
+        <spring.version>3.2.14.RELEASE</spring.version>
         <commons-io.version>2.4</commons-io.version>
         <commons-lang.version>2.6</commons-lang.version>
         <commons-pool.version>1.6</commons-pool.version>
@@ -120,11 +120,12 @@
         <junit.version>4.11</junit.version>
         <mockito-core.version>1.9.0</mockito-core.version>
         <jasypt.version>1.9.0</jasypt.version>
-        <guava.version>13.0</guava.version>
+        <guava.version>16.0</guava.version>
         <assertj.version>1.7.1</assertj.version>
         <jackson-databinding.version>2.3.3</jackson-databinding.version>
         <cassandra-driver-core.version>2.1.5</cassandra-driver-core.version>
         <cassandra-unit.version>2.0.2.2</cassandra-unit.version>
+        <apache-backends-cassandra.version>1.8.3-SNAPSHOT</apache-backends-cassandra.version>
     </properties>
 
     <dependencyManagement>
@@ -280,6 +281,21 @@
                         <artifactId>mail</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <!--
+
+            -->
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-cassandra</artifactId>
+                <version>${apache-backends-cassandra.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-cassandra</artifactId>
+                <version>${apache-backends-cassandra.version}</version>
+                <type>test-jar</type>
             </dependency>
 
             <!--

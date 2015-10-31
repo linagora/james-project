@@ -17,12 +17,11 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+package org.apache.james.backends.cassandra.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.commons.lang.mutable.MutableInt;
-import org.apache.james.mailbox.exception.MailboxException;
 import org.junit.Test;
 
 public class FunctionRunnerWithRetryTest {
@@ -34,7 +33,7 @@ public class FunctionRunnerWithRetryTest {
         new FunctionRunnerWithRetry(-1);
     }
 
-    @Test(expected = MailboxException.class)
+    @Test(expected = LightweightTransactionException.class)
     public void functionRunnerShouldFailIfTransactionCanNotBePerformed() throws Exception {
         final MutableInt value = new MutableInt(0);
         new FunctionRunnerWithRetry(MAX_RETRY).execute(
