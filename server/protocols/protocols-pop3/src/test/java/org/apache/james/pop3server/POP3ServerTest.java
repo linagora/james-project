@@ -689,8 +689,7 @@ public class POP3ServerTest {
     }
 
     protected void setUpPOP3Server() {
-        KeystoreLoader keystoreLoader = new KeystoreLoader();
-        keystoreLoader.setFileSystem(fileSystem);
+        KeystoreLoader keystoreLoader = new KeystoreLoader(fileSystem);
 
         pop3Server = createPOP3Server();
         pop3Server.setKeystoreLoader(keystoreLoader);

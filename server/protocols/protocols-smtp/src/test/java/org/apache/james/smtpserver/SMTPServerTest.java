@@ -193,8 +193,7 @@ public class SMTPServerTest {
 
     protected void setUpSMTPServer() {
 
-        KeystoreLoader keystoreLoader = new KeystoreLoader();
-        keystoreLoader.setFileSystem(fileSystem);
+        KeystoreLoader keystoreLoader = new KeystoreLoader(fileSystem);
 
         Logger log = LoggerFactory.getLogger("SMTP");
         // slf4j can't set programmatically any log level. It's just a facade

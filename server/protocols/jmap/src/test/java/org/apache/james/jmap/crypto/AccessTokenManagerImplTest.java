@@ -28,6 +28,11 @@ import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.name.Names;
+
 public class AccessTokenManagerImplTest {
     
     private AccessTokenManager accessTokenManager;
@@ -35,10 +40,18 @@ public class AccessTokenManagerImplTest {
     
     @Before
     public void setUp() throws Exception {
-        accessTokenRepository = new MemoryAccessTokenRepository(100);
+        Injector injector = Guice.createInjector(new AbstractModule() {
+            
+            @Override
+            protected void configure() {
+                bindConstant().annotatedWith(Names.named("tokenExpirationInMs")).to(100L);
+                bind(AccessTokenRepository.class).to(MemoryAccessTokenRepository.class);
+            }
+        });
+        accessTokenRepository = injector.getInstance(AccessTokenRepository.class);
         accessTokenManager = new AccessTokenManagerImpl(accessTokenRepository);
     }
-    
+
     @Test(expected=NullPointerException.class)
     public void grantShouldThrowOnNullUsername() throws Exception {
         accessTokenManager.grantAccessToken(null);

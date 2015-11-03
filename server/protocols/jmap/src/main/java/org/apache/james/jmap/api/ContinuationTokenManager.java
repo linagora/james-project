@@ -21,8 +21,6 @@ package org.apache.james.jmap.api;
 
 import org.apache.james.jmap.model.ContinuationToken;
 
-import java.time.ZonedDateTime;
-
 public interface ContinuationTokenManager {
 
     ContinuationToken generateToken(String username) throws Exception;

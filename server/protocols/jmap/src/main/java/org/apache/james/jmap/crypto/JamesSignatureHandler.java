@@ -19,20 +19,25 @@
 
 package org.apache.james.jmap.crypto;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.james.lifecycle.api.Configurable;
-import org.apache.james.protocols.lib.KeystoreLoader;
-
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.protocols.lib.KeystoreLoader;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
+@Singleton
 public class JamesSignatureHandler implements SignatureHandler, Configurable {
 
     public static final String ALIAS = "james";
@@ -44,7 +49,8 @@ public class JamesSignatureHandler implements SignatureHandler, Configurable {
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public JamesSignatureHandler(KeystoreLoader keystoreLoader) {
+    @Inject
+    @VisibleForTesting JamesSignatureHandler(KeystoreLoader keystoreLoader) {
         this.keystoreLoader = keystoreLoader;
     }
 
@@ -53,6 +59,7 @@ public class JamesSignatureHandler implements SignatureHandler, Configurable {
         secret = configuration.getString("tls.secret", "");
     }
 
+    @Override
     public void init() throws Exception {
         KeyStore keystore = keystoreLoader.load(keystoreURL, secret);
         publicKey = keystore.getCertificate(ALIAS).getPublicKey();

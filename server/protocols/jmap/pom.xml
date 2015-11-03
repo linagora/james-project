@@ -215,6 +215,11 @@
                     <version>2.3.3</version>
                 </dependency>
                 <dependency>
+                    <groupId>com.google.inject.extensions</groupId>
+                    <artifactId>guice-servlet</artifactId>
+                    <version>4.0</version>
+                </dependency>
+                <dependency>
                     <groupId>com.jayway.restassured</groupId>
                     <artifactId>rest-assured</artifactId>
                     <version>2.5.0</version>
@@ -234,6 +239,11 @@
                     <groupId>junit</groupId>
                     <artifactId>junit</artifactId>
                     <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.onami</groupId>
+                    <artifactId>org.apache.onami.test</artifactId>
+                    <version>1.4.0-incubating</version>
                 </dependency>
                 <dependency>
                     <groupId>org.assertj</groupId>
