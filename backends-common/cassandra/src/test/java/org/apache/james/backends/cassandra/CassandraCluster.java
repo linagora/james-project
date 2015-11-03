@@ -55,6 +55,7 @@ public final class CassandraCluster {
         this.module = module;
         try {
             EmbeddedCassandraServerHelper.startEmbeddedCassandra();
+
             session = new FunctionRunnerWithRetry(MAX_RETRY)
                 .executeAndRetrieveObject(CassandraCluster.this::tryInitializeSession);
             typesProvider = new CassandraTypesProvider(module, session);
@@ -77,7 +78,8 @@ public final class CassandraCluster {
 
     private Optional<Session> tryInitializeSession() {
         try {
-            Cluster cluster = ClusterFactory.createClusterForSingleServerWithoutPassWord(CLUSTER_IP, CLUSTER_PORT_TEST);
+            Cluster cluster = ClusterFactory.createTestingCluster(CLUSTER_IP, CLUSTER_PORT_TEST);
+
             Cluster clusterWithInitializedKeyspace = ClusterWithKeyspaceCreatedFactory
                 .clusterWithInitializedKeyspace(cluster, KEYSPACE_NAME, REPLICATION_FACTOR);
             return Optional.of(new SessionWithInitializedTablesFactory(module).createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME));
