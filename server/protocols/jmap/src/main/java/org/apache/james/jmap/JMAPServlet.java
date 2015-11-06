@@ -33,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.james.jmap.methods.RequestHandler;
+import org.apache.james.jmap.model.AuthenticatedProtocolRequest;
 import org.apache.james.jmap.model.ProtocolRequest;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -57,10 +58,12 @@ public class JMAPServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
+        JmapAuthenticatedRequest request = (JmapAuthenticatedRequest)req;
         try {
             List<Object[]> responses = 
-                requestAsJsonStream(req)
+                requestAsJsonStream(request)
                 .map(ProtocolRequest::deserialize)
+                .map(x -> AuthenticatedProtocolRequest.decorate(x, request))
                 .map(requestHandler::handle)
                 .map(protocolResponse -> protocolResponse.asProtocolSpecification())
                 .collect(Collectors.toList());
