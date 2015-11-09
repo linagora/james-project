@@ -21,13 +21,12 @@ package org.apache.james.jmap.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.apache.james.jmap.exceptions.MalformedContinuationTokenException;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.time.DateTimeException;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class ContinuationTokenTest {
 

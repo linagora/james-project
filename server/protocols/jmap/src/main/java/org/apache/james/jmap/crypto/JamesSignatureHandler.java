@@ -28,18 +28,21 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.jmap.JMAPConfiguration;
 import org.apache.james.protocols.lib.KeystoreLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 
-public class JamesSignatureHandler implements SignatureHandler, Configurable {
+@Singleton
+public class JamesSignatureHandler implements SignatureHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JamesSignatureHandler.class);
 
@@ -47,24 +50,22 @@ public class JamesSignatureHandler implements SignatureHandler, Configurable {
     public static final String ALGORITHM = "SHA1withRSA";
 
     private final KeystoreLoader keystoreLoader;
-    private String secret;
-    private String keystoreURL;
+    private final JMAPConfiguration jmapConfiguration;
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    public JamesSignatureHandler(KeystoreLoader keystoreLoader) {
+
+    @Inject
+    @VisibleForTesting JamesSignatureHandler(KeystoreLoader keystoreLoader, JMAPConfiguration jmapConfiguration) {
         this.keystoreLoader = keystoreLoader;
+        this.jmapConfiguration = jmapConfiguration;
     }
 
-    public void configure(HierarchicalConfiguration configuration) throws ConfigurationException {
-        keystoreURL = configuration.getString("tls.keystoreURL", "file://conf/keystoreURL");
-        secret = configuration.getString("tls.secret", "");
-    }
-
+    @Override
     public void init() throws Exception {
-        KeyStore keystore = keystoreLoader.load(keystoreURL, secret);
+        KeyStore keystore = keystoreLoader.load(jmapConfiguration.getKeystore(), jmapConfiguration.getSecret());
         publicKey = keystore.getCertificate(ALIAS).getPublicKey();
-        Key key = keystore.getKey(ALIAS, secret.toCharArray());
+        Key key = keystore.getKey(ALIAS, jmapConfiguration.getSecret().toCharArray());
         if (! (key instanceof PrivateKey)) {
             throw new Exception("Provided key is not a PrivateKey");
         }

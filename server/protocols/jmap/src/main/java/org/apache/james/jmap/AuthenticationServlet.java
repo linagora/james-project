@@ -20,6 +20,8 @@ package org.apache.james.jmap;
 
 import java.io.IOException;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -43,7 +45,9 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@Singleton
 public class AuthenticationServlet extends HttpServlet {
+
     public static final String JSON_CONTENT_TYPE = "application/json";
     public static final String JSON_CONTENT_TYPE_UTF8 = "application/json; charset=UTF-8";
 
@@ -54,9 +58,16 @@ public class AuthenticationServlet extends HttpServlet {
         .registerClass(AccessTokenRequest.UNIQUE_JSON_PATH, AccessTokenRequest.class)
         .build();
 
-    private UsersRepository usersRepository;
-    private ContinuationTokenManager continuationTokenManager;
-    private AccessTokenManager accessTokenManager;
+    private final UsersRepository usersRepository;
+    private final ContinuationTokenManager continuationTokenManager;
+    private final AccessTokenManager accessTokenManager;
+
+    @Inject
+    private AuthenticationServlet(UsersRepository usersRepository, ContinuationTokenManager continuationTokenManager, AccessTokenManager accessTokenManager) {
+        this.usersRepository = usersRepository;
+        this.continuationTokenManager = continuationTokenManager;
+        this.accessTokenManager = accessTokenManager;
+    }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -192,17 +203,4 @@ public class AuthenticationServlet extends HttpServlet {
     private void returnRestartAuthentication(HttpServletResponse resp) throws IOException {
         resp.sendError(HttpServletResponse.SC_FORBIDDEN);
     }
-
-    public void setUsersRepository(UsersRepository usersRepository) {
-        this.usersRepository = usersRepository;
-    }
-
-    public void setContinuationTokenManager(ContinuationTokenManager continuationTokenManager) {
-        this.continuationTokenManager = continuationTokenManager;
-    }
-
-    public void setAccessTokenManager(AccessTokenManager accessTokenManager) {
-        this.accessTokenManager = accessTokenManager;
-    }
-
 }

@@ -18,11 +18,10 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import org.apache.james.jmap.exceptions.MalformedContinuationTokenException;
 
-import java.time.DateTimeException;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
 @JsonDeserialize(builder = AccessTokenRequest.Builder.class)
 public class AccessTokenRequest {

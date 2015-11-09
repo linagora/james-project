@@ -19,18 +19,23 @@
 
 package org.apache.james.protocols.lib;
 
-import org.apache.james.filesystem.api.FileSystem;
-
 import java.io.InputStream;
 import java.security.KeyStore;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import org.apache.james.filesystem.api.FileSystem;
+
+@Singleton
 public class KeystoreLoader {
 
     public static final String JKS = "JKS";
 
-    private FileSystem fileSystem;
+    private final FileSystem fileSystem;
 
-    public void setFileSystem(FileSystem fileSystem) {
+    @Inject
+    public KeystoreLoader(FileSystem fileSystem) {
         this.fileSystem = fileSystem;
     }
 

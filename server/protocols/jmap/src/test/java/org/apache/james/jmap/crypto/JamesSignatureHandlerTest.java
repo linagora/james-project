@@ -21,20 +21,28 @@ package org.apache.james.jmap.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import javax.inject.Inject;
+
+import org.apache.onami.test.OnamiRunner;
+import org.apache.onami.test.annotation.GuiceModules;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(OnamiRunner.class)
+@GuiceModules({ JamesSignatureHandlerModule.class })
 public class JamesSignatureHandlerTest {
 
     public static final String SIGNATURE = "NeIFNei4p6vn085wCEw0pbEwJ+Oak5yEIRLZsDcRVzT9rWWOcLvDFUA3S6awi/bxPiFxqJFreVz6xqzehnUI4tUBupk3sIsqeXShhFWBpaV+m58mC41lT/A0RJa3GgCvg6kmweCRf3tOo0+gvwOQJdwCL2B21GjDCKqBHaiK+OHcsSjrQW0xuew5z84EAz3ErdH4MMNjITksxK5FG/cGQ9V6LQgwcPk0RrprVC4eY7FFHw/sQNlJpZKsSFLnn5igPQkQtjiQ4ay1/xoB7FU7aJLakxRhYOnTKgper/Ur7UWOZJaE+4EjcLwCFLF9GaCILwp9W+mf/f7j92PVEU50Vg==";
     private static final String FAKE_SIGNATURE = "MeIFNei4p6vn085wCEw0pbEwJ+Oak5yEIRLZsDcRVzT9rWWOcLvDFUA3S6awi/bxPiFxqJFreVz6xqzehnUI4tUBupk3sIsqeXShhFWBpaV+m58mC41lT/A0RJa3GgCvg6kmweCRf3tOo0+gvwOQJdwCL2B21GjDCKqBHaiK+OHcsSjrQW0xuew5z84EAz3ErdH4MMNjITksxK5FG/cGQ9V6LQgwcPk0RrprVC4eY7FFHw/sQNlJpZKsSFLnn5igPQkQtjiQ4ay1/xoB7FU7aJLakxRhYOnTKgper/Ur7UWOZJaE+4EjcLwCFLF9GaCILwp9W+mf/f7j92PVEU50Vg==";
     public static final String SOURCE = "plop";
 
-    private JamesSignatureHandler signatureHandler;
+    @Inject
+    private SignatureHandler signatureHandler;
 
     @Before
     public void setUp() throws Exception {
-        signatureHandler = new JamesSignatureHandlerProvider().provide();
+        signatureHandler.init();
     }
 
     @Test

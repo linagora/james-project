@@ -30,11 +30,13 @@ public class MultipleObjectMapperTest {
 
     private ObjectMapper mapper;
 
+    @SuppressWarnings("unused")
     private static class First {
         public String first;
         public String other;
     }
 
+    @SuppressWarnings("unused")
     private static class Second {
         public String second;
         public String other;

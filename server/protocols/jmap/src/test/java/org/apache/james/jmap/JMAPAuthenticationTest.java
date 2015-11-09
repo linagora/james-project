@@ -18,11 +18,11 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -31,26 +31,13 @@ import static org.mockito.Mockito.when;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import javax.servlet.Filter;
 
 import org.apache.james.jmap.api.AccessTokenManager;
-import org.apache.james.jmap.api.ContinuationTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
-import org.apache.james.jmap.crypto.JamesSignatureHandlerProvider;
-import org.apache.james.jmap.crypto.SignedContinuationTokenManager;
-import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
 import org.apache.james.jmap.model.ContinuationToken;
 import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,49 +47,34 @@ import com.jayway.restassured.http.ContentType;
 
 public class JMAPAuthenticationTest {
 
-    private static final int RANDOM_PORT = 0;
+    static final int RANDOM_PORT = 0;
     private static final ZonedDateTime oldDate = ZonedDateTime.parse("2011-12-03T10:15:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     private static final ZonedDateTime newDate = ZonedDateTime.parse("2011-12-03T10:16:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     private static final ZonedDateTime afterExpirationDate = ZonedDateTime.parse("2011-12-03T10:30:31+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
 
-    private Server server;
+    private TestServer server;
 
     private UsersRepository mockedUsersRepository;
-    private ContinuationTokenManager continuationTokenManager;
     private ZonedDateTimeProvider mockedZonedDateTimeProvider;
     private AccessTokenManager accessTokenManager;
 
     @Before
     public void setup() throws Exception {
-        server = new Server(RANDOM_PORT);
-
-        ServletHandler handler = new ServletHandler();
-        server.setHandler(handler);
-
         mockedUsersRepository = mock(UsersRepository.class);
         mockedZonedDateTimeProvider = mock(ZonedDateTimeProvider.class);
-        continuationTokenManager = new SignedContinuationTokenManager(new JamesSignatureHandlerProvider().provide(), mockedZonedDateTimeProvider);
-        accessTokenManager = new AccessTokenManagerImpl(new MemoryAccessTokenRepository(TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS)));
 
-        AuthenticationServlet authenticationServlet = new AuthenticationServlet();
-        authenticationServlet.setUsersRepository(mockedUsersRepository);
-        authenticationServlet.setContinuationTokenManager(continuationTokenManager);
-        authenticationServlet.setAccessTokenManager(accessTokenManager);
-        ServletHolder servletHolder = new ServletHolder(authenticationServlet);
-        handler.addServletWithMapping(servletHolder, "/*");
-
-        AuthenticationFilter authenticationFilter = new AuthenticationFilter(accessTokenManager);
-        Filter getAuthenticationFilter = new BypassOnPostFilter(authenticationFilter);
-        FilterHolder authenticationFilterHolder = new FilterHolder(getAuthenticationFilter);
-        handler.addFilterWithMapping(authenticationFilterHolder, "/*", null);
-        
+        server = new TestServer(mockedUsersRepository, mockedZonedDateTimeProvider);
         server.start();
+        accessTokenManager = server.getAccessTokenManager();
 
-        int localPort = ((ServerConnector) server.getConnectors()[0]).getLocalPort();
-        RestAssured.port = localPort;
+        RestAssured.port = server.getLocalPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset("UTF-8"));
+    }
 
+    @After
+    public void teardown() throws Exception {
+        server.stop();
     }
 
     @Test
@@ -183,7 +155,7 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustReturnJsonResponse() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         given()
@@ -199,7 +171,7 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void methodShouldContainPasswordWhenValidResquest() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         given()
@@ -215,7 +187,7 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustReturnContinuationTokenWhenValidResquest() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         given()
@@ -231,7 +203,7 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustReturnAuthenticationFailedWhenBadPassword() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
@@ -252,7 +224,7 @@ public class JMAPAuthenticationTest {
         
         when(mockedUsersRepository.test("user@domain.tld", "password"))
             .thenReturn(true);
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         given()
@@ -267,14 +239,14 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustReturnRestartAuthenticationWhenContinuationTokenIsExpired() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
         
         when(mockedUsersRepository.test("user@domain.tld", "password"))
             .thenReturn(true);
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(afterExpirationDate);
 
         given()
@@ -289,7 +261,7 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustReturnAuthenticationFailedWhenUsersRepositoryException() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
@@ -309,14 +281,14 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustReturnCreatedWhenGoodPassword() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
 
         when(mockedUsersRepository.test("user@domain.tld", "password"))
             .thenReturn(true);
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(newDate);
 
         given()
@@ -331,14 +303,14 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void mustSendJsonContainingAccessTokenWhenGoodPassword() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
 
         when(mockedUsersRepository.test("user@domain.tld", "password"))
             .thenReturn(true);
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(newDate);
 
         given()
@@ -384,14 +356,14 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void getMustReturnEndpointsWhenCorrectAuthentication() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
     
         when(mockedUsersRepository.test("user@domain.tld", "password"))
             .thenReturn(true);
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(newDate);
     
         String accessToken = fromGoodAccessTokenRequest(continuationToken);
@@ -446,14 +418,14 @@ public class JMAPAuthenticationTest {
 
     @Test
     public void deleteMustInvalidAuthorizationOnCorrectAuthorization() throws Exception {
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(oldDate);
 
         String continuationToken = fromGoodContinuationTokenRequest();
     
         when(mockedUsersRepository.test("user@domain.tld", "password"))
             .thenReturn(true);
-        when(mockedZonedDateTimeProvider.provide())
+        when(mockedZonedDateTimeProvider.get())
             .thenReturn(newDate);
     
         String accessToken = fromGoodAccessTokenRequest(continuationToken);
@@ -494,10 +466,4 @@ public class JMAPAuthenticationTest {
             .header("Authorization", accessToken)
             .delete("/authentication");
     }
-
-    @After
-    public void teardown() throws Exception {
-        server.stop();
-    }
-
 }
