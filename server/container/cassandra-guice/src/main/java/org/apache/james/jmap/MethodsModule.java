@@ -27,7 +27,10 @@ import org.apache.james.jmap.methods.JmapResponseWriterImpl;
 import org.apache.james.jmap.methods.Method;
 import org.apache.james.mailbox.cassandra.CassandraId;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.inject.AbstractModule;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 
@@ -35,8 +38,10 @@ public class MethodsModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(JmapRequestParser.class).to(JmapRequestParserImpl.class).asEagerSingleton();
-        bind(JmapResponseWriter.class).to(JmapResponseWriterImpl.class).asEagerSingleton();
+        Multibinder<Module> jacksonModules = Multibinder.newSetBinder(binder(), Module.class);
+        jacksonModules.addBinding().to(Jdk8Module.class);
+        bind(JmapRequestParser.class).to(JmapRequestParserImpl.class).in(Singleton.class);
+        bind(JmapResponseWriter.class).to(JmapResponseWriterImpl.class).in(Singleton.class);
 
         Multibinder<Method> methods = Multibinder.newSetBinder(binder(), Method.class);
         methods.addBinding().to(new TypeLiteral<GetMailboxesMethod<CassandraId>>(){});

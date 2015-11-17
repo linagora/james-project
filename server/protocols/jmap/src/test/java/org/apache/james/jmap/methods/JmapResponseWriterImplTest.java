@@ -28,6 +28,8 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.google.common.collect.ImmutableSet;
 
 public class JmapResponseWriterImplTest {
 
@@ -43,7 +45,7 @@ public class JmapResponseWriterImplTest {
                 parameters,
                 new ObjectNode(new JsonNodeFactory(false)).textNode(expectedClientId)} ;
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl();
+        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
         ProtocolResponse response = jmapResponseWriterImpl.formatMethodResponse(ProtocolRequest.deserialize(nodes), null);
 
         assertThat(response.getMethod()).isEqualTo(expectedMethod);
@@ -66,7 +68,7 @@ public class JmapResponseWriterImplTest {
         ResponseClass responseClass = new ResponseClass();
         responseClass.id = expectedId;
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl();
+        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
         ProtocolResponse response = jmapResponseWriterImpl.formatMethodResponse(ProtocolRequest.deserialize(nodes), responseClass);
 
         assertThat(response.getMethod()).isEqualTo(expectedMethod);
@@ -91,7 +93,7 @@ public class JmapResponseWriterImplTest {
                 parameters,
                 new ObjectNode(new JsonNodeFactory(false)).textNode(expectedClientId)} ;
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl();
+        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
         ProtocolResponse response = jmapResponseWriterImpl.formatErrorResponse(ProtocolRequest.deserialize(nodes));
 
         assertThat(response.getMethod()).isEqualTo(JmapResponseWriterImpl.ERROR_METHOD);

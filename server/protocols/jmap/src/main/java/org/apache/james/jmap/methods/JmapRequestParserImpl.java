@@ -20,21 +20,24 @@
 package org.apache.james.jmap.methods;
 
 import java.io.IOException;
+import java.util.Set;
+
+import javax.inject.Inject;
 
 import org.apache.james.jmap.model.ProtocolRequest;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
 public class JmapRequestParserImpl implements JmapRequestParser {
 
     private final ObjectMapper objectMapper;
 
-    public JmapRequestParserImpl() {
-        this.objectMapper = new ObjectMapper()
-                .registerModule(new Jdk8Module());
+    @Inject
+    public JmapRequestParserImpl(Set<Module> jacksonModules) {
+        this.objectMapper = new ObjectMapper().registerModules(jacksonModules);
     }
 
     @Override

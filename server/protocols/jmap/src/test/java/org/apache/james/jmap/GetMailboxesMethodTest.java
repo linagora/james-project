@@ -31,8 +31,6 @@ import java.util.UUID;
 
 import org.apache.james.http.jetty.Configuration;
 import org.apache.james.http.jetty.JettyHttpServer;
-import org.apache.james.jmap.AuthenticationFilter;
-import org.apache.james.jmap.JMAPServlet;
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.methods.GetMailboxesMethod;
@@ -56,6 +54,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -81,8 +80,8 @@ public class GetMailboxesMethodTest {
         mockedMailboxManager = mock(MailboxManager.class);
         mockedMailboxSession = mock(MailboxSession.class);
 
-        JmapRequestParser jmapRequestParser = new JmapRequestParserImpl();
-        JmapResponseWriter jmapResponseWriter = new JmapResponseWriterImpl();
+        JmapRequestParser jmapRequestParser = new JmapRequestParserImpl(ImmutableSet.of(new Jdk8Module()));
+        JmapResponseWriter jmapResponseWriter = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
 
         requestHandler = new RequestHandler(ImmutableSet.of(new GetMailboxesMethod<>(jmapRequestParser, jmapResponseWriter, mockedMailboxManager, mockedMailboxMapperFactory)));
         JMAPServlet jmapServlet = new JMAPServlet(requestHandler);

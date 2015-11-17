@@ -19,13 +19,17 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.Set;
+
+import javax.inject.Inject;
+
 import org.apache.james.jmap.model.ProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.annotations.VisibleForTesting;
 
 public class JmapResponseWriterImpl implements JmapResponseWriter {
@@ -35,9 +39,9 @@ public class JmapResponseWriterImpl implements JmapResponseWriter {
 
     private final ObjectMapper objectMapper;
 
-    public JmapResponseWriterImpl() {
-        this.objectMapper = new ObjectMapper()
-                .registerModule(new Jdk8Module());
+    @Inject
+    public JmapResponseWriterImpl(Set<Module> jacksonModules) {
+        this.objectMapper = new ObjectMapper().registerModules(jacksonModules);
     }
 
     @Override

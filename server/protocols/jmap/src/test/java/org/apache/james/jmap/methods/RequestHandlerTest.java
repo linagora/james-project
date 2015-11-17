@@ -33,6 +33,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
@@ -111,8 +112,8 @@ public class RequestHandlerTest {
 
     @Before
     public void setup() {
-        jmapRequestParser = new JmapRequestParserImpl();
-        jmapResponseWriter = new JmapResponseWriterImpl();
+        jmapRequestParser = new JmapRequestParserImpl(ImmutableSet.of(new Jdk8Module()));
+        jmapResponseWriter = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
         testee = new RequestHandler(ImmutableSet.of(new TestMethod(jmapRequestParser, jmapResponseWriter)));
     }
 
