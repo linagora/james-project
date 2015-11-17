@@ -28,7 +28,6 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 public class SwitchableDelimiterBasedFrameDecoder extends DelimiterBasedFrameDecoder {
 
 	private volatile boolean framingEnabled = true;
-	private volatile ChannelBuffer cumulation;
 
 	public SwitchableDelimiterBasedFrameDecoder(final int maxFrameLength, final boolean stripDelimiter, final ChannelBuffer... delimiters) {
 		super(maxFrameLength, stripDelimiter, delimiters);
@@ -55,10 +54,5 @@ public class SwitchableDelimiterBasedFrameDecoder extends DelimiterBasedFrameDec
 			Channels.fireMessageReceived(ctx, spareBytes);
 		}
 	}
-
-	@Override
-	protected synchronized ChannelBuffer createCumulationDynamicBuffer(final ChannelHandlerContext ctx) {
-		this.cumulation = super.createCumulationDynamicBuffer(ctx);
-		return this.cumulation;
-	}
+	
 }
