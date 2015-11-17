@@ -25,6 +25,7 @@ import org.apache.james.modules.data.CassandraRecipientRewriteTableModule;
 import org.apache.james.modules.data.CassandraUsersRepositoryModule;
 import org.apache.james.modules.mailbox.CassandraMailboxModule;
 import org.apache.james.modules.mailbox.CassandraSessionModule;
+import org.apache.james.modules.mailbox.CassandraTypesModule;
 import org.apache.james.modules.mailbox.ElasticSearchMailboxModule;
 import org.apache.james.modules.protocols.IMAPServerModule;
 import org.apache.james.modules.protocols.JMAPServerModule;
@@ -50,6 +51,7 @@ public class CassandraJamesServerMain {
     public static final Module defaultModule = Modules.combine(
             new CommonServicesModule(),
             new ConfigurationPerformerModule(),
+            new CassandraTypesModule(),
             new CassandraMailboxModule(),
             new CassandraSessionModule(),
             new ElasticSearchMailboxModule(),

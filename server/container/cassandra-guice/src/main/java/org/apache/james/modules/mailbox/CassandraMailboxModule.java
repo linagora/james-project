@@ -54,7 +54,6 @@ public class CassandraMailboxModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bindCassandraTypes();
 
         bind(SubscriptionManager.class).to(CassandraSubscriptionManager.class);
         bind(MailboxSessionMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
@@ -66,14 +65,6 @@ public class CassandraMailboxModule extends AbstractModule {
         cassandraDataDefinitions.addBinding().to(org.apache.james.mailbox.cassandra.CassandraMailboxModule.class);
     }
     
-    private void bindCassandraTypes() {
-        bind(new TypeLiteral<MessageSearchIndex<CassandraId>>(){}).to(new TypeLiteral<ElasticSearchListeningMessageSearchIndex<CassandraId>>(){});
-        bind(new TypeLiteral<MessageMapperFactory<CassandraId>>(){}).to(CassandraMailboxSessionMapperFactory.class);
-        bind(new TypeLiteral<MailboxMapperFactory<CassandraId>>(){}).to(CassandraMailboxSessionMapperFactory.class);
-        bind(new TypeLiteral<ModSeqProvider<CassandraId>>(){}).to(new TypeLiteral<CassandraModSeqProvider>(){});
-        bind(new TypeLiteral<UidProvider<CassandraId>>(){}).to(new TypeLiteral<CassandraUidProvider>(){});
-    }
-
     @Provides @Named(MAILBOXMANAGER_NAME) @Singleton
     public MailboxManager provideMailboxManager(CassandraMailboxManager cassandraMailboxManager) throws MailboxException {
         cassandraMailboxManager.init();

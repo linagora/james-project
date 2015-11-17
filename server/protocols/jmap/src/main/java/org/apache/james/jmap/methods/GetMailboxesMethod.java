@@ -29,7 +29,6 @@ import org.apache.james.jmap.model.AuthenticatedProtocolRequest;
 import org.apache.james.jmap.model.GetMailboxesRequest;
 import org.apache.james.jmap.model.GetMailboxesResponse;
 import org.apache.james.jmap.model.Mailbox;
-import org.apache.james.jmap.model.ProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
 import org.apache.james.jmap.model.Role;
 import org.apache.james.mailbox.MailboxManager;
@@ -40,17 +39,20 @@ import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
 public class GetMailboxesMethod<Id extends MailboxId> implements Method {
     
     private static final boolean DONT_RESET_RECENT = false;
+    private static final Logger LOGGER = LoggerFactory.getLogger(GetMailboxesMethod.class);
 
     private final JmapRequestParser jmapRequestParser;
     private final JmapResponseWriter jmapResponseWriter;
-    private MailboxManager mailboxManager; 
-    private MailboxMapperFactory<Id> mailboxMapperFactory;
+    private final MailboxManager mailboxManager; 
+    private final MailboxMapperFactory<Id> mailboxMapperFactory;
 
     @Inject
     @VisibleForTesting public GetMailboxesMethod(JmapRequestParser jmapRequestParser, JmapResponseWriter jmapResponseWriter, 
@@ -66,7 +68,7 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
         return "getMailboxes";
     }
 
-    public ProtocolResponse process(ProtocolRequest request) {
+    public ProtocolResponse process(AuthenticatedProtocolRequest request) {
         try {
             jmapRequestParser.extractJmapRequest(request, GetMailboxesRequest.class);
         } catch (IOException e) {
@@ -78,8 +80,9 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
         }
         
         try {
-            MailboxSession mailboxSession = ((AuthenticatedProtocolRequest)request).getMailboxSession();
-            return jmapResponseWriter.formatMethodResponse(request, getMailboxesResponse(mailboxSession));
+            MailboxSession mailboxSession = request.getMailboxSession();
+            GetMailboxesResponse mailboxesResponse = getMailboxesResponse(mailboxSession);
+            return jmapResponseWriter.formatMethodResponse(request, mailboxesResponse);
         } catch (MailboxException e) {
             return jmapResponseWriter.formatErrorResponse(request);
         }
@@ -105,6 +108,7 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
                     .unreadMessages(unreadMessages(mailboxPath, mailboxSession))
                     .build());
         } catch (MailboxException e) {
+            LOGGER.warn("Cannot find mailbox for :" + mailboxPath.getName(), e);
             return Optional.empty();
         }
     }
