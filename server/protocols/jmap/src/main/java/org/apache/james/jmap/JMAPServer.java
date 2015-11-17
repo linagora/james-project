@@ -43,13 +43,12 @@ public class JMAPServer implements Configurable {
     @Inject
     private JMAPServer(@Named(DEFAULT_JMAP_PORT) int port, 
             AuthenticationServlet authenticationServlet, JMAPServlet jmapServlet,
-            AuthenticationFilter authenticationFilter,
-            BypassOnPostFilter bypassOnPostFilter) {
+            AuthenticationFilter authenticationFilter) {
 
         server = JettyHttpServer.create(Configuration.builder()
                 .port(port)
                 .serve("/authentication").with(authenticationServlet)
-                .filter("/authentication").with(bypassOnPostFilter)
+                .filter("/authentication").with(new BypassOnPostFilter(authenticationFilter))
                 .serve("/jmap").with(jmapServlet)
                 .filter("/jmap").with(authenticationFilter)
                 .build());

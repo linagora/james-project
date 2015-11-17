@@ -41,7 +41,6 @@ public class JMAPModule extends AbstractModule {
         bind(RequestHandler.class).in(Singleton.class);
 
         bindConstant().annotatedWith(Names.named(JMAPServer.DEFAULT_JMAP_PORT)).to(DEFAULT_PORT);
-        bind(JMAPServer.class);
     }
 
     @Provides
