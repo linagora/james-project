@@ -74,8 +74,7 @@ public class AuthenticationFilter implements Filter {
 
         addSessionToRequest(httpRequest, httpResponse, authHeader);
 
-        JmapAuthenticatedRequest jmapAuthenticatedRequest = new JmapAuthenticatedRequest(httpRequest);
-        chain.doFilter(jmapAuthenticatedRequest, response);
+        chain.doFilter(httpRequest, response);
     }
 
     private void addSessionToRequest(HttpServletRequest httpRequest, HttpServletResponse httpResponse, Optional<String> authHeader) throws IOException {
@@ -90,7 +89,7 @@ public class AuthenticationFilter implements Filter {
     @VisibleForTesting MailboxSession createMailboxSession(Optional<String> authHeader) throws BadCredentialsException, MailboxException {
         String username = authHeader
             .map(AccessToken::fromString)
-            .map(accessToken -> accessTokenManager.getUsernameFromToken(accessToken))
+            .map(accessTokenManager::getUsernameFromToken)
             .orElseThrow(() -> new BadCredentialsException());
         return mailboxManager.createSystemSession(username, LOG);
     }
@@ -99,7 +98,7 @@ public class AuthenticationFilter implements Filter {
         try {
             return authHeader
                     .map(AccessToken::fromString)
-                    .map(accessToken -> accessTokenManager.isValid(accessToken))
+                    .map(accessTokenManager::isValid)
                     .orElse(false);
         } catch (NotAnUUIDException e) {
             return false;

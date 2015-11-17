@@ -32,7 +32,6 @@ import org.apache.james.jmap.methods.RequestHandler;
 import org.apache.james.jmap.model.ProtocolResponse;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -64,14 +63,12 @@ public class JMAPServletTest {
         RestAssured.port = server.getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
     }
-    
-    
+
     @After
     public void teardown() throws Exception {
         server.stop();
     }
 
-    @Ignore("implement later")
     @Test
     public void mustReturnBadRequestOnMalformedRequest() {
         String missingAnOpeningBracket = "[\"getAccounts\", {\"state\":false}, \"#0\"]]";
@@ -86,7 +83,6 @@ public class JMAPServletTest {
             .statusCode(400);
     }
 
-    @Ignore("implement later")
     @Test
     public void mustReturnInvalidArgumentOnInvalidState() {
         ObjectNode json = new ObjectNode(new JsonNodeFactory(false));
@@ -106,7 +102,6 @@ public class JMAPServletTest {
             .content(equalTo("[[\"error\",{\"type\":\"invalidArgument\"},\"#0\"]]"));
     }
 
-    @Ignore("implement later")
     @Test
     public void mustReturnAccountsOnValidRequest() {
         ObjectNode json = new ObjectNode(new JsonNodeFactory(false));

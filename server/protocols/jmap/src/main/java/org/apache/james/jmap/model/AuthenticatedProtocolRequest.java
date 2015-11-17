@@ -18,24 +18,26 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
-import org.apache.james.jmap.JmapAuthenticatedRequest;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.james.jmap.AuthenticationFilter;
 import org.apache.james.mailbox.MailboxSession;
 
 public class AuthenticatedProtocolRequest extends ProtocolRequest {
     
-    public static AuthenticatedProtocolRequest decorate(ProtocolRequest request, JmapAuthenticatedRequest authentication) {
-        return new AuthenticatedProtocolRequest(request, authentication);
+    public static AuthenticatedProtocolRequest decorate(ProtocolRequest request, HttpServletRequest httpServletRequest) {
+        return new AuthenticatedProtocolRequest(request, httpServletRequest);
     }
 
-    private final JmapAuthenticatedRequest authentication;
+    private final HttpServletRequest httpServletRequest;
 
-    private AuthenticatedProtocolRequest(ProtocolRequest request, JmapAuthenticatedRequest authentication) {
+    private AuthenticatedProtocolRequest(ProtocolRequest request, HttpServletRequest httpServletRequest) {
         super(request.getMethod(), request.getParameters(), request.getClientId());
-        this.authentication = authentication;
+        this.httpServletRequest = httpServletRequest;
         
     }
 
     public MailboxSession getMailboxSession() {
-        return authentication.getMailboxSession();
+        return (MailboxSession) httpServletRequest.getAttribute(AuthenticationFilter.MAILBOX_SESSION);
     }
 }
