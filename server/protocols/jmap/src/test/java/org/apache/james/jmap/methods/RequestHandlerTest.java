@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.james.jmap.model.AuthenticatedProtocolRequest;
 import org.apache.james.jmap.model.ProtocolRequest;
@@ -110,11 +111,13 @@ public class RequestHandlerTest {
     private RequestHandler testee;
     private JmapRequestParser jmapRequestParser;
     private JmapResponseWriter jmapResponseWriter;
+    private HttpServletRequest fakeHttpServletRequest;
 
     @Before
     public void setup() {
         jmapRequestParser = new JmapRequestParserImpl(ImmutableSet.of(new Jdk8Module()));
         jmapResponseWriter = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
+        fakeHttpServletRequest = null;
         testee = new RequestHandler(ImmutableSet.of(new TestMethod(jmapRequestParser, jmapResponseWriter)));
     }
 
@@ -126,7 +129,7 @@ public class RequestHandlerTest {
                 new ObjectNode(new JsonNodeFactory(false)).textNode("#1")} ;
 
         RequestHandler requestHandler = new RequestHandler(ImmutableSet.of());
-        requestHandler.handle(AuthenticatedProtocolRequest.decorate(ProtocolRequest.deserialize(nodes), null));
+        requestHandler.handle(AuthenticatedProtocolRequest.decorate(ProtocolRequest.deserialize(nodes), fakeHttpServletRequest));
     }
 
     @Test(expected=IllegalStateException.class)
@@ -174,7 +177,7 @@ public class RequestHandlerTest {
                 parameters,
                 new ObjectNode(new JsonNodeFactory(false)).textNode("#1")} ;
 
-        ProtocolResponse response = testee.handle(AuthenticatedProtocolRequest.decorate(ProtocolRequest.deserialize(nodes), null));
+        ProtocolResponse response = testee.handle(AuthenticatedProtocolRequest.decorate(ProtocolRequest.deserialize(nodes), fakeHttpServletRequest));
 
         assertThat(response.getResults().findValue("id").asText()).isEqualTo("testId");
         assertThat(response.getResults().findValue("name").asText()).isEqualTo("testName");
