@@ -45,7 +45,7 @@ import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
 import org.apache.james.jmap.model.ContinuationToken;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.user.api.UsersRepository;
-import org.apache.james.user.lib.mock.MockUsersRepository;
+import org.apache.james.user.lib.mock.InMemoryUsersRepository;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +70,7 @@ public class JMAPAuthenticationTest {
 
     @Before
     public void setup() throws Exception {
-        usersRepository = new MockUsersRepository();
+        usersRepository = new InMemoryUsersRepository();
         zonedDateTimeProvider = new FixedDateZonedDateTimeProvider();
         MailboxManager mockedMailboxManager = mock(MailboxManager.class);
         accessTokenManager = new AccessTokenManagerImpl(new MemoryAccessTokenRepository(TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS)));
