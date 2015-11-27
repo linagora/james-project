@@ -23,19 +23,12 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
-import org.apache.james.jmap.model.ProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.annotations.VisibleForTesting;
 
 public class JmapResponseWriterImpl implements JmapResponseWriter {
-
-    @VisibleForTesting static final String DEFAULT_ERROR_MESSAGE = "Error while processing";
-    @VisibleForTesting static final String ERROR_METHOD = "error";
 
     private final ObjectMapper objectMapper;
 
@@ -45,19 +38,10 @@ public class JmapResponseWriterImpl implements JmapResponseWriter {
     }
 
     @Override
-    public ProtocolResponse formatMethodResponse(ProtocolRequest request, JmapResponse jmapResponse) {
-        ObjectNode objectNode = objectMapper.valueToTree(jmapResponse);
-        return new ProtocolResponse(request.getMethod(), objectNode, request.getClientId());
-    }
-
-    @Override
-    public ProtocolResponse formatErrorResponse(ProtocolRequest request) {
-        return formatErrorResponse(request, DEFAULT_ERROR_MESSAGE);
-    }
-
-    @Override
-    public ProtocolResponse formatErrorResponse(ProtocolRequest request, String error) {
-        ObjectNode errorObjectNode = new ObjectNode(new JsonNodeFactory(false)).put("type", error);
-        return new ProtocolResponse(ERROR_METHOD, errorObjectNode, request.getClientId());
+    public ProtocolResponse formatMethodResponse(JmapResponse jmapResponse) {
+        return new ProtocolResponse(
+                jmapResponse.getMethod(), 
+                objectMapper.valueToTree(jmapResponse.getResponse()), 
+                jmapResponse.getClientId());
     }
 }

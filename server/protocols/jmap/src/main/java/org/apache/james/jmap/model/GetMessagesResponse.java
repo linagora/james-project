@@ -18,39 +18,20 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
+import java.util.List;
+
 import org.apache.james.jmap.methods.Method;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.base.Preconditions;
+public class GetMessagesResponse implements Method.Response {
 
-public class ProtocolResponse {
+    private final List<Message> messages;
 
-    private final Method.Name method;
-    private final ObjectNode results;
-    private final ClientId clientId;
-
-    public ProtocolResponse(Method.Name name, ObjectNode results, ClientId clientId) {
-        Preconditions.checkNotNull(name, "method is mandatory");
-        Preconditions.checkNotNull(results, "results is mandatory");
-        Preconditions.checkNotNull(clientId,  "clientId is mandatory");
-        this.method = name;
-        this.results = results;
-        this.clientId = clientId;
+    public GetMessagesResponse(List<Message> messages) {
+        this.messages = messages;
+    }
+    
+    public List<Message> list() {
+        return messages;
     }
 
-    public Method.Name getMethod() {
-        return method;
-    }
-
-    public ObjectNode getResults() {
-        return results;
-    }
-
-    public ClientId getClientId() {
-        return clientId;
-    }
-
-    public Object[] asProtocolSpecification() {
-        return new Object[] { getMethod(), getResults(), getClientId() };
-    }
 }

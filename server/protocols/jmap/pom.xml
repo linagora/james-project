@@ -155,6 +155,11 @@
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>
+                    <artifactId>apache-james-mailbox-memory</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
                     <artifactId>apache-james-mailbox-store</artifactId>
                 </dependency>
                 <dependency>
@@ -196,6 +201,11 @@
                     <version>2.6.3</version>
                 </dependency>
                 <dependency>
+                    <groupId>com.github.fge</groupId>
+                    <artifactId>throwing-lambdas</artifactId>
+                    <version>0.5.0</version>
+                </dependency>
+                <dependency>
                     <groupId>com.jayway.restassured</groupId>
                     <artifactId>rest-assured</artifactId>
                     <version>2.5.0</version>
@@ -215,6 +225,7 @@
                     <version>3.0.1</version>
                     <scope>provided</scope>
                 </dependency>
+                
                 <dependency>
                     <groupId>org.apache.james</groupId>
                     <artifactId>apache-james-mailbox-store</artifactId>
@@ -229,6 +240,7 @@
                 <dependency>
                     <groupId>org.assertj</groupId>
                     <artifactId>assertj-core</artifactId>
+                    <version>${assertj3}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
@@ -242,6 +254,11 @@
                     <artifactId>jetty-servlet</artifactId>
                     <version>9.3.2.v20150730</version>
                     <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.javatuples</groupId>
+                    <artifactId>javatuples</artifactId>
+                    <version>1.2</version>
                 </dependency>
                 <dependency>
                     <groupId>org.mockito</groupId>

@@ -18,80 +18,70 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
-import java.util.List;
+import java.util.Arrays;
 import java.util.Optional;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.JmapRequest;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.collect.ImmutableList;
 
-@JsonDeserialize(builder = GetMailboxesRequest.Builder.class)
-public class GetMailboxesRequest implements JmapRequest {
+public class GetMessagesRequest implements JmapRequest {
 
     public static Builder builder() {
         return new Builder();
     }
-
-    @JsonPOJOBuilder(withPrefix = "")
+    
     public static class Builder {
-
-        private String accountId;
-        private ImmutableList.Builder<String> ids;
-        private ImmutableList.Builder<String> properties;
+        
+        private Optional<String> accountId;
+        private ImmutableList.Builder<MessageId> messages;
+        private Optional<ImmutableList<Property>> properties;
 
         private Builder() {
-            ids = ImmutableList.builder();
-            properties = ImmutableList.builder();
+            accountId = Optional.empty();
+            messages = ImmutableList.builder();
+            properties = Optional.empty();
         }
-
+        
         public Builder accountId(String accountId) {
-            if (accountId != null) {
-                throw new NotImplementedException();
-            }
-            return this;
-        }
-
-        public Builder ids(List<String> ids) {
-            if (ids != null) {
-                throw new NotImplementedException();
-            }
-            return this;
-        }
-
-        public Builder properties(List<String> properties) {
-            if (properties != null) {
-                throw new NotImplementedException();
-            }
+            this.accountId = Optional.of(accountId);
             return this;
         }
         
-        public GetMailboxesRequest build() {
-            return new GetMailboxesRequest(Optional.ofNullable(accountId), ids.build(), properties.build());
+        public Builder messages(MessageId... messages) {
+            this.messages.addAll(Arrays.asList(messages));
+            return this;
+        }
+
+        public Builder properties(Property... properties) {
+            this.properties = Optional.of(ImmutableList.copyOf(properties));
+            return this;
+        }
+        
+        public GetMessagesRequest build() {
+            return new GetMessagesRequest(accountId, messages.build(), properties);
         }
     }
 
     private final Optional<String> accountId;
-    private final List<String> ids;
-    private final List<String> properties;
+    private final ImmutableList<MessageId> messages;
+    private final Optional<ImmutableList<Property>> properties;
 
-    private GetMailboxesRequest(Optional<String> accountId, List<String> ids, List<String> properties) {
+    public GetMessagesRequest(Optional<String> accountId, ImmutableList<MessageId> messages, Optional<ImmutableList<Property>> properties) {
         this.accountId = accountId;
-        this.ids = ids;
+        this.messages = messages;
         this.properties = properties;
     }
-
+    
     public Optional<String> getAccountId() {
         return accountId;
     }
-
-    public List<String> getIds() {
-        return ids;
+    
+    public ImmutableList<MessageId> getMessageIds() {
+        return messages;
     }
-
-    public List<String> getProperties() {
+    
+    public Optional<ImmutableList<Property>> getProperties() {
         return properties;
     }
 }

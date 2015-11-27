@@ -18,39 +18,47 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
-import org.apache.james.jmap.methods.Method;
+import com.google.common.collect.ImmutableList;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.base.Preconditions;
+public enum Property {
+    id("id"),
+    blobId("blobId"),
+    threadId("threadId"),
+    mailboxIds("mailboxIds"),
+    inReplyToMessageId("inReplyToMessageId"),
+    isUnread("isUnread"),
+    isFlagged("isFlagged"),
+    isAnswered("isAnswered"),
+    isDraft("isDraft"),
+    hasAttachment("hasAttachment"),
+    headers("headers"),
+    from("from"),
+    to("to"),
+    cc("cc"),
+    bcc("bcc"),
+    replyTo("replyTo"),
+    subject("subject"),
+    date("date"),
+    size("size"),
+    preview("preview"),
+    textBody("textBody"),
+    htmlBody("htmlBody"),
+    attachments("attachments"),
+    attachedMessages("attachedMessages"),
+    body("body"),
+    headers_property("headers.property");
+    
+    private String property;
 
-public class ProtocolResponse {
-
-    private final Method.Name method;
-    private final ObjectNode results;
-    private final ClientId clientId;
-
-    public ProtocolResponse(Method.Name name, ObjectNode results, ClientId clientId) {
-        Preconditions.checkNotNull(name, "method is mandatory");
-        Preconditions.checkNotNull(results, "results is mandatory");
-        Preconditions.checkNotNull(clientId,  "clientId is mandatory");
-        this.method = name;
-        this.results = results;
-        this.clientId = clientId;
+    private Property(String property) {
+        this.property = property;
     }
-
-    public Method.Name getMethod() {
-        return method;
+    
+    public String getProperty() {
+        return property;
     }
-
-    public ObjectNode getResults() {
-        return results;
-    }
-
-    public ClientId getClientId() {
-        return clientId;
-    }
-
-    public Object[] asProtocolSpecification() {
-        return new Object[] { getMethod(), getResults(), getClientId() };
+    
+    public static ImmutableList<Property> all() {
+        return ImmutableList.copyOf(values());
     }
 }

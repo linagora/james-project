@@ -28,7 +28,9 @@ import static org.mockito.Mockito.when;
 
 import org.apache.james.http.jetty.Configuration;
 import org.apache.james.http.jetty.JettyHttpServer;
+import org.apache.james.jmap.methods.Method;
 import org.apache.james.jmap.methods.RequestHandler;
+import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.ProtocolResponse;
 import org.junit.After;
 import org.junit.Before;
@@ -89,7 +91,7 @@ public class JMAPServletTest {
         json.put("type", "invalidArgument");
 
         when(requestHandler.handle(any()))
-            .thenReturn(new ProtocolResponse("error", json, "#0"));
+            .thenReturn(new ProtocolResponse(Method.name("error"), json, ClientId.of("#0")));
 
         given()
             .accept(ContentType.JSON)
@@ -113,7 +115,7 @@ public class JMAPServletTest {
         arrayNode.add(list);
 
         when(requestHandler.handle(any()))
-            .thenReturn(new ProtocolResponse("accounts", json, "#0"));
+            .thenReturn(new ProtocolResponse(Method.name("accounts"), json, ClientId.of("#0")));
 
         given()
             .accept(ContentType.JSON)

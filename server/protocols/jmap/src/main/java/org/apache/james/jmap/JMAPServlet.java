@@ -41,7 +41,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 
 public class JMAPServlet extends HttpServlet {
 
@@ -52,7 +51,7 @@ public class JMAPServlet extends HttpServlet {
     private final RequestHandler requestHandler;
 
     @Inject
-    @VisibleForTesting JMAPServlet(RequestHandler requestHandler) {
+    public JMAPServlet(RequestHandler requestHandler) {
         this.requestHandler = requestHandler;
         this.objectMapper = new ObjectMapper();
     }
@@ -73,7 +72,7 @@ public class JMAPServlet extends HttpServlet {
             resp.setStatus(SC_BAD_REQUEST);
         }
     }
-
+    
     private Stream<JsonNode[]> requestAsJsonStream(HttpServletRequest req) throws IOException, JsonParseException, JsonMappingException {
         return Arrays.stream(
                 objectMapper.readValue(req.getInputStream(), JsonNode[][].class));

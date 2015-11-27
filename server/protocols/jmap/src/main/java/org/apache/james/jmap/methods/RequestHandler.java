@@ -19,29 +19,58 @@
 
 package org.apache.james.jmap.methods;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.jmap.methods.JmapResponse.Builder;
 import org.apache.james.jmap.model.AuthenticatedProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
+import org.apache.james.mailbox.MailboxSession;
 
 public class RequestHandler {
 
-    private final Map<String, Method> methods;
+    private final JmapRequestParser jmapRequestParser;
+    private final JmapResponseWriter jmapResponseWriter;
+    private final Map<Method.Name, Method> methods;
 
     @Inject
-    public RequestHandler(Set<Method> methods) {
+    public RequestHandler(Set<Method> methods, JmapRequestParser jmapRequestParser, JmapResponseWriter jmapResponseWriter) {
+        this.jmapRequestParser = jmapRequestParser;
+        this.jmapResponseWriter = jmapResponseWriter;
         this.methods = methods.stream()
-                .collect(Collectors.toMap(Method::methodName, method -> method));
+                .collect(Collectors.toMap(Method::methodName, Function.identity()));
     }
 
     public ProtocolResponse handle(AuthenticatedProtocolRequest request) {
+        Builder responseBuilder = JmapResponse.forRequest(request);
         return Optional.ofNullable(methods.get(request.getMethod()))
-            .map(method -> method.process(request))
-            .orElseThrow(() -> new IllegalStateException("unknown method"));
+                        .map(extractAndProcess(request, responseBuilder))
+                        .map(jmapResponseWriter::formatMethodResponse)
+                        .orElseThrow(() -> new IllegalStateException("unknown method"));
+    }
+    
+    private Function<Method, JmapResponse> extractAndProcess(AuthenticatedProtocolRequest request, JmapResponse.Builder responseBuilder) {
+        MailboxSession mailboxSession = request.getMailboxSession();
+        return (Method method) -> {
+                    try {
+                        JmapRequest jmapRequest = jmapRequestParser.extractJmapRequest(request, method.requestType());
+                        return responseBuilder
+                                .response(method.process(jmapRequest, mailboxSession))
+                                .build();
+                    } catch (IOException e) {
+                        if (e.getCause() instanceof NotImplementedException) {
+                            return responseBuilder.error("Not yet implemented").build();
+                        }
+                        return responseBuilder.error("invalidArguments").build();
+                    }
+                };
+        
     }
 }
