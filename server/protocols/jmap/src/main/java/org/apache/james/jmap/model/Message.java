@@ -27,8 +27,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.mailbox.elasticsearch.json.EMailer;
-import org.apache.james.mailbox.elasticsearch.json.IndexableMessage;
+import org.apache.james.jmap.model.message.EMailer;
+import org.apache.james.jmap.model.message.IndexableMessage;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.util.streams.Collectors;
