@@ -151,7 +151,7 @@
             <dependencies>
                 <dependency>
                     <groupId>org.apache.james</groupId>
-                    <artifactId>apache-james-backends-cassandra</artifactId>
+                    <artifactId>james-server-util-java8</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>

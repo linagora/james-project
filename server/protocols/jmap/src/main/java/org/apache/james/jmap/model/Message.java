@@ -25,13 +25,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.elasticsearch.json.EMailer;
 import org.apache.james.mailbox.elasticsearch.json.IndexableMessage;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.util.streams.Collectors;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -87,7 +87,7 @@ public class Message {
                     Strings.emptyToNull(
                         im.getSubjects()
                             .stream()
-                            .collect(Collectors.joining(MULTIVALUED_HEADERS_SEPARATOR))))
+                            .collect(java.util.stream.Collectors.joining(MULTIVALUED_HEADERS_SEPARATOR))))
                 .orElse(NO_SUBJECT);
     }
     
@@ -101,7 +101,7 @@ public class Message {
     private static ImmutableList<Emailer> fromElasticSearchEmailers(Set<EMailer> emailers) {
         return emailers.stream()
                     .map(Message::fromElasticSearchEmailer)
-                    .collect(org.apache.james.backends.cassandra.utils.Collectors.toImmutableList());
+                    .collect(Collectors.toImmutableList());
     }
     
     private static Emailer fromElasticSearchEmailer(EMailer emailer) {
@@ -132,7 +132,7 @@ public class Message {
                 .asMap()
                 .entrySet()
                 .stream()
-                .collect(org.apache.james.backends.cassandra.utils.Collectors.toImmutableMap(Map.Entry::getKey, x -> joinOnComma(x.getValue())));
+                .collect(Collectors.toImmutableMap(Map.Entry::getKey, x -> joinOnComma(x.getValue())));
     }
     
     private static String getHeaderAsSingleValue(IndexableMessage im, String header) {
