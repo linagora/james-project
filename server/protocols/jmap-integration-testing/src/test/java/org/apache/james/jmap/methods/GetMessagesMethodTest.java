@@ -176,8 +176,9 @@ public abstract class GetMessagesMethodTest {
             .extract()
             .asString();
 
+        System.out.println(response);
         assertThat(jsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].messageId")).containsExactly("username@domain.tld-inbox-1");
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].id")).containsExactly("username@domain.tld-inbox-1");
         assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].subject")).containsExactly("my test subject");
     }
 }
