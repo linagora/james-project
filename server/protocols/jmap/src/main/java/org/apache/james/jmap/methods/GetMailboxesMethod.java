@@ -46,7 +46,7 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
     
     private static final boolean DONT_RESET_RECENT = false;
     private static final Logger LOGGER = LoggerFactory.getLogger(GetMailboxesMethod.class);
-    private static final Method.Name METHOD_NAME = Method.name("getMailboxes");
+    private static final Method.RequestName METHOD_NAME = Method.name("getMailboxes");
     
     private final MailboxManager mailboxManager; 
     private final MailboxMapperFactory<Id> mailboxMapperFactory;
@@ -58,7 +58,7 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
     }
 
     @Override
-    public Name methodName() {
+    public RequestName methodName() {
         return METHOD_NAME;
     }
 

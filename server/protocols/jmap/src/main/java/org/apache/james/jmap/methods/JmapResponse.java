@@ -31,19 +31,21 @@ public class JmapResponse {
     }
     
     public static Builder forRequest(ProtocolRequest request) {
-        return builder().clientId(request.getClientId()).method(request.getMethod());
+        return builder()
+                .clientId(request.getClientId())
+                .method(Method.responseFrom(request.getMethod()));
     }
-    
+
     public static class Builder {
         
-        private Method.Name method;
+        private Method.ResponseName method;
         private ClientId id;
         private Object response;
 
         private Builder() {
         }
 
-        public Builder method(Method.Name name) {
+        public Builder method(Method.ResponseName name) {
             this.method = name;
             return this;
         }
@@ -64,7 +66,7 @@ public class JmapResponse {
 
         public Builder error(String message) {
             this.response = new ErrorResponse(message);
-            this.method = ERROR_METHOD;
+            this.method = Method.error();
             return this;
         }
 
@@ -88,19 +90,18 @@ public class JmapResponse {
     }
     
     @VisibleForTesting static final String DEFAULT_ERROR_MESSAGE = "Error while processing";
-    @VisibleForTesting static final Method.Name ERROR_METHOD = Method.name("error");
 
-    private final Method.Name method;
+    private final Method.ResponseName method;
     private final ClientId clientId;
     private final Object response;
     
-    private JmapResponse(Method.Name method, ClientId clientId, Object response) {
+    private JmapResponse(Method.ResponseName method, ClientId clientId, Object response) {
         this.method = method;
         this.clientId = clientId;
         this.response = response;
     }
 
-    public Method.Name getMethod() {
+    public Method.ResponseName getMethod() {
         return method;
     }
     

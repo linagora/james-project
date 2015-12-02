@@ -83,14 +83,14 @@ public class RequestHandlerTest {
 
     public static class TestMethod implements Method {
 
-        private static final Method.Name METHOD_NAME = Method.name("testMethod");
+        private static final Method.RequestName METHOD_NAME = Method.name("testMethod");
         
         @Inject
         @VisibleForTesting TestMethod() {
         }
 
         @Override
-        public Name methodName() {
+        public RequestName methodName() {
             return METHOD_NAME;
         }
 
@@ -163,15 +163,15 @@ public class RequestHandlerTest {
 
     private class NamedMethod implements Method {
 
-        private final Name methodName;
+        private final RequestName methodName;
 
-        public NamedMethod(Method.Name methodName) {
+        public NamedMethod(Method.RequestName methodName) {
             this.methodName = methodName;
             
         }
 
         @Override
-        public Name methodName() {
+        public RequestName methodName() {
             return methodName;
         }
 

@@ -19,7 +19,7 @@
 package org.apache.james.jmap.model;
 
 import org.apache.james.jmap.methods.Method;
-import org.apache.james.jmap.methods.Method.Name;
+import org.apache.james.jmap.methods.Method.RequestName;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -35,17 +35,17 @@ public class ProtocolRequest {
         return new ProtocolRequest(Method.name(json[0].textValue()), (ObjectNode) json[1], ClientId.of(json[2].textValue()));
     }
 
-    private final Method.Name method;
+    private final Method.RequestName method;
     private final ObjectNode parameters;
     private final ClientId clientId;
 
-    protected ProtocolRequest(Method.Name method, ObjectNode parameters, ClientId clientId) {
+    protected ProtocolRequest(Method.RequestName method, ObjectNode parameters, ClientId clientId) {
         this.method = method;
         this.parameters = parameters;
         this.clientId = clientId;
     }
 
-    public Name getMethod() {
+    public RequestName getMethod() {
         return method;
     }
 

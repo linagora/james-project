@@ -91,7 +91,7 @@ public class JMAPServletTest {
         json.put("type", "invalidArgument");
 
         when(requestHandler.handle(any()))
-            .thenReturn(new ProtocolResponse(Method.name("error"), json, ClientId.of("#0")));
+            .thenReturn(new ProtocolResponse(Method.error(), json, ClientId.of("#0")));
 
         given()
             .accept(ContentType.JSON)
@@ -115,7 +115,7 @@ public class JMAPServletTest {
         arrayNode.add(list);
 
         when(requestHandler.handle(any()))
-            .thenReturn(new ProtocolResponse(Method.name("accounts"), json, ClientId.of("#0")));
+            .thenReturn(new ProtocolResponse(Method.responseFrom(Method.name("getAccounts")), json, ClientId.of("#0")));
 
         given()
             .accept(ContentType.JSON)

@@ -25,11 +25,11 @@ import com.google.common.base.Preconditions;
 
 public class ProtocolResponse {
 
-    private final Method.Name method;
+    private final Method.ResponseName method;
     private final ObjectNode results;
     private final ClientId clientId;
 
-    public ProtocolResponse(Method.Name name, ObjectNode results, ClientId clientId) {
+    public ProtocolResponse(Method.ResponseName name, ObjectNode results, ClientId clientId) {
         Preconditions.checkNotNull(name, "method is mandatory");
         Preconditions.checkNotNull(results, "results is mandatory");
         Preconditions.checkNotNull(clientId,  "clientId is mandatory");
@@ -38,7 +38,7 @@ public class ProtocolResponse {
         this.clientId = clientId;
     }
 
-    public Method.Name getMethod() {
+    public Method.ResponseName getMethod() {
         return method;
     }
 

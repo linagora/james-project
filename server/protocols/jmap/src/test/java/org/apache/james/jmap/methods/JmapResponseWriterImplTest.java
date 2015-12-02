@@ -38,13 +38,13 @@ public class JmapResponseWriterImplTest {
     @Ignore
     @Test(expected=IllegalStateException.class)
     public void formatMethodResponseShouldWorkWhenNullJmapResponse() {
-        String expectedMethod = "unknwonMethod";
+        String expectedMethod = "nwonMethod";
         String expectedClientId = "#1";
         String expectedId = "myId";
 
         ObjectNode parameters = new ObjectNode(new JsonNodeFactory(false));
         parameters.put("id", expectedId);
-        JsonNode[] nodes = new JsonNode[] { new ObjectNode(new JsonNodeFactory(false)).textNode(expectedMethod),
+        JsonNode[] nodes = new JsonNode[] { new ObjectNode(new JsonNodeFactory(false)).textNode("unknwonMethod"),
                 parameters,
                 new ObjectNode(new JsonNodeFactory(false)).textNode(expectedClientId)} ;
 
@@ -55,20 +55,20 @@ public class JmapResponseWriterImplTest {
                 .response(null)
                 .build());
 
-        assertThat(response.getMethod()).isEqualTo(expectedMethod);
+        assertThat(response.getMethod().getName()).isEqualTo(expectedMethod);
         assertThat(response.getResults().findValue("id").asText()).isEqualTo(expectedId);
         assertThat(response.getClientId()).isEqualTo(expectedClientId);
     }
 
     @Test
     public void formatMethodResponseShouldWork() {
-        String expectedMethod = "unknwonMethod";
+        String expectedMethod = "nwonMethod";
         String expectedClientId = "#1";
         String expectedId = "myId";
 
         ObjectNode parameters = new ObjectNode(new JsonNodeFactory(false));
         parameters.put("id", expectedId);
-        JsonNode[] nodes = new JsonNode[] { new ObjectNode(new JsonNodeFactory(false)).textNode(expectedMethod),
+        JsonNode[] nodes = new JsonNode[] { new ObjectNode(new JsonNodeFactory(false)).textNode("unknwonMethod"),
                 parameters,
                 new ObjectNode(new JsonNodeFactory(false)).textNode(expectedClientId)} ;
 
@@ -82,7 +82,7 @@ public class JmapResponseWriterImplTest {
                 .response(responseClass)
                 .build());
 
-        assertThat(response.getMethod()).isEqualTo(Method.name(expectedMethod));
+        assertThat(response.getMethod().getName()).isEqualTo(expectedMethod);
         assertThat(response.getResults().findValue("id").asText()).isEqualTo(expectedId);
         assertThat(response.getClientId()).isEqualTo(ClientId.of(expectedClientId));
     }
@@ -111,7 +111,7 @@ public class JmapResponseWriterImplTest {
                     .error()
                     .build());
 
-        assertThat(response.getMethod()).isEqualTo(JmapResponse.ERROR_METHOD);
+        assertThat(response.getMethod()).isEqualToComparingFieldByField(Method.error());
         assertThat(response.getResults().findValue("type").asText()).isEqualTo(JmapResponse.DEFAULT_ERROR_MESSAGE);
         assertThat(response.getClientId()).isEqualTo(ClientId.of(expectedClientId));
     }

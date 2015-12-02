@@ -31,30 +31,85 @@ import com.google.common.base.Preconditions;
 public interface Method {
 
     interface Response {};
-    
-    public static Name name(String name) {
-        return new Name(name);
+
+    public static RequestName name(String name) {
+        return new RequestName(name);
     }
-    
-    public class Name {
+
+    public static ResponseName responseFrom(RequestName requestName) {
+        String name = requestName.getName();
+        Preconditions.checkNotNull(name);
+        Preconditions.checkArgument(!name.isEmpty());
+
+        String substring = name.substring(3);
+        return new ResponseName(Character.toLowerCase(substring.charAt(0)) + substring.substring(1));
+    }
+
+    public static ResponseName error() {
+        return new ResponseError();
+    }
+
+    public interface Name {
+
+        String getName();
+    }
+
+    public class RequestName implements Name {
 
         private final String name;
         
-        private Name(String name) {
+        private RequestName(String name) {
             Preconditions.checkNotNull(name);
             Preconditions.checkArgument(!name.isEmpty());
             this.name = name;
         }
 
         @JsonValue
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof RequestName) {
+                RequestName other = (RequestName) obj;
+                return Objects.equals(name, other.name);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name);
+        }
+
+        @Override
+        public String toString() {
+            return toStringHelper(this).add("name", name).toString();
+        }
+    }
+
+    public class ResponseName implements Name {
+
+        private final String name;
+
+        protected ResponseName(String name) {
+            Preconditions.checkNotNull(name);
+            Preconditions.checkArgument(!name.isEmpty());
+            this.name = name;
+        }
+
+        @JsonValue
+        @Override
         public String getName() {
             return name;
         }
         
         @Override
         public boolean equals(Object obj) {
-            if (obj instanceof Name) {
-                Name other = (Name) obj;
+            if (obj instanceof ResponseName) {
+                ResponseName other = (ResponseName) obj;
                 return Objects.equals(name, other.name);
             }
             return false;
@@ -70,8 +125,15 @@ public interface Method {
             return toStringHelper(this).add("name", name).toString();
         }
     }
-    
-    Name methodName();
+
+    public class ResponseError extends ResponseName {
+
+        protected ResponseError() {
+            super("error");
+        }
+    }
+
+    RequestName methodName();
 
     Class<? extends JmapRequest> requestType();
     
