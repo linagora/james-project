@@ -16,32 +16,49 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
-package org.apache.james.backends.cassandra.utils;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collector;
+package org.apache.james.jmap.model;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
-public class Collectors {
+public enum Property {
+    id("id"),
+    blobId("blobId"),
+    threadId("threadId"),
+    mailboxIds("mailboxIds"),
+    inReplyToMessageId("inReplyToMessageId"),
+    isUnread("isUnread"),
+    isFlagged("isFlagged"),
+    isAnswered("isAnswered"),
+    isDraft("isDraft"),
+    hasAttachment("hasAttachment"),
+    headers("headers"),
+    from("from"),
+    to("to"),
+    cc("cc"),
+    bcc("bcc"),
+    replyTo("replyTo"),
+    subject("subject"),
+    date("date"),
+    size("size"),
+    preview("preview"),
+    textBody("textBody"),
+    htmlBody("htmlBody"),
+    attachments("attachments"),
+    attachedMessages("attachedMessages"),
+    body("body"),
+    headers_property("headers.property");
+    
+    private String property;
 
-    public static <T> Collector<T, List<T>, ImmutableList<T>> toImmutableList() {
-        return Collector.of(ArrayList::new, List::add, (left, right) -> {
-            left.addAll(right);
-            return left;
-        }, ImmutableList::copyOf);
+    private Property(String property) {
+        this.property = property;
     }
     
-    public static <T, K, V> Collector<T, ImmutableMap.Builder<K, V>, ImmutableMap<K, V>> toImmutableMap(
-            Function<? super T, ? extends K> keyMapper,
-            Function<? super T, ? extends V> valueMapper) {
-        return Collector.of(ImmutableMap::<K,V>builder,
-                (acc, v) -> acc.put(keyMapper.apply(v), valueMapper.apply(v)),
-                (map1, map2) -> map1.putAll(map2.build()),
-                ImmutableMap.Builder::build);
+    public String getProperty() {
+        return property;
+    }
+    
+    public static ImmutableList<Property> all() {
+        return ImmutableList.copyOf(values());
     }
 }

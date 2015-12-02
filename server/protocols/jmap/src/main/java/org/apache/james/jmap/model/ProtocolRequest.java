@@ -19,7 +19,6 @@
 package org.apache.james.jmap.model;
 
 import org.apache.james.jmap.methods.Method;
-import org.apache.james.jmap.methods.Method.Name;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -45,7 +44,7 @@ public class ProtocolRequest {
         this.clientId = clientId;
     }
 
-    public Name getMethod() {
+    public Method.Name getMethod() {
         return method;
     }
 
