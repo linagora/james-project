@@ -19,6 +19,7 @@
 package org.apache.james.backends.cassandra;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.thrift.transport.TTransportException;
@@ -28,13 +29,14 @@ import com.google.common.base.Throwables;
 
 public class EmbeddedCassandra {
 
+
     public static EmbeddedCassandra createStartServer() {
         return new EmbeddedCassandra();
     }
-    
+
     private EmbeddedCassandra() {
         try {
-            EmbeddedCassandraServerHelper.startEmbeddedCassandra(20000L);
+            EmbeddedCassandraServerHelper.startEmbeddedCassandra(TimeUnit.SECONDS.toMillis(20));
         } catch (ConfigurationException | TTransportException | IOException | InterruptedException e) {
             Throwables.propagate(e);
         }
