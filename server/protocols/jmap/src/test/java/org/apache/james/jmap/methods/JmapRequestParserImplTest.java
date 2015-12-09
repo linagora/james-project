@@ -41,7 +41,7 @@ public class JmapRequestParserImplTest {
         jmapRequestParserImpl.extractJmapRequest(ProtocolRequest.deserialize(nodes), null);
     }
 
-    @Test(expected=UnrecognizedPropertyException.class)
+    @Test
     public void extractJmapRequestShouldNotThrowWhenJsonContainsUnknownProperty() throws Exception {
         ObjectNode parameters = new ObjectNode(new JsonNodeFactory(false));
         parameters.put("id", "myId");
