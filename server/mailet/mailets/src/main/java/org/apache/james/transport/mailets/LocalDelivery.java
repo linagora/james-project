@@ -31,6 +31,7 @@ import org.apache.commons.collections.iterators.IteratorChain;
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailetConfig;
@@ -51,7 +52,13 @@ public class LocalDelivery extends GenericMailet {
     private UsersRepository usersRepository;
     private MailboxManager mailboxManager;
     private DomainList domainList;
+    private SieveRepository sieveRepository;
     private FileSystem fileSystem;
+
+    @Inject
+    public void setSieveRepository(SieveRepository sieveRepository) {
+        this.sieveRepository = sieveRepository;
+    }
 
     @Inject
     public void setRrt(org.apache.james.rrt.api.RecipientRewriteTable rrt) {
@@ -116,13 +123,8 @@ public class LocalDelivery extends GenericMailet {
         recipientRewriteTable.setRecipientRewriteTable(rrt);
         recipientRewriteTable.init(getMailetConfig());
  
-        sieveMailet = new SieveMailet();
-        sieveMailet.setUsersRepository(usersRepository);
-        sieveMailet.setMailboxManager(mailboxManager);
+        sieveMailet = new SieveMailet(usersRepository, mailboxManager, sieveRepository, "INBOX");
         sieveMailet.init(new MailetConfig() {
-            /*
-             * @see org.apache.mailet.MailetConfig#getInitParameter(java.lang.String)
-             */
             public String getInitParameter(String name) {
                 if ("addDeliveryHeader".equals(name)) {
                     return "Delivered-To";
@@ -132,9 +134,7 @@ public class LocalDelivery extends GenericMailet {
                     return getMailetConfig().getInitParameter(name);
                 }
             }
-            /*
-             * @see org.apache.mailet.MailetConfig#getInitParameterNames()
-             */
+
             public Iterator<String> getInitParameterNames() {
                 IteratorChain c = new IteratorChain();
                 Collection<String> h = new ArrayList<String>();
@@ -144,15 +144,11 @@ public class LocalDelivery extends GenericMailet {
                 c.addIterator(h.iterator());
                 return c;
             }
-            /*
-             * @see org.apache.mailet.MailetConfig#getMailetContext()
-             */
+
             public MailetContext getMailetContext() {
                 return getMailetConfig().getMailetContext();
             }
-            /*
-             * @see org.apache.mailet.MailetConfig#getMailetName()
-             */
+
             public String getMailetName() {
                 return getMailetConfig().getMailetName();
             }
@@ -160,8 +156,6 @@ public class LocalDelivery extends GenericMailet {
         });
         // Override the default value of "quiet"
         sieveMailet.setQuiet(getInitParameter("quiet", true));
-        sieveMailet.setFolder("INBOX");
-        
     }
 
 }

@@ -21,6 +21,7 @@ package org.apache.james.transport.mailets;
 
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
+import org.apache.james.sieverepository.api.exception.SieveRepositoryException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.sieverepository.api.exception.UserNotFoundException;
 import org.apache.jsieve.mailet.ResourceLocator;
@@ -40,20 +41,14 @@ import java.io.InputStream;
 public class ResourceLocatorImpl implements ResourceLocator {
 
     private final boolean virtualHosting;
-    
-    private SieveRepository sieveRepository = null;
+    private final SieveRepository sieveRepository;
 
-    public ResourceLocatorImpl(boolean virtualHosting) {
+    public ResourceLocatorImpl(boolean virtualHosting, SieveRepository sieveRepository) {
         this.virtualHosting = virtualHosting;
-    }
-
-    @Inject
-    @Resource(name = "sieverepository")
-    public void setSieveRepository(@Named("sieverepository") SieveRepository sieveRepository) {
         this.sieveRepository = sieveRepository;
     }
 
-    public InputStream get(String uri) throws IOException {
+    public InputStream get(String uri) throws SieveRepositoryException {
         // Use the complete email address for finding the sieve file
         uri = uri.substring(2);
 
@@ -64,14 +59,6 @@ public class ResourceLocatorImpl implements ResourceLocator {
             username = uri.substring(0, uri.indexOf("@"));
         }
 
-        try {
-            return sieveRepository.getActive(username);
-        } catch (UserNotFoundException e) {
-            throw new IOException();
-        } catch (ScriptNotFoundException e) {
-            throw new IOException();
-        } catch (StorageException e) {
-            throw new IOException();
-        }
+        return sieveRepository.getActive(username);
     }
 }
