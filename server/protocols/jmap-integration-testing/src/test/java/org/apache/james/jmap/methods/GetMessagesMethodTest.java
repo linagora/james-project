@@ -27,7 +27,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 
 import java.io.ByteArrayInputStream;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
@@ -43,6 +45,8 @@ import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mime4j.dom.datetime.DateTime;
+import org.assertj.core.data.MapEntry;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -175,9 +179,9 @@ public abstract class GetMessagesMethodTest {
     
     @Test
     public void getMessagesShouldReturnMessagesWhenAvailable() throws Exception {
-        ZonedDateTime now = ZonedDateTime.now();
+        ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
         jmapServer.serverProbe().appendMessage("username", new MailboxPath(MailboxConstants.USER_NAMESPACE, "username", "inbox"),
-                new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(now.toInstant()), false, new Flags());
+                new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
         
         embeddedElasticSearch.awaitForElasticSearch();
         
@@ -194,14 +198,18 @@ public abstract class GetMessagesMethodTest {
             .extract()
             .asString();
 
+        String firstResponsePath = "$.[0].[1]";
+        String firstMessagePath = firstResponsePath + ".list[0]";
+
         assertThat(jsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].id")).containsExactly("username@domain.tld-inbox-1");
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].subject")).containsExactly("my test subject");
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].textBody")).containsExactly("testmail");
-        assertThat(jsonPath.parse(response).<List<Boolean>>read("$.[0].[1].list[*].isUnread")).containsExactly(true);
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].preview")).containsExactly("testmail");
-        assertThat(jsonPath.parse(response).<List<Map<String, String>>>read("$.[0].[1].list[*].headers")).containsExactly(ImmutableMap.of("subject", "my test subject"));
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].date")).containsExactly(now.withZoneSameInstant(ZoneId.of("Z")).toString());
+        assertThat(jsonPath.parse(response).<Integer>read(firstResponsePath + ".list.length()")).isEqualTo(1);
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".id")).isEqualTo("username@domain.tld-inbox-1");
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".subject")).isEqualTo("my test subject");
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".textBody")).isEqualTo("testmail");
+        assertThat(jsonPath.parse(response).<Boolean>read(firstMessagePath + ".isUnread")).isTrue();
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".preview")).isEqualTo("testmail");
+        assertThat(jsonPath.parse(response).<Map<String, String>>read(firstMessagePath + ".headers")).containsExactly(MapEntry.entry("subject", "my test subject"));
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".date")).isEqualTo("2014-10-30T14:12:00Z");
     }
 
 }
