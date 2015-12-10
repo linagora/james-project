@@ -112,7 +112,7 @@ public abstract class GetMessagesMethodTest {
     }
     
     @Test
-    public void getMessagesShouldIgnoreInvalidArguments() throws Exception {
+    public void getMessagesShouldIgnoreUnknownArguments() throws Exception {
         given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
@@ -126,7 +126,7 @@ public abstract class GetMessagesMethodTest {
     }
 
     @Test
-    public void getMessagesShouldErrorInvalidArgumentsWhenRequestIsInvalid() throws Exception {
+    public void getMessagesShouldErrorInvalidArgumentsWhenRequestContainsInvalidArgument() throws Exception {
         given()
                 .accept(ContentType.JSON)
                 .contentType(ContentType.JSON)
