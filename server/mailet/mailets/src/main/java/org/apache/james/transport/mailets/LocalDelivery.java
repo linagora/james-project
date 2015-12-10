@@ -53,7 +53,6 @@ public class LocalDelivery extends GenericMailet {
     private MailboxManager mailboxManager;
     private DomainList domainList;
     private SieveRepository sieveRepository;
-    private FileSystem fileSystem;
 
     @Inject
     public void setSieveRepository(SieveRepository sieveRepository) {
@@ -78,11 +77,6 @@ public class LocalDelivery extends GenericMailet {
     @Inject
     public void setDomainList(DomainList domainList) {
         this.domainList = domainList;
-    }
-    
-    @Inject
-    public void setFileSystem(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
     }
 
     private SieveMailet sieveMailet;  // Mailet that actually stores the message

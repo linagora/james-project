@@ -33,6 +33,8 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.rrt.api.RecipientRewriteTable;
+import org.apache.james.sieverepository.api.SieveRepository;
+import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.transport.mailets.LocalDelivery;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.mailet.Mail;
@@ -63,26 +65,26 @@ import java.util.Properties;
 public class LocalDeliveryTest {
 
     private UsersRepository usersRepository;
-    private FileSystem fileSystem;
     private RecipientRewriteTable recipientRewriteTable;
     private MailboxManager mailboxManager;
     private DomainList domainList;
+    private SieveRepository sieveRepository;
     private LocalDelivery localDelivery;
 
     @Before
     public void setUp() throws Exception {
+        sieveRepository = mock(SieveRepository.class);
         usersRepository = mock(UsersRepository.class);
-        fileSystem = mock(FileSystem.class);
         recipientRewriteTable = mock(RecipientRewriteTable.class);
         mailboxManager = mock(MailboxManager.class);
         domainList = mock(DomainList.class);
 
         localDelivery = new LocalDelivery();
         localDelivery.setDomainList(domainList);
-        localDelivery.setFileSystem(fileSystem);
         localDelivery.setMailboxManager(mailboxManager);
         localDelivery.setRrt(recipientRewriteTable);
         localDelivery.setUsersRepository(usersRepository);
+        localDelivery.setSieveRepository(sieveRepository);
     }
 
     @Test
@@ -92,7 +94,7 @@ public class LocalDeliveryTest {
                 return true;
             }
         });
-        when(fileSystem.getFile(any(String.class))).thenThrow(FileNotFoundException.class);
+        when(sieveRepository.getActive("receiver@domain.com")).thenThrow(new ScriptNotFoundException());
         MailboxPath inbox = new MailboxPath("#private", "receiver@domain.com", "INBOX");
         final MessageManager messageManager = mock(MessageManager.class);
         when(mailboxManager.getMailbox(eq(inbox), any(MailboxSession.class))).thenAnswer(new Answer<MessageManager>() {
@@ -129,7 +131,7 @@ public class LocalDeliveryTest {
                 return false;
             }
         });
-        when(fileSystem.getFile(any(String.class))).thenThrow(FileNotFoundException.class);
+        when(sieveRepository.getActive("receiver")).thenThrow(new ScriptNotFoundException());
         MailboxPath inbox = new MailboxPath("#private", "receiver", "INBOX");
         final MessageManager messageManager = mock(MessageManager.class);
         when(mailboxManager.getMailbox(eq(inbox), any(MailboxSession.class))).thenAnswer(new Answer<MessageManager>() {

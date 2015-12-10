@@ -58,8 +58,6 @@ public class ToRecipientFolder extends GenericMailet {
     private SieveRepository sieveRepository;
     private UsersRepository usersRepository;
 
-    private FileSystem fileSystem;
-
     @Inject
     public void setMailboxManager(@Named("mailboxmanager")MailboxManager mailboxManager) {
         this.mailboxManager = mailboxManager;
@@ -73,11 +71,6 @@ public class ToRecipientFolder extends GenericMailet {
     @Inject
     public void setUsersRepository(UsersRepository usersRepository) {
         this.usersRepository = usersRepository;
-    }
-
-    @Inject
-    public void setFileSystem(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
     }
 
     private SieveMailet sieveMailet;  // Mailet that actually stores the message
