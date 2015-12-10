@@ -275,7 +275,7 @@ public abstract class JMAPAuthenticationTest {
     }
 
     @Test
-    public void mustSendJsonContainingAccessTokenWhenGoodPassword() throws Exception {
+    public void mustSendJsonContainingAccessTokenAndEndpointsWhenGoodPassword() throws Exception {
         String continuationToken = fromGoodContinuationTokenRequest();
         zonedDateTimeProvider.setFixedDateTime(newDate);
 
