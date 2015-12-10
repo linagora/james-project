@@ -19,14 +19,18 @@
 
 package org.apache.james.transport.mailets;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import org.apache.james.sieverepository.api.SieveRepository;
+import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
+import org.apache.james.sieverepository.api.exception.SieveRepositoryException;
+import org.apache.james.sieverepository.api.exception.StorageException;
+import org.apache.james.sieverepository.api.exception.UserNotFoundException;
+import org.apache.jsieve.mailet.ResourceLocator;
+
+import javax.annotation.Resource;
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.IOException;
 import java.io.InputStream;
-
-import org.apache.james.filesystem.api.FileSystem;
-import org.apache.jsieve.mailet.ResourceLocator;
 
 /**
  * To maintain backwards compatibility with existing installations, this uses
@@ -37,15 +41,14 @@ import org.apache.jsieve.mailet.ResourceLocator;
 public class ResourceLocatorImpl implements ResourceLocator {
 
     private final boolean virtualHosting;
-    
-    private FileSystem fileSystem = null;
+    private final SieveRepository sieveRepository;
 
-    public ResourceLocatorImpl(boolean virtualHosting, FileSystem fileSystem) {
+    public ResourceLocatorImpl(boolean virtualHosting, SieveRepository sieveRepository) {
         this.virtualHosting = virtualHosting;
-            this.fileSystem = fileSystem;
+        this.sieveRepository = sieveRepository;
     }
 
-    public InputStream get(String uri) throws IOException {
+    public InputStream get(String uri) throws SieveRepositoryException {
         // Use the complete email address for finding the sieve file
         uri = uri.substring(2);
 
@@ -56,15 +59,6 @@ public class ResourceLocatorImpl implements ResourceLocator {
             username = uri.substring(0, uri.indexOf("@"));
         }
 
-        // RFC 5228 permits extensions: .siv .sieve
-        String sieveFilePrefix = FileSystem.FILE_PROTOCOL + "sieve/" + username + ".";
-        File sieveFile;
-        try {
-            sieveFile = fileSystem.getFile(sieveFilePrefix + "sieve");
-        } catch (FileNotFoundException ex) {
-            sieveFile = fileSystem.getFile(sieveFilePrefix + "siv");
-        }
-        return new FileInputStream(sieveFile);
+        return sieveRepository.getActive(username);
     }
-
 }
