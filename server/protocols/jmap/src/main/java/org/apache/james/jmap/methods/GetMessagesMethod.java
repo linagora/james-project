@@ -75,7 +75,7 @@ public class GetMessagesMethod<Id extends MailboxId> implements Method {
     }
     
     @Override
-    public Name responseName() {
+    public Method.Response.Name responseName() {
         return RESPONSE_NAME;
     }
     
