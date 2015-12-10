@@ -27,11 +27,15 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 
 import java.io.ByteArrayInputStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import javax.mail.Flags;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
@@ -60,7 +64,6 @@ public abstract class GetMessagesMethodTest {
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
     private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
-
     protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
 
     @Rule
@@ -172,8 +175,9 @@ public abstract class GetMessagesMethodTest {
     
     @Test
     public void getMessagesShouldReturnMessagesWhenAvailable() throws Exception {
-        jmapServer.serverProbe().appendMessage("username", new MailboxPath(MailboxConstants.USER_NAMESPACE, "username", "inbox"), 
-                new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        ZonedDateTime now = ZonedDateTime.now();
+        jmapServer.serverProbe().appendMessage("username", new MailboxPath(MailboxConstants.USER_NAMESPACE, "username", "inbox"),
+                new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(now.toInstant()), false, new Flags());
         
         embeddedElasticSearch.awaitForElasticSearch();
         
@@ -190,9 +194,14 @@ public abstract class GetMessagesMethodTest {
             .extract()
             .asString();
 
-        System.out.println(response);
         assertThat(jsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
         assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].id")).containsExactly("username@domain.tld-inbox-1");
         assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].subject")).containsExactly("my test subject");
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].textBody")).containsExactly("testmail");
+        assertThat(jsonPath.parse(response).<List<Boolean>>read("$.[0].[1].list[*].isUnread")).containsExactly(true);
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].preview")).containsExactly("testmail");
+        assertThat(jsonPath.parse(response).<List<Map<String, String>>>read("$.[0].[1].list[*].headers")).containsExactly(ImmutableMap.of("subject", "my test subject"));
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].list[*].date")).containsExactly(now.withZoneSameInstant(ZoneId.of("Z")).toString());
     }
+
 }

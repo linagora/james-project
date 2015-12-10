@@ -23,6 +23,7 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.james.jmap.model.ProtocolResponse;
 
 import com.fasterxml.jackson.databind.Module;
@@ -34,7 +35,8 @@ public class JmapResponseWriterImpl implements JmapResponseWriter {
 
     @Inject
     public JmapResponseWriterImpl(Set<Module> jacksonModules) {
-        this.objectMapper = new ObjectMapper().registerModules(jacksonModules);
+        this.objectMapper = new ObjectMapper().registerModules(jacksonModules)
+            .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
     }
 
     @Override
