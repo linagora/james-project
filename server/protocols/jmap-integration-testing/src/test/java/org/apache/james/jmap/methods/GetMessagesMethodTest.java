@@ -105,7 +105,7 @@ public abstract class GetMessagesMethodTest {
     }
     
     @Test
-    public void getMessagesShouldErrorInvalidArgumentsWhenRequestIsInvalid() throws Exception {
+    public void getMessagesShouldIgnoreInvalidArguments() throws Exception {
         given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
@@ -115,7 +115,21 @@ public abstract class GetMessagesMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(equalTo("[[\"error\",{\"type\":\"invalidArguments\"},\"#0\"]]"));
+            .content(equalTo("[[\"messages\",{\"notFound\":[],\"list\":[]},\"#0\"]]"));
+    }
+
+    @Test
+    public void getMessagesShouldErrorInvalidArgumentsWhenRequestIsInvalid() throws Exception {
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMessages\", {\"ids\": null}, \"#0\"]]")
+                .when()
+                .post("/jmap")
+                .then()
+                .statusCode(200)
+                .content(equalTo("[[\"error\",{\"type\":\"invalidArguments\"},\"#0\"]]"));
     }
 
     @Test
