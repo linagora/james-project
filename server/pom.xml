@@ -62,10 +62,12 @@
         <module>container/cli</module>
         <module>container/core</module>
         <module>container/filesystem-api</module>
+        <module>container/jetty</module>
         <module>container/lifecycle-api</module>
         <module>container/mailbox-adapter</module>
         <module>container/spring</module>
         <module>container/util</module>
+        <module>container/util-java8</module>
 
         <module>mailet/mailetcontainer-api</module>
         <module>mailet/mailetcontainer-camel</module>
@@ -81,12 +83,15 @@
         <module>data/data-jpa</module>
         <module>data/data-jcr</module>
         <module>data/data-jdbc</module>
+        <module>data/data-jmap</module>
         <module>data/data-file</module>
         <module>data/data-ldap</module>
         <module>data/data-hbase</module>
 
         <module>protocols/fetchmail</module>
         <module>protocols/protocols-imap4</module>
+        <module>protocols/jmap</module>
+        <module>protocols/jmap-integration-testing</module>
         <module>protocols/protocols-library</module>
         <module>protocols/protocols-lmtp</module>
         <module>protocols/protocols-pop3</module>
@@ -181,6 +186,10 @@
         <mockito-core.version>1.9.0</mockito-core.version>
         <backends.version>1.8.3-SNAPSHOT</backends.version>
         <apache-backends-cassandra.version>1.8.3-SNAPSHOT</apache-backends-cassandra.version>
+        <assertj3>3.2.0</assertj3>
+        <jackson-data.version>2.6.3</jackson-data.version>
+        <jetty.version>9.3.5.v20151012</jetty.version>
+        <cassandra-unit.version>2.1.9.2</cassandra-unit.version>
     </properties>
 
     <dependencyManagement>
@@ -204,6 +213,18 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>james-server-cassandra-guice</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-cassandra-guice</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-jetty</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -497,6 +518,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-jmap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
                 <artifactId>james-server-data-jcr</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -523,6 +549,16 @@
                 <version>${project.version}</version>
                 <scope>test</scope>
                 <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-jmap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-jmap-integration-testing</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
@@ -638,6 +674,11 @@
                 <artifactId>james-server-mailets</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-util-java8</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.apache.james</groupId>
@@ -663,6 +704,22 @@
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-store</artifactId>
                 <version>${mailbox.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>commons-collections</groupId>
+                        <artifactId>commons-collections</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-store</artifactId>
+                <version>${mailbox.version}</version>
+                <type>test-jar</type>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-collections</groupId>
@@ -773,6 +830,11 @@
                 <version>${commons-collections.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.0</version>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
@@ -867,7 +929,26 @@
                 <version>${commons-net.version}</version>
                 <scope>test</scope>
             </dependency>
-
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson-data.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-guava</artifactId>
+                <version>${jackson-data.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jdk8</artifactId>
+                <version>${jackson-data.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>2.6.1</version>
+            </dependency>
             <dependency>
                 <groupId>dnsjava</groupId>
                 <artifactId>dnsjava</artifactId>
@@ -1309,6 +1390,26 @@
                 <groupId>com.jayway.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
                 <version>1.6.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jayway.restassured</groupId>
+                <artifactId>rest-assured</artifactId>
+                <version>2.6.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-http</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-server</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-servlet</artifactId>
+                <version>${jetty.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

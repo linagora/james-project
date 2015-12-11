@@ -125,7 +125,12 @@
             <activation>
                 <jdk>[1.8,)</jdk>
             </activation>
-		    <dependencies>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>james-server-util-java8</artifactId>
+                    <version>3.0.0-beta5-SNAPSHOT</version>
+                </dependency>
 		        <dependency>
 		            <groupId>com.datastax.cassandra</groupId>
 		            <artifactId>cassandra-driver-core</artifactId>
