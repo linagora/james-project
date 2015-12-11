@@ -48,14 +48,14 @@ public class DefaultQuotaRootResolverTest {
     public static final SimpleMailbox<TestId> MAILBOX_2 = new SimpleMailbox<TestId>(MAILBOX_PATH_2, 10);
     public static final QuotaRoot QUOTA_ROOT = QuotaRootImpl.quotaRoot("#private&benwa");
 
-    private DefaultQuotaRootResolver testee;
+    private DefaultQuotaRootResolver<TestId> testee;
     private MailboxSessionMapperFactory<TestId> mockedFactory;
 
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
-        mockedFactory = (MailboxSessionMapperFactory<TestId>) mock(MailboxSessionMapperFactory.class);
-        testee = new DefaultQuotaRootResolver(mockedFactory);
+        mockedFactory = mock(MailboxSessionMapperFactory.class);
+        testee = new DefaultQuotaRootResolver<TestId>(mockedFactory);
     }
 
     @Test

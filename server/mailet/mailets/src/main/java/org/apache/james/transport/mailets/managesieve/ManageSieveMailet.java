@@ -38,6 +38,7 @@ import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.transport.mailets.managesieve.transcode.MessageToCoreToMessage;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
+import org.apache.mailet.MailetContext.LogLevel;
 import org.apache.mailet.base.GenericMailet;
 
 /**
@@ -185,12 +186,12 @@ public class ManageSieveMailet extends GenericMailet implements MessageToCoreToM
 
         // Sanity checks
         if (null == mail.getSender()) {
-            getMailetContext().log("ERROR: Sender is null");
+            getMailetContext().log(LogLevel.ERROR, "Sender is null");
             return;
         }
 
         if (!getMailetContext().isLocalServer(mail.getSender().getDomain().toLowerCase())) {
-            getMailetContext().log("ERROR: Sender not local");
+            getMailetContext().log(LogLevel.ERROR, "Sender not local");
             return;
         }
 
@@ -219,6 +220,7 @@ public class ManageSieveMailet extends GenericMailet implements MessageToCoreToM
         return _help;
     }
     
+    @SuppressWarnings("resource")
     protected String computeHelp() throws MessagingException
     {
         InputStream stream = null;

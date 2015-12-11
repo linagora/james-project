@@ -45,7 +45,7 @@ import org.apache.james.mailbox.store.quota.StoreQuotaManager;
 public class InMemoryIntegrationResources implements IntegrationResources {
 
     private SimpleGroupMembershipResolver groupMembershipResolver;
-    private DefaultQuotaRootResolver quotaRootResolver;
+    private DefaultQuotaRootResolver<InMemoryId> quotaRootResolver;
 
     @Override
     public MailboxManager createMailboxManager(GroupMembershipResolver groupMembershipResolver) throws MailboxException {
@@ -71,7 +71,7 @@ public class InMemoryIntegrationResources implements IntegrationResources {
         QuotaRootResolver quotaRootResolver =  createQuotaRootResolver(mailboxManager);
 
         InMemoryCurrentQuotaManager currentQuotaManager = new InMemoryCurrentQuotaManager(
-            new CurrentQuotaCalculator(((StoreMailboxManager<InMemoryId>)mailboxManager).getMapperFactory(), quotaRootResolver),
+            new CurrentQuotaCalculator<InMemoryId>(((StoreMailboxManager<InMemoryId>)mailboxManager).getMapperFactory(), quotaRootResolver),
             mailboxManager
         );
 
@@ -99,9 +99,9 @@ public class InMemoryIntegrationResources implements IntegrationResources {
 
     @SuppressWarnings("unchecked")
     @Override
-    public DefaultQuotaRootResolver createQuotaRootResolver(MailboxManager mailboxManager) throws Exception {
+    public DefaultQuotaRootResolver<InMemoryId> createQuotaRootResolver(MailboxManager mailboxManager) throws Exception {
         if (quotaRootResolver == null) {
-            quotaRootResolver = new DefaultQuotaRootResolver(((StoreMailboxManager<InMemoryId>) mailboxManager).getMapperFactory());
+            quotaRootResolver = new DefaultQuotaRootResolver<InMemoryId>(((StoreMailboxManager<InMemoryId>) mailboxManager).getMapperFactory());
         }
         return quotaRootResolver;
     }

@@ -18,22 +18,22 @@
  ****************************************************************/
 package org.apache.james.mailetcontainer.api.mock;
 
-import org.apache.mailet.HostAddress;
-import org.apache.mailet.LookupException;
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.MailetContext;
-import org.apache.mailet.TemporaryLookupException;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.MimeMessage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.MimeMessage;
+
+import org.apache.mailet.HostAddress;
+import org.apache.mailet.LookupException;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.MailetContext;
 
 public class MockMailetContext implements MailetContext {
 

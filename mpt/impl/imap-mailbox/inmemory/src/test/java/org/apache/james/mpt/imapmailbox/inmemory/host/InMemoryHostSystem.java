@@ -78,14 +78,14 @@ public class InMemoryHostSystem extends JamesImapHostSystem {
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
 
         mailboxManager = new StoreMailboxManager<InMemoryId>(factory, userManager, aclResolver, groupMembershipResolver);
-        QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver(factory);
+        QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver<InMemoryId>(factory);
 
         InMemoryPerUserMaxQuotaManager perUserMaxQuotaManager = new InMemoryPerUserMaxQuotaManager();
         perUserMaxQuotaManager.setDefaultMaxMessage(4096);
         perUserMaxQuotaManager.setDefaultMaxStorage(5L * 1024L * 1024L * 1024L);
 
         InMemoryCurrentQuotaManager currentQuotaManager = new InMemoryCurrentQuotaManager(
-            new CurrentQuotaCalculator(factory, quotaRootResolver),
+            new CurrentQuotaCalculator<InMemoryId>(factory, quotaRootResolver),
             mailboxManager);
 
         StoreQuotaManager quotaManager = new StoreQuotaManager();

@@ -33,6 +33,8 @@ import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 
+import com.google.common.base.Strings;
+
 import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Map;
@@ -64,10 +66,8 @@ public class LineToCore{
         _core = core;
     }
     
-    public Map<Capabilities, String> capability(String args) throws ArgumentException
-    {
-        if (!args.trim().isEmpty())
-        {
+    public Map<Capabilities, String> capability(String args) throws ArgumentException {
+        if (!args.trim().isEmpty()) {
             throw new ArgumentException("Too many arguments: " + args);
         }
         return _core.capability();
@@ -76,30 +76,20 @@ public class LineToCore{
     public void deleteScript(String args) throws AuthenticationRequiredException, ScriptNotFoundException, IsActiveException, ArgumentException
     {       
         String scriptName = ParserUtils.getScriptName(args);
-        if (null == scriptName || scriptName.isEmpty())
-        {
+        if (Strings.isNullOrEmpty(scriptName)) {
             throw new ArgumentException("Missing argument: script name");
         }
         
-        Scanner scanner = new Scanner(args.substring(scriptName.length()).trim()).useDelimiter("\\A");
-        if (scanner.hasNext())
-        {
-            throw new ArgumentException("Too many arguments: " + scanner.next());
-        }
+        assertStringContainsSinglePart(args.substring(scriptName.length()).trim());
         _core.deleteScript(ParserUtils.unquote(scriptName));
     }    
     
     public String getScript(String args) throws AuthenticationRequiredException, ScriptNotFoundException, ArgumentException, StorageException {
         String scriptName = ParserUtils.getScriptName(args);
-        if (null == scriptName || scriptName.isEmpty())
-        {
+        if (Strings.isNullOrEmpty(scriptName)) {
             throw new ArgumentException("Missing argument: script name");
         }
-        Scanner scanner = new Scanner(args.substring(scriptName.length()).trim()).useDelimiter("\\A");
-        if (scanner.hasNext())
-        {
-            throw new ArgumentException("Too many arguments: " + scanner.next());
-        }
+        assertStringContainsSinglePart(args.substring(scriptName.length()).trim());
         return _core.getScript(ParserUtils.unquote(scriptName));
     }     
     
@@ -115,26 +105,30 @@ public class LineToCore{
     public void haveSpace(String args) throws AuthenticationRequiredException,
             QuotaExceededException, ArgumentException {
         String scriptName = ParserUtils.getScriptName(args);
-        if (null == scriptName || scriptName.isEmpty()) {
+        if (Strings.isNullOrEmpty(scriptName)) {
             throw new ArgumentException("Missing argument: script name");
         }
 
         Scanner scanner = new Scanner(args.substring(scriptName.length()).trim());
-        long size = 0;
-
         try {
-            size = scanner.nextLong();
-        } catch (InputMismatchException ex) {
-            throw new ArgumentException("Invalid argument: script size");
-        } catch (NoSuchElementException ex) {
-            throw new ArgumentException("Missing argument: script size");
+            long size = 0;
+    
+            try {
+                size = scanner.nextLong();
+            } catch (InputMismatchException ex) {
+                throw new ArgumentException("Invalid argument: script size");
+            } catch (NoSuchElementException ex) {
+                throw new ArgumentException("Missing argument: script size");
+            }
+    
+            scanner.useDelimiter("\\A");
+            if (scanner.hasNext()) {
+                throw new ArgumentException("Too many arguments: " + scanner.next().trim());
+            }
+            _core.haveSpace(ParserUtils.unquote(scriptName), size);
+        } finally {
+            scanner.close();
         }
-
-        scanner.useDelimiter("\\A");
-        if (scanner.hasNext()) {
-            throw new ArgumentException("Too many arguments: " + scanner.next().trim());
-        }
-        _core.haveSpace(ParserUtils.unquote(scriptName), size);
     }
 
     public List<ScriptSummary> listScripts(String args) throws AuthenticationRequiredException, ArgumentException {
@@ -148,65 +142,67 @@ public class LineToCore{
     public List<String> putScript(String args)
             throws AuthenticationRequiredException, SyntaxException, QuotaExceededException, ArgumentException {
         String scriptName = ParserUtils.getScriptName(args);
-        if (null == scriptName || scriptName.isEmpty())
-        {
+        if (Strings.isNullOrEmpty(scriptName)) {
             throw new ArgumentException("Missing argument: script name");
         }
+        
+        @SuppressWarnings("resource")
         Scanner scanner = new Scanner(args.substring(scriptName.length()).trim()).useDelimiter("\\A");
-        if (!scanner.hasNext())
-        {
-            throw new ArgumentException("Missing argument: script content");
+        try {
+            if (!scanner.hasNext()) {
+                throw new ArgumentException("Missing argument: script content");
+            }
+            String content = scanner.next();
+            return _core.putScript(ParserUtils.unquote(scriptName), content);
+        } finally {
+            scanner.close();
         }
-        String content = scanner.next();
-        return _core.putScript(ParserUtils.unquote(scriptName), content);
     }
 
     public void renameScript(String args)
             throws AuthenticationRequiredException, ScriptNotFoundException,
             DuplicateException, ArgumentException {
         String oldName = ParserUtils.getScriptName(args);
-        if (null == oldName || oldName.isEmpty())
-        {
+        if (Strings.isNullOrEmpty(oldName)) {
             throw new ArgumentException("Missing argument: old script name");
         }
         
         String newName = ParserUtils.getScriptName(args.substring(oldName.length()));
-        if (null == newName || newName.isEmpty())
-        {
+        if (Strings.isNullOrEmpty(newName)) {
             throw new ArgumentException("Missing argument: new script name");
         } 
-        
-        Scanner scanner = new Scanner(args.substring(oldName.length() + 1 + newName.length()).trim()).useDelimiter("\\A");
-        if (scanner.hasNext())
-        {
-            throw new ArgumentException("Too many arguments: " + scanner.next());
-        }
-        _core.renameScript(oldName, newName);    
+        assertStringContainsSinglePart(args.substring(oldName.length() + 1 + newName.length()).trim());
+
+        _core.renameScript(oldName, newName);
     }
 
     public void setActive(String args) throws AuthenticationRequiredException,
             ScriptNotFoundException, ArgumentException {
         String scriptName = ParserUtils.getScriptName(args);
-        if (null == scriptName || scriptName.isEmpty())
-        {
+        if (Strings.isNullOrEmpty(scriptName)) {
             throw new ArgumentException("Missing argument: script name");
         }
         
-        Scanner scanner = new Scanner(args.substring(scriptName.length()).trim()).useDelimiter("\\A");
-        if (scanner.hasNext())
-        {
-            throw new ArgumentException("Too many arguments: " + scanner.next());
-        }
+        assertStringContainsSinglePart(args.substring(scriptName.length()).trim());
         _core.setActive(ParserUtils.unquote(scriptName));
     } 
     
     public String getActive(String args) throws AuthenticationRequiredException, ScriptNotFoundException, ArgumentException, StorageException {
-        Scanner scanner = new Scanner(args.trim()).useDelimiter("\\A");
-        if (scanner.hasNext())
-        {
-            throw new ArgumentException("Too many arguments: " + scanner.next());
-        }
+        assertStringContainsSinglePart(args);
         return _core.getActive();
+    }
+
+    private void assertStringContainsSinglePart(String value) throws ArgumentException {
+        @SuppressWarnings("resource")
+        Scanner scanner = new Scanner(value.trim()).useDelimiter("\\A");
+        try {
+            if (scanner.hasNext())
+            {
+                throw new ArgumentException("Too many arguments: " + scanner.next());
+            }
+        } finally {
+            scanner.close();
+        }
     }  
 
 }

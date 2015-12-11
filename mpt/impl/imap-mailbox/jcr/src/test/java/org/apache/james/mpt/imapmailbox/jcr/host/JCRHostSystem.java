@@ -33,6 +33,7 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.jcr.GlobalMailboxSessionJCRRepository;
+import org.apache.james.mailbox.jcr.JCRId;
 import org.apache.james.mailbox.jcr.JCRMailboxManager;
 import org.apache.james.mailbox.jcr.JCRMailboxSessionMapperFactory;
 import org.apache.james.mailbox.jcr.JCRSubscriptionManager;
@@ -94,7 +95,11 @@ public class JCRHostSystem extends JamesImapHostSystem{
             mailboxManager = new JCRMailboxManager(mf, userManager, locker, aclResolver, groupMembershipResolver);
             mailboxManager.init();
 
-            final ImapProcessor defaultImapProcessorFactory = DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, new JCRSubscriptionManager(mf), new NoQuotaManager(), new DefaultQuotaRootResolver(mf));
+            final ImapProcessor defaultImapProcessorFactory = 
+                    DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, 
+                            new JCRSubscriptionManager(mf), 
+                            new NoQuotaManager(), 
+                            new DefaultQuotaRootResolver<JCRId>(mf));
             resetUserMetaData();
             MailboxSession session = mailboxManager.createSystemSession("test", LoggerFactory.getLogger("TestLog"));
             mailboxManager.startProcessingRequest(session);

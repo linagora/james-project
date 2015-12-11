@@ -25,14 +25,13 @@ import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.mail.MessagingException;
 
-import org.apache.mailet.base.GenericMatcher;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.GenericMatcher;
 
 /**
  * <p>

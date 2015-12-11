@@ -59,8 +59,8 @@ import org.apache.james.mailbox.store.event.DelegatingMailboxListener;
 import org.apache.james.mailbox.store.event.DefaultDelegatingMailboxListener;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
@@ -165,7 +165,6 @@ public class StoreMailboxManager<Id extends MailboxId> implements MailboxManager
      *
      * @throws MailboxException
      */
-    @SuppressWarnings("rawtypes")
     @PostConstruct
     public void init() throws MailboxException {
         // The dispatcher need to have the delegating listener added
@@ -175,7 +174,7 @@ public class StoreMailboxManager<Id extends MailboxId> implements MailboxManager
             index = new SimpleMessageSearchIndex<Id>(mailboxSessionMapperFactory);
         }
         if (index instanceof ListeningMessageSearchIndex) {
-            this.addGlobalListener((ListeningMessageSearchIndex) index, null);
+            this.addGlobalListener((MailboxListener) index, null);
         }
 
         if (idGenerator == null) {
@@ -185,7 +184,7 @@ public class StoreMailboxManager<Id extends MailboxId> implements MailboxManager
             quotaManager = new NoQuotaManager();
         }
         if (quotaRootResolver == null) {
-            quotaRootResolver = new DefaultQuotaRootResolver(mailboxSessionMapperFactory);
+            quotaRootResolver = new DefaultQuotaRootResolver<Id>(mailboxSessionMapperFactory);
         }
         if (quotaUpdater != null && quotaUpdater instanceof MailboxListener) {
             this.addGlobalListener((MailboxListener) quotaUpdater, null);

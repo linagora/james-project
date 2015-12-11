@@ -78,7 +78,7 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(uidProvider, modSeqProvider, session, new CassandraTypesProvider(mailboxModule, session));
         
         mailboxManager = new CassandraMailboxManager(mapperFactory, userManager, new JVMMailboxPathLocker());
-        QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver(mapperFactory);
+        QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver<>(mapperFactory);
 
         CassandraPerUserMaxQuotaManager perUserMaxQuotaManager = new CassandraPerUserMaxQuotaManager(session);
         perUserMaxQuotaManager.setDefaultMaxMessage(4096);
