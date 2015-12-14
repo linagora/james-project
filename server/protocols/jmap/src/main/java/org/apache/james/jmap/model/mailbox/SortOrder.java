@@ -16,19 +16,35 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.jmap.model.mailbox;
 
-package org.apache.james.jmap;
+import com.google.common.collect.ImmutableMap;
 
-import org.apache.james.jmap.model.mailbox.Mailbox;
-import org.junit.Test;
+import java.util.Optional;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class SortOrder {
 
-public class BeansTest {
+    private static final int DEFAULT_SORT_ORDER = 1000;
+    private static final ImmutableMap<Role, Integer> defaultSortOrders =
+            ImmutableMap.<Role, Integer>builder()
+                .put(Role.INBOX, 10)
+                .put(Role.ARCHIVE, 20)
+                .put(Role.DRAFTS, 30)
+                .put(Role.OUTBOX, 40)
+                .put(Role.SENT, 50)
+                .put(Role.TRASH, 60)
+                .put(Role.SPAM, 70)
+                .put(Role.TEMPLATES, 80)
+                .build();
 
-    @Test
-    public void beanShouldRespectBeanContract() {
-        EqualsVerifier.forClass(Mailbox.class)
-            .verify();
+    private static Optional<Integer> getDefaultSortOrder(Role role) {
+        return Optional.ofNullable(defaultSortOrders.get(role));
+    }
+
+    public static Integer getSortOrder(Optional<Role> role) {
+        return role
+                .map(SortOrder::getDefaultSortOrder)
+                .map(Optional::get)
+                .orElse(DEFAULT_SORT_ORDER);
     }
 }

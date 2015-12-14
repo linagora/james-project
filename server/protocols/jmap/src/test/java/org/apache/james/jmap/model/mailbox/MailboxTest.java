@@ -17,12 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model;
+package org.apache.james.jmap.model.mailbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
+import org.apache.james.jmap.model.mailbox.Mailbox;
+import org.apache.james.jmap.model.mailbox.Role;
 import org.junit.Test;
 
 public class MailboxTest {
@@ -86,14 +88,14 @@ public class MailboxTest {
 
     @Test
     public void buildShouldWork() {
-        Mailbox expectedMailbox = new Mailbox("id", "name", Optional.of("parentId"), Optional.of(Role.DRAFTS), 123, 
+        Mailbox expectedMailbox = new Mailbox("id", "name", Optional.of("parentId"), Optional.of(Role.DRAFTS), 123,
                 true, true, true, true, true, true, true, 456, 789, 741, 852);
 
         Mailbox mailbox = Mailbox.builder()
             .id("id")
             .name("name")
             .parentId("parentId")
-            .role(Role.DRAFTS)
+            .role(Optional.of(Role.DRAFTS))
             .sortOrder(123)
             .mustBeOnlyMailbox(true)
             .mayReadItems(true)
