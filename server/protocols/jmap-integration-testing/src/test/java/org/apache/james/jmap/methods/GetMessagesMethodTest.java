@@ -51,9 +51,8 @@ import org.junit.rules.TemporaryFolder;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ParseContext;
-import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
-import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.http.ContentType;
 
@@ -80,9 +79,8 @@ public abstract class GetMessagesMethodTest {
         RestAssured.port = jmapServer.getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
         jsonPath = JsonPath.using(Configuration.builder()
-                                    .jsonProvider(new JacksonJsonProvider())
-                                    .mappingProvider(new JacksonMappingProvider())
-                                    .build());
+                .options(Option.DEFAULT_PATH_LEAF_TO_NULL)
+                .build());
 
         String domain = "domain.tld";
         String username = "username@" + domain;
@@ -109,7 +107,7 @@ public abstract class GetMessagesMethodTest {
     
     @Test
     public void getMessagesShouldIgnoreUnknownArguments() throws Exception {
-        given()
+        String response = given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -118,7 +116,13 @@ public abstract class GetMessagesMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(equalTo("[[\"messages\",{\"notFound\":[],\"list\":[]},\"#0\"]]"));
+            .content(startsWith("[[\"messages\","))
+            .extract()
+            .asString();
+
+        String firstResponsePath = "$.[0].[1]";
+        assertThat(JsonPath.parse(response).<Integer>read(firstResponsePath + ".notFound.length()")).isEqualTo(0);
+        assertThat(JsonPath.parse(response).<Integer>read(firstResponsePath + ".list.length()")).isEqualTo(0);
     }
 
     @Test
@@ -150,8 +154,8 @@ public abstract class GetMessagesMethodTest {
             .extract()
             .asString();
         
-        assertThat(jsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
-        assertThat(jsonPath.parse(response).<Integer>read("$.[0].[1].list.length()")).isEqualTo(0);
+        assertThat(JsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
+        assertThat(JsonPath.parse(response).<Integer>read("$.[0].[1].list.length()")).isEqualTo(0);
     }
 
     @Test
@@ -169,8 +173,8 @@ public abstract class GetMessagesMethodTest {
             .extract()
             .asString();
         
-        assertThat(jsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
-        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].notFound")).containsExactly("username-inbox-12");
+        assertThat(JsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
+        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].notFound")).containsExactly("username-inbox-12");
     }
     
     @Test
@@ -197,15 +201,49 @@ public abstract class GetMessagesMethodTest {
         String firstResponsePath = "$.[0].[1]";
         String firstMessagePath = firstResponsePath + ".list[0]";
 
+        assertThat(JsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
+        assertThat(JsonPath.parse(response).<Integer>read(firstResponsePath + ".list.length()")).isEqualTo(1);
+        assertThat(JsonPath.parse(response).<String>read(firstMessagePath + ".id")).isEqualTo("username@domain.tld-inbox-1");
+        assertThat(JsonPath.parse(response).<String>read(firstMessagePath + ".subject")).isEqualTo("my test subject");
+        assertThat(JsonPath.parse(response).<String>read(firstMessagePath + ".textBody")).isEqualTo("testmail");
+        assertThat(JsonPath.parse(response).<Boolean>read(firstMessagePath + ".isUnread")).isTrue();
+        assertThat(JsonPath.parse(response).<String>read(firstMessagePath + ".preview")).isEqualTo("testmail");
+        assertThat(JsonPath.parse(response).<Map<String, String>>read(firstMessagePath + ".headers")).containsExactly(MapEntry.entry("subject", "my test subject"));
+        assertThat(JsonPath.parse(response).<String>read(firstMessagePath + ".date")).isEqualTo("2014-10-30T14:12:00Z");
+    }
+    
+    @Test
+    public void getMessagesShouldReturnFilteredPropertiesMessagesWhenAsked() throws Exception {
+        ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
+        jmapServer.serverProbe().appendMessage("username", new MailboxPath(MailboxConstants.USER_NAMESPACE, "username", "inbox"),
+                new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
+        
+        embeddedElasticSearch.awaitForElasticSearch();
+        
+        String response = given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"username-inbox-1\"], \"properties\": [\"subject\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .content(startsWith("[[\"messages\","))
+            .extract()
+            .asString();
+
+        String firstResponsePath = "$.[0].[1]";
+        String firstMessagePath = firstResponsePath + ".list[0]";
+
         assertThat(jsonPath.parse(response).<Integer>read("$.length()")).isEqualTo(1);
         assertThat(jsonPath.parse(response).<Integer>read(firstResponsePath + ".list.length()")).isEqualTo(1);
         assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".id")).isEqualTo("username@domain.tld-inbox-1");
         assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".subject")).isEqualTo("my test subject");
-        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".textBody")).isEqualTo("testmail");
-        assertThat(jsonPath.parse(response).<Boolean>read(firstMessagePath + ".isUnread")).isTrue();
-        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".preview")).isEqualTo("testmail");
-        assertThat(jsonPath.parse(response).<Map<String, String>>read(firstMessagePath + ".headers")).containsExactly(MapEntry.entry("subject", "my test subject"));
-        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".date")).isEqualTo("2014-10-30T14:12:00Z");
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".textBody")).isNull();
+        assertThat(jsonPath.parse(response).<Boolean>read(firstMessagePath + ".isUnread")).isNull();
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".preview")).isNull();
+        assertThat(jsonPath.parse(response).<Map<String, String>>read(firstMessagePath + ".headers")).isNull();
+        assertThat(jsonPath.parse(response).<String>read(firstMessagePath + ".date")).isNull();
     }
-
 }

@@ -18,47 +18,6 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
-import com.google.common.collect.ImmutableList;
-
-public enum Property {
-    id("id"),
-    blobId("blobId"),
-    threadId("threadId"),
-    mailboxIds("mailboxIds"),
-    inReplyToMessageId("inReplyToMessageId"),
-    isUnread("isUnread"),
-    isFlagged("isFlagged"),
-    isAnswered("isAnswered"),
-    isDraft("isDraft"),
-    hasAttachment("hasAttachment"),
-    headers("headers"),
-    from("from"),
-    to("to"),
-    cc("cc"),
-    bcc("bcc"),
-    replyTo("replyTo"),
-    subject("subject"),
-    date("date"),
-    size("size"),
-    preview("preview"),
-    textBody("textBody"),
-    htmlBody("htmlBody"),
-    attachments("attachments"),
-    attachedMessages("attachedMessages"),
-    body("body"),
-    headers_property("headers.property");
-    
-    private String property;
-
-    private Property(String property) {
-        this.property = property;
-    }
-    
-    public String getProperty() {
-        return property;
-    }
-    
-    public static ImmutableList<Property> all() {
-        return ImmutableList.copyOf(values());
-    }
+public interface Property {
+    String asFieldName();
 }

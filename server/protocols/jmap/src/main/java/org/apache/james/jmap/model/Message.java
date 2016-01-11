@@ -25,9 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.model.message.EMailer;
 import org.apache.james.jmap.model.message.IndexableMessage;
@@ -44,6 +46,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
 @JsonDeserialize(builder = Message.Builder.class)
+@JsonFilter("propertiesFilter")
 public class Message {
     public static final String NO_SUBJECT = "(No subject)";
     public static final String MULTIVALUED_HEADERS_SEPARATOR = ", ";
@@ -304,7 +307,7 @@ public class Message {
             this.attachedMessages.putAll(attachedMessages);
             return this;
         }
-
+        
         public Message build() {
             Preconditions.checkState(id != null, "'id' is mandatory");
             Preconditions.checkState(!Strings.isNullOrEmpty(blobId), "'blobId' is mandatory");
@@ -382,6 +385,40 @@ public class Message {
         this.htmlBody = htmlBody;
         this.attachments = attachments;
         this.attachedMessages = attachedMessages;
+    }
+    
+    public Message filterHeaders(Set<MessageProperty> requestedProperties) {
+        ImmutableMap<String, String> filteredHeaders = headers
+                .entrySet()
+                .stream()
+                .filter(x -> MessageProperty.selectHeadersProperties(requestedProperties).contains(MessageProperty.headerValueOf(x.getKey())))
+                .collect(org.apache.james.util.streams.Collectors.toImmutableMap(Entry::getKey, Entry::getValue));
+        return Message.builder()
+            .id(id)
+            .blobId(blobId)
+            .threadId(threadId)
+            .mailboxIds(mailboxIds)
+            .inReplyToMessageId(inReplyToMessageId.orElse(null))
+            .isUnread(isUnread)
+            .isFlagged(isFlagged)
+            .isAnswered(isAnswered)
+            .isDraft(isDraft)
+            .hasAttachment(hasAttachment)
+            .headers(filteredHeaders)
+            .from(from.orElse(null))
+            .to(to)
+            .cc(cc)
+            .bcc(bcc)
+            .replyTo(replyTo)
+            .subject(subject)
+            .date(date)
+            .size(size)
+            .preview(preview)
+            .textBody(textBody.orElse(null))
+            .htmlBody(htmlBody.orElse(null))
+            .attachments(attachments)
+            .attachedMessages(attachedMessages)
+            .build();
     }
 
     public MessageId getId() {
