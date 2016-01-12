@@ -18,24 +18,10 @@
  ****************************************************************/
 package org.apache.james.mailbox.maildir.mail.model;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
-import java.util.Date;
-import java.util.List;
-
-import javax.mail.Flags;
-import javax.mail.util.SharedFileInputStream;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.james.mailbox.maildir.MaildirFolder;
-import org.apache.james.mailbox.maildir.MaildirId;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
-import org.apache.james.mailbox.store.mail.model.AbstractMessage;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.streaming.CountingInputStream;
@@ -48,177 +34,26 @@ import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.james.mime4j.stream.MimeTokenStream;
 import org.apache.james.mime4j.stream.RecursionMode;
 
-public class MaildirMessage extends AbstractMessage<MaildirId> {
+import javax.mail.util.SharedFileInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
+import java.util.Date;
+import java.util.List;
 
-	private MaildirMessageName messageName;
+public class MaildirMessage implements Message {
+
+    private MaildirMessageName messageName;
     private int bodyStartOctet;
     private final PropertyBuilder propertyBuilder = new PropertyBuilder();
     private boolean parsed;
-    private boolean answered;
-    private boolean deleted;
-    private boolean draft;
-    private boolean flagged;
-    private boolean recent;
-    private boolean seen;
-    private Mailbox<MaildirId> mailbox;
-    private long uid;
-    protected boolean newMessage;
-    private long modSeq;
-    
-    public MaildirMessage(Mailbox<MaildirId> mailbox, long uid, MaildirMessageName messageName) throws IOException {
-        this.mailbox = mailbox;
-        setUid(uid);
-        setModSeq(messageName.getFile().lastModified());
-        Flags flags = messageName.getFlags();
-        
-        // Set the flags for the message and respect if its RECENT
-        // See MAILBOX-84
-        File file = messageName.getFile();
-        if (!file.exists()) {
-            throw new FileNotFoundException("Unable to read file " + file.getAbsolutePath() + " for the message");
-        } else {
-            // if the message resist in the new folder its RECENT
-            if (file.getParentFile().getName().equals(MaildirFolder.NEW)) {
-                if (flags == null)
-                    flags = new Flags();
-                flags.add(Flags.Flag.RECENT);
-            }
-        }
-        setFlags(flags);
+
+    public MaildirMessage(MaildirMessageName messageName) {
         this.messageName = messageName;
     }
 
-    
-    @Override
-    public MaildirId getMailboxId() {
-        return mailbox.getMailboxId();
-    }
-
-    @Override
-    public long getUid() {
-        return uid;
-    }
-
-    @Override
-    public void setUid(long uid) {
-        this.uid = uid;
-    }
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Message#setFlags(
-     * javax.mail.Flags)
-     */
-    @Override
-    public void setFlags(Flags flags) {
-        if (flags != null) {
-            answered = flags.contains(Flags.Flag.ANSWERED);
-            deleted = flags.contains(Flags.Flag.DELETED);
-            draft = flags.contains(Flags.Flag.DRAFT);
-            flagged = flags.contains(Flags.Flag.FLAGGED);
-            recent = flags.contains(Flags.Flag.RECENT);
-            seen = flags.contains(Flags.Flag.SEEN);
-        }
-    }
-    
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Message#isAnswered()
-     */
-    @Override
-    public boolean isAnswered() {
-        return answered;
-    }
-
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Message#isDeleted()
-     */
-    @Override
-    public boolean isDeleted() {
-        return deleted;
-    }
-
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Message#isDraft()
-     */
-    @Override
-    public boolean isDraft() {
-        return draft;
-    }
-
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Message#isFlagged()
-     */
-    @Override
-    public boolean isFlagged() {
-        return flagged;
-    }
-
-    /**
-     * @see
-     * org.apache.james.mailbox.store.mail.model.Message#isRecent()
-     */
-    @Override
-    public boolean isRecent() {
-        return recent;
-    }
-
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isSeen()
-     */
-    @Override
-    public boolean isSeen() {
-        return seen;
-    }
-
-    /**
-     * Indicates whether this MaildirMessage reflects a new message or one that already
-     * exists in the file system.
-     * @return true if it is new, false if it already exists
-     */
-    public boolean isNew() {
-        return newMessage;
-    }
-    
-    
-    @Override
-    public String toString() {
-        StringBuilder theString = new StringBuilder("MaildirMessage ");
-        theString.append(getUid());
-        theString.append(" {");
-        Flags flags = createFlags();
-        if (flags.contains(Flags.Flag.DRAFT))
-            theString.append(MaildirMessageName.FLAG_DRAFT);
-        if (flags.contains(Flags.Flag.FLAGGED))
-            theString.append(MaildirMessageName.FLAG_FLAGGED);
-        if (flags.contains(Flags.Flag.ANSWERED))
-            theString.append(MaildirMessageName.FLAG_ANSWERD);
-        if (flags.contains(Flags.Flag.SEEN))
-            theString.append(MaildirMessageName.FLAG_SEEN);
-        if (flags.contains(Flags.Flag.DELETED))
-            theString.append(MaildirMessageName.FLAG_DELETED);
-        theString.append("} ");
-        theString.append(getInternalDate());
-        return theString.toString();
-    }
-
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getModSeq()
-     */
-    @Override
-    public long getModSeq() {
-        return modSeq;
-    }
-
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#setModSeq(long)
-     */
-    @Override
-    public void setModSeq(long modSeq) {
-        this.modSeq = modSeq;
-    }
     /**
      * Parse message if needed
      */
@@ -319,19 +154,16 @@ public class MaildirMessage extends AbstractMessage<MaildirId> {
         }
     }
 
+
     /**
      * Return the position in the given {@link InputStream} at which the Body of
-     * the Message starts
-     * 
-     * @param msgIn
-     * @return bodyStartOctet
-     * @throws IOException
+     * the MailboxMessage starts
      */
     private int bodyStartOctet(InputStream msgIn) throws IOException {
         // we need to pushback maximal 3 bytes
         PushbackInputStream in = new PushbackInputStream(msgIn, 3);
         int localBodyStartOctet = in.available();
-        int i = -1;
+        int i;
         int count = 0;
         while ((i = in.read()) != -1 && in.available() > 4) {
             if (i == 0x0D) {
@@ -357,27 +189,23 @@ public class MaildirMessage extends AbstractMessage<MaildirId> {
         return localBodyStartOctet;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getMediaType()
-     */
     @Override
     public String getMediaType() {
         parseMessage();
         return propertyBuilder.getMediaType();
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getSubType()
-     */
     @Override
     public String getSubType() {
         parseMessage();
         return propertyBuilder.getSubType();
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getFullContentOctets()
-     */
+    @Override
+    public long getBodyOctets() {
+        return getFullContentOctets() - getBodyStartOctet();
+    }
+
     @Override
     public long getFullContentOctets() {
         Long size = messageName.getSize();
@@ -392,27 +220,23 @@ public class MaildirMessage extends AbstractMessage<MaildirId> {
         }
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getTextualLineCount()
-     */
     @Override
     public Long getTextualLineCount() {
         parseMessage();
         return propertyBuilder.getTextualLineCount();
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getProperties()
-     */
     @Override
     public List<Property> getProperties() {
         parseMessage();
         return propertyBuilder.toProperties();
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getInternalDate()
-     */
+    @Override
+    public MessageId getMessageId() {
+        return null;
+    }
+
     @Override
     public Date getInternalDate() {
         return messageName.getInternalDate();
@@ -426,9 +250,6 @@ public class MaildirMessage extends AbstractMessage<MaildirId> {
         return new FileInputStream(messageName.getFile());
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getBodyContent()
-     */
     @Override
     public InputStream getBodyContent() throws IOException {
         parseMessage();
@@ -438,11 +259,7 @@ public class MaildirMessage extends AbstractMessage<MaildirId> {
 
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.AbstractMessage#getBodyStartOctet()
-     */
-    @Override
-    protected int getBodyStartOctet() {
+    private int getBodyStartOctet() {
         parseMessage();
         return bodyStartOctet;
     }
@@ -455,8 +272,6 @@ public class MaildirMessage extends AbstractMessage<MaildirId> {
             limit = 0;
         }
         return new LimitingFileInputStream(messageName.getFile(), limit);
-
     }
-
 
 }

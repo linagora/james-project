@@ -16,33 +16,22 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.search.comparator;
+package org.apache.james.mailbox.inmemory.manager;
 
-import java.util.Comparator;
-
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.manager.ManagerTestResources;
+import org.apache.james.mailbox.manager.QuotaMessageManagerTest;
 
 /**
- * {@link Comparator} which compares {@link MailboxMessage}'s with their {@link MailboxMessage#getInternalDate()} value
+ * Test for quota support upon basic MailboxMessage manager operation.
  *
+ * Tests are performed with sufficient rights to ensure all underlying functions behave well.
+ * Quota are adjusted and we check that exceptions are well thrown.
  */
-public class InternalDateComparator  implements Comparator<MailboxMessage<?>>{
+public class InMemoryQuotaMailboxMessageManagerTest extends QuotaMessageManagerTest {
 
-
-    private final static Comparator<MailboxMessage<?>> INTERNALDATE = new InternalDateComparator();;
-    private final static Comparator<MailboxMessage<?>> REVERSE_INTERNALDATE = new ReverseComparator(INTERNALDATE);
-
-    
     @Override
-    public int compare(MailboxMessage<?> o1, MailboxMessage<?> o2) {
-        return (o1.getInternalDate().compareTo(o2.getInternalDate()));
+    protected ManagerTestResources createResources() throws Exception {
+        return new ManagerTestResources(new InMemoryIntegrationResources());
     }
 
-    public static Comparator<MailboxMessage<?>> internalDate(boolean reverse){
-        if (reverse) {
-            return REVERSE_INTERNALDATE;
-        } else {
-            return INTERNALDATE;
-        }
-    }
 }

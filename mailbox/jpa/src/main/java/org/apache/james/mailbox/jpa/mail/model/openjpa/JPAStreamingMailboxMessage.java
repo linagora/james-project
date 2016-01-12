@@ -33,23 +33,23 @@ import javax.persistence.Table;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
-import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.openjpa.persistence.Persistent;
 
 /**
- * JPA implementation of {@link AbstractJPAMessage} which use openjpas {@link Persistent} type to
+ * JPA implementation of {@link AbstractJPAMailboxMessage} which use openjpas {@link Persistent} type to
  * be able to stream the message content without loading it into the memory at all. 
  * 
  * This is not supported for all DB's yet. See <a href="http://openjpa.apache.org/builds/latest/docs/manual/ref_guide_mapping_jpa.html">Additional JPA Mappings</a>
  * 
- * If your DB is not supported by this, use {@link JPAMessage} 
+ * If your DB is not supported by this, use {@link JPAMailboxMessage}
  *
  * TODO: Fix me!
  */
-@Entity(name="Message")
+@Entity(name="MailboxMessage")
 @Table(name="JAMES_MAIL")
-public class JPAStreamingMessage extends AbstractJPAMessage {
+public class JPAStreamingMailboxMessage extends AbstractJPAMailboxMessage {
 
     @Persistent(optional = false, fetch = FetchType.LAZY)
     @Column(name = "MAIL_BYTES", length = 1048576000, nullable = false)
@@ -61,10 +61,7 @@ public class JPAStreamingMessage extends AbstractJPAMessage {
 
     private SharedInputStream content;
 
-    @Deprecated
-    public JPAStreamingMessage() {}
-
-    public JPAStreamingMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet,final PropertyBuilder propertyBuilder) throws MailboxException {
+    public JPAStreamingMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, final PropertyBuilder propertyBuilder) throws MailboxException {
         super(mailbox, internalDate, flags, size ,bodyStartOctet, propertyBuilder);
         this.content = content;
 
@@ -79,11 +76,8 @@ public class JPAStreamingMessage extends AbstractJPAMessage {
 
     /**
      * Create a copy of the given message
-     * 
-     * @param message
-     * @throws IOException 
      */
-    public JPAStreamingMessage(JPAMailbox mailbox, long uid, long modSeq, Message<?> message) throws MailboxException {
+    public JPAStreamingMailboxMessage(JPAMailbox mailbox, long uid, long modSeq, MailboxMessage<?> message) throws MailboxException {
         super(mailbox, uid, modSeq, message);
         try {
             this.content = new SharedByteArrayInputStream(IOUtils.toByteArray(message.getFullContent()));
@@ -94,17 +88,12 @@ public class JPAStreamingMessage extends AbstractJPAMessage {
         }
     }
 
-    
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getBodyContent()
-     */
+    @Override
     public InputStream getBodyContent() throws IOException {
         return content.newStream(getBodyStartOctet(), -1);
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getHeaderContent()
-     */
+    @Override
     public InputStream getHeaderContent() throws IOException {
         int headerEnd = getBodyStartOctet() -2;
         if (headerEnd < 0) {

@@ -16,44 +16,8 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
 package org.apache.james.mailbox.store.mail.model;
 
-import static org.junit.Assert.*;
-
-import org.apache.james.mailbox.store.MessageBuilder;
-import org.apache.james.mailbox.store.TestId;
-import org.apache.james.mailbox.store.mail.model.Message;
-import org.junit.Test;
-
-public class AbstractMessageTest {    
-    
-    @Test
-    public void testShouldReturnPositiveWhenFirstGreaterThanSecond()
-            throws Exception {
-        Message<TestId> one = buildMessage(100);
-        Message<TestId> two = buildMessage(99);
-        assertTrue( one.compareTo(two) > 0);
-    }
-
-    private Message<TestId> buildMessage(int uid) throws Exception {
-        MessageBuilder builder = new MessageBuilder();
-        builder.uid = uid;
-        return builder.build();
-    }
-
-    @Test
-    public void testShouldReturnNegativeWhenFirstLessThanSecond()
-            throws Exception {
-        Message<TestId> one = buildMessage(98);
-        Message<TestId> two = buildMessage(99);
-        assertTrue( one.compareTo(two) < 0);
-    }
-
-    @Test
-    public void testShouldReturnZeroWhenFirstEqualsSecond() throws Exception {
-        Message<TestId> one = buildMessage(90);
-        Message<TestId> two = buildMessage(90);
-        assertEquals(0, one.compareTo(two));
-    }
+public interface MessageId {
+    String serialize();
 }

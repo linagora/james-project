@@ -16,33 +16,21 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.search.comparator;
 
-import java.util.Comparator;
+package org.apache.james.mailbox.store.json;
 
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.TestId;
+import org.apache.james.mailbox.store.TestIdDeserializer;
+import org.apache.james.mailbox.store.event.EventSerializer;
+import org.apache.james.mailbox.store.json.event.EventConverter;
+import org.apache.james.mailbox.store.json.event.MailboxConverter;
 
-/**
- * {@link Comparator} which compares {@link MailboxMessage}'s with their {@link MailboxMessage#getInternalDate()} value
- *
- */
-public class InternalDateComparator  implements Comparator<MailboxMessage<?>>{
+public class MailboxMessagePackEventSerializerTest extends EventSerializerTest {
 
-
-    private final static Comparator<MailboxMessage<?>> INTERNALDATE = new InternalDateComparator();;
-    private final static Comparator<MailboxMessage<?>> REVERSE_INTERNALDATE = new ReverseComparator(INTERNALDATE);
-
-    
     @Override
-    public int compare(MailboxMessage<?> o1, MailboxMessage<?> o2) {
-        return (o1.getInternalDate().compareTo(o2.getInternalDate()));
-    }
-
-    public static Comparator<MailboxMessage<?>> internalDate(boolean reverse){
-        if (reverse) {
-            return REVERSE_INTERNALDATE;
-        } else {
-            return INTERNALDATE;
-        }
+    EventSerializer createSerializer() {
+        return new MessagePackEventSerializer<TestId>(
+            new EventConverter<TestId>(
+                new MailboxConverter<TestId>(new TestIdDeserializer())));
     }
 }

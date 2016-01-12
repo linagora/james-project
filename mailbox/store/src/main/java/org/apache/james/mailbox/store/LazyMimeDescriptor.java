@@ -41,11 +41,11 @@ import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
  */
 public class LazyMimeDescriptor implements MimeDescriptor{
 
-    private final Message<?> message;
+    private final Message message;
     private final MessageResult result;
     private PropertyBuilder pbuilder;
     
-    public LazyMimeDescriptor(final MessageResult result, final Message<?> message) {
+    public LazyMimeDescriptor(final MessageResult result, final Message message) {
         this.message = message;
         this.result = result;
     }

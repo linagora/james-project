@@ -16,33 +16,40 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.search.comparator;
+package org.apache.james.mailbox.store.mail.model;
 
-import java.util.Comparator;
+import javax.mail.Flags;
 
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+public class FlagsBuilder {
 
-/**
- * {@link Comparator} which compares {@link MailboxMessage}'s with their {@link MailboxMessage#getInternalDate()} value
- *
- */
-public class InternalDateComparator  implements Comparator<MailboxMessage<?>>{
+    public static Flags createFlags(MailboxMessage<?> mailboxMessage, String[] userFlags) {
+        final Flags flags = new Flags();
 
-
-    private final static Comparator<MailboxMessage<?>> INTERNALDATE = new InternalDateComparator();;
-    private final static Comparator<MailboxMessage<?>> REVERSE_INTERNALDATE = new ReverseComparator(INTERNALDATE);
-
-    
-    @Override
-    public int compare(MailboxMessage<?> o1, MailboxMessage<?> o2) {
-        return (o1.getInternalDate().compareTo(o2.getInternalDate()));
-    }
-
-    public static Comparator<MailboxMessage<?>> internalDate(boolean reverse){
-        if (reverse) {
-            return REVERSE_INTERNALDATE;
-        } else {
-            return INTERNALDATE;
+        if (mailboxMessage.isAnswered()) {
+            flags.add(Flags.Flag.ANSWERED);
         }
+        if (mailboxMessage.isDeleted()) {
+            flags.add(Flags.Flag.DELETED);
+        }
+        if (mailboxMessage.isDraft()) {
+            flags.add(Flags.Flag.DRAFT);
+        }
+        if (mailboxMessage.isFlagged()) {
+            flags.add(Flags.Flag.FLAGGED);
+        }
+        if (mailboxMessage.isRecent()) {
+            flags.add(Flags.Flag.RECENT);
+        }
+        if (mailboxMessage.isSeen()) {
+            flags.add(Flags.Flag.SEEN);
+        }
+        if (userFlags != null && userFlags.length > 0) {
+            for (int i = 0; i < userFlags.length; i++) {
+                flags.add(userFlags[i]);
+            }
+        }
+        return flags;
     }
+
+
 }

@@ -16,22 +16,13 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.inmemory.manager;
+package org.apache.james.mailbox.cassandra.mail;
 
-import org.apache.james.mailbox.manager.ManagerTestResources;
-import org.apache.james.mailbox.manager.QuotaMessageManagerTest;
+import org.apache.james.mailbox.cassandra.CassandraId;
+import org.apache.james.mailbox.store.mail.model.AbstractMessageMapperTest;
 
-/**
- * Test for quota support upon basic Message manager operation.
- *
- * Tests are performed with sufficient rights to ensure all underlying functions behave well.
- * Quota are adjusted and we check that exceptions are well thrown.
- */
-public class InMemoryQuotaMessageManagerTest extends QuotaMessageManagerTest {
-
-    @Override
-    protected ManagerTestResources createResources() throws Exception {
-        return new ManagerTestResources(new InMemoryIntegrationResources());
+public class CassandraMailboxMessageMapperTest extends AbstractMessageMapperTest<CassandraId> {
+    public CassandraMailboxMessageMapperTest() {
+        super(new CassandraMapperProvider());
     }
-
 }

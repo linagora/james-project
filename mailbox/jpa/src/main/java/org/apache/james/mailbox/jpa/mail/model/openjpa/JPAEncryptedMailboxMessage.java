@@ -35,14 +35,14 @@ import javax.persistence.Table;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
-import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.openjpa.persistence.Externalizer;
 import org.apache.openjpa.persistence.Factory;
 
-@Entity(name="Message")
+@Entity(name="MailboxMessage")
 @Table(name="JAMES_MAIL")
-public class JPAEncryptedMessage extends AbstractJPAMessage {
+public class JPAEncryptedMailboxMessage extends AbstractJPAMailboxMessage {
 
         /** The value for the body field. Lazy loaded */
         /** We use a max length to represent 1gb data. Thats prolly overkill, but who knows */
@@ -61,10 +61,7 @@ public class JPAEncryptedMessage extends AbstractJPAMessage {
         @Factory("EncryptDecryptHelper.getDecrypted")
         @Lob private byte[] header;
         
-        @Deprecated
-        public JPAEncryptedMessage() {}
-
-        public JPAEncryptedMessage(JPAMailbox mailbox,Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, final PropertyBuilder propertyBuilder) throws MailboxException {
+        public JPAEncryptedMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, final PropertyBuilder propertyBuilder) throws MailboxException {
             super(mailbox, internalDate, flags, size ,bodyStartOctet, propertyBuilder);
             try {
                 int headerEnd = bodyStartOctet;
@@ -81,11 +78,8 @@ public class JPAEncryptedMessage extends AbstractJPAMessage {
 
         /**
          * Create a copy of the given message
-         * 
-         * @param message
-         * @throws MailboxException 
          */
-        public JPAEncryptedMessage(JPAMailbox mailbox, long uid, long modSeq, Message<?> message) throws MailboxException{
+        public JPAEncryptedMailboxMessage(JPAMailbox mailbox, long uid, long modSeq, MailboxMessage<?> message) throws MailboxException{
             super(mailbox, uid, modSeq, message);
             try {
                 this.body = IOUtils.toByteArray(message.getBodyContent());
@@ -96,16 +90,12 @@ public class JPAEncryptedMessage extends AbstractJPAMessage {
         }
 
 
-        /**
-         * @see org.apache.james.mailbox.store.mail.model.Message#getBodyContent()
-         */
+        @Override
         public InputStream getBodyContent() throws IOException {
             return new ByteArrayInputStream(body);
         }
 
-        /**
-         * @see org.apache.james.mailbox.store.mail.model.Message#getHeaderContent()
-         */
+        @Override
         public InputStream getHeaderContent() throws IOException {
             return new ByteArrayInputStream(header);
         }

@@ -25,6 +25,7 @@ import static org.apache.james.mailbox.hbase.HBaseUtils.messageRowKey;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -36,18 +37,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.hbase.io.ChunkInputStream;
-import org.apache.james.mailbox.store.mail.model.AbstractMessage;
-import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 
 /**
- * Concrete HBaseMessage implementation. This implementation does not store any
+ * Concrete HBaseMailboxMessage implementation. This implementation does not store any
  * message content. The message content is retrieved using a ChunkedInputStream
  * directly from HBase.
  */
-public class HBaseMessage extends AbstractMessage<HBaseId> {
+public class HBaseMailboxMessage implements MailboxMessage<HBaseId> {
 
+    private static final MessageUidComparator MESSAGE_UID_COMPARATOR = new MessageUidComparator();
     private static final String TOSTRING_SEPARATOR = " ";
     /** Configuration for the HBase cluster */
     private final Configuration conf;
@@ -84,18 +89,12 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
     /** Meta data for this message */
     private List<Property> properties;
     private List<String> userFlags;
-
+    
     /**
      * Create a copy of the given message.
      * All properties are cloned except mailbox and UID.
-     * @param mailboxId
-     * @param uid
-     * @param modSeq
-     * @param original
-     * @throws MailboxException
      */
-    public HBaseMessage(Configuration conf, HBaseId mailboxId, long uid, long modSeq, Message<?> original) throws MailboxException {
-        super();
+    public HBaseMailboxMessage(Configuration conf, HBaseId mailboxId, long uid, long modSeq, MailboxMessage<?> original) throws MailboxException {
         this.conf = conf;
         this.mailboxId = mailboxId;
         this.uid = uid;
@@ -117,16 +116,7 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         this.properties = original.getProperties();
     }
 
-    /**
-     * Create a copy of the given message.
-     * @param mailboxId
-     * @param internalDate
-     * @param flags
-     * @param contentOctets
-     * @param bodyStartOctet
-     * @param propertyBuilder
-     */
-    public HBaseMessage(Configuration conf, HBaseId mailboxId, Date internalDate, Flags flags, long contentOctets, int bodyStartOctet, PropertyBuilder propertyBuilder) {
+    public HBaseMailboxMessage(Configuration conf, HBaseId mailboxId, Date internalDate, Flags flags, long contentOctets, int bodyStartOctet, PropertyBuilder propertyBuilder) {
         super();
         this.conf = conf;
         this.mailboxId = mailboxId;
@@ -142,22 +132,19 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         this.properties = propertyBuilder.toProperties();
     }
 
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Message#getBodyContent()
-     */
     @Override
     public InputStream getBodyContent() throws IOException {
         return new ChunkInputStream(conf, MESSAGES_TABLE, MESSAGE_DATA_BODY_CF, messageRowKey(this));
     }
 
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Message#getHeaderContent()
-     */
     @Override
     public InputStream getHeaderContent() throws IOException {
         return new ChunkInputStream(conf, MESSAGES_TABLE, MESSAGE_DATA_HEADERS_CF, messageRowKey(this));
+    }
+
+    @Override
+    public InputStream getFullContent() throws IOException {
+        return new SequenceInputStream(getHeaderContent(), getBodyContent());
     }
 
     @Override
@@ -180,7 +167,7 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final HBaseMessage other = (HBaseMessage) obj;
+        final HBaseMailboxMessage other = (HBaseMailboxMessage) obj;
         if (getMailboxId() != null) {
             if (!getMailboxId().equals(other.getMailboxId())) {
                 return false;
@@ -196,19 +183,11 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         return true;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Message#getModSeq()
-     */
     @Override
     public long getModSeq() {
         return modSeq;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Message#setModSeq(long)
-     */
     @Override
     public void setModSeq(long modSeq) {
         this.modSeq = modSeq;
@@ -232,6 +211,11 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
     @Override
     public String getSubType() {
         return subType;
+    }
+
+    @Override
+    public long getBodyOctets() {
+        return getFullContentOctets() - bodyStartOctet;
     }
 
     /**
@@ -259,87 +243,56 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         this.textualLineCount = textualLineCount;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Document#getFullContentOctets()
-     */
     @Override
     public long getFullContentOctets() {
         return contentOctets;
     }
 
     @Override
-    protected int getBodyStartOctet() {
-        return bodyStartOctet;
+    public MessageId getMessageId() {
+        return new DefaultMessageId(getMailboxId(), getUid());
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getInternalDate()
-     */
     @Override
     public Date getInternalDate() {
         return internalDate;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getMailboxId()
-     */
     @Override
     public HBaseId getMailboxId() {
         return mailboxId;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#getUid()
-     */
     @Override
     public long getUid() {
         return uid;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isAnswered()
-     */
     @Override
     public boolean isAnswered() {
         return answered;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isDeleted()
-     */
     @Override
     public boolean isDeleted() {
         return deleted;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isDraft()
-     */
     @Override
     public boolean isDraft() {
         return draft;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isFlagged()
-     */
     @Override
     public boolean isFlagged() {
         return flagged;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isRecent()
-     */
     @Override
     public boolean isRecent() {
         return recent;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#isSeen()
-     */
     @Override
     public boolean isSeen() {
         return seen;
@@ -350,9 +303,6 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         this.uid = uid;
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.model.Message#setFlags(javax.mail.Flags)
-     */
     @Override
     public final void setFlags(Flags flags) {
         answered = flags.contains(Flags.Flag.ANSWERED);
@@ -366,12 +316,14 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
         userFlags.addAll(Arrays.asList(userflags));
     }
 
+    @Override
+    public Flags createFlags() {
+        return FlagsBuilder.createFlags(this, createUserFlags());
+    }
+
     /**
      * This implementation supports user flags
-     *
-     *
      */
-    @Override
     public String[] createUserFlags() {
         String[] flags = new String[userFlags.size()];
         for (int i = 0; i < userFlags.size(); i++) {
@@ -395,5 +347,10 @@ public class HBaseMessage extends AbstractMessage<HBaseId> {
                 + "seen = " + this.seen + TOSTRING_SEPARATOR
                 + " )";
         return retValue;
+    }
+
+    @Override
+    public int compareTo(MailboxMessage<HBaseId> other) {
+        return MESSAGE_UID_COMPARATOR.compare(this, other);
     }
 }

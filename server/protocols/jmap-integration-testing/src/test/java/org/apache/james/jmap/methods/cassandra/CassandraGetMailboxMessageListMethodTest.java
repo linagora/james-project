@@ -16,33 +16,20 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.search.comparator;
 
-import java.util.Comparator;
+package org.apache.james.jmap.methods.cassandra;
 
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.backends.cassandra.EmbeddedCassandra;
+import org.apache.james.jmap.JmapServer;
+import org.apache.james.jmap.cassandra.CassandraJmapServer;
+import org.apache.james.jmap.methods.GetMessageListMethodTest;
+import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.junit.rules.TemporaryFolder;
 
-/**
- * {@link Comparator} which compares {@link MailboxMessage}'s with their {@link MailboxMessage#getInternalDate()} value
- *
- */
-public class InternalDateComparator  implements Comparator<MailboxMessage<?>>{
+public class CassandraGetMailboxMessageListMethodTest extends GetMessageListMethodTest {
 
-
-    private final static Comparator<MailboxMessage<?>> INTERNALDATE = new InternalDateComparator();;
-    private final static Comparator<MailboxMessage<?>> REVERSE_INTERNALDATE = new ReverseComparator(INTERNALDATE);
-
-    
     @Override
-    public int compare(MailboxMessage<?> o1, MailboxMessage<?> o2) {
-        return (o1.getInternalDate().compareTo(o2.getInternalDate()));
-    }
-
-    public static Comparator<MailboxMessage<?>> internalDate(boolean reverse){
-        if (reverse) {
-            return REVERSE_INTERNALDATE;
-        } else {
-            return INTERNALDATE;
-        }
+    protected JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
+        return new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
     }
 }

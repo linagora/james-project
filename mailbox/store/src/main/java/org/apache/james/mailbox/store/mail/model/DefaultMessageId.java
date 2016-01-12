@@ -16,21 +16,40 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.store.mail.model;
 
-package org.apache.james.mailbox.store.json;
+import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 
-import org.apache.james.mailbox.store.TestId;
-import org.apache.james.mailbox.store.TestIdDeserializer;
-import org.apache.james.mailbox.store.event.EventSerializer;
-import org.apache.james.mailbox.store.json.event.EventConverter;
-import org.apache.james.mailbox.store.json.event.MailboxConverter;
+public class DefaultMessageId implements MessageId {
 
-public class MessagePackEventSerializerTest extends EventSerializerTest {
+    private final MailboxId mailboxId;
+    private final long messageUid;
 
+    public DefaultMessageId(MailboxId mailboxId, long messageUid) {
+        Preconditions.checkNotNull(mailboxId);
+        this.mailboxId = mailboxId;
+        this.messageUid = messageUid;
+    }
+    
     @Override
-    EventSerializer createSerializer() {
-        return new MessagePackEventSerializer<TestId>(
-            new EventConverter<TestId>(
-                new MailboxConverter<TestId>(new TestIdDeserializer())));
+    public String serialize() {
+        return String.format("%s-%d", mailboxId.serialize(), messageUid);
+    }
+    
+    @Override
+    public final boolean equals(Object obj) {
+        if (obj instanceof DefaultMessageId) {
+            DefaultMessageId other = (DefaultMessageId) obj;
+            return Objects.equal(mailboxId, other.mailboxId) &&
+                    Objects.equal(messageUid, other.messageUid);
+            
+        }
+        return false;
+    }
+    
+    @Override
+    public final int hashCode() {
+        return Objects.hashCode(mailboxId, messageUid);
     }
 }

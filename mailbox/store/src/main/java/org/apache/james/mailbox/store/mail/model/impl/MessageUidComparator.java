@@ -16,13 +16,16 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.cassandra.mail;
+package org.apache.james.mailbox.store.mail.model.impl;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.store.mail.model.AbstractMessageMapperTest;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
-public class CassandraMessageMapperTest extends AbstractMessageMapperTest<CassandraId> {
-    public CassandraMessageMapperTest() {
-        super(new CassandraMapperProvider());
+import java.util.Comparator;
+
+public class MessageUidComparator implements Comparator<MailboxMessage<?>> {
+
+    @Override
+    public int compare(MailboxMessage<?> m1, MailboxMessage<?> m2) {
+        return Long.valueOf(m1.getUid()).compareTo(m2.getUid());
     }
 }
