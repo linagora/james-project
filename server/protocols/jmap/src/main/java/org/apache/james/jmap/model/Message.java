@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.model.message.EMailer;
 import org.apache.james.jmap.model.message.IndexableMessage;
@@ -44,6 +45,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
 @JsonDeserialize(builder = Message.Builder.class)
+@JsonFilter("propertiesFilter")
 public class Message {
     public static final String NO_SUBJECT = "(No subject)";
     public static final String MULTIVALUED_HEADERS_SEPARATOR = ", ";
