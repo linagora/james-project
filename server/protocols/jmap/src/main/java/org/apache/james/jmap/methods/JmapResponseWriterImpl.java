@@ -19,31 +19,65 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
-import com.fasterxml.jackson.databind.SerializationFeature;
+import org.apache.james.jmap.model.Property;
 import org.apache.james.jmap.model.ProtocolResponse;
+import org.apache.james.util.streams.Collectors;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
+import com.fasterxml.jackson.databind.ser.PropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
 public class JmapResponseWriterImpl implements JmapResponseWriter {
 
-    private final ObjectMapper objectMapper;
+    private final Set<Module> jacksonModules;
 
     @Inject
     public JmapResponseWriterImpl(Set<Module> jacksonModules) {
-        this.objectMapper = new ObjectMapper().registerModules(jacksonModules)
-            .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        this.jacksonModules = jacksonModules;
     }
 
     @Override
-    public ProtocolResponse formatMethodResponse(JmapResponse jmapResponse) {
-        return new ProtocolResponse(
-                jmapResponse.getResponseName(), 
-                objectMapper.valueToTree(jmapResponse.getResponse()), 
-                jmapResponse.getClientId());
+    public Stream<ProtocolResponse> formatMethodResponse(Stream<JmapResponse> jmapResponses) {
+        return jmapResponses.map(jmapResponse -> {
+            ObjectMapper objectMapper = newConfiguredObjectMapper(jmapResponse);
+
+            return new ProtocolResponse(
+                    jmapResponse.getResponseName(),
+                    objectMapper.valueToTree(jmapResponse.getResponse()),
+                    jmapResponse.getClientId());
+        });
+    }
+    
+    private ObjectMapper newConfiguredObjectMapper(JmapResponse jmapResponse) {
+        ObjectMapper objectMapper = new ObjectMapper().registerModules(jacksonModules)
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+
+        objectMapper.setFilterProvider(buildPropertiesFilter(jmapResponse.getProperties()));
+
+        return objectMapper;
+    }
+
+    private FilterProvider buildPropertiesFilter(Optional<? extends Set<? extends Property>> properties) {
+        PropertyFilter filter = properties
+                .map(this::toFieldNames)
+                .map(SimpleBeanPropertyFilter::filterOutAllExcept)
+                .orElse(SimpleBeanPropertyFilter.serializeAll());
+        return new SimpleFilterProvider().addFilter("propertiesFilter", filter);
+    }
+    
+    private Set<String> toFieldNames(Set<? extends Property> properties) {
+        return properties.stream()
+            .map(Property::asFieldName)
+            .collect(Collectors.toImmutableSet());
     }
 }

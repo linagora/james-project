@@ -19,8 +19,10 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,10 +31,12 @@ import java.util.stream.StreamSupport;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.GetMessagesRequest;
 import org.apache.james.jmap.model.GetMessagesResponse;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageId;
+import org.apache.james.jmap.model.MessageProperty;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
@@ -47,6 +51,7 @@ import org.javatuples.Pair;
 import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 
 public class GetMessagesMethod<Id extends MailboxId> implements Method {
 
@@ -70,21 +75,45 @@ public class GetMessagesMethod<Id extends MailboxId> implements Method {
     }
     
     @Override
-    public Method.Response.Name responseName() {
-        return RESPONSE_NAME;
-    }
-    
-    @Override
     public Class<? extends JmapRequest> requestType() {
         return GetMessagesRequest.class;
     }
     
     @Override
-    public GetMessagesResponse process(JmapRequest request, MailboxSession mailboxSession) {
+    public Stream<JmapResponse> process(JmapRequest request, ClientId clientId, MailboxSession mailboxSession) {
         Preconditions.checkNotNull(request);
         Preconditions.checkNotNull(mailboxSession);
         Preconditions.checkArgument(request instanceof GetMessagesRequest);
         GetMessagesRequest getMessagesRequest = (GetMessagesRequest) request;
+        return Stream.of(JmapResponse.builder().clientId(clientId)
+                            .response(getMessagesResponse(mailboxSession, getMessagesRequest))
+                            .responseName(RESPONSE_NAME)
+                            .properties(getMessagesRequest.getProperties().map(this::handleSpecificProperties))
+                            .build());
+    }
+
+    private Set<MessageProperty> handleSpecificProperties(Set<MessageProperty> input) {
+        Set<MessageProperty> toAdd = new HashSet<MessageProperty>();
+        Set<MessageProperty> toRemove = new HashSet<MessageProperty>();
+        ensureContainsId(input, toAdd);
+        handleBody(input, toAdd, toRemove);
+        return Sets.union(Sets.difference(input, toRemove), toAdd).immutableCopy();
+    }
+        
+    private void ensureContainsId(Set<MessageProperty> input, Set<MessageProperty> toAdd) {
+        if (!input.contains(MessageProperty.id)) {
+            toAdd.add(MessageProperty.id);
+        }
+    }
+    
+    private void handleBody(Set<MessageProperty> input, Set<MessageProperty> toAdd, Set<MessageProperty> toRemove) {
+        if (input.contains(MessageProperty.body)) {
+            toAdd.add(MessageProperty.textBody);
+            toRemove.add(MessageProperty.body);
+        }
+    }
+
+    private GetMessagesResponse getMessagesResponse(MailboxSession mailboxSession, GetMessagesRequest getMessagesRequest) {
         getMessagesRequest.getAccountId().ifPresent(GetMessagesMethod::notImplemented);
         
         Function<MessageId, Stream<Pair<MailboxMessage<Id>, MailboxPath>>> loadMessages = loadMessage(mailboxSession);

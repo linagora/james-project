@@ -19,7 +19,11 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.Optional;
+import java.util.Set;
+
 import org.apache.james.jmap.model.ClientId;
+import org.apache.james.jmap.model.Property;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -33,7 +37,8 @@ public class JmapResponse {
         
         private Method.Response.Name responseName;
         private ClientId id;
-        private Object response;
+        private Method.Response response;
+        private Optional<? extends Set<? extends Property>> properties = Optional.empty();
 
         private Builder() {
         }
@@ -48,8 +53,18 @@ public class JmapResponse {
             return this;
         }
         
-        public Builder response(Object response) {
+        public Builder response(Method.Response response) {
             this.response = response;
+            return this;
+        }
+
+        public Builder properties(Optional<? extends Set<? extends Property>> properties) {
+            this.properties = properties;
+            return this;
+        }
+
+        public Builder properties(Set<? extends Property> properties) {
+            this.properties = Optional.ofNullable(properties);
             return this;
         }
 
@@ -65,11 +80,11 @@ public class JmapResponse {
 
         
         public JmapResponse build() {
-            return new JmapResponse(responseName, id, response);
+            return new JmapResponse(responseName, id, response, properties);
         }
     }
 
-    public static class ErrorResponse {
+    public static class ErrorResponse implements Method.Response {
         
         private final String type;
 
@@ -88,12 +103,14 @@ public class JmapResponse {
     
     private final Method.Response.Name method;
     private final ClientId clientId;
-    private final Object response;
+    private final Method.Response response;
+    private Optional<? extends Set<? extends Property>> properties;
     
-    private JmapResponse(Method.Response.Name method, ClientId clientId, Object response) {
+    private JmapResponse(Method.Response.Name method, ClientId clientId, Method.Response response, Optional<? extends Set<? extends Property>> properties) {
         this.method = method;
         this.clientId = clientId;
         this.response = response;
+        this.properties = properties;
     }
 
     public Method.Response.Name getResponseName() {
@@ -106,5 +123,9 @@ public class JmapResponse {
     
     public ClientId getClientId() {
         return clientId;
+    }
+
+    public Optional<? extends Set<? extends Property>> getProperties() {
+        return properties;
     }
 }
