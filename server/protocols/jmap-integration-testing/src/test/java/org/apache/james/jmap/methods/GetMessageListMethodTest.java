@@ -121,7 +121,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
         
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1", "username@domain.tld-mailbox-2");
+            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
     @Ignore("ISSUE-53")
@@ -175,7 +175,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
         
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1");
+            .containsOnly("username@domain.tld|mailbox|1");
     }
 
     @Test
@@ -201,7 +201,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1");
+            .containsOnly("username@domain.tld|mailbox|1");
     }
 
     @Test
@@ -254,7 +254,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsExactly("username@domain.tld-mailbox-1", "username@domain.tld-mailbox-2");
+            .containsExactly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
     @Test
@@ -282,7 +282,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsExactly("username@domain.tld-mailbox-2", "username@domain.tld-mailbox-1");
+            .containsExactly("username@domain.tld|mailbox|2", "username@domain.tld|mailbox|1");
     }
 
     @Test
@@ -310,7 +310,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsExactly("username@domain.tld-mailbox-1", "username@domain.tld-mailbox-2");
+            .containsExactly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
     @Test
@@ -338,7 +338,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1", "username@domain.tld-mailbox-2");
+            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
     @Test
@@ -366,7 +366,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-2");
+            .containsOnly("username@domain.tld|mailbox|2");
     }
 
     @Test
@@ -394,7 +394,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1", "username@domain.tld-mailbox-2");
+            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
     @Test
@@ -422,7 +422,7 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1");
+            .containsOnly("username@domain.tld|mailbox|1");
     }
 
     @Test
@@ -454,6 +454,6 @@ public abstract class GetMessageListMethodTest {
             .asString();
 
         assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld-mailbox-1", "username@domain.tld-mailbox-2", "username@domain.tld-mailbox-3");
+            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2", "username@domain.tld|mailbox|3");
     }
 }
