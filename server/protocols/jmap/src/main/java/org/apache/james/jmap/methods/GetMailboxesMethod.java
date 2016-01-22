@@ -19,6 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -39,7 +40,9 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.slf4j.Logger;
@@ -93,16 +96,29 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
     private GetMailboxesResponse getMailboxesResponse(MailboxSession mailboxSession) {
         GetMailboxesResponse.Builder builder = GetMailboxesResponse.builder();
         try {
-            mailboxManager.list(mailboxSession)
+            retrieveUserMailboxes(mailboxSession)
                 .stream()
+                .map(MailboxMetaData::getPath)
                 .map(mailboxPath -> mailboxFromMailboxPath(mailboxPath, mailboxSession))
-                .forEach(mailbox -> builder.add(mailbox.get()));
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .sorted((m1, m2) -> Integer.compare(m1.getSortOrder(), m2.getSortOrder()))
+                .forEach(mailbox -> builder.add(mailbox));
             return builder.build();
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
         }
     }
     
+    private List<MailboxMetaData> retrieveUserMailboxes(MailboxSession session) throws MailboxException {
+        String username = session.getUser().getUserName();
+        return mailboxManager.search(MailboxQuery.builder()
+                                        .pathDelimiter(session.getPathDelimiter())
+                                        .privateUserMailboxes(username)
+                                        .build(),
+                                   session);
+    }
+
     private Optional<Mailbox> mailboxFromMailboxPath(MailboxPath mailboxPath, MailboxSession mailboxSession) {
         try {
             Optional<Role> role = Role.from(mailboxPath.getName());
