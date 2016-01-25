@@ -19,30 +19,30 @@
 
 package org.apache.james.jmap.model.message;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Multimap;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.james.mailbox.store.extractor.TextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mime4j.MimeException;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Multimap;
 
 public class IndexableMessage {
 
     public static IndexableMessage from(MailboxMessage<? extends MailboxId> message, TextExtractor textExtractor, ZoneId zoneId) {
-        Preconditions.checkNotNull(message.getMailboxId());
+        Preconditions.checkNotNull(message.getMailboxIds());
         IndexableMessage indexableMessage = new IndexableMessage();
         try {
             MimePart parsingResult = new MimePartParser(message, textExtractor).parse();
@@ -74,7 +74,7 @@ public class IndexableMessage {
 
     private void copyMessageFields(MailboxMessage<? extends MailboxId> message, ZoneId zoneId) {
         this.id = message.getUid();
-        this.mailboxId = message.getMailboxId().serialize();
+        this.mailboxIds = message.getMailboxIds();
         this.modSeq = message.getModSeq();
         this.size = message.getFullContentOctets();
         this.date = DateResolutionFormater.DATE_TIME_FOMATTER.format(getSanitizedInternalDate(message, zoneId));
@@ -100,7 +100,7 @@ public class IndexableMessage {
     }
 
     private Long id;
-    private String mailboxId;
+    private List<? extends MailboxId> mailboxIds;
     private long modSeq;
     private long size;
     private String date;
@@ -131,8 +131,8 @@ public class IndexableMessage {
     }
 
     @JsonProperty(JsonMessageConstants.MAILBOX_ID)
-    public String getMailboxId() {
-        return mailboxId;
+    public List<? extends MailboxId> getMailboxIds() {
+        return mailboxIds;
     }
 
     @JsonProperty(JsonMessageConstants.MODSEQ)

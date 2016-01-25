@@ -21,6 +21,7 @@ package org.apache.james.mailbox.store.mail.model.impl;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
@@ -33,6 +34,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailboxMessage<Id> {
@@ -87,8 +89,8 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
         return userFlags.clone();
     }
 
-    public Id getMailboxId() {
-        return mailboxId;
+    public List<Id> getMailboxIds() {
+        return ImmutableList.of(mailboxId);
     }
 
     public long getUid() {

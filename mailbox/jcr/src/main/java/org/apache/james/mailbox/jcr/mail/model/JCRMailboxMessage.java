@@ -41,14 +41,14 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jcr.JCRId;
 import org.apache.james.mailbox.jcr.JCRImapConstants;
 import org.apache.james.mailbox.jcr.Persistent;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.slf4j.Logger;
+
+import com.google.common.collect.ImmutableList;
 
 public class JCRMailboxMessage implements MailboxMessage<JCRId>, JCRImapConstants, Persistent {
 
@@ -353,11 +353,11 @@ public class JCRMailboxMessage implements MailboxMessage<JCRId>, JCRImapConstant
             if (other.getUUID() != null)
         	return false;
         }
-        if (getMailboxId() != null) {
-            if (!getMailboxId().equals(other.getMailboxId()))
+        if (getMailboxIds() != null) {
+            if (!getMailboxIds().equals(other.getMailboxIds()))
         	return false;
         } else {
-            if (other.getMailboxId() != null)
+            if (other.getMailboxIds() != null)
         	return false;
         }
         if (getId() != null) {
@@ -368,12 +368,6 @@ public class JCRMailboxMessage implements MailboxMessage<JCRId>, JCRImapConstant
         	return false;
         }
         return true;
-    }
-
-
-    @Override
-    public MessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), getUid());
     }
 
     @Override
@@ -394,7 +388,11 @@ public class JCRMailboxMessage implements MailboxMessage<JCRId>, JCRImapConstant
     }
 
     @Override
-    public JCRId getMailboxId() {
+    public List<JCRId> getMailboxIds() {
+        return ImmutableList.of(getMailboxId());
+    }
+
+    private JCRId getMailboxId() {
         if (isPersistent()) {
             try {
                 return JCRId.of(node.getProperty(MAILBOX_UUID_PROPERTY).getString());
@@ -581,7 +579,7 @@ public class JCRMailboxMessage implements MailboxMessage<JCRId>, JCRImapConstant
         final int PRIME = 31;
         int result = 1;
         result = PRIME * result + getUUID().hashCode();
-        result = PRIME * result + getMailboxId().hashCode();
+        result = PRIME * result + getMailboxIds().hashCode();
         return result;
     }
 
@@ -590,7 +588,7 @@ public class JCRMailboxMessage implements MailboxMessage<JCRId>, JCRImapConstant
         final String retValue = 
             "message("
             + "uuid = " + getUUID()
-            + "mailboxUUID = " + this.getMailboxId() + TOSTRING_SEPARATOR
+            + "mailboxUUID = " + this.getMailboxIds() + TOSTRING_SEPARATOR
             + "uuid = " + this.getId() + TOSTRING_SEPARATOR
             + "internalDate = " + this.getInternalDate() + TOSTRING_SEPARATOR
             + "size = " + this.getFullContentOctets() + TOSTRING_SEPARATOR

@@ -107,11 +107,6 @@ public abstract class DelegatingMailboxMessage<Id extends MailboxId> implements 
         return message.getSubType();
     }
 
-    @Override
-    public DefaultMessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), getUid());
-    }
-
     public Message getMessage() {
         return message;
     }

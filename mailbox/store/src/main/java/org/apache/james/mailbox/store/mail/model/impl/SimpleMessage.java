@@ -18,15 +18,15 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model.impl;
 
-import org.apache.james.mailbox.store.mail.model.Message;
-import org.apache.james.mailbox.store.mail.model.MessageId;
-import org.apache.james.mailbox.store.mail.model.Property;
-
-import javax.mail.internet.SharedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 import java.util.List;
+
+import javax.mail.internet.SharedInputStream;
+
+import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.mailbox.store.mail.model.Property;
 
 public class SimpleMessage implements Message {
 
@@ -48,11 +48,6 @@ public class SimpleMessage implements Message {
         this.size = size;
         this.textualLineCount = textualLineCount;
         this.properties = properties;
-    }
-
-    @Override
-    public MessageId getMessageId() {
-        return null;
     }
 
     @Override

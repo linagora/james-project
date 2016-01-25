@@ -46,16 +46,16 @@ import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.jpa.mail.model.JPAProperty;
 import org.apache.james.mailbox.jpa.mail.model.JPAUserFlag;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.openjpa.persistence.jdbc.ElementJoinColumn;
 import org.apache.openjpa.persistence.jdbc.ElementJoinColumns;
 import org.apache.openjpa.persistence.jdbc.Index;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Abstract base class for JPA based implementations of {@link DelegatingMailboxMessage}
@@ -325,11 +325,11 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
         if (getClass() != obj.getClass())
             return false;
         final AbstractJPAMailboxMessage other = (AbstractJPAMailboxMessage) obj;
-        if (getMailboxId() != null) {
-            if (!getMailboxId().equals(other.getMailboxId()))
+        if (getMailboxIds() != null) {
+            if (!getMailboxIds().equals(other.getMailboxIds()))
             return false;
         } else {
-            if (other.getMailboxId() != null)
+            if (other.getMailboxIds() != null)
             return false;
         }
         if (uid != other.uid)
@@ -408,9 +408,13 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     }
 
     /**
-     * @see MailboxMessage#getMailboxId()
+     * @see MailboxMessage#getMailboxIds()
      */
-    public JPAId getMailboxId() {
+    public List<JPAId> getMailboxIds() {
+        return ImmutableList.of(getMailboxId());
+    }
+
+    private JPAId getMailboxId() {
         return getMailbox().getMailboxId();
     }
 
@@ -550,11 +554,6 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     }
 
     @Override
-    public MessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), uid);
-    }
-
-    @Override
     public int compareTo(MailboxMessage<JPAId> other) {
         return MESSAGE_UID_COMPARATOR.compare(this, other);
     }
@@ -562,7 +561,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     public String toString() {
         final String retValue = 
             "message("
-            + "mailboxId = " + this.getMailboxId() + TOSTRING_SEPARATOR
+            + "mailboxId = " + this.getMailboxIds() + TOSTRING_SEPARATOR
             + "uid = " + this.uid + TOSTRING_SEPARATOR
             + "internalDate = " + this.internalDate + TOSTRING_SEPARATOR
             + "answered = " + this.answered + TOSTRING_SEPARATOR

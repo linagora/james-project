@@ -46,10 +46,10 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Fla
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DELETED;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DRAFT;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.FLAGGED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER_FLAGS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.RECENT;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.SEEN;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER_FLAGS;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,14 +67,13 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 import javax.mail.util.SharedByteArrayInputStream;
 
-import com.google.common.base.Throwables;
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
+import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.mailbox.cassandra.mail.utils.MessageDeletedDuringFlagsUpdateException;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxCountersTable;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageTable;
@@ -104,6 +103,7 @@ import com.datastax.driver.core.querybuilder.Assignment;
 import com.datastax.driver.core.querybuilder.Insert;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Where;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Bytes;
 
@@ -426,7 +426,7 @@ public class CassandraMessageMapper implements MessageMapper<CassandraId> {
                 .and(set(USER_FLAGS, userFlagsSet(message)))
                 .and(set(MOD_SEQ, message.getModSeq()))
                 .where(eq(IMAP_UID, message.getUid()))
-                .and(eq(MAILBOX_ID, message.getMailboxId().asUuid()))
+                .and(eq(MAILBOX_ID, message.getMailboxIds().get(0).asUuid()))
                 .onlyIf(eq(MOD_SEQ, oldModSeq)));
         return resultSet.one().getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED);
     }

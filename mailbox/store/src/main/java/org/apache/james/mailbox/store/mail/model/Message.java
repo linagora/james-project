@@ -25,8 +25,6 @@ import java.util.List;
 
 public interface Message {
 
-    MessageId getMessageId();
-
     Date getInternalDate();
 
     /**

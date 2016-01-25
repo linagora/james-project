@@ -204,7 +204,7 @@ public class HBaseUtils {
      * @return rowkey byte array that can be used with HBase API
      */
     public static byte[] messageRowKey(MailboxMessage<HBaseId> message) {
-        return messageRowKey(message.getMailboxId(), message.getUid());
+        return messageRowKey(message.getMailboxIds().get(0), message.getUid());
     }
 
     /**

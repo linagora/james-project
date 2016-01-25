@@ -26,6 +26,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Iterator;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
@@ -47,8 +49,6 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
-
-import java.util.Iterator;
 
 public class ReIndexerImplTest {
 
@@ -95,7 +95,7 @@ public class ReIndexerImplTest {
         });
         final MailboxMessage<TestId> message = new MessageBuilder().build();
         final SimpleMailbox<TestId> mailbox = new SimpleMailbox<TestId>(INBOX, 42);
-        mailbox.setMailboxId(message.getMailboxId());
+        mailbox.setMailboxId(message.getMailboxIds().get(0));
         when(mailboxMapper.findMailboxByPath(INBOX)).thenAnswer(new Answer<Mailbox<TestId>>() {
             @Override
             public Mailbox<TestId> answer(InvocationOnMock invocationOnMock) throws Throwable {

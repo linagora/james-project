@@ -38,8 +38,8 @@ public class MessageAssert extends AbstractAssert<MessageAssert, MailboxMessage<
 
     public MessageAssert isEqualTo(MailboxMessage<?> expected, MessageMapper.FetchType usedFetchType) throws IOException {
         isNotNull();
-        if (!equals(actual.getMailboxId(), expected.getMailboxId())) {
-            failWithMessage("Expected Mailbox ID to be <%s> but was <%s>", expected.getMailboxId().toString(), actual.getMailboxId().toString());
+        if (!equals(actual.getMailboxIds(), expected.getMailboxIds())) {
+            failWithMessage("Expected Mailbox ID to be <%s> but was <%s>", expected.getMailboxIds().toString(), actual.getMailboxIds().toString());
         }
         if (!equals(actual.getUid(), expected.getUid())) {
             failWithMessage("Expected UID to be <%s> but was <%s>", expected.getUid(), actual.getUid());

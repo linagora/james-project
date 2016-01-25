@@ -21,6 +21,7 @@ package org.apache.james.mailbox.maildir.mail.model;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import javax.mail.Flags;
 
@@ -29,6 +30,8 @@ import org.apache.james.mailbox.maildir.MaildirId;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.collect.ImmutableList;
 
 public class MaildirMailboxMessage extends DelegatingMailboxMessage<MaildirId> {
 
@@ -69,8 +72,8 @@ public class MaildirMailboxMessage extends DelegatingMailboxMessage<MaildirId> {
 
     
     @Override
-    public MaildirId getMailboxId() {
-        return mailbox.getMailboxId();
+    public List<MaildirId> getMailboxIds() {
+        return ImmutableList.of(mailbox.getMailboxId());
     }
 
     @Override

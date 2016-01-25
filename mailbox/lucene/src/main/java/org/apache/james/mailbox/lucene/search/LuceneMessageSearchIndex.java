@@ -57,8 +57,8 @@ import org.apache.james.mailbox.model.SearchQuery.NumericOperator;
 import org.apache.james.mailbox.model.SearchQuery.NumericRange;
 import org.apache.james.mailbox.model.SearchQuery.UidCriterion;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.apache.james.mailbox.store.search.SearchUtil;
@@ -456,11 +456,11 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     private Document createMessageDocument(final MailboxSession session, final MailboxMessage<?> membership) throws MailboxException{
         final Document doc = new Document();
         // TODO: Better handling
-        doc.add(new Field(MAILBOX_ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(MAILBOX_ID_FIELD, membership.getMailboxIds().get(0).serialize().toUpperCase(Locale.ENGLISH), Store.YES, Index.NOT_ANALYZED));
         doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(membership.getUid()));
         
         // create an unqiue key for the document which can be used later on updates to find the document
-        doc.add(new Field(ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH) +"-" + Long.toString(membership.getUid()), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(ID_FIELD, membership.getMailboxIds().get(0).serialize().toUpperCase(Locale.ENGLISH) +"-" + Long.toString(membership.getUid()), Store.YES, Index.NOT_ANALYZED));
 
         doc.add(new Field(INTERNAL_DATE_FIELD_YEAR_RESOLUTION, DateTools.dateToString(membership.getInternalDate(), DateTools.Resolution.YEAR), Store.NO, Index.NOT_ANALYZED));
         doc.add(new Field(INTERNAL_DATE_FIELD_MONTH_RESOLUTION, DateTools.dateToString(membership.getInternalDate(), DateTools.Resolution.MONTH), Store.NO, Index.NOT_ANALYZED));
@@ -1251,8 +1251,8 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
      */
     private Document createFlagsDocument(MailboxMessage<?> message) {
         Document doc = new Document();
-        doc.add(new Field(ID_FIELD, "flags-" + message.getMailboxId().serialize() +"-" + Long.toString(message.getUid()), Store.YES, Index.NOT_ANALYZED));
-        doc.add(new Field(MAILBOX_ID_FIELD, message.getMailboxId().serialize(), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(ID_FIELD, "flags-" + message.getMailboxIds().get(0).serialize() +"-" + Long.toString(message.getUid()), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(MAILBOX_ID_FIELD, message.getMailboxIds().get(0).serialize(), Store.YES, Index.NOT_ANALYZED));
         doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(message.getUid()));
         
         indexFlags(doc, message.createFlags());

@@ -37,13 +37,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.hbase.io.ChunkInputStream;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Concrete HBaseMailboxMessage implementation. This implementation does not store any
@@ -168,12 +168,12 @@ public class HBaseMailboxMessage implements MailboxMessage<HBaseId> {
             return false;
         }
         final HBaseMailboxMessage other = (HBaseMailboxMessage) obj;
-        if (getMailboxId() != null) {
-            if (!getMailboxId().equals(other.getMailboxId())) {
+        if (getMailboxIds() != null) {
+            if (!getMailboxIds().equals(other.getMailboxIds())) {
                 return false;
             }
         } else {
-            if (other.getMailboxId() != null) {
+            if (other.getMailboxIds() != null) {
                 return false;
             }
         }
@@ -249,18 +249,13 @@ public class HBaseMailboxMessage implements MailboxMessage<HBaseId> {
     }
 
     @Override
-    public MessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), getUid());
-    }
-
-    @Override
     public Date getInternalDate() {
         return internalDate;
     }
 
     @Override
-    public HBaseId getMailboxId() {
-        return mailboxId;
+    public List<HBaseId> getMailboxIds() {
+        return ImmutableList.of(mailboxId);
     }
 
     @Override
@@ -336,7 +331,7 @@ public class HBaseMailboxMessage implements MailboxMessage<HBaseId> {
     public String toString() {
         final String retValue =
                 "message("
-                + "mailboxId = " + this.getMailboxId() + TOSTRING_SEPARATOR
+                + "mailboxId = " + this.getMailboxIds() + TOSTRING_SEPARATOR
                 + "uid = " + this.uid + TOSTRING_SEPARATOR
                 + "internalDate = " + this.internalDate + TOSTRING_SEPARATOR
                 + "answered = " + this.answered + TOSTRING_SEPARATOR
