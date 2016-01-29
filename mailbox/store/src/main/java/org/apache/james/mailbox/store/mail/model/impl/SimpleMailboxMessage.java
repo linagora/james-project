@@ -34,6 +34,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.Objects;
 import com.google.common.primitives.Ints;
+import org.apache.james.mailbox.store.mail.model.Message;
 
 public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailboxMessage<Id> {
 
@@ -69,14 +70,18 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
     public SimpleMailboxMessage(Date internalDate, long size, int bodyStartOctet,
                                 SharedInputStream content, Flags flags,
                                 PropertyBuilder propertyBuilder, final Id mailboxId) {
-        super(new SimpleMessage(
-            content, size, internalDate, propertyBuilder.getSubType(),
-            propertyBuilder.getMediaType(),
-            bodyStartOctet,
-            propertyBuilder.getTextualLineCount(),
-            propertyBuilder.toProperties()
-            ));
+        this(new SimpleMessage(
+                    content, size, internalDate, propertyBuilder.getSubType(),
+                    propertyBuilder.getMediaType(),
+                    bodyStartOctet,
+                    propertyBuilder.getTextualLineCount(),
+                    propertyBuilder.toProperties()),
+            flags, mailboxId
+            );
+    }
 
+    public SimpleMailboxMessage(Message message, Flags flags, Id mailboxId) {
+        super(message);
         setFlags(flags);
         this.mailboxId = mailboxId;
         this.userFlags = flags.getUserFlags();

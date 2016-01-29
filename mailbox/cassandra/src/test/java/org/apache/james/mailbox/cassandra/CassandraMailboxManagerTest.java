@@ -20,8 +20,11 @@ package org.apache.james.mailbox.cassandra;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.mailbox.AbstractMailboxManagerTest;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxCountersRepository;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageRepository;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
@@ -36,6 +39,8 @@ import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.LoggerFactory;
+
+import com.datastax.driver.core.Session;
 
 /**
  * CassandraMailboxManagerTest that extends the StoreMailboxManagerTest.
@@ -83,12 +88,16 @@ public class CassandraMailboxManagerTest extends AbstractMailboxManagerTest {
      */
     @Override
     protected void createMailboxManager() throws MailboxException {
-        final CassandraUidProvider uidProvider = new CassandraUidProvider(CASSANDRA.getConf());
-        final CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(CASSANDRA.getConf());
+        Session session = CASSANDRA.getConf();
+        CassandraTypesProvider typesProvider = CASSANDRA.getTypesProvider();
+        CassandraUidProvider uidProvider = new CassandraUidProvider(session);
+        CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(session);
+
+        CassandraMessageRepository messageRepository = new CassandraMessageRepository(session, typesProvider);
+        CassandraMailboxCountersRepository mailboxCountersRepository = new CassandraMailboxCountersRepository(session);
+
         final CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(uidProvider,
-            modSeqProvider,
-            CASSANDRA.getConf(),
-            CASSANDRA.getTypesProvider());
+            modSeqProvider, session, typesProvider, messageRepository, mailboxCountersRepository);
 
         final CassandraMailboxManager manager = new CassandraMailboxManager(mapperFactory, null, new JVMMailboxPathLocker());
         manager.init();

@@ -29,7 +29,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.FlagsUpdateCalculator;
+import org.apache.james.mailbox.store.FlagsUpdate;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -69,7 +69,7 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
     /**
      * @see org.apache.james.mailbox.store.mail.MessageMapper#updateFlags(org.apache.james.mailbox.store.mail.model.Mailbox, javax.mail.Flags, boolean, boolean, org.apache.james.mailbox.model.MessageRange)
      */
-    public Iterator<UpdatedFlags> updateFlags(final Mailbox<Id> mailbox, final FlagsUpdateCalculator flagsUpdateCalculator, final MessageRange set) throws MailboxException {
+    public Iterator<UpdatedFlags> updateFlags(final Mailbox<Id> mailbox, final FlagsUpdate flagsUpdate, final MessageRange set) throws MailboxException {
         final List<UpdatedFlags> updatedFlags = new ArrayList<UpdatedFlags>();
         Iterator<MailboxMessage<Id>> messages = findInMailbox(mailbox, set, FetchType.Metadata, -1);
         
@@ -83,7 +83,7 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
         while(messages.hasNext()) {
         	final MailboxMessage<Id> member = messages.next();
             Flags originalFlags = member.createFlags();
-            member.setFlags(flagsUpdateCalculator.buildNewFlags(originalFlags));
+            member.setFlags(flagsUpdate.apply(originalFlags));
             Flags newFlags = member.createFlags();
             if (UpdatedFlags.flagsChanged(originalFlags, newFlags)) {
                 // increase the mod-seq as we changed the flags

@@ -7,7 +7,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.FlagsUpdateCalculator;
+import org.apache.james.mailbox.store.FlagsUpdate;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -95,12 +95,12 @@ public class CachingMessageMapper<Id extends MailboxId> implements MessageMapper
     }
 
     @Override
-    public Iterator<UpdatedFlags> updateFlags(Mailbox<Id> mailbox, FlagsUpdateCalculator calculator, MessageRange set)
+    public Iterator<UpdatedFlags> updateFlags(Mailbox<Id> mailbox, FlagsUpdate flagsUpdate, MessageRange set)
             throws MailboxException {
         //check if there are in fact any updates
         if (set.iterator().hasNext())
             invalidateMetadata(mailbox);
-        return underlying.updateFlags(mailbox, calculator, set);
+        return underlying.updateFlags(mailbox, flagsUpdate, set);
     }
 
 

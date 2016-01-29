@@ -59,7 +59,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateMessageMapper() throws Exception {
         LOG.info("createMessageMapper");
         MailboxSession session = null;
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, null, null);
         MessageMapper<CassandraId> messageMapper = instance.createMessageMapper(session);
         assertNotNull(messageMapper);
         assertTrue(messageMapper instanceof MessageMapper);
@@ -73,7 +73,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateMailboxMapper() throws Exception {
         LOG.info("createMailboxMapper");
         MailboxSession session = null;
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, null, null);
         MailboxMapper<CassandraId> mailboxMapper = instance.createMailboxMapper(session);
         assertNotNull(mailboxMapper);
         assertTrue(mailboxMapper instanceof MailboxMapper);
@@ -87,7 +87,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateSubscriptionMapper() throws Exception {
         LOG.info("createSubscriptionMapper");
         MailboxSession session = null;
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, null, null);
         SubscriptionMapper subscriptionMapper = instance.createSubscriptionMapper(session);
         assertNotNull(subscriptionMapper);
         assertTrue(subscriptionMapper instanceof SubscriptionMapper);
@@ -101,7 +101,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testGetModSeqProvider() {
         LOG.info("getModSeqProvider");
         ModSeqProvider<CassandraId> expResult = new CassandraModSeqProvider(CLUSTER.getConf());
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, expResult, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, expResult, null, null, null, null);
         ModSeqProvider<CassandraId> result = instance.getModSeqProvider();
         assertEquals(expResult, result);
     }
@@ -114,7 +114,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testGetUidProvider() {
         LOG.info("getUidProvider");
         UidProvider<CassandraId> expResult = new CassandraUidProvider(CLUSTER.getConf());
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory((CassandraUidProvider) expResult, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory((CassandraUidProvider) expResult, null, null, null, null, null);
         UidProvider<CassandraId> result = instance.getUidProvider();
         assertEquals(expResult, result);
     }

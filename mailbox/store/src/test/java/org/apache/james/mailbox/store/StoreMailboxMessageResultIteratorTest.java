@@ -143,7 +143,7 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         @Override
-        public Iterator<UpdatedFlags> updateFlags(Mailbox<TestId> mailbox, FlagsUpdateCalculator calculator, MessageRange set) throws MailboxException {
+        public Iterator<UpdatedFlags> updateFlags(Mailbox<TestId> mailbox, FlagsUpdate calculator, MessageRange set) throws MailboxException {
             throw new UnsupportedOperationException();
         }
 

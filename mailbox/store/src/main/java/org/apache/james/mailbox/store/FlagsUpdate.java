@@ -22,30 +22,34 @@ package org.apache.james.mailbox.store;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageManager;
+import org.msgpack.core.Preconditions;
 
-public class FlagsUpdateCalculator {
+public class FlagsUpdate {
 
     private final Flags providedFlags;
     private final MessageManager.FlagsUpdateMode mode;
 
-    public FlagsUpdateCalculator(Flags providedFlags, MessageManager.FlagsUpdateMode mode) {
+    public FlagsUpdate(Flags providedFlags, MessageManager.FlagsUpdateMode mode) {
+        Preconditions.checkNotNull(providedFlags);
+        Preconditions.checkNotNull(mode);
         this.providedFlags = providedFlags;
         this.mode = mode;
     }
 
-    public Flags buildNewFlags(Flags flags) {
+    public Flags apply(Flags flags) {
         Flags updatedFlags = new Flags(flags);
         switch (mode) {
         case REPLACE:
             return new Flags(providedFlags);
         case ADD:
             updatedFlags.add(providedFlags);
-            break;
+            return updatedFlags;
         case REMOVE:
             updatedFlags.remove(providedFlags);
-            break;
+            return updatedFlags;
+        default:
+            throw new IllegalStateException("mode not handled");
         }
-        return updatedFlags;
     }
 
 }

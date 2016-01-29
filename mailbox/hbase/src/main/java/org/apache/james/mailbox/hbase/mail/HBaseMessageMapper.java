@@ -71,7 +71,7 @@ import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageRange.Type;
 import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.FlagsUpdateCalculator;
+import org.apache.james.mailbox.store.FlagsUpdate;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
@@ -494,7 +494,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
      * @see org.apache.james.mailbox.store.mail.MessageMapper#updateFlags(org.apache.james.mailbox.store.mail.model.Mailbox, javax.mail.Flags, boolean, boolean, org.apache.james.mailbox.MessageRange)
      */
     @Override
-    public Iterator<UpdatedFlags> updateFlags(final Mailbox<HBaseId> mailbox, FlagsUpdateCalculator flagsUpdateCalculator, MessageRange set) throws MailboxException {
+    public Iterator<UpdatedFlags> updateFlags(final Mailbox<HBaseId> mailbox, FlagsUpdate flagsUpdate, MessageRange set) throws MailboxException {
 
         final List<UpdatedFlags> updatedFlags = new ArrayList<UpdatedFlags>();
         Iterator<MailboxMessage<HBaseId>> messagesFound = findInMailbox(mailbox, set, FetchType.Metadata, -1);
@@ -514,7 +514,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
                 Put put = null;
                 final MailboxMessage<HBaseId> member = messagesFound.next();
                 Flags originalFlags = member.createFlags();
-                member.setFlags(flagsUpdateCalculator.buildNewFlags(originalFlags));
+                member.setFlags(flagsUpdate.apply(originalFlags));
                 Flags newFlags = member.createFlags();
                 put = flagsToPut(member, newFlags);
                 if (UpdatedFlags.flagsChanged(originalFlags, newFlags)) {

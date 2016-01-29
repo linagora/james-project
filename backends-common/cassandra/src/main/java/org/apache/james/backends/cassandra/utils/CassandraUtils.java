@@ -19,15 +19,35 @@
 
 package org.apache.james.backends.cassandra.utils;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 public class CassandraUtils {
 
+    private static Executor executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("Cassandra-CompletableFuture-Pool-%d").build());
+    
     public static Stream<Row> convertToStream(ResultSet resultSet) {
         return StreamSupport.stream(resultSet.spliterator(), true);
     }
+
+    public static CompletableFuture<ResultSet> executeAsync(Session session, Statement statement) {
+        return FutureConverter.toCompletableFuture(session.executeAsync(statement), executor);
+    }
+
+    public static CompletableFuture<Void> executeVoidAsync(Session session, Statement statement) {
+        return FutureConverter.toCompletableFuture(session.executeAsync(statement), executor)
+            .thenAccept(CassandraUtils::consume);
+    }
+
+    private static <U> void consume(U value) {}
 
 }

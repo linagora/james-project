@@ -19,10 +19,6 @@
 
 package org.apache.james.mailbox.cassandra.table;
 
-import javax.mail.Flags;
-
-import com.google.common.collect.ImmutableMap;
-
 public interface CassandraMessageTable {
 
     String TABLE_NAME = "message";
@@ -49,16 +45,6 @@ public interface CassandraMessageTable {
         String USER = "flagUser";
         String USER_FLAGS = "userFlags";
         String[] ALL = { ANSWERED, DELETED, DRAFT, RECENT, SEEN, FLAGGED, USER };
-
-        ImmutableMap<String, Flags.Flag> JAVAX_MAIL_FLAG = ImmutableMap.<String, Flags.Flag>builder()
-            .put(ANSWERED, Flags.Flag.ANSWERED)
-            .put(DELETED, Flags.Flag.DELETED)
-            .put(DRAFT, Flags.Flag.DRAFT)
-            .put(RECENT, Flags.Flag.RECENT)
-            .put(SEEN, Flags.Flag.SEEN)
-            .put(FLAGGED, Flags.Flag.FLAGGED)
-            .put(USER, Flags.Flag.USER)
-            .build();
     }
 
     interface Properties {

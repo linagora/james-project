@@ -539,7 +539,7 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
         Iterator<UpdatedFlags> it = messageMapper.execute(new Mapper.Transaction<Iterator<UpdatedFlags>>() {
 
             public Iterator<UpdatedFlags> run() throws MailboxException {
-                return messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdateCalculator(flags, flagsUpdateMode), set);
+                return messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdate(flags, flagsUpdateMode), set);
             }
         });
 
@@ -664,7 +664,7 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
                 for (MessageRange range : ranges) {
                     if (reset) {
                         // only call save if we need to
-                        messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdateCalculator(new Flags(Flag.RECENT), FlagsUpdateMode.REMOVE), range);
+                        messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdate(new Flags(Flag.RECENT), FlagsUpdateMode.REMOVE), range);
                     }
                 }
                 return members;

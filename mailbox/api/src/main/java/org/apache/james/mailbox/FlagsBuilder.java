@@ -20,6 +20,7 @@
 package org.apache.james.mailbox;
 
 import javax.mail.Flags;
+import java.util.Arrays;
 
 public class FlagsBuilder {
 
@@ -30,17 +31,11 @@ public class FlagsBuilder {
     }
 
     public FlagsBuilder add(Flags.Flag... flags) {
-        for(Flags.Flag flag : flags) {
-            internalFlags.add(flag);
-        }
-        return this;
+        return addFlags(Arrays.asList(flags));
     }
 
     public FlagsBuilder add(String... flags) {
-        for(String userFlag : flags) {
-            internalFlags.add(userFlag);
-        }
-        return this;
+        return addUserFlags(Arrays.asList(flags));
     }
 
     public FlagsBuilder add(Flags flags) {
@@ -48,7 +43,22 @@ public class FlagsBuilder {
         return this;
     }
 
+    public FlagsBuilder addFlags(Iterable<Flags.Flag> flags) {
+        for(Flags.Flag flag : flags) {
+            internalFlags.add(flag);
+        }
+        return this;
+    }
+
+    public FlagsBuilder addUserFlags(Iterable<String> userFlags) {
+        for(String userFlag : userFlags) {
+            internalFlags.add(userFlag);
+        }
+        return this;
+    }
+
     public Flags build() {
         return new Flags(internalFlags);
     }
+
 }

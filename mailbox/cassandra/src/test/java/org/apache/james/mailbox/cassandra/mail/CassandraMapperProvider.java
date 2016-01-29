@@ -2,6 +2,7 @@ package org.apache.james.mailbox.cassandra.mail;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
@@ -15,6 +16,8 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
 
+import com.datastax.driver.core.Session;
+
 public class CassandraMapperProvider implements MapperProvider<CassandraId> {
 
     private static final CassandraCluster cassandra = CassandraCluster.create(new CassandraModuleComposite(
@@ -26,22 +29,32 @@ public class CassandraMapperProvider implements MapperProvider<CassandraId> {
 
     @Override
     public MailboxMapper<CassandraId> createMailboxMapper() throws MailboxException {
+        Session session = cassandra.getConf();
+        CassandraTypesProvider typesProvider = cassandra.getTypesProvider();
+        CassandraMessageRepository messageRepository = new CassandraMessageRepository(session, typesProvider);
+        CassandraMailboxCountersRepository mailboxCountersRepository = new CassandraMailboxCountersRepository(session);
         return new CassandraMailboxSessionMapperFactory(
-            new CassandraUidProvider(cassandra.getConf()),
-            new CassandraModSeqProvider(cassandra.getConf()),
-            cassandra.getConf(),
-            cassandra.getTypesProvider()
-        ).getMailboxMapper(new MockMailboxSession("benwa"));
+            new CassandraUidProvider(session),
+            new CassandraModSeqProvider(session),
+            session,
+            typesProvider,
+            messageRepository,
+            mailboxCountersRepository).getMailboxMapper(new MockMailboxSession("benwa"));
     }
 
     @Override
     public MessageMapper<CassandraId> createMessageMapper() throws MailboxException {
+        Session session = cassandra.getConf();
+        CassandraTypesProvider typesProvider = cassandra.getTypesProvider();
+        CassandraMessageRepository messageRepository = new CassandraMessageRepository(session, typesProvider);
+        CassandraMailboxCountersRepository mailboxCountersRepository = new CassandraMailboxCountersRepository(session);
         return new CassandraMailboxSessionMapperFactory(
-            new CassandraUidProvider(cassandra.getConf()),
-            new CassandraModSeqProvider(cassandra.getConf()),
-            cassandra.getConf(),
-            cassandra.getTypesProvider()
-        ).getMessageMapper(new MockMailboxSession("benwa"));
+            new CassandraUidProvider(session),
+            new CassandraModSeqProvider(session),
+            session,
+            typesProvider,
+            messageRepository,
+            mailboxCountersRepository).getMessageMapper(new MockMailboxSession("benwa"));
     }
 
     @Override
