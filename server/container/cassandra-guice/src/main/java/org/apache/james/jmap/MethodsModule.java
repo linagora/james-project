@@ -19,7 +19,6 @@
 
 package org.apache.james.jmap;
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.james.jmap.methods.GetMailboxesMethod;
 import org.apache.james.jmap.methods.GetMessageListMethod;
 import org.apache.james.jmap.methods.GetMessagesMethod;
@@ -28,10 +27,12 @@ import org.apache.james.jmap.methods.JmapRequestParserImpl;
 import org.apache.james.jmap.methods.JmapResponseWriter;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
 import org.apache.james.jmap.methods.Method;
+import org.apache.james.jmap.methods.SetMessagesMethod;
 import org.apache.james.mailbox.cassandra.CassandraId;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -54,6 +55,7 @@ public class MethodsModule extends AbstractModule {
         methods.addBinding().to(new TypeLiteral<GetMailboxesMethod<CassandraId>>(){});
         methods.addBinding().to(new TypeLiteral<GetMessageListMethod<CassandraId>>(){});
         methods.addBinding().to(new TypeLiteral<GetMessagesMethod<CassandraId>>(){});
+        methods.addBinding().to(new TypeLiteral<SetMessagesMethod<CassandraId>>(){});
     }
 
 }

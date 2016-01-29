@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonFilter;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.GetMessagesMethod;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
@@ -36,7 +35,9 @@ import org.apache.james.jmap.model.message.EMailer;
 import org.apache.james.jmap.model.message.IndexableMessage;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
@@ -45,7 +46,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 @JsonDeserialize(builder = Message.Builder.class)
 @JsonFilter(JmapResponseWriterImpl.PROPERTIES_FILTER)
@@ -159,14 +159,14 @@ public class Message {
         private MessageId id;
         private String blobId;
         private String threadId;
-        private ImmutableList<String> mailboxIds;
+        private ImmutableList.Builder<String> mailboxIds;
         private String inReplyToMessageId;
         private boolean isUnread;
         private boolean isFlagged;
         private boolean isAnswered;
         private boolean isDraft;
         private boolean hasAttachment;
-        private ImmutableMap<String, String> headers;
+        private ImmutableMap.Builder<String, String> headers;
         private Emailer from;
         private final ImmutableList.Builder<Emailer> to;
         private final ImmutableList.Builder<Emailer> cc;
@@ -182,6 +182,8 @@ public class Message {
         private final ImmutableMap.Builder<String, SubMessage> attachedMessages;
 
         private Builder() {
+            mailboxIds = ImmutableList.builder();
+            headers = ImmutableMap.builder();
             to = ImmutableList.builder();
             cc = ImmutableList.builder();
             bcc = ImmutableList.builder();
@@ -205,8 +207,8 @@ public class Message {
             return this;
         }
 
-        public Builder mailboxIds(ImmutableList<String> mailboxIds) {
-            this.mailboxIds = mailboxIds;
+        public Builder mailboxIds(List<String> mailboxIds) {
+            this.mailboxIds.addAll(mailboxIds);
             return this;
         }
 
@@ -240,8 +242,8 @@ public class Message {
             return this;
         }
 
-        public Builder headers(ImmutableMap<String, String> headers) {
-            this.headers = headers;
+        public Builder headers(Map<String, String> headers) {
+            this.headers.putAll(headers);
             return this;
         }
 
@@ -324,7 +326,7 @@ public class Message {
             ImmutableMap<String, SubMessage> attachedMessages = this.attachedMessages.build();
             Preconditions.checkState(areAttachedMessagesKeysInAttachments(attachments, attachedMessages), "'attachedMessages' keys must be in 'attachements'");
 
-            return new Message(id, blobId, threadId, mailboxIds, Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, hasAttachment, headers, Optional.ofNullable(from),
+            return new Message(id, blobId, threadId, mailboxIds.build(), Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, hasAttachment, headers.build(), Optional.ofNullable(from),
                     to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, size, preview, Optional.ofNullable(textBody), Optional.ofNullable(htmlBody), attachments, attachedMessages);
         }
     }
