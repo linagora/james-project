@@ -16,29 +16,26 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package org.apache.james.jmap.json;
 
-import org.apache.james.jmap.model.MessageProperties.MessageProperty;
-import org.junit.Test;
 
-public class MessagePropertyTest {
-    
-    @Test
-    public void findShouldThrowWhenNull() {
-        assertThatThrownBy(() -> MessageProperty.find(null)).isInstanceOf(NullPointerException.class);
+import com.fasterxml.jackson.databind.ser.PropertyWriter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+
+import java.util.function.Predicate;
+
+public class FieldNamePropertyFilter extends SimpleBeanPropertyFilter {
+
+    private final Predicate<String> predicate;
+
+    public FieldNamePropertyFilter(Predicate<String> predicate) {
+        this.predicate = predicate;
     }
 
-    
-    @Test
-    public void findShouldReturnEmptyWhenNotFound() {
-        assertThat(MessageProperty.find("not found")).isEmpty();
+    @Override
+    protected boolean include(PropertyWriter writer) {
+        return predicate.test(writer.getName());
     }
-    
-    @Test
-    public void findShouldReturnEnumEntryWhenFound() {
-        assertThat(MessageProperty.find("subject")).containsExactly(MessageProperty.subject);
-    }
+
 }
