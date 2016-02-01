@@ -16,29 +16,46 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
+
+package org.apache.james.util.streams;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.apache.james.jmap.model.MessageProperties.MessageProperty;
+import java.util.Optional;
+import java.util.stream.Stream;
+
 import org.junit.Test;
 
-public class MessagePropertyTest {
-    
-    @Test
-    public void findShouldThrowWhenNull() {
-        assertThatThrownBy(() -> MessageProperty.find(null)).isInstanceOf(NullPointerException.class);
+import com.google.common.collect.ImmutableList;
+
+public class StreamsTest {
+
+    @Test(expected=NullPointerException.class)
+    public void omitEmptyShouldThrowWhenNull() {
+        Streams.omitEmpty(null);
     }
 
-    
     @Test
-    public void findShouldReturnEmptyWhenNotFound() {
-        assertThat(MessageProperty.find("not found")).isEmpty();
+    public void omitEmptyShouldReturnEmptyStreamWhenEmptyList() {
+        Stream<Object> sut = Streams.omitEmpty(ImmutableList.of());
+        assertThat(sut.collect(Collectors.toImmutableList())).hasSize(0);
     }
-    
+
     @Test
-    public void findShouldReturnEnumEntryWhenFound() {
-        assertThat(MessageProperty.find("subject")).containsExactly(MessageProperty.subject);
+    public void omitEmptyShouldReturnOneWhenOne() {
+        Stream<String> sut = Streams.omitEmpty(ImmutableList.of(Optional.of("test")));
+        assertThat(sut.collect(Collectors.toImmutableList())).hasSize(1);
+    }
+
+    @Test
+    public void omitEmptyShouldReturnEmptyWhenOneEmpty() {
+        Stream<String> sut = Streams.omitEmpty(ImmutableList.of(Optional.empty()));
+        assertThat(sut.collect(Collectors.toImmutableList())).hasSize(0);
+    }
+
+    @Test
+    public void omitEmptyShouldReturnTwoWhenTwoPresentAndTwoEmpty() {
+        Stream<String> sut = Streams.omitEmpty(ImmutableList.of(Optional.of("test1"), Optional.empty(), Optional.of("test2"), Optional.empty()));
+        assertThat(sut.collect(Collectors.toImmutableList())).hasSize(2);
     }
 }

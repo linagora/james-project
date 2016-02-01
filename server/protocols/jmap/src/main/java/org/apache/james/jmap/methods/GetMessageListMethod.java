@@ -32,7 +32,9 @@ import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.FilterCondition;
 import org.apache.james.jmap.model.GetMessageListRequest;
 import org.apache.james.jmap.model.GetMessageListResponse;
+import org.apache.james.jmap.model.GetMessagesRequest;
 import org.apache.james.jmap.model.MessageId;
+import org.apache.james.jmap.model.MessageProperty;
 import org.apache.james.jmap.utils.SortToComparatorConvertor;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
@@ -49,6 +51,7 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.util.streams.Collectors;
+import org.apache.james.util.streams.Streams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,14 +76,16 @@ public class GetMessageListMethod<Id extends MailboxId> implements Method {
     private final MailboxManager mailboxManager;
     private final MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory;
     private final int maximumLimit;
+    private final GetMessagesMethod<Id> getMessagesMethod;
 
     @Inject
     @VisibleForTesting public GetMessageListMethod(MailboxManager mailboxManager, MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory,
-            @Named(MAXIMUM_LIMIT) int maximumLimit) {
+            @Named(MAXIMUM_LIMIT) int maximumLimit, GetMessagesMethod<Id> getMessagesMethod) {
 
         this.mailboxManager = mailboxManager;
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.maximumLimit = maximumLimit;
+        this.getMessagesMethod = getMessagesMethod;
     }
 
     @Override
@@ -96,35 +101,54 @@ public class GetMessageListMethod<Id extends MailboxId> implements Method {
     @Override
     public Stream<JmapResponse> process(JmapRequest request, ClientId clientId, MailboxSession mailboxSession) {
         Preconditions.checkArgument(request instanceof GetMessageListRequest);
-        return Stream.of(
-                JmapResponse.builder().clientId(clientId)
-                .response(getMessageListResponse((GetMessageListRequest) request, mailboxSession))
-                .responseName(RESPONSE_NAME)
-                .build());
+        return getMessageListResponse((GetMessageListRequest) request, clientId, mailboxSession);
     }
 
-    private GetMessageListResponse getMessageListResponse(GetMessageListRequest jmapRequest, MailboxSession mailboxSession) {
+    private Stream<JmapResponse> getMessageListResponse(GetMessageListRequest messageListRequest, ClientId clientId, MailboxSession mailboxSession) {
         GetMessageListResponse.Builder builder = GetMessageListResponse.builder();
         try {
 
             List<MailboxPath> mailboxPaths = mailboxManager.list(mailboxSession);
-            listRequestedMailboxes(jmapRequest, mailboxPaths, mailboxSession)
+            listRequestedMailboxes(messageListRequest, mailboxPaths, mailboxSession)
                 .stream()
-                .flatMap(mailboxPath -> listMessages(mailboxPath, mailboxSession, jmapRequest))
-                .skip(jmapRequest.getPosition())
-                .limit(limit(jmapRequest.getLimit()))
+                .flatMap(mailboxPath -> listMessages(mailboxPath, mailboxSession, messageListRequest))
+                .skip(messageListRequest.getPosition())
+                .limit(limit(messageListRequest.getLimit()))
                 .map(MessageId::serialize)
                 .forEach(builder::messageId);
 
-            return builder.build();
+            GetMessageListResponse messageListResponse = builder.build();
+            Optional<JmapResponse> jmapResponse = Optional.of(JmapResponse.builder().clientId(clientId)
+                .response(messageListResponse)
+                .responseName(RESPONSE_NAME)
+                .build());
+            return Streams.<JmapResponse> omitEmpty(ImmutableList.of(
+                    jmapResponse, 
+                    processGetMessages(messageListRequest, messageListResponse, clientId, mailboxSession)));
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
         }
     }
 
-    private Stream<MessageId> listMessages(MailboxPath mailboxPath, MailboxSession mailboxSession, GetMessageListRequest jmapRequest) {
+    private Optional<JmapResponse> processGetMessages(GetMessageListRequest messageListRequest, GetMessageListResponse messageListResponse, ClientId clientId, MailboxSession mailboxSession) {
+        if (messageListRequest.isFetchMessages().orElse(false) && !messageListRequest.isFetchThreads().orElse(false)) {
+            GetMessagesRequest getMessagesRequest = GetMessagesRequest.builder()
+                    .ids(messageListResponse.getMessageIds().stream()
+                            .map(MessageId::of)
+                            .toArray(MessageId[]::new))
+                    .properties(messageListRequest.getFetchMessageProperties().stream()
+                            .map(MessageProperty::valueOf)
+                            .toArray(MessageProperty[]::new))
+                    .build();
+            return getMessagesMethod.process(getMessagesRequest, clientId, mailboxSession)
+                    .findFirst();
+        }
+        return Optional.empty();
+    }
+
+    private Stream<MessageId> listMessages(MailboxPath mailboxPath, MailboxSession mailboxSession, GetMessageListRequest messageListRequest) {
         return getMessages(mailboxPath, mailboxSession).stream()
-                .sorted(comparatorFor(jmapRequest))
+                .sorted(comparatorFor(messageListRequest))
                 .map(message -> new MessageId(mailboxSession.getUser(), mailboxPath, message.getUid()));
     }
     
@@ -132,13 +156,13 @@ public class GetMessageListMethod<Id extends MailboxId> implements Method {
         return limit.orElse(maximumLimit);
     }
 
-    private Comparator<MailboxMessage<Id>> comparatorFor(GetMessageListRequest jmapRequest) {
-        return SortToComparatorConvertor.comparatorFor(jmapRequest.getSort());
+    private Comparator<MailboxMessage<Id>> comparatorFor(GetMessageListRequest messageListRequest) {
+        return SortToComparatorConvertor.comparatorFor(messageListRequest.getSort());
     }
 
-    private ImmutableSet<MailboxPath> listRequestedMailboxes(GetMessageListRequest jmapRequest, List<MailboxPath> mailboxPaths, MailboxSession session) {
+    private ImmutableSet<MailboxPath> listRequestedMailboxes(GetMessageListRequest messageListRequest, List<MailboxPath> mailboxPaths, MailboxSession session) {
         ImmutableSet<MailboxPath> mailboxPathSet = ImmutableSet.copyOf(mailboxPaths);
-        return jmapRequest.getFilter()
+        return messageListRequest.getFilter()
             .filter(FilterCondition.class::isInstance)
             .map(FilterCondition.class::cast)
             .map(FilterCondition::getInMailboxes)

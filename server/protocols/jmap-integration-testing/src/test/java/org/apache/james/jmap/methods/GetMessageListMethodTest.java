@@ -24,7 +24,9 @@ import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 
 import java.io.ByteArrayInputStream;
@@ -49,7 +51,10 @@ import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ParseContext;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.http.ContentType;
 
@@ -70,11 +75,15 @@ public abstract class GetMessageListMethodTest {
 
     private AccessToken accessToken;
     private String username;
+    private ParseContext jsonPath;
 
     @Before
     public void setup() throws Exception {
         RestAssured.port = jmapServer.getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
+        jsonPath = JsonPath.using(Configuration.builder()
+                .options(Option.DEFAULT_PATH_LEAF_TO_NULL)
+                .build());
 
         String domain = "domain.tld";
         this.username = "username@" + domain;
@@ -121,7 +130,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
         
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
@@ -150,7 +159,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
         
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("1", "2");
     }
 
@@ -183,7 +192,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
         
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1");
     }
 
@@ -218,7 +227,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1");
     }
 
@@ -243,7 +252,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .isEmpty();
     }
 
@@ -271,7 +280,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsExactly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
@@ -299,7 +308,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsExactly("username@domain.tld|mailbox|2", "username@domain.tld|mailbox|1");
     }
 
@@ -327,7 +336,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsExactly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
@@ -355,7 +364,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
@@ -383,7 +392,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|2");
     }
 
@@ -411,7 +420,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
     }
 
@@ -439,7 +448,7 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1");
     }
 
@@ -471,7 +480,33 @@ public abstract class GetMessageListMethodTest {
             .extract()
             .asString();
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
+        assertThat(jsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
             .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2", "username@domain.tld|mailbox|3");
+    }
+
+    @Test
+    public void getMessageListShouldChainFetchingMessagesWhenAskedFor() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+
+        LocalDate date = LocalDate.now();
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
+        embeddedElasticSearch.awaitForElasticSearch();
+
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessageList\", {\"fetchMessages\":true}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .content(containsString("[\"messageList\","))
+            .content(containsString("[\"messages\","))
+            .body("[0][1].messageIds", hasSize(1))
+            .body("[0][1].messageIds[0]", equalTo("username@domain.tld|mailbox|1"))
+            .body("[1][1].list", hasSize(1))
+            .body("[1][1].list[0].id", equalTo("username@domain.tld|mailbox|1"));
     }
 }

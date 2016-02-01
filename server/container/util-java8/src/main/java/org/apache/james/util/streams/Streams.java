@@ -16,29 +16,18 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package org.apache.james.util.streams;
 
-import org.apache.james.jmap.model.MessageProperties.MessageProperty;
-import org.junit.Test;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
-public class MessagePropertyTest {
-    
-    @Test
-    public void findShouldThrowWhenNull() {
-        assertThatThrownBy(() -> MessageProperty.find(null)).isInstanceOf(NullPointerException.class);
-    }
+public class Streams {
 
-    
-    @Test
-    public void findShouldReturnEmptyWhenNotFound() {
-        assertThat(MessageProperty.find("not found")).isEmpty();
-    }
-    
-    @Test
-    public void findShouldReturnEnumEntryWhenFound() {
-        assertThat(MessageProperty.find("subject")).containsExactly(MessageProperty.subject);
+    public static <T> Stream<T> omitEmpty(List<Optional<T>> optionals) {
+        return optionals.stream()
+            .filter(Optional::isPresent)
+            .map(Optional::get);
     }
 }
