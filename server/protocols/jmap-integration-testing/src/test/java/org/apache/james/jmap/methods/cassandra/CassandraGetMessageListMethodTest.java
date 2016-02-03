@@ -16,29 +16,20 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package org.apache.james.jmap.methods.cassandra;
 
-import org.apache.james.jmap.model.MessageProperties.MessageProperty;
-import org.junit.Test;
+import org.apache.james.backends.cassandra.EmbeddedCassandra;
+import org.apache.james.jmap.JmapServer;
+import org.apache.james.jmap.cassandra.CassandraJmapServer;
+import org.apache.james.jmap.methods.GetMessageListMethodTest;
+import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.junit.rules.TemporaryFolder;
 
-public class MessagePropertyTest {
-    
-    @Test
-    public void findShouldThrowWhenNull() {
-        assertThatThrownBy(() -> MessageProperty.find(null)).isInstanceOf(NullPointerException.class);
-    }
+public class CassandraGetMessageListMethodTest extends GetMessageListMethodTest {
 
-    
-    @Test
-    public void findShouldReturnEmptyWhenNotFound() {
-        assertThat(MessageProperty.find("not found")).isEmpty();
-    }
-    
-    @Test
-    public void findShouldReturnEnumEntryWhenFound() {
-        assertThat(MessageProperty.find("subject")).containsExactly(MessageProperty.subject);
+    @Override
+    protected JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
+        return new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
     }
 }
