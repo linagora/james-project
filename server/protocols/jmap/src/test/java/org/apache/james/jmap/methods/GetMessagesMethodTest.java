@@ -28,7 +28,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.model.ClientId;
@@ -36,7 +38,7 @@ import org.apache.james.jmap.model.GetMessagesRequest;
 import org.apache.james.jmap.model.GetMessagesResponse;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageId;
-import org.apache.james.jmap.model.MessageProperty;
+import org.apache.james.jmap.model.MessageProperties.MessageProperty;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
@@ -56,8 +58,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.jayway.jsonpath.JsonPath;
 
 public class GetMessagesMethodTest {
@@ -155,9 +160,9 @@ public class GetMessagesMethodTest {
         long message3Uid = inbox.appendMessage(message3Content, now, session, false, null);
         
         GetMessagesRequest request = GetMessagesRequest.builder()
-                .ids(new MessageId(ROBERT, inboxPath, message1Uid),
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid),
                           new MessageId(ROBERT, inboxPath, message2Uid),
-                          new MessageId(ROBERT, inboxPath, message3Uid))
+                          new MessageId(ROBERT, inboxPath, message3Uid)))
                 .build();
 
         GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
@@ -176,15 +181,15 @@ public class GetMessagesMethodTest {
     }
 
     @Test
-    public void processShouldReturnOnlyMessageIdsOnEmptyPropertyList() throws MailboxException {
+    public void processShouldReturnOnlyMandatoryPropertiesOnEmptyPropertyList() throws MailboxException {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
         Date now = new Date();
         ByteArrayInputStream message1Content = new ByteArrayInputStream("Subject: message 1 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
         long message1Uid = inbox.appendMessage(message1Content, now, session, false, null);
         
         GetMessagesRequest request = GetMessagesRequest.builder()
-                .ids(new MessageId(ROBERT, inboxPath, message1Uid))
-                .properties(new MessageProperty[0])
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid)))
+                .properties(ImmutableList.of())
                 .build();
 
         GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
@@ -198,16 +203,39 @@ public class GetMessagesMethodTest {
     }
 
     @Test
-    public void processShouldReturnIdWhenNotInPropertyList() throws MailboxException {
+    public void processShouldReturnAllPropertiesWhenNoPropertyGiven() throws MailboxException {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
         Date now = new Date();
         ByteArrayInputStream message1Content = new ByteArrayInputStream("Subject: message 1 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
         long message1Uid = inbox.appendMessage(message1Content, now, session, false, null);
         
         GetMessagesRequest request = GetMessagesRequest.builder()
-                .ids(new MessageId(ROBERT, inboxPath, message1Uid))
-                .properties(MessageProperty.subject)
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid)))
                 .build();
+
+        GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
+        Stream<JmapResponse> result = testee.process(request, clientId, session);
+
+        assertThat(result).hasSize(1)
+            .extracting(JmapResponse::getProperties)
+            .flatExtracting(Optional::get)
+            .asList()
+            .containsOnlyElementsOf(MessageProperty.allOutputProperties());
+    }
+
+    @Test
+    public void processShouldAddMandatoryPropertiesWhenNotInPropertyList() throws MailboxException {
+        MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
+        Date now = new Date();
+        ByteArrayInputStream message1Content = new ByteArrayInputStream("Subject: message 1 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        long message1Uid = inbox.appendMessage(message1Content, now, session, false, null);
+        
+        GetMessagesRequest request = GetMessagesRequest.builder()
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid)))
+                .properties(ImmutableList.of(MessageProperty.subject.asFieldName()))
+                .build();
+
+        Set<MessageProperty> expected = Sets.newHashSet(MessageProperty.id, MessageProperty.subject);
 
         GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
         List<JmapResponse> result = testee.process(request, clientId, session).collect(Collectors.toList());
@@ -216,7 +244,7 @@ public class GetMessagesMethodTest {
             .extracting(JmapResponse::getProperties)
             .flatExtracting(Optional::get)
             .asList()
-            .containsOnly(MessageProperty.id, MessageProperty.subject);
+            .containsOnlyElementsOf(expected);
     }
     
     @Test
@@ -227,9 +255,11 @@ public class GetMessagesMethodTest {
         long message1Uid = inbox.appendMessage(message1Content, now, session, false, null);
         
         GetMessagesRequest request = GetMessagesRequest.builder()
-                .ids(new MessageId(ROBERT, inboxPath, message1Uid))
-                .properties(MessageProperty.body)
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid)))
+                .properties(ImmutableList.of(MessageProperty.body.asFieldName()))
                 .build();
+
+        Set<MessageProperty> expected = Sets.newHashSet(MessageProperty.id, MessageProperty.textBody);
 
         GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
         List<JmapResponse> result = testee.process(request, clientId, session).collect(Collectors.toList());
@@ -238,7 +268,7 @@ public class GetMessagesMethodTest {
             .extracting(JmapResponse::getProperties)
             .flatExtracting(Optional::get)
             .asList()
-            .containsOnly(MessageProperty.id, MessageProperty.textBody);
+            .containsOnlyElementsOf(expected);
     }
     
     @Test
@@ -252,9 +282,11 @@ public class GetMessagesMethodTest {
         long message1Uid = inbox.appendMessage(message1Content, now, session, false, null);
         
         GetMessagesRequest request = GetMessagesRequest.builder()
-                .ids(new MessageId(ROBERT, inboxPath, message1Uid))
-                .properties(MessageProperty.valueOf("headers.from"), MessageProperty.valueOf("headers.heADER2"))
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid)))
+                .properties(ImmutableList.of("headers.from", "headers.heADER2"))
                 .build();
+
+        Set<MessageProperty> expected = Sets.newHashSet(MessageProperty.id, MessageProperty.headers);
 
         GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
         List<JmapResponse> result = testee.process(request, clientId, session).collect(Collectors.toList());
@@ -264,11 +296,11 @@ public class GetMessagesMethodTest {
             .extracting(JmapResponse::getProperties)
             .flatExtracting(Optional::get)
             .asList()
-            .containsOnly(MessageProperty.id, MessageProperty.headers);
+            .containsOnlyElementsOf(expected);
     }
     
     @Test
-    public void processShouldReturnAPreconfiguredObjectMapperFilteringHeaders() throws Exception {
+    public void processShouldReturnPropertyFilterWhenFilteringHeadersRequested() throws Exception {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
         Date now = new Date();
         ByteArrayInputStream message1Content = new ByteArrayInputStream(("From: user@domain.tld\r\n"
@@ -278,8 +310,8 @@ public class GetMessagesMethodTest {
         long message1Uid = inbox.appendMessage(message1Content, now, session, false, null);
         
         GetMessagesRequest request = GetMessagesRequest.builder()
-                .ids(new MessageId(ROBERT, inboxPath, message1Uid))
-                .properties(MessageProperty.valueOf("headers.from"), MessageProperty.valueOf("headers.heADER2"))
+                .ids(ImmutableList.of(new MessageId(ROBERT, inboxPath, message1Uid)))
+                .properties(ImmutableList.of("headers.from", "headers.heADER2"))
                 .build();
 
         GetMessagesMethod<InMemoryId> testee = new GetMessagesMethod<>(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
@@ -289,8 +321,9 @@ public class GetMessagesMethodTest {
             .hasSize(1)
             .extracting(JmapResponse::getFilterProvider)
             .are(new Condition<>(Optional::isPresent, "present"));
+        SimpleFilterProvider actualFilterProvider = result.get(0).getFilterProvider().get();
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setFilterProvider(result.get(0).getFilterProvider().get());
+        objectMapper.setFilterProvider(actualFilterProvider.setDefaultFilter(SimpleBeanPropertyFilter.serializeAll()));
         String response = objectMapper.writer().writeValueAsString(result.get(0));
         assertThat(JsonPath.parse(response).<Map<String, String>>read("$.response.list[0].headers")).containsOnly(MapEntry.entry("from", "user@domain.tld"), MapEntry.entry("header2", "Header2Content"));
     }

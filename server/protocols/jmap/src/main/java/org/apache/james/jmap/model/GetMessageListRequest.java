@@ -74,7 +74,8 @@ public class GetMessageListRequest implements JmapRequest {
         }
 
         public Builder collapseThreads(boolean collapseThreads) {
-            throw new NotImplementedException();
+            this.collapseThreads = collapseThreads;
+            return this;
         }
 
         public Builder position(int position) {
@@ -100,7 +101,8 @@ public class GetMessageListRequest implements JmapRequest {
         }
 
         public Builder fetchMessages(boolean fetchMessages) {
-            throw new NotImplementedException();
+            this.fetchMessages = fetchMessages;
+            return this;
         }
 
         public Builder fetchMessageProperties(List<String> fetchMessageProperties) {

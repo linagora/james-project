@@ -23,9 +23,11 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
@@ -42,18 +44,18 @@ import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
-import com.jayway.jsonpath.JsonPath;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.http.ContentType;
 
 public abstract class GetMessageListMethodTest {
+    private static final String NAME = "[0][0]";
+    private static final String ARGUMENTS = "[0][1]";
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
@@ -95,7 +97,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(equalTo("[[\"error\",{\"type\":\"invalidArguments\"},\"#0\"]]"));
+            .body(NAME, equalTo("error"))
+            .body(ARGUMENTS + ".type", equalTo("invalidArguments"));
     }
 
     @Test
@@ -108,7 +111,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -117,15 +120,10 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-        
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", containsInAnyOrder("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2"));
     }
 
-    @Ignore("ISSUE-53")
     @Test
     public void getMessageListShouldReturnAllMessagesWhenMultipleMailboxesAndNoParameters() throws Exception {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
@@ -137,7 +135,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -146,12 +144,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-        
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("1", "2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", containsInAnyOrder("username@domain.tld|mailbox|1", "username@domain.tld|mailbox2|1"));
     }
 
     @Test
@@ -170,7 +164,7 @@ public abstract class GetMessageListMethodTest {
                 .post("/jmap")
                 .path("[0][1].list[0].id");
         
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -179,12 +173,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-        
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|1"));
     }
 
     @Test
@@ -205,7 +195,7 @@ public abstract class GetMessageListMethodTest {
                 .post("/jmap")
                 .path("[0][1].list.id");
         
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -214,12 +204,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|1"));
     }
 
     @Test
@@ -230,7 +216,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -239,12 +225,7 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .isEmpty();
+            .body(ARGUMENTS + ".messageIds", empty());
     }
 
     @Test
@@ -258,7 +239,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -267,12 +248,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsExactly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2"));
     }
 
     @Test
@@ -286,7 +263,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -295,12 +272,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsExactly("username@domain.tld|mailbox|2", "username@domain.tld|mailbox|1");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|2", "username@domain.tld|mailbox|1"));
     }
 
     @Test
@@ -314,7 +287,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -323,14 +296,38 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsExactly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2"));
     }
 
+    @Test
+    public void getMessageListShouldWorkWhenCollapseThreadIsFalse() {
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessageList\", {\"collapseThreads\":false}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messageList"));
+    }
+    
+    @Test
+    public void getMessageListShouldWorkWhenCollapseThreadIsTrue() {
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessageList\", {\"collapseThreads\":true}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messageList"));
+    }
+    
     @Test
     public void getMessageListShouldReturnAllMessagesWhenPositionIsNotGiven() throws Exception {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
@@ -342,7 +339,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -351,12 +348,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", containsInAnyOrder("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2"));
     }
 
     @Test
@@ -370,7 +363,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -379,12 +372,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|2"));
     }
 
     @Test
@@ -398,7 +387,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -407,12 +396,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", containsInAnyOrder("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2"));
     }
 
     @Test
@@ -426,7 +411,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -435,12 +420,8 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
-
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1");
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", contains("username@domain.tld|mailbox|1"));
     }
 
     @Test
@@ -458,7 +439,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test4\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String response = given()
+        given()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
             .header("Authorization", accessToken.serialize())
@@ -467,11 +448,33 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200)
-            .content(startsWith("[[\"messageList\","))
-            .extract()
-            .asString();
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", containsInAnyOrder("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2", "username@domain.tld|mailbox|3"));
+    }
 
-        assertThat(JsonPath.parse(response).<List<String>>read("$.[0].[1].messageIds"))
-            .containsOnly("username@domain.tld|mailbox|1", "username@domain.tld|mailbox|2", "username@domain.tld|mailbox|3");
+    @Test
+    public void getMessageListShouldChainFetchingMessagesWhenAskedFor() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+
+        LocalDate date = LocalDate.now();
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
+        embeddedElasticSearch.awaitForElasticSearch();
+
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessageList\", {\"fetchMessages\":true}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body("[0][0]", equalTo("messageList"))
+            .body("[1][0]", equalTo("messages"))
+            .body("[0][1].messageIds", hasSize(1))
+            .body("[0][1].messageIds[0]", equalTo("username@domain.tld|mailbox|1"))
+            .body("[1][1].list", hasSize(1))
+            .body("[1][1].list[0].id", equalTo("username@domain.tld|mailbox|1"));
     }
 }

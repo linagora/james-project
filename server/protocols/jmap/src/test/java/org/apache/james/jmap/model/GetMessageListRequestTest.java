@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-public class GetMailboxMessageListRequestTest {
+public class GetMessageListRequestTest {
 
     @Test(expected=IllegalStateException.class)
     public void builderShouldThrowWhenPositionIsNegative() {
@@ -44,11 +44,6 @@ public class GetMailboxMessageListRequestTest {
     @Test(expected=NotImplementedException.class)
     public void builderShouldThrowWhenAccountId() {
         GetMessageListRequest.builder().accountId(null);
-    }
-
-    @Test(expected=NotImplementedException.class)
-    public void builderShouldThrowWhenCollapseThreads() {
-        GetMessageListRequest.builder().collapseThreads(false);
     }
 
     @Test(expected=NotImplementedException.class)
@@ -67,11 +62,6 @@ public class GetMailboxMessageListRequestTest {
     }
 
     @Test(expected=NotImplementedException.class)
-    public void builderShouldThrowWhenFetchMessages() {
-        GetMessageListRequest.builder().fetchMessages(false);
-    }
-
-    @Test(expected=NotImplementedException.class)
     public void builderShouldThrowWhenFetchSearchSnippets() {
         GetMessageListRequest.builder().fetchSearchSnippets(false);
     }
@@ -83,14 +73,16 @@ public class GetMailboxMessageListRequestTest {
                 .build();
         List<String> sort = ImmutableList.of("date desc");
         List<String> fetchMessageProperties = ImmutableList.of("id", "blobId");
-        GetMessageListRequest expectedGetMessageListRequest = new GetMessageListRequest(Optional.empty(), Optional.of(filterCondition), sort, Optional.empty(), 1, Optional.empty(), Optional.empty(), Optional.of(2),
-                Optional.empty(), Optional.empty(), fetchMessageProperties, Optional.empty());
+        GetMessageListRequest expectedGetMessageListRequest = new GetMessageListRequest(Optional.empty(), Optional.of(filterCondition), sort, Optional.of(true), 1, Optional.empty(), Optional.empty(), Optional.of(2),
+                Optional.empty(), Optional.of(true), fetchMessageProperties, Optional.empty());
 
         GetMessageListRequest getMessageListRequest = GetMessageListRequest.builder()
             .filter(filterCondition)
             .sort(sort)
+            .collapseThreads(true)
             .position(1)
             .limit(2)
+            .fetchMessages(true)
             .fetchMessageProperties(fetchMessageProperties)
             .build();
 

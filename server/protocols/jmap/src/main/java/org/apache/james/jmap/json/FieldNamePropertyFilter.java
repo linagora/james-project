@@ -17,19 +17,25 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods.cassandra;
+package org.apache.james.jmap.json;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.JmapServer;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMessageListMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
-import org.junit.rules.TemporaryFolder;
 
-public class CassandraGetMailboxMessageListMethodTest extends GetMessageListMethodTest {
+import com.fasterxml.jackson.databind.ser.PropertyWriter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+
+import java.util.function.Predicate;
+
+public class FieldNamePropertyFilter extends SimpleBeanPropertyFilter {
+
+    private final Predicate<String> predicate;
+
+    public FieldNamePropertyFilter(Predicate<String> predicate) {
+        this.predicate = predicate;
+    }
 
     @Override
-    protected JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
-        return new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+    protected boolean include(PropertyWriter writer) {
+        return predicate.test(writer.getName());
     }
+
 }
