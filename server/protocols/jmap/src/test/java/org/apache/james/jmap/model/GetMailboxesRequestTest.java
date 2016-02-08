@@ -19,6 +19,8 @@
 
 package org.apache.james.jmap.model;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.commons.lang.NotImplementedException;
 import org.junit.Test;
 
@@ -31,9 +33,52 @@ public class GetMailboxesRequestTest {
         GetMailboxesRequest.builder().accountId("1");
     }
 
-    @Test(expected=NotImplementedException.class)
-    public void builderShouldThrowWhenIds() {
+    @Test
+    public void builderShouldNotThrowWhenIds() {
         GetMailboxesRequest.builder().ids(ImmutableList.of());
     }
 
+    @Test
+    public void idsShouldBeEmptyListWhenEmptyList() {
+        GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder()
+            .ids(ImmutableList.of())
+            .build();
+        assertThat(getMailboxesRequest.getIds()).isPresent();
+        assertThat(getMailboxesRequest.getIds().get()).hasSize(0);
+    }
+
+    @Test
+    public void idsShouldBePresentWhenListIsNotEmpty() {
+        GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder()
+            .ids(ImmutableList.of("123"))
+            .build();
+        assertThat(getMailboxesRequest.getIds()).isPresent();
+        assertThat(getMailboxesRequest.getIds().get()).containsExactly("123");
+    }
+
+    @Test
+    public void propertiesShouldBeEmptyWhenNotGiven() {
+        GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder().build();
+        assertThat(getMailboxesRequest.getProperties()).isEmpty();
+    }
+
+    @Test
+    public void propertiesShouldNotBeEmptyWhenEmptyListGiven() {
+        GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder()
+                .properties(ImmutableList.of())
+                .build();
+
+        assertThat(getMailboxesRequest.getProperties()).isPresent();
+        assertThat(getMailboxesRequest.getProperties().get()).isEmpty();;
+    }
+
+    @Test
+    public void propertiesShouldNotBeEmptyWhenListGiven() {
+        GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder()
+                .properties(ImmutableList.of("id"))
+                .build();
+
+        assertThat(getMailboxesRequest.getProperties()).isPresent();
+        assertThat(getMailboxesRequest.getProperties().get()).containsOnly(MailboxProperty.ID);
+    }
 }

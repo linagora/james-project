@@ -17,19 +17,43 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods.cassandra;
+package org.apache.james.jmap.model;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.JmapServer;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMessageListMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
-import org.junit.rules.TemporaryFolder;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class CassandraGetMailboxMessageListMethodTest extends GetMessageListMethodTest {
+import java.util.Optional;
 
-    @Override
-    protected JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
-        return new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+import org.junit.Test;
+
+public class SetErrorTest {
+
+    @Test
+    public void buildShouldThrowWhenTypeIsNotGiven() {
+        assertThatThrownBy(() -> SetError.builder().build())
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void buildShouldWorkWhenAllMandatoryFieldsAreGiven() {
+        SetError expected = new SetError("type", Optional.empty());
+
+        SetError setError = SetError.builder()
+            .type("type")
+            .build();
+
+        assertThat(setError).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void buildShouldWorkWhenAllFieldsAreGiven() {
+        SetError expected = new SetError("type", Optional.of("description"));
+
+        SetError setError = SetError.builder()
+            .type("type")
+            .description("description")
+            .build();
+
+        assertThat(setError).isEqualToComparingFieldByField(expected);
     }
 }
