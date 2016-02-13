@@ -22,17 +22,17 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
+import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.isA;
+import static org.hamcrest.Matchers.notNullValue;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.model.ContinuationToken;
-import org.apache.james.jmap.utils.ZonedDateTimeProvider;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,19 +50,13 @@ public abstract class JMAPAuthenticationTest {
     private static final ZonedDateTime afterExpirationDate = ZonedDateTime.parse("2011-12-03T10:30:31+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private FixedDateZonedDateTimeProvider zonedDateTimeProvider = new FixedDateZonedDateTimeProvider();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra, zonedDateTimeProvider);
+    private JmapServer jmapServer = jmapServer(temporaryFolder);
 
-
-    
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra, ZonedDateTimeProvider zonedDateTimeProvider);
+    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder);
 
     @Rule
     public RuleChain chain = RuleChain
         .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
         .around(jmapServer);
     
     private UserCredentials userCredentials;
@@ -83,7 +77,7 @@ public abstract class JMAPAuthenticationTest {
         jmapServer.serverProbe().addDomain(domain);
         jmapServer.serverProbe().addUser(userCredentials.getUsername(), userCredentials.getPassword());
         
-        zonedDateTimeProvider.setFixedDateTime(oldDate);
+        jmapServer.setFixedDateTime(oldDate);
     }
 
     @Test
@@ -232,7 +226,7 @@ public abstract class JMAPAuthenticationTest {
     @Test
     public void mustReturnRestartAuthenticationWhenContinuationTokenIsExpired() throws Exception {
         String continuationToken = fromGoodContinuationTokenRequest();
-        zonedDateTimeProvider.setFixedDateTime(afterExpirationDate);
+        jmapServer.setFixedDateTime(afterExpirationDate);
 
         given()
             .contentType(ContentType.JSON)
@@ -261,7 +255,7 @@ public abstract class JMAPAuthenticationTest {
     @Test
     public void mustReturnCreatedWhenGoodPassword() throws Exception {
         String continuationToken = fromGoodContinuationTokenRequest();
-        zonedDateTimeProvider.setFixedDateTime(newDate);
+        jmapServer.setFixedDateTime(newDate);
 
         given()
             .contentType(ContentType.JSON)
@@ -276,7 +270,7 @@ public abstract class JMAPAuthenticationTest {
     @Test
     public void mustSendJsonContainingAccessTokenAndEndpointsWhenGoodPassword() throws Exception {
         String continuationToken = fromGoodContinuationTokenRequest();
-        zonedDateTimeProvider.setFixedDateTime(newDate);
+        jmapServer.setFixedDateTime(newDate);
 
         given()
             .contentType(ContentType.JSON)
@@ -372,7 +366,7 @@ public abstract class JMAPAuthenticationTest {
     @Test
     public void getMustReturnEndpointsWhenCorrectAuthentication() throws Exception {
         String continuationToken = fromGoodContinuationTokenRequest();
-        zonedDateTimeProvider.setFixedDateTime(newDate);
+        jmapServer.setFixedDateTime(newDate);
     
         String accessToken = fromGoodAccessTokenRequest(continuationToken);
     
@@ -419,7 +413,7 @@ public abstract class JMAPAuthenticationTest {
     @Test
     public void deleteMustInvalidAuthorizationOnCorrectAuthorization() throws Exception {
         String continuationToken = fromGoodContinuationTokenRequest();
-        zonedDateTimeProvider.setFixedDateTime(newDate);
+        jmapServer.setFixedDateTime(newDate);
     
         String accessToken = fromGoodAccessTokenRequest(continuationToken);
         

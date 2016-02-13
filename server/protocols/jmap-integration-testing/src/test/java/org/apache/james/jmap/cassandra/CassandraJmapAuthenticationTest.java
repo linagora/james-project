@@ -16,24 +16,17 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap;
+package org.apache.james.jmap.cassandra;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.utils.ZonedDateTimeProvider;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.apache.james.jmap.JMAPAuthenticationTest;
+import org.apache.james.jmap.JmapServer;
 import org.junit.rules.TemporaryFolder;
-
-import com.google.inject.util.Modules;
 
 public class CassandraJmapAuthenticationTest extends JMAPAuthenticationTest {
 
     @Override
-    protected JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra, ZonedDateTimeProvider zonedDateTimeProvider) {
-        return new CassandraJmapServer(
-                Modules.combine(
-                        CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra),
-                        (binder) -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider)));
+    protected JmapServer jmapServer(TemporaryFolder temporaryFolder) {
+        return new CassandraJmapServer(temporaryFolder);
     }
     
 }

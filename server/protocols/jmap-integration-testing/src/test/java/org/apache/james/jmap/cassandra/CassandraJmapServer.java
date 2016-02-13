@@ -19,13 +19,18 @@
 
 package org.apache.james.jmap.cassandra;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 import javax.inject.Singleton;
 
 import org.apache.james.CassandraJamesServer;
 import org.apache.james.CassandraJamesServerMain;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
+import org.apache.james.jmap.FixedDateZonedDateTimeProvider;
 import org.apache.james.jmap.JmapServer;
+import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestFilesystemModule;
@@ -43,35 +48,43 @@ import com.google.inject.util.Modules;
 public class CassandraJmapServer implements JmapServer {
 
     private static final int LIMIT_TO_3_MESSAGES = 3;
+    private static final ZonedDateTime REFERENCE_DATE = ZonedDateTime.parse("2011-12-03T10:15:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
     private CassandraJamesServer server;
+    private EmbeddedElasticSearch embeddedElasticSearch;
+    private EmbeddedCassandra cassandra;
+    private FixedDateZonedDateTimeProvider zonedDateTimeProvider;
 
     private final Module module;
 
-    public static Module defaultOverrideModule(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
+    public CassandraJmapServer(TemporaryFolder temporaryFolder) {
+        embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
+        cassandra = EmbeddedCassandra.createStartServer();
+        zonedDateTimeProvider = new FixedDateZonedDateTimeProvider();
+        this.module = Modules.override(CassandraJamesServerMain.defaultModule)
+                .with(defaultOverrideModule(temporaryFolder));
+    }
+
+    private Module defaultOverrideModule(TemporaryFolder temporaryFolder) {
         return Modules.combine(new TestElasticSearchModule(embeddedElasticSearch),
                 new TestFilesystemModule(temporaryFolder),
                 new TestJMAPServerModule(LIMIT_TO_3_MESSAGES),
                 new AbstractModule() {
-
-            @Override
-            protected void configure() {
-                bind(EmbeddedCassandra.class).toInstance(cassandra);
-            }
-
-            @Provides
-            @Singleton
-            com.datastax.driver.core.Session provideSession(CassandraCluster initializedCassandra) {
-                return initializedCassandra.getConf();
-            }
-        });
+        
+                    @Override
+                    protected void configure() {
+                        bind(EmbeddedCassandra.class).toInstance(cassandra);
+                        bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider);
+                    }
+        
+                    @Provides
+                    @Singleton
+                    com.datastax.driver.core.Session provideSession(CassandraCluster initializedCassandra) {
+                        return initializedCassandra.getConf();
+                    }
+                });
     }
 
-    
-    public CassandraJmapServer(Module overrideModule) {
-        this.module = Modules.override(CassandraJamesServerMain.defaultModule).with(overrideModule);
-    }
-    
     @Override
     public Statement apply(Statement base, Description description) {
         return new Statement() {
@@ -89,12 +102,15 @@ public class CassandraJmapServer implements JmapServer {
     }
 
     private void before() throws Throwable {
+        embeddedElasticSearch.before();
         server = new CassandraJamesServer(module);
         server.start();
+        zonedDateTimeProvider.setFixedDateTime(REFERENCE_DATE);
     }
 
     private void after() {
         server.stop();
+        embeddedElasticSearch.after();
     }
 
     @Override
@@ -105,5 +121,15 @@ public class CassandraJmapServer implements JmapServer {
     @Override
     public ExtendedServerProbe serverProbe() {
         return server.serverProbe();
+    }
+
+    @Override
+    public void awaitForIndexation() {
+        embeddedElasticSearch.awaitForElasticSearch();
+    }
+
+    @Override
+    public void setFixedDateTime(ZonedDateTime date) {
+        zonedDateTimeProvider.setFixedDateTime(date);
     }
 }

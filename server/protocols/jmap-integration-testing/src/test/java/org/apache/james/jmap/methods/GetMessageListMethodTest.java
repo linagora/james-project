@@ -23,10 +23,10 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
 import java.io.ByteArrayInputStream;
@@ -36,11 +36,9 @@ import java.util.List;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.Before;
@@ -58,16 +56,13 @@ public abstract class GetMessageListMethodTest {
     private static final String ARGUMENTS = "[0][1]";
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    private JmapServer jmapServer = jmapServer(temporaryFolder);
 
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
+    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder);
 
     @Rule
     public RuleChain chain = RuleChain
         .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
         .around(jmapServer);
 
     private AccessToken accessToken;
@@ -109,7 +104,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -133,7 +128,7 @@ public abstract class GetMessageListMethodTest {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox2");
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox2"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -153,7 +148,7 @@ public abstract class GetMessageListMethodTest {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         String mailboxId = 
                 with()
@@ -184,7 +179,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox2");
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         List<String> mailboxIds = 
                 with()
@@ -214,7 +209,7 @@ public abstract class GetMessageListMethodTest {
 
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -237,7 +232,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -261,7 +256,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -285,7 +280,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -337,7 +332,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -361,7 +356,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -385,7 +380,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -409,7 +404,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -437,7 +432,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test4\r\n\r\ntestmail".getBytes()), new Date(date.toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -459,7 +454,7 @@ public abstract class GetMessageListMethodTest {
         LocalDate date = LocalDate.now();
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(date.plusDays(1).toEpochDay()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)

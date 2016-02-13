@@ -19,6 +19,8 @@
 
 package org.apache.james.jmap;
 
+import java.time.ZonedDateTime;
+
 import org.apache.james.utils.ExtendedServerProbe;
 import org.junit.rules.TestRule;
 
@@ -28,4 +30,7 @@ public interface JmapServer extends TestRule {
 
     ExtendedServerProbe serverProbe();
 
+    void awaitForIndexation();
+
+    void setFixedDateTime(ZonedDateTime date);
 }

@@ -22,8 +22,8 @@ package org.apache.james.jmap.methods;
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
@@ -34,12 +34,10 @@ import java.util.Date;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -58,16 +56,13 @@ public abstract class GetMailboxesMethodTest {
     private static final String ARGUMENTS = "[0][1]";
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    private JmapServer jmapServer = jmapServer(temporaryFolder);
 
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
+    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder);
 
     @Rule
     public RuleChain chain = RuleChain
         .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
         .around(jmapServer);
 
     private AccessToken accessToken;

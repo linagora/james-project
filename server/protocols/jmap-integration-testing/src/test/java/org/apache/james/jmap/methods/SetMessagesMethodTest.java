@@ -35,11 +35,9 @@ import java.util.Date;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.Before;
@@ -59,16 +57,13 @@ public abstract class SetMessagesMethodTest {
     private static final String ARGUMENTS = "[0][1]";
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    private JmapServer jmapServer = jmapServer(temporaryFolder);
 
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
+    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder);
 
     @Rule
     public RuleChain chain = RuleChain
         .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
         .around(jmapServer);
 
     private AccessToken accessToken;
@@ -162,7 +157,7 @@ public abstract class SetMessagesMethodTest {
 
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -186,7 +181,7 @@ public abstract class SetMessagesMethodTest {
 
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         // When
         given()
@@ -225,7 +220,7 @@ public abstract class SetMessagesMethodTest {
 
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         given()
             .accept(ContentType.JSON)
@@ -258,7 +253,7 @@ public abstract class SetMessagesMethodTest {
 
         jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"), 
                 new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        jmapServer.awaitForIndexation();
 
         // When
         given()
