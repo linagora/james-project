@@ -47,6 +47,8 @@ import org.apache.james.core.MimeMessageCopyOnWriteProxy;
 import org.apache.james.core.MimeMessageSource;
 import org.apache.james.lifecycle.api.Disposable;
 import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.james.queue.api.ComposedMailQueueItem;
+import org.apache.james.queue.api.MailQueueActionFactory;
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
@@ -67,13 +69,15 @@ public class FileMailQueue implements ManageableMailQueue {
     private final File queueDir;
     private final Logger log;
 
+    private final MailQueueActionFactory mailQueueActionFactory;
     private final boolean sync;
     private final static String MSG_EXTENSION = ".msg";
     private final static String OBJECT_EXTENSION = ".obj";
     private final static String NEXT_DELIVERY = "FileQueueNextDelivery";
     private final static int SPLITCOUNT = 10;
 
-    public FileMailQueue(File parentDir, String queuename, boolean sync, Logger log) throws IOException {
+    public FileMailQueue(MailQueueActionFactory mailQueueActionFactory, File parentDir, String queuename, boolean sync, Logger log) throws IOException {
+        this.mailQueueActionFactory = mailQueueActionFactory;
         this.log = log;
         this.sync = sync;
         this.queueDir = new File(parentDir, queuename);
@@ -269,7 +273,7 @@ public class FileMailQueue implements ManageableMailQueue {
                 oin = new ObjectInputStream(new FileInputStream(objectFile));
                 final Mail mail = (Mail) oin.readObject();
                 mail.setMessage(new MimeMessageCopyOnWriteProxy(new FileMimeMessageSource(msgFile)));
-                return new MailQueueItem() {
+                MailQueueItem fileMailQueueItem = new MailQueueItem() {
 
                     @Override
                     public Mail getMail() {
@@ -293,6 +297,7 @@ public class FileMailQueue implements ManageableMailQueue {
                         LifecycleUtil.dispose(mail);
                     }
                 };
+                return new ComposedMailQueueItem(fileMailQueueItem, mailQueueActionFactory.newAction());
 
                 // TODO: Think about exception handling in detail
             } catch (FileNotFoundException e) {

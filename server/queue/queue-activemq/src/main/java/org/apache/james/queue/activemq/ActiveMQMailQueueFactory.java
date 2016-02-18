@@ -18,7 +18,11 @@
  ****************************************************************/
 package org.apache.james.queue.activemq;
 
+import javax.inject.Inject;
+import javax.jms.ConnectionFactory;
+
 import org.apache.james.queue.api.MailQueue;
+import org.apache.james.queue.api.MailQueueActionFactory;
 import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.queue.jms.JMSMailQueueFactory;
 
@@ -30,12 +34,17 @@ public class ActiveMQMailQueueFactory extends JMSMailQueueFactory {
 
     private boolean useBlob = true;
 
+    @Inject
+    public ActiveMQMailQueueFactory(ConnectionFactory connectionFactory, MailQueueActionFactory mailQueueActionFactory) {
+        super(connectionFactory, mailQueueActionFactory);
+    }
+
     public void setUseBlobMessages(boolean useBlob) {
         this.useBlob = useBlob;
     }
 
     @Override
     protected MailQueue createMailQueue(String name) {
-        return new ActiveMQMailQueue(connectionFactory, name, useBlob, log);
+        return new ActiveMQMailQueue(connectionFactory, mailQueueActionFactory, name, useBlob, log);
     }
 }

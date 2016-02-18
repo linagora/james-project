@@ -20,6 +20,8 @@ package org.apache.james.queue.jms;
 
 import org.apache.james.core.MailImpl;
 import org.apache.james.core.MimeMessageCopyOnWriteProxy;
+import org.apache.james.queue.api.MailQueueActionFactory;
+import org.apache.james.queue.api.ComposedMailQueueItem;
 import org.apache.james.queue.api.MailPrioritySupport;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.ManageableMailQueue;
@@ -70,11 +72,13 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
 
     protected final String queueName;
     protected final ConnectionFactory connectionFactory;
+    protected final MailQueueActionFactory mailQueueActionFactory;
     protected final Logger logger;
     public final static String FORCE_DELIVERY = "FORCE_DELIVERY";
 
-    public JMSMailQueue(final ConnectionFactory connectionFactory, final String queueName, final Logger logger) {
+    public JMSMailQueue(final ConnectionFactory connectionFactory, final MailQueueActionFactory mailQueueActionFactory, final String queueName, final Logger logger) {
         this.connectionFactory = connectionFactory;
+        this.mailQueueActionFactory = mailQueueActionFactory;
         this.queueName = queueName;
         this.logger = logger;
     }
@@ -472,7 +476,8 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
      */
     protected MailQueueItem createMailQueueItem(Connection connection, Session session, MessageConsumer consumer, Message message) throws JMSException, MessagingException {
         final Mail mail = createMail(message);
-        return new JMSMailQueueItem(mail, connection, session, consumer);
+        JMSMailQueueItem jmsMailQueueItem = new JMSMailQueueItem(mail, connection, session, consumer);
+        return new ComposedMailQueueItem(jmsMailQueueItem, mailQueueActionFactory.newAction());
     }
 
     protected String getMessageSelector() {
