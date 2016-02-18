@@ -18,26 +18,27 @@
  ****************************************************************/
 package org.apache.james.transport.mailets;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.GenericMailet;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
 
 /**
  * Serialise the email and pass it to an HTTP call
@@ -154,7 +155,8 @@ public class SerialiseToHTTP extends GenericMailet {
 	private String httpPost(NameValuePair[] data) {
 
         String response = null;
-		HttpClient client = new DefaultHttpClient();
+        HttpClient client = HttpClientBuilder.create()
+                .build();
 		HttpPost post = new HttpPost(url);
         HttpParams params = new BasicHttpParams();
 		if( data.length>1 && data[1]!=null ) {

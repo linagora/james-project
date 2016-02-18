@@ -18,25 +18,26 @@
  ****************************************************************/
 package org.apache.james.transport.mailets;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpParams;
-import org.apache.mailet.Mail;
-import org.apache.mailet.base.GenericMailet;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpParams;
+import org.apache.mailet.Mail;
+import org.apache.mailet.base.GenericMailet;
 
 /**
  * Serialise the email and pass it to an HTTP call
@@ -137,7 +138,8 @@ public class HeadersToHTTP extends GenericMailet {
 
 	private String httpPost(HashSet<NameValuePair> pairs) throws IOException {
 
-		HttpClient client = new DefaultHttpClient();
+		HttpClient client = HttpClientBuilder.create()
+	        .build();
 		HttpPost post = new HttpPost(url);
 
 		post.setParams(extractParams(pairs));
@@ -146,9 +148,8 @@ public class HeadersToHTTP extends GenericMailet {
 		String result = clientResponse.getStatusLine().getStatusCode() + ": " + clientResponse.getStatusLine();
 		log("HeadersToHTTP: " + result);
 
-        client.getConnectionManager().shutdown();
+		client.getConnectionManager().shutdown();
 		return result;
-		
 	}
 
 	private HttpParams extractParams(HashSet<NameValuePair> pairs) {
