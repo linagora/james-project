@@ -38,7 +38,7 @@ public class ContainerTest {
     
     @Test
     public void containerShouldBeReachable() throws ClientProtocolException, IOException, URISyntaxException {
-        String containerIpAddress = container.getContainerInfo().getNetworkSettings().getIpAddress();
+        String containerIpAddress = container.getContainerIpAddress();
         Response response = Request.Get(new URIBuilder().setScheme("http").setHost(containerIpAddress).setPort(80).build()).execute();
         assertThat(response.returnResponse().getStatusLine().getStatusCode()).isEqualTo(200);
     }
