@@ -18,8 +18,10 @@
  ****************************************************************/
 package org.apache.james.queue.jms;
 
+import javax.inject.Inject;
 import javax.jms.ConnectionFactory;
 
+import org.apache.james.queue.api.MailQueueActionProvider;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.queue.library.AbstractMailQueueFactory;
@@ -30,14 +32,17 @@ import org.apache.james.queue.library.AbstractMailQueueFactory;
 public class JMSMailQueueFactory extends AbstractMailQueueFactory {
 
     protected ConnectionFactory connectionFactory;
-
-    public void setConnectionFactory(ConnectionFactory connectionFactory) {
+    protected MailQueueActionProvider mailQueueActionProvider;
+    
+    @Inject
+    public JMSMailQueueFactory(ConnectionFactory connectionFactory, MailQueueActionProvider mailQueueActionProvider) {
         this.connectionFactory = connectionFactory;
+        this.mailQueueActionProvider = mailQueueActionProvider;
     }
 
     @Override
     protected MailQueue createMailQueue(String name) {
-        return new JMSMailQueue(connectionFactory, name, log);
+        return new JMSMailQueue(connectionFactory, mailQueueActionProvider, name, log);
     }
     
 }

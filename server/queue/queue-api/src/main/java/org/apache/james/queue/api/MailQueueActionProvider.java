@@ -16,35 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.queue.activemq;
 
-import javax.inject.Inject;
-import javax.jms.ConnectionFactory;
+package org.apache.james.queue.api;
 
-import org.apache.james.queue.api.MailQueue;
-import org.apache.james.queue.api.MailQueueActionProvider;
-import org.apache.james.queue.api.MailQueueFactory;
-import org.apache.james.queue.jms.JMSMailQueueFactory;
+import org.apache.james.queue.api.MailQueue.MailQueueException;
 
-/**
- * {@link MailQueueFactory} implementations which return
- * {@link ActiveMQMailQueue} instances
- */
-public class ActiveMQMailQueueFactory extends JMSMailQueueFactory {
+public interface MailQueueActionProvider {
 
-    private boolean useBlob = true;
-
-    @Inject
-    public ActiveMQMailQueueFactory(ConnectionFactory connectionFactory, MailQueueActionProvider mailQueueActionProvider) {
-        super(connectionFactory, mailQueueActionProvider);
+    MailQueueAction newAction();
+    
+    interface MailQueueAction {
+        void done(boolean success) throws MailQueueException;
     }
-
-    public void setUseBlobMessages(boolean useBlob) {
-        this.useBlob = useBlob;
-    }
-
-    @Override
-    protected MailQueue createMailQueue(String name) {
-        return new ActiveMQMailQueue(connectionFactory, mailQueueActionProvider, name, useBlob, log);
-    }
+    
+    MailQueueAction NOOP = new MailQueueAction() {
+        @Override
+        public void done(boolean success) throws MailQueueException {
+            // Nothing to do
+        }
+    };
+    
+    MailQueueActionProvider NOOPProvider = new MailQueueActionProvider() {
+        @Override
+        public MailQueueAction newAction() {
+            return NOOP;
+        }
+    };
 }
