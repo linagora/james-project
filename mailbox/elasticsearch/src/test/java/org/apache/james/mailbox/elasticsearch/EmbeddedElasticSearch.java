@@ -23,8 +23,6 @@ import static com.jayway.awaitility.Awaitility.await;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.function.Supplier;
 
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.flush.FlushRequestBuilder;
@@ -32,45 +30,23 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
 import org.junit.rules.ExternalResource;
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Throwables;
 import com.jayway.awaitility.Duration;
 
 public class EmbeddedElasticSearch extends ExternalResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedElasticSearch.class);
 
-    private final Supplier<Path> folder;
     private Node node;
-
-    private static Path createTempDir(TemporaryFolder temporaryFolder) {
-        try {
-            return temporaryFolder.newFolder().toPath();
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
-    }
-    
-    public EmbeddedElasticSearch(TemporaryFolder temporaryFolder) {
-        this(() -> EmbeddedElasticSearch.createTempDir(temporaryFolder));
-    }
-    
-    public EmbeddedElasticSearch(Path folder) {
-        this(() -> folder);
-    }
-    
-    private EmbeddedElasticSearch(Supplier<Path> folder) {
-        this.folder = folder;
-    }
     
     @Override
     public void before() throws IOException {
         node = nodeBuilder().local(true)
             .settings(ImmutableSettings.builder()
-                .put("path.data", folder.get().toAbsolutePath())
+                .put("index.store.type", "memory")
+                .put("index.store.fs.memory.enabled", "true")
                 .put("script.disable_dynamic",true)
                 .build())
             .node();
