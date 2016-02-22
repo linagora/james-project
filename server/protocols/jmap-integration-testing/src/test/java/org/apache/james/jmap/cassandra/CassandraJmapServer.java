@@ -22,15 +22,27 @@ package org.apache.james.jmap.cassandra;
 import javax.inject.Singleton;
 
 import org.apache.james.CassandraJamesServer;
-import org.apache.james.CassandraJamesServerMain;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.apache.james.modules.CommonServicesModule;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestFilesystemModule;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.data.CassandraDomainListModule;
+import org.apache.james.modules.data.CassandraUsersRepositoryModule;
+import org.apache.james.modules.mailbox.CassandraMailboxModule;
+import org.apache.james.modules.mailbox.CassandraSessionModule;
+import org.apache.james.modules.mailbox.ElasticSearchMailboxModule;
+import org.apache.james.modules.protocols.IMAPServerModule;
+import org.apache.james.modules.protocols.JMAPServerModule;
+import org.apache.james.modules.server.ConfigurationProviderModule;
+import org.apache.james.modules.server.DNSServiceModule;
+import org.apache.james.modules.server.QuotaModule;
+import org.apache.james.modules.server.SieveModule;
 import org.apache.james.utils.ExtendedServerProbe;
+import org.apache.onami.lifecycle.jsr250.PreDestroyModule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -43,6 +55,21 @@ import com.google.inject.util.Modules;
 public class CassandraJmapServer implements JmapServer {
 
     private static final int LIMIT_TO_3_MESSAGES = 3;
+
+    private static Module CASSANDRA_JMAP_MODULE = Modules.combine(
+        new CommonServicesModule(),
+        new CassandraMailboxModule(),
+        new CassandraSessionModule(),
+        new ElasticSearchMailboxModule(),
+        new CassandraUsersRepositoryModule(),
+        new CassandraDomainListModule(),
+        new DNSServiceModule(),
+        new IMAPServerModule(),
+        new SieveModule(),
+        new QuotaModule(),
+        new ConfigurationProviderModule(),
+        new JMAPServerModule(),
+        new PreDestroyModule());
 
     private CassandraJamesServer server;
 
@@ -69,7 +96,7 @@ public class CassandraJmapServer implements JmapServer {
 
     
     public CassandraJmapServer(Module overrideModule) {
-        this.module = Modules.override(CassandraJamesServerMain.defaultModule).with(overrideModule);
+        this.module = Modules.override(CASSANDRA_JMAP_MODULE).with(overrideModule);
     }
     
     @Override
