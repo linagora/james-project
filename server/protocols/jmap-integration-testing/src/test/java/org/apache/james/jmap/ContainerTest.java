@@ -35,20 +35,12 @@ public class ContainerTest {
 
     @Rule public GenericContainer container = new GenericContainer("nginx:1.7.1")
             .withExposedPorts(80);
-    
-    @Test
-    public void containerShouldBeReachable() throws ClientProtocolException, IOException, URISyntaxException {
-        String containerIpAddress = container.getContainerIpAddress();
-        Response response = Request.Get(new URIBuilder().setScheme("http").setHost(containerIpAddress).setPort(80).build()).execute();
-        assertThat(response.returnResponse().getStatusLine().getStatusCode()).isEqualTo(200);
-    }
-    
+
     @Test
     public void containerShouldBeReachableOnExposedPort() throws ClientProtocolException, IOException, URISyntaxException {
+        String containerIpAddress = container.getContainerIpAddress();
         Integer containerPort = container.getMappedPort(80);
-        Response response = Request.Get(new URIBuilder().setScheme("http").setHost("localhost").setPort(containerPort).build()).execute();
+        Response response = Request.Get(new URIBuilder().setScheme("http").setHost(containerIpAddress).setPort(containerPort).build()).execute();
         assertThat(response.returnResponse().getStatusLine().getStatusCode()).isEqualTo(200);
     }
-    
-    
 }
