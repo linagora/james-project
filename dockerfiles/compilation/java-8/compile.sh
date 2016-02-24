@@ -42,8 +42,12 @@ git clone $ORIGIN/.
 git checkout $SHA1
 
 # Compilation
+echo "Listing root"
 ls -l /
+echo "Listing /keys"
 ls -l /keys
+echo "Listing workflow"
+ls -l /workflow
 
 if [ "$SKIPTESTS" = "skipTests" ]; then
    mvn package -DskipTests -Pcassandra,exclude-lucene,with-assembly,with-jetm
