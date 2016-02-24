@@ -149,6 +149,14 @@
             </activation>
             <dependencies>
                 <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>testcontainers</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>docker-java</artifactId>
+                </dependency>
+                <dependency>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
                     <version>18.0</version> <!--$NO-MVN-MAN-VER$-->
@@ -169,11 +177,6 @@
                     <artifactId>assertj-core</artifactId>
                     <version>${assertj-3.version}</version>
                     <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>org.testcontainers</groupId>
-                    <artifactId>testcontainers</artifactId>
-                    <version>1.0.1</version>
                 </dependency>
                 <dependency>
                     <groupId>ch.qos.logback</groupId>
