@@ -52,57 +52,7 @@
     </repositories>
 
     <modules>
-        <module>app</module>
-
-        <module>karaf/distribution</module>
-        <module>karaf/features</module>
-        <module>karaf/integration</module>
-
-        <module>container/cassandra-guice</module>
-        <module>container/cli</module>
-        <module>container/core</module>
-        <module>container/filesystem-api</module>
-        <module>container/jetty</module>
-        <module>container/lifecycle-api</module>
-        <module>container/mailbox-adapter</module>
-        <module>container/spring</module>
-        <module>container/util</module>
-        <module>container/util-java8</module>
-
-        <module>mailet/mailetcontainer-api</module>
-        <module>mailet/mailetcontainer-camel</module>
-        <module>mailet/mailets</module>
-
-        <module>dns-service/dnsservice-api</module>
-        <module>dns-service/dnsservice-dnsjava</module>
-        <module>dns-service/dnsservice-library</module>
-
-        <module>data/data-api</module>
-        <module>data/data-library</module>
-        <module>data/data-cassandra</module>
-        <module>data/data-jpa</module>
-        <module>data/data-jcr</module>
-        <module>data/data-jdbc</module>
-        <module>data/data-jmap</module>
-        <module>data/data-file</module>
-        <module>data/data-ldap</module>
-        <module>data/data-hbase</module>
-        <module>data/data-memory</module>
-
-        <module>protocols/fetchmail</module>
-        <module>protocols/protocols-imap4</module>
-        <module>protocols/jmap</module>
         <module>protocols/jmap-integration-testing</module>
-        <module>protocols/protocols-library</module>
-        <module>protocols/protocols-lmtp</module>
-        <module>protocols/protocols-managesieve</module>
-        <module>protocols/protocols-pop3</module>
-        <module>protocols/protocols-smtp</module>
-
-        <module>queue/queue-api</module>
-        <module>queue/queue-file</module>
-        <module>queue/queue-jms</module>
-        <module>queue/queue-activemq</module>
     </modules>
 
     <distributionManagement>
