@@ -28,7 +28,10 @@ import org.apache.james.jmap.methods.JmapRequestParserImpl;
 import org.apache.james.jmap.methods.JmapResponseWriter;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
 import org.apache.james.jmap.methods.Method;
+import org.apache.james.jmap.methods.SetMessagesCreationProcessor;
+import org.apache.james.jmap.methods.SetMessagesDestructionProcessor;
 import org.apache.james.jmap.methods.SetMessagesMethod;
+import org.apache.james.jmap.methods.SetMessagesProcessor;
 import org.apache.james.jmap.methods.SetMessagesUpdateProcessor;
 import org.apache.james.mailbox.cassandra.CassandraId;
 
@@ -53,7 +56,10 @@ public class MethodsModule extends AbstractModule {
         methods.addBinding().to(new TypeLiteral<GetMessageListMethod<CassandraId>>(){});
         methods.addBinding().to(new TypeLiteral<GetMessagesMethod<CassandraId>>(){});
         methods.addBinding().to(new TypeLiteral<SetMessagesMethod<CassandraId>>(){});
-        bind(SetMessagesUpdateProcessor.class).to(new TypeLiteral<SetMessagesUpdateProcessor<CassandraId>>(){});
-    }
 
+        Multibinder<SetMessagesProcessor> setMessagesProcessors = Multibinder.newSetBinder(binder(), SetMessagesProcessor.class);
+        setMessagesProcessors.addBinding().to(new TypeLiteral<SetMessagesUpdateProcessor<CassandraId>>(){});
+        setMessagesProcessors.addBinding().to(new TypeLiteral<SetMessagesCreationProcessor<CassandraId>>(){});
+        setMessagesProcessors.addBinding().to(new TypeLiteral<SetMessagesDestructionProcessor<CassandraId>>(){});
+    }
 }
