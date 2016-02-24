@@ -69,6 +69,7 @@ import com.github.dockerjava.api.command.UnpauseContainerCmd;
 import com.github.dockerjava.api.command.VersionCmd;
 import com.github.dockerjava.api.command.WaitContainerCmd;
 import com.github.dockerjava.core.DockerClientConfig;
+import com.github.dockerjava.core.SSLConfig;
 import com.github.dockerjava.jaxrs.connector.ApacheConnectorProvider;
 import com.github.dockerjava.jaxrs.filter.JsonClientFilter;
 import com.github.dockerjava.jaxrs.filter.ResponseStatusExceptionFilter;
@@ -143,10 +144,13 @@ public class DockerCmdExecFactoryImpl implements DockerCmdExecFactory {
         String protocol = null;
 
         LOGGER.info("Client config: " + dockerClientConfig);
-        if (dockerClientConfig.getSslConfig() != null) {
+        SSLConfig sslConfig = dockerClientConfig.getSslConfig();
+        if (sslConfig != null) {
             protocol = "https";
             try {
-                sslContext = dockerClientConfig.getSslConfig().getSSLContext();
+                LOGGER.info("sslConfig: " + sslConfig);
+                sslContext = sslConfig.getSSLContext();
+                LOGGER.info("sslContext: " + sslContext);
             } catch (Exception ex) {
                 throw new DockerClientException("Error in SSL Configuration", ex);
             }
