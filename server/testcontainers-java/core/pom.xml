@@ -36,11 +36,6 @@
             <artifactId>docker-java</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.docker-java</groupId>
-            <artifactId>docker-java</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.zeroturnaround</groupId>
             <artifactId>zt-exec</artifactId>
             <version>1.8</version>
@@ -125,10 +120,6 @@
                             <pattern>com.fasterxml.jackson</pattern>
                             <shadedPattern>org.testcontainers.shaded.com.fasterxml.jackson</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>com.github.dockerjava</pattern>
-                            <shadedPattern>org.testcontainers.shaded.com.github.dockerjava</shadedPattern>
-                        </relocation>
                     </relocations>
                     <artifactSet>
                         <includes>
@@ -138,7 +129,6 @@
                             <include>javax.inject:*</include>
                             <include>javax.ws.rs:*</include>
                             <include>com.fasterxml.*:*</include>
-                            <include>com.github.docker-java:*</include>
                         </includes>
                     </artifactSet>
                     <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
@@ -151,7 +141,6 @@
                                 <exclude>META-INF/*.DSA</exclude>
                                 <exclude>META-INF/*.RSA</exclude>
                                 <exclude>META-INF/services/com.fasterxml.jackson.core.*</exclude>                                
-                                <exclude>META-INF/services/com.github.dockerjava.api.command.*</exclude>
                                 <exclude>META-INF/services/javax.ws.rs.ext.*</exclude>
                                 <exclude>META-INF/services/org.glassfish.hk2.extension.*</exclude>
                                 <exclude>META-INF/services/org.jvnet.hk2.external.generator.*</exclude>
