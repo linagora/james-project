@@ -73,7 +73,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
     protected final Logger logger;
     public final static String FORCE_DELIVERY = "FORCE_DELIVERY";
 
-    public JMSMailQueue(final ConnectionFactory connectionFactory, final String queueName, final Logger logger) {
+    public JMSMailQueue(ConnectionFactory connectionFactory, String queueName, Logger logger) {
         this.connectionFactory = connectionFactory;
         this.queueName = queueName;
         this.logger = logger;

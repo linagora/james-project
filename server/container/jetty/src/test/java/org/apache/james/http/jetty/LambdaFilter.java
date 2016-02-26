@@ -16,35 +16,20 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.http.jetty;
 
-package org.apache.james.imap.message.response;
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
 
-import org.apache.james.imap.api.display.HumanReadableText;
-import org.apache.james.imap.api.message.response.ImapResponseMessage;
+@FunctionalInterface
+public interface LambdaFilter extends Filter {
 
-public class ContinuationResponse implements ImapResponseMessage {
-
-    private final String data;
-
-    private final HumanReadableText textKey;
-
-    public ContinuationResponse(String data) {
-        super();
-        this.data = data;
-        this.textKey = null;
+    @Override
+    default void init(FilterConfig filterConfig) throws ServletException {
     }
-
-    public ContinuationResponse(HumanReadableText textKey) {
-        super();
-        this.data = null;
-        this.textKey = textKey;
-    }
-
-    public String getData() {
-        return data;
-    }
-
-    public HumanReadableText getTextKey() {
-        return textKey;
+    
+    @Override
+    default void destroy() {
     }
 }

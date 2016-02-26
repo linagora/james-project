@@ -95,7 +95,7 @@ public class FileMailQueue implements ManageableMailQueue {
                 }
             });
 
-            for (final String name : files) {
+            for (String name : files) {
 
                 ObjectInputStream oin = null;
 
@@ -159,7 +159,7 @@ public class FileMailQueue implements ManageableMailQueue {
     }
 
     @Override
-    public void enQueue(final Mail mail, long delay, TimeUnit unit) throws MailQueueException {
+    public void enQueue(Mail mail, long delay, TimeUnit unit) throws MailQueueException {
         final String key = mail.getName() + "-" + COUNTER.incrementAndGet();
         FileOutputStream out = null;
         FileOutputStream foout = null;
