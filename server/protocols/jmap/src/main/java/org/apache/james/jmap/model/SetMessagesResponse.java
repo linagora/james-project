@@ -21,7 +21,6 @@ package org.apache.james.jmap.model;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Strings;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.Method;
 
@@ -29,6 +28,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -42,18 +42,26 @@ public class SetMessagesResponse implements Method.Response {
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
 
+        public static Builder accumulator(Builder accumulator, SetMessagesResponse response) {
+            return response.mergeInto(accumulator);
+        }
+
+        public static Builder combiner(Builder firstBuilder, Builder secondBuilder) {
+            return secondBuilder.build().mergeInto(firstBuilder);
+        }
+
         private String accountId;
         private String oldState;
         private String newState;
-        private ImmutableList.Builder<Message> created;
-        private ImmutableList.Builder<MessageId> updated;
-        private ImmutableList.Builder<MessageId> destroyed;
-        private ImmutableMap.Builder<MessageId, SetError> notCreated;
-        private ImmutableMap.Builder<MessageId, SetError> notUpdated;
-        private ImmutableMap.Builder<MessageId, SetError> notDestroyed;
+        private final ImmutableMap.Builder<CreationMessageId, Message> created;
+        private final ImmutableList.Builder<MessageId> updated;
+        private final ImmutableList.Builder<MessageId> destroyed;
+        private final ImmutableMap.Builder<CreationMessageId, SetError> notCreated;
+        private final ImmutableMap.Builder<MessageId, SetError> notUpdated;
+        private final ImmutableMap.Builder<MessageId, SetError> notDestroyed;
 
         private Builder() {
-            created = ImmutableList.builder();
+            created = ImmutableMap.builder();
             updated = ImmutableList.builder();
             destroyed = ImmutableList.builder();
             notCreated = ImmutableMap.builder();
@@ -73,8 +81,8 @@ public class SetMessagesResponse implements Method.Response {
             throw new NotImplementedException();
         }
 
-        public Builder created(List<Message> created) {
-            this.created.addAll(created);
+        public Builder created(Map<CreationMessageId, Message> created) {
+            this.created.putAll(created);
             return this;
         }
 
@@ -93,7 +101,7 @@ public class SetMessagesResponse implements Method.Response {
             return this;
         }
 
-        public Builder notCreated(Map<MessageId, SetError> notCreated) {
+        public Builder notCreated(Map<CreationMessageId, SetError> notCreated) {
             this.notCreated.putAll(notCreated);
             return this;
         }
@@ -122,15 +130,15 @@ public class SetMessagesResponse implements Method.Response {
     private final String accountId;
     private final String oldState;
     private final String newState;
-    private final List<Message> created;
+    private final Map<CreationMessageId, Message> created;
     private final List<MessageId> updated;
     private final List<MessageId> destroyed;
-    private final Map<MessageId, SetError> notCreated;
+    private final Map<CreationMessageId, SetError> notCreated;
     private final Map<MessageId, SetError> notUpdated;
     private final Map<MessageId, SetError> notDestroyed;
 
-    @VisibleForTesting SetMessagesResponse(String accountId, String oldState, String newState, List<Message> created, List<MessageId> updated, List<MessageId> destroyed, 
-            Map<MessageId, SetError> notCreated, Map<MessageId, SetError> notUpdated, Map<MessageId, SetError> notDestroyed) {
+    @VisibleForTesting SetMessagesResponse(String accountId, String oldState, String newState, Map<CreationMessageId, Message> created, List<MessageId> updated, List<MessageId> destroyed,
+            Map<CreationMessageId, SetError> notCreated, Map<MessageId, SetError> notUpdated, Map<MessageId, SetError> notDestroyed) {
         this.accountId = accountId;
         this.oldState = oldState;
         this.newState = newState;
@@ -158,7 +166,7 @@ public class SetMessagesResponse implements Method.Response {
     }
 
     @JsonSerialize
-    public List<Message> getCreated() {
+    public Map<CreationMessageId, Message> getCreated() {
         return created;
     }
 
@@ -173,7 +181,7 @@ public class SetMessagesResponse implements Method.Response {
     }
 
     @JsonSerialize
-    public Map<MessageId, SetError> getNotCreated() {
+    public Map<CreationMessageId, SetError> getNotCreated() {
         return notCreated;
     }
 
@@ -187,7 +195,7 @@ public class SetMessagesResponse implements Method.Response {
         return notDestroyed;
     }
 
-    public void mergeInto(SetMessagesResponse.Builder responseBuilder) {
+    public SetMessagesResponse.Builder mergeInto(SetMessagesResponse.Builder responseBuilder) {
         responseBuilder.created(getCreated());
         responseBuilder.updated(getUpdated());
         responseBuilder.destroyed(getDestroyed());
@@ -203,5 +211,6 @@ public class SetMessagesResponse implements Method.Response {
         if(! Strings.isNullOrEmpty(getNewState())) {
             responseBuilder.accountId(getAccountId());
         }
+        return responseBuilder;
     }
 }

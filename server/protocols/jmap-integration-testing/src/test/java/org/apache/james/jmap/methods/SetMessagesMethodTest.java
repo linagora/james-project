@@ -25,6 +25,7 @@ import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasKey;
@@ -36,6 +37,9 @@ import static org.hamcrest.collection.IsMapWithSize.anEmptyMap;
 
 import java.io.ByteArrayInputStream;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
 import javax.mail.Flags;
 
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
@@ -46,30 +50,30 @@ import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
-
+import org.hamcrest.Matchers;
+import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.RuleChain;
+import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.ResponseSpecBuilder;
 import com.jayway.restassured.http.ContentType;
 import com.jayway.restassured.specification.ResponseSpecification;
-import org.hamcrest.Matchers;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 public abstract class SetMessagesMethodTest {
 
     private static final String NAME = "[0][0]";
     private static final String ARGUMENTS = "[0][1]";
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    private final TemporaryFolder temporaryFolder = new TemporaryFolder();
+    private final EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
+    private final EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
+    private final JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    private String outboxId;
 
     protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
 
@@ -94,6 +98,25 @@ public abstract class SetMessagesMethodTest {
         jmapServer.serverProbe().addUser(username, password);
         jmapServer.serverProbe().createMailbox("#private", "username", "inbox");
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
+        embeddedElasticSearch.awaitForElasticSearch();
+        // Find the newly created outbox mailbox (using getMailboxes command on /jmap endpoint)
+        List<Map<String, String>> mailboxes = with()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
+                .post("/jmap")
+                .andReturn()
+                .body()
+                .jsonPath()
+                .getList(ARGUMENTS + ".list");
+
+        outboxId = mailboxes.stream()
+                .filter(x -> x.get("role").equals("outbox"))
+                .map(x -> x.get("id"))
+                .findFirst().get();
     }
 
     @Test
@@ -623,5 +646,255 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notUpdated[\""+nonExistingMessageId+"\"].type", equalTo("notFound"))
             .body(ARGUMENTS + ".notUpdated[\""+nonExistingMessageId+"\"].description", equalTo("message not found"))
             .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessageShouldReturnCreatedMessageWhenSendingMessage() {
+        String messageCreationId = "user|inbox|1";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"MAILER-DEAMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+        .when()
+                .post("/jmap")
+        .then()
+                .log().ifValidationFails()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+                .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
+                // note that assertions on result message had to be split between
+                // string-typed values and boolean-typed value assertions on the same .created entry
+                // make sure only one creation has been processed
+                .body(ARGUMENTS + ".created", aMapWithSize(1))
+                // assert server-set attributes are returned
+                .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
+                        hasEntry(equalTo("id"), not(isEmptyOrNullString())),
+                        hasEntry(equalTo("blobId"), not(isEmptyOrNullString())),
+                        hasEntry(equalTo("threadId"), not(isEmptyOrNullString())),
+                        hasEntry(equalTo("size"), not(isEmptyOrNullString()))
+                )))
+                // assert that message flags are all unset
+                .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
+                        hasEntry(equalTo("isDraft"), equalTo(false)),
+                        hasEntry(equalTo("isUnread"), equalTo(false)),
+                        hasEntry(equalTo("isFlagged"), equalTo(false)),
+                        hasEntry(equalTo("isAnswered"), equalTo(false))
+                )))
+                ;
+    }
+
+    @Test
+    public void setMessagesShouldCreateMessageInOutboxWhenSendingMessage() throws MailboxException {
+        // Given
+        String messageCreationId = "user|inbox|1";
+        String presumedMessageId = "username@domain.tld|outbox|1";
+        String messageSubject = "Thank you for joining example.com!";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"MAILER-DAEMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"subject\": \"" + messageSubject + "\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+        // When
+        .when()
+                .post("/jmap");
+
+        // Then
+        with()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMessages\", {\"ids\": [\"" + presumedMessageId + "\"]}, \"#0\"]]")
+        .post("/jmap")
+        .then()
+                .body(NAME, equalTo("messages"))
+                .body(ARGUMENTS + ".list", hasSize(1))
+                .body(ARGUMENTS + ".list[0].subject", equalTo(messageSubject))
+                .log().ifValidationFails();
+    }
+
+    @Test
+    public void setMessagesShouldRejectWhenSendingMessageHasNoValidAddress() {
+        String messageCreationId = "user|inbox|1";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"MAILER-DEAMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com@example.com\"}]," +
+                "        \"cc\": [{ \"name\": \"ALICE\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+                .when()
+                .post("/jmap")
+                .then()
+                .log().ifValidationFails()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+
+                .body(ARGUMENTS + ".notCreated", hasKey(messageCreationId))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].description", endsWith("no recipient address set"))
+                .body(ARGUMENTS + ".created", aMapWithSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldRejectWhenSendingMessageHasMissingFrom() {
+        String messageCreationId = "user|inbox|1";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"cc\": [{ \"name\": \"ALICE\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+        .when()
+                .post("/jmap")
+        .then()
+                .log().ifValidationFails()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+                .body(ARGUMENTS + ".notCreated", hasKey(messageCreationId))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].description", endsWith("'from' address is mandatory"))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", hasSize(1))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", contains("from"))
+                .body(ARGUMENTS + ".created", aMapWithSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldSucceedWhenSendingMessageWithOnlyFromAddress() {
+        String messageCreationId = "user|inbox|1";
+        String fromAddress = "postmaster@example.com";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"cc\": [{ \"name\": \"ALICE\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+        .when()
+                .post("/jmap")
+        .then()
+                .log().ifValidationFails()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+                .body(ARGUMENTS + ".created", aMapWithSize(1))
+                .body(ARGUMENTS + ".created", hasKey(messageCreationId))
+                .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].headers.from", equalTo(fromAddress))
+                .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].from.name", equalTo(fromAddress))
+                .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].from.email", equalTo(fromAddress));
+    }
+
+    @Test
+    public void setMessagesShouldRejectWhenSendingMessageHasMissingSubject() {
+        String messageCreationId = "user|inbox|1";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"MAILER-DEAMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"cc\": [{ \"name\": \"ALICE\"}]," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+        .when()
+                .post("/jmap")
+        .then()
+                .log().ifValidationFails()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+                .body(ARGUMENTS + ".notCreated", hasKey(messageCreationId))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", hasSize(1))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", contains("subject"))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].description", endsWith("'subject' is missing"))
+                .body(ARGUMENTS + ".created", aMapWithSize(0));
     }
 }
