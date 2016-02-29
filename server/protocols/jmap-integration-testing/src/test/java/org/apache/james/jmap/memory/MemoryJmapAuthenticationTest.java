@@ -17,23 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.mailbox;
+package org.apache.james.jmap.memory;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.store.extractor.TextExtractor;
-import org.apache.james.mailbox.store.search.MessageSearchIndex;
-import org.apache.james.mailbox.store.search.SimpleMessageSearchIndex;
-import org.apache.james.mailbox.tika.extractor.TikaTextExtractor;
+import org.apache.james.jmap.JMAPAuthenticationTest;
+import org.apache.james.jmap.JmapServer;
+import org.apache.james.jmap.cassandra.CassandraJmapServer;
+import org.apache.james.jmap.utils.ZonedDateTimeProvider;
+import org.junit.Rule;
+import org.junit.rules.RuleChain;
+import org.junit.rules.TemporaryFolder;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.TypeLiteral;
+import com.google.inject.util.Modules;
 
-public class SimpleSearchMailboxModule extends AbstractModule {
+public class MemoryJmapAuthenticationTest extends JMAPAuthenticationTest {
+
+    private TemporaryFolder temporaryFolder = new TemporaryFolder();
+    private JmapServer jmapServer = CassandraJmapServer.createMemoryServer(
+        Modules.combine(
+            CassandraJmapServer.memoryOverrideModule(temporaryFolder),
+            (binder) -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider)));
+
+    @Rule
+    public RuleChain ruleChain = RuleChain.outerRule(temporaryFolder).around(jmapServer);
 
     @Override
-    protected void configure() {
-        bind(new TypeLiteral<MessageSearchIndex<CassandraId>>(){}).to(new TypeLiteral<SimpleMessageSearchIndex<CassandraId>>() {});
-        bind(TextExtractor.class).to(TikaTextExtractor.class);
+    protected JmapServer getJmapServer() {
+        return jmapServer;
     }
-
+    
 }

@@ -35,20 +35,15 @@ import java.util.Date;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
@@ -58,32 +53,21 @@ public abstract class GetMailboxesMethodTest {
     private static final String NAME = "[0][0]";
     private static final String ARGUMENTS = "[0][1]";
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
-
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
-
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+    protected abstract JmapServer getJmapServer();
 
     private AccessToken accessToken;
     private String username;
 
     @Before
     public void setup() throws Exception {
-        RestAssured.port = jmapServer.getPort();
+        RestAssured.port = getJmapServer().getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
 
         String domain = "domain.tld";
         username = "username@" + domain;
         String password = "password";
-        jmapServer.serverProbe().addDomain(domain);
-        jmapServer.serverProbe().addUser(username, password);
+        getJmapServer().serverProbe().addDomain(domain);
+        getJmapServer().serverProbe().addUser(username, password);
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
     }
 
@@ -104,7 +88,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnEmptyWhenIdsDoesntMatch() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
 
         given()
             .accept(ContentType.JSON)
@@ -121,11 +105,11 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWhenIdsMatch() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
 
-        Mailbox<CassandraId> mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
-        Mailbox<CassandraId> mailbox2 = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
+        Mailbox mailbox = getJmapServer().serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        Mailbox mailbox2 = getJmapServer().serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
 
         String mailboxId = mailbox.getMailboxId().serialize();
         String mailboxId2 = mailbox2.getMailboxId().serialize();
@@ -147,10 +131,10 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnOnlyMatchingMailboxesWhenIdsGiven() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
 
-        Mailbox<CassandraId> mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        Mailbox mailbox = getJmapServer().serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
 
         String mailboxId = mailbox.getMailboxId().serialize();
 
@@ -170,7 +154,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnEmptyWhenIdsIsEmpty() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
 
         given()
             .accept(ContentType.JSON)
@@ -187,11 +171,11 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnAllMailboxesWhenIdsIsNull() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
 
-        Mailbox<CassandraId> mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
-        Mailbox<CassandraId> mailbox2 = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
+        Mailbox mailbox = getJmapServer().serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        Mailbox mailbox2 = getJmapServer().serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
 
         String mailboxId = mailbox.getMailboxId().serialize();
         String mailboxId2 = mailbox2.getMailboxId().serialize();
@@ -288,9 +272,9 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWhenAvailable() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "name"), 
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "name"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         given()
@@ -321,7 +305,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnFilteredMailboxesPropertiesWhenRequestContainsFilterProperties() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
 
         given()
             .accept(ContentType.JSON)
@@ -352,7 +336,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnIdWhenRequestContainsEmptyPropertyListFilter() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
 
         given()
             .accept(ContentType.JSON)
@@ -370,7 +354,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldIgnoreUnknownPropertiesWhenRequestContainsUnknownPropertyListFilter() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
 
         given()
             .accept(ContentType.JSON)
@@ -388,8 +372,8 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWithSortOrder() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "trash");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "trash");
 
         given()
             .accept(ContentType.JSON)
@@ -410,7 +394,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWithRolesInLowerCase() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
 
         given()
             .accept(ContentType.JSON)

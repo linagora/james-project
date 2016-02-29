@@ -24,12 +24,30 @@ import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.cassandra.CassandraJmapServer;
 import org.apache.james.jmap.methods.SetMessagesMethodTest;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.junit.Rule;
+import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
 public class CassandraSetMessagesMethodTest extends SetMessagesMethodTest {
 
+    private TemporaryFolder temporaryFolder = new TemporaryFolder();
+    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
+    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
+    private JmapServer jmapServer = new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+
+    @Rule
+    public RuleChain chain = RuleChain
+        .outerRule(temporaryFolder)
+        .around(embeddedElasticSearch)
+        .around(jmapServer);
+
     @Override
-    protected JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
-        return new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+    protected JmapServer getJmapServer() {
+        return jmapServer;
+    }
+
+    @Override
+    protected void await() {
+        embeddedElasticSearch.awaitForElasticSearch();
     }
 }

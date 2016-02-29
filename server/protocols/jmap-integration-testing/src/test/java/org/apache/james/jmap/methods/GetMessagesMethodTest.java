@@ -34,19 +34,14 @@ import java.util.Date;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.elasticsearch.common.collect.ImmutableMap;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
@@ -56,33 +51,24 @@ public abstract class GetMessagesMethodTest {
     private static final String NAME = "[0][0]";
     private static final String ARGUMENTS = "[0][1]";
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    protected abstract JmapServer getJmapServer();
 
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
-
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+    protected abstract void await();
 
     private AccessToken accessToken;
     private String username;
 
     @Before
     public void setup() throws Exception {
-        RestAssured.port = jmapServer.getPort();
+        RestAssured.port = getJmapServer().getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
 
         String domain = "domain.tld";
         username = "username@" + domain;
         String password = "password";
-        jmapServer.serverProbe().addDomain(domain);
-        jmapServer.serverProbe().addUser(username, password);
-        jmapServer.serverProbe().createMailbox("#private", "username", "inbox");
+        getJmapServer().serverProbe().addDomain(domain);
+        getJmapServer().serverProbe().addUser(username, password);
+        getJmapServer().serverProbe().createMailbox("#private", "username", "inbox");
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
     }
 
@@ -164,13 +150,13 @@ public abstract class GetMessagesMethodTest {
 
     @Test
     public void getMessagesShouldReturnMessagesWhenAvailable() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
                 new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
         
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
         
         given()
             .accept(ContentType.JSON)
@@ -195,13 +181,13 @@ public abstract class GetMessagesMethodTest {
     
     @Test
     public void getMessagesShouldReturnFilteredPropertiesMessagesWhenAsked() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
                 new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
         
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
         
         given()
             .accept(ContentType.JSON)
@@ -225,10 +211,10 @@ public abstract class GetMessagesMethodTest {
     
     @Test
     public void getMessagesShouldReturnFilteredHeaderPropertyWhenAsked() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
                 new ByteArrayInputStream(("From: user@domain.tld\r\n"
                         + "header1: Header1Content\r\n"
                         + "HEADer2: Header2Content\r\n"
@@ -236,7 +222,7 @@ public abstract class GetMessagesMethodTest {
                         + "\r\n"
                         + "testmail").getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
         
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
         
         given()
             .accept(ContentType.JSON)
@@ -260,13 +246,13 @@ public abstract class GetMessagesMethodTest {
 
     @Test
     public void getMessagesShouldReturnNotFoundWhenIdDoesntMatch() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
                 new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
         
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
         
         given()
             .accept(ContentType.JSON)
@@ -284,12 +270,12 @@ public abstract class GetMessagesMethodTest {
 
     @Test
     public void getMessagesShouldReturnMandatoryPropertiesMessagesWhenNotAsked() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes()), Date.from(dateTime.toInstant()), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         given()
             .accept(ContentType.JSON)

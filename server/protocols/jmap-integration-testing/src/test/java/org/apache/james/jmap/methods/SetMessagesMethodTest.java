@@ -43,21 +43,16 @@ import java.util.concurrent.TimeUnit;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
 import com.jayway.awaitility.Awaitility;
@@ -76,37 +71,29 @@ public abstract class SetMessagesMethodTest {
     private static final String SECOND_ARGUMENTS = "[1][1]";
     private static final String USERS_DOMAIN = "domain.tld";
 
-    private final TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private final EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private final EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private final JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
     private ConditionFactory calmlyAwait;
 
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
+    protected abstract JmapServer getJmapServer();
 
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+    protected abstract void await();
 
     private AccessToken accessToken;
     private String username;
 
     @Before
     public void setup() throws Exception {
-        RestAssured.port = jmapServer.getPort();
+        RestAssured.port = getJmapServer().getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
 
         username = "username@" + USERS_DOMAIN;
         String password = "password";
-        jmapServer.serverProbe().addDomain(USERS_DOMAIN);
-        jmapServer.serverProbe().addUser(username, password);
-        jmapServer.serverProbe().createMailbox("#private", username, "inbox");
+        getJmapServer().serverProbe().addDomain(USERS_DOMAIN);
+        getJmapServer().serverProbe().addUser(username, password);
+        getJmapServer().serverProbe().createMailbox("#private", username, "inbox");
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
 
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
-        embeddedElasticSearch.awaitForElasticSearch();
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
+        await();
 
         Duration slowPacedPollInterval = Duration.FIVE_HUNDRED_MILLISECONDS;
         calmlyAwait = Awaitility.with().pollInterval(slowPacedPollInterval).and().with().pollDelay(slowPacedPollInterval).await();
@@ -188,7 +175,7 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void setMessagesShouldReturnNotDestroyedWhenNoMatchingMessage() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
         String messageId = username + "|mailbox|12345";
         given()
@@ -213,11 +200,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldReturnDestroyedWhenMatchingMessage() throws Exception {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         given()
             .accept(ContentType.JSON)
@@ -237,11 +224,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldDeleteMessageWhenMatchingMessage() throws Exception {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         // When
         given()
@@ -270,17 +257,17 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void setMessagesShouldReturnDestroyedNotDestroyWhenMixed() throws Exception {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String missingMessageId = username + "|mailbox|4";
         given()
@@ -305,17 +292,17 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldDeleteMatchingMessagesWhenMixed() throws Exception {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         // When
         given()
@@ -345,11 +332,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldReturnUpdatedIdAndNoErrorWhenIsUnreadPassedToFalse() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
 
@@ -381,11 +368,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMarkAsReadWhenIsUnreadPassedToFalse() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         given()
@@ -414,11 +401,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldReturnUpdatedIdAndNoErrorWhenIsUnreadPassed() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.SEEN));
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         given()
@@ -438,11 +425,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMarkAsUnreadWhenIsUnreadPassed() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.SEEN));
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         given()
@@ -471,11 +458,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldReturnUpdatedIdAndNoErrorWhenIsFlaggedPassed() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         given()
@@ -495,11 +482,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMarkAsFlaggedWhenIsFlaggedPassed() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         given()
@@ -526,11 +513,11 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void setMessagesShouldRejectUpdateWhenPropertyHasWrongType() throws MailboxException {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String messageId = username + "|mailbox|1";
 
@@ -556,11 +543,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     @Ignore("Jackson json deserializer stops after first error found")
     public void setMessagesShouldRejectUpdateWhenPropertiesHaveWrongTypes() throws MailboxException {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String messageId = username + "|mailbox|1";
 
@@ -586,11 +573,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMarkMessageAsAnsweredWhenIsAnsweredPassed() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         // When
@@ -610,11 +597,11 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMarkAsAnsweredWhenIsAnsweredPassed() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
-        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+        getJmapServer().serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        embeddedElasticSearch.awaitForElasticSearch();
+        await();
 
         String presumedMessageId = username + "|mailbox|1";
         given()
@@ -641,7 +628,7 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void setMessageShouldReturnNotFoundWhenUpdateUnknownMessage() {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
 
         String nonExistingMessageId = username + "|mailbox|12345";
 
@@ -764,7 +751,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMoveMessageInSentWhenMessageIsSent() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
         String sentMailboxId = getAllMailboxesIds(accessToken).stream()
                 .filter(x -> x.get("role").equals("sent"))
                 .map(x -> x.get("id"))
@@ -937,7 +924,7 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void setMessagesShouldMoveToSentWhenSendingMessageWithOnlyFromAddress() {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
         String sentMailboxId = getAllMailboxesIds(accessToken).stream()
                 .filter(x -> x.get("role").equals("sent"))
                 .map(x -> x.get("id"))
@@ -1017,13 +1004,13 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldDeliverMessageToRecipient() throws Exception {
         // Sender
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
         // Recipient
         String recipientAddress = "recipient" + "@" + USERS_DOMAIN;
         String password = "password";
-        jmapServer.serverProbe().addUser(recipientAddress, password);
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, recipientAddress, "inbox");
-        embeddedElasticSearch.awaitForElasticSearch();
+        getJmapServer().serverProbe().addUser(recipientAddress, password);
+        getJmapServer().serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, recipientAddress, "inbox");
+        await();
         AccessToken recipientToken = JmapAuthentication.authenticateJamesUser(recipientAddress, password);
 
         String messageCreationId = "user|inbox|1";

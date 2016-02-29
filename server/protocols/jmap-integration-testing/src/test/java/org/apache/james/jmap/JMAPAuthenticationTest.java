@@ -22,22 +22,20 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
+
+import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.isA;
+import static org.hamcrest.Matchers.notNullValue;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.model.ContinuationToken;
-import org.apache.james.jmap.utils.ZonedDateTimeProvider;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
@@ -49,27 +47,14 @@ public abstract class JMAPAuthenticationTest {
     private static final ZonedDateTime newDate = ZonedDateTime.parse("2011-12-03T10:16:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     private static final ZonedDateTime afterExpirationDate = ZonedDateTime.parse("2011-12-03T10:30:31+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private FixedDateZonedDateTimeProvider zonedDateTimeProvider = new FixedDateZonedDateTimeProvider();
-    private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra, zonedDateTimeProvider);
+    protected abstract JmapServer getJmapServer();
 
-
-    
-    protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra, ZonedDateTimeProvider zonedDateTimeProvider);
-
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
-    
     private UserCredentials userCredentials;
+    public FixedDateZonedDateTimeProvider zonedDateTimeProvider = new FixedDateZonedDateTimeProvider();
 
     @Before
     public void setup() throws Exception {
-        RestAssured.port = jmapServer.getPort();
+        RestAssured.port = getJmapServer().getPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
 
         
@@ -80,8 +65,8 @@ public abstract class JMAPAuthenticationTest {
 
         
         String domain = "domain.tld";
-        jmapServer.serverProbe().addDomain(domain);
-        jmapServer.serverProbe().addUser(userCredentials.getUsername(), userCredentials.getPassword());
+        getJmapServer().serverProbe().addDomain(domain);
+        getJmapServer().serverProbe().addUser(userCredentials.getUsername(), userCredentials.getPassword());
         
         zonedDateTimeProvider.setFixedDateTime(oldDate);
     }
