@@ -17,24 +17,27 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james;
 
-import java.io.InputStream;
-import java.util.Date;
+import org.apache.james.jmap.methods.GetMessageListMethod;
+import org.apache.james.modules.TestFilesystemModule;
+import org.apache.james.modules.TestJMAPServerModule;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
-import javax.mail.Flags;
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 
-import org.apache.james.cli.probe.ServerProbe;
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.exception.BadCredentialsException;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
+public class MemoryJamesServerTest extends AbstractJamesServerTest {
 
-public interface ExtendedServerProbe extends ServerProbe {
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    void appendMessage(String username, MailboxPath mailboxPath, InputStream message, Date internalDate, boolean isRecent, Flags flags) 
-            throws BadCredentialsException, MailboxException;
+    @Override
+    protected Module createModule() {
+        return Modules.override(CassandraJamesServerMain.memoryModule)
+                .with(new TestFilesystemModule(temporaryFolder),
+                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT));
+    }
 
-    Mailbox getMailbox(String namespace, String user, String name);
 }

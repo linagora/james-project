@@ -17,24 +17,21 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james.mailbox.inmemory;
 
-import java.io.InputStream;
-import java.util.Date;
+import javax.inject.Inject;
 
-import javax.mail.Flags;
+import org.apache.james.mailbox.MailboxPathLocker;
+import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.store.Authenticator;
+import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.StoreMailboxManager;
 
-import org.apache.james.cli.probe.ServerProbe;
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.exception.BadCredentialsException;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
+public class InMemoryMailboxManager extends StoreMailboxManager<InMemoryId>{
 
-public interface ExtendedServerProbe extends ServerProbe {
-
-    void appendMessage(String username, MailboxPath mailboxPath, InputStream message, Date internalDate, boolean isRecent, Flags flags) 
-            throws BadCredentialsException, MailboxException;
-
-    Mailbox getMailbox(String namespace, String user, String name);
+    @Inject
+    public InMemoryMailboxManager(MailboxSessionMapperFactory<InMemoryId> mailboxSessionMapperFactory, Authenticator authenticator, MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver) {
+        super(mailboxSessionMapperFactory, authenticator, locker, aclResolver, groupMembershipResolver);
+    }
 }

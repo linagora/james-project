@@ -17,24 +17,23 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james.modules.mailbox;
 
-import java.io.InputStream;
-import java.util.Date;
-
-import javax.mail.Flags;
-
-import org.apache.james.cli.probe.ServerProbe;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.exception.BadCredentialsException;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.extractor.TextExtractor;
+import org.apache.james.mailbox.store.search.MessageSearchIndex;
+import org.apache.james.mailbox.store.search.SimpleMessageSearchIndex;
+import org.apache.james.mailbox.tika.extractor.TikaTextExtractor;
 
-public interface ExtendedServerProbe extends ServerProbe {
+import com.google.inject.AbstractModule;
+import com.google.inject.TypeLiteral;
 
-    void appendMessage(String username, MailboxPath mailboxPath, InputStream message, Date internalDate, boolean isRecent, Flags flags) 
-            throws BadCredentialsException, MailboxException;
+public class SimpleSearchMailboxModule extends AbstractModule {
 
-    Mailbox getMailbox(String namespace, String user, String name);
+    @Override
+    protected void configure() {
+        bind(new TypeLiteral<MessageSearchIndex<CassandraId>>(){}).to(new TypeLiteral<SimpleMessageSearchIndex<CassandraId>>() {});
+        bind(TextExtractor.class).to(TikaTextExtractor.class);
+    }
+
 }

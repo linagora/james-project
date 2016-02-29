@@ -224,6 +224,10 @@
                 </dependency>
                 <dependency>
                     <groupId>${project.groupId}</groupId>
+                    <artifactId>apache-james-mailbox-memory</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>${project.groupId}</groupId>
                     <artifactId>apache-james-mailbox-tika</artifactId>
                 </dependency>
                 <dependency>
@@ -254,10 +258,13 @@
                     <groupId>${project.groupId}</groupId>
                     <artifactId>james-server-data-cassandra</artifactId>
                 </dependency>
-                
                 <dependency>
                     <groupId>${project.groupId}</groupId>
                     <artifactId>james-server-data-library</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>${project.groupId}</groupId>
+                    <artifactId>james-server-data-memory</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>${project.groupId}</groupId>

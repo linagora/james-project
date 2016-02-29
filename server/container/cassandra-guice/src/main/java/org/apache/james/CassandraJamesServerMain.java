@@ -19,13 +19,17 @@
 
 package org.apache.james;
 
+import org.apache.james.jmap.JMAPModule;
+import org.apache.james.jmap.MemoryMethodsModule;
 import org.apache.james.modules.CommonServicesModule;
 import org.apache.james.modules.data.CassandraDomainListModule;
 import org.apache.james.modules.data.CassandraRecipientRewriteTableModule;
 import org.apache.james.modules.data.CassandraUsersRepositoryModule;
+import org.apache.james.modules.data.MemoryDataModule;
 import org.apache.james.modules.mailbox.CassandraMailboxModule;
 import org.apache.james.modules.mailbox.CassandraSessionModule;
 import org.apache.james.modules.mailbox.ElasticSearchMailboxModule;
+import org.apache.james.modules.mailbox.MemoryMailboxModule;
 import org.apache.james.modules.protocols.IMAPServerModule;
 import org.apache.james.modules.protocols.JMAPServerModule;
 import org.apache.james.modules.protocols.LMTPServerModule;
@@ -71,6 +75,26 @@ public class CassandraJamesServerMain {
             new ConfigurationProviderModule(),
             new JMAPServerModule(),
             new PreDestroyModule());
+
+    public static final Module memoryModule = Modules.combine(
+        new CommonServicesModule(),
+        new MemoryMailboxModule(),
+        new MemoryDataModule(),
+        new DNSServiceModule(),
+        new IMAPServerModule(),
+        new ProtocolHandlerModule(),
+        new POP3ServerModule(),
+        new SMTPServerModule(),
+        new LMTPServerModule(),
+        new ManageSieveServerModule(),
+        new ActiveMQQueueModule(),
+        new SieveModule(),
+        new MailStoreRepositoryModule(),
+        new CamelMailetContainerModule(),
+        new QuotaModule(),
+        new ConfigurationProviderModule(),
+        new JMAPServerModule(new JMAPModule(new MemoryMethodsModule())),
+        new PreDestroyModule());
 
     public static void main(String[] args) throws Exception {
         CassandraJamesServer server = new CassandraJamesServer(Modules.combine(
