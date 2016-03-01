@@ -53,6 +53,9 @@ import com.google.common.collect.Iterators;
  */
 public class ToRecipientFolder extends GenericMailet {
 
+    public static final String FOLDER_PARAMETER = "folder";
+    public static final String CONSUME_PARAMETER = "consume";
+
     private MailboxManager mailboxManager;
     private SieveRepository sieveRepository;
     private UsersRepository usersRepository;
@@ -63,8 +66,8 @@ public class ToRecipientFolder extends GenericMailet {
     }
 
     @Inject
-    public void setSetUsersRepository(SieveRepository setUsersRepository) {
-        this.sieveRepository = setUsersRepository;
+    public void setSieveRepository(SieveRepository sieveRepository) {
+        this.sieveRepository = sieveRepository;
     }
 
     @Inject
@@ -89,7 +92,7 @@ public class ToRecipientFolder extends GenericMailet {
     @Override
     public void init() throws MessagingException {
         super.init();
-        sieveMailet = new SieveMailet(usersRepository, mailboxManager, sieveRepository, "INBOX");
+        sieveMailet = new SieveMailet(usersRepository, mailboxManager, sieveRepository, getInitParameter(FOLDER_PARAMETER, "INBOX"));
         sieveMailet.init(new MailetConfig() {
             
             @Override
@@ -102,7 +105,6 @@ public class ToRecipientFolder extends GenericMailet {
                     return getMailetConfig().getInitParameter(name);
                 }
             }
-            
 
             @Override
             public Iterator<String> getInitParameterNames() {
@@ -121,8 +123,8 @@ public class ToRecipientFolder extends GenericMailet {
             }
 
         });
-        // Override the default value of "quiet"
         sieveMailet.setQuiet(getInitParameter("quiet", true));
+        sieveMailet.setConsume(getInitParameter(CONSUME_PARAMETER, false));
     }
 
     @Override
