@@ -21,6 +21,7 @@
 package org.apache.james.sieverepository.api;
 
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.james.sieverepository.api.exception.DuplicateException;
@@ -30,14 +31,14 @@ import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.sieverepository.api.exception.UserNotFoundException;
-
+import org.joda.time.DateTime;
 
 
 /**
  * <code>SieveRepository</code>
  */
 public interface SieveRepository {
-    
+
     void haveSpace(String user, String name, long size) throws UserNotFoundException, QuotaExceededException, StorageException;
     
     /**
@@ -57,6 +58,8 @@ public interface SieveRepository {
     List<ScriptSummary> listScripts(String user) throws UserNotFoundException, StorageException;
     
     InputStream getActive(String user) throws UserNotFoundException, ScriptNotFoundException, StorageException;
+
+    DateTime getActivationDateForActiveScript(String user) throws StorageException, UserNotFoundException, ScriptNotFoundException;
     
     void setActive(String user, String name) throws UserNotFoundException, ScriptNotFoundException, StorageException;
     

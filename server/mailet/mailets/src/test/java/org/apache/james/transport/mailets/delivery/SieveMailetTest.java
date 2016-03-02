@@ -19,21 +19,34 @@
 
 package org.apache.james.transport.mailets.delivery;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
+
 import com.google.common.collect.Lists;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.transport.mailets.SieveMailet;
 import org.apache.james.user.api.UsersRepository;
+import org.apache.jsieve.mailet.ResourceLocator;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.base.test.FakeMail;
 import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMailetConfig;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -52,17 +65,7 @@ import javax.mail.util.ByteArrayDataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
-import java.util.List;
 import java.util.Properties;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
 
 public class SieveMailetTest {
 
@@ -76,25 +79,30 @@ public class SieveMailetTest {
         }
     }
 
+    public static DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-mm-dd HH:mm:ss");
+    public static final DateTime DATE_CLOSE = formatter.parseDateTime("2016-01-16 00:00:00");
+    public static final DateTime DATE_DEFAULT = formatter.parseDateTime("2016-01-14 00:00:00");
+    public static final DateTime DATE_NEW = formatter.parseDateTime("2016-01-18 00:00:00");
+    public static final DateTime DATE_OLD = formatter.parseDateTime("2011-01-18 00:00:00");
     public static final MailboxPath NOT_SELECTED_MAILBOX = new MailboxPath("#private", "receiver", "INBOX.not.selected");
     public static final MailboxPath SELECTED_MAILBOX = new MailboxPath("#private", "receiver", "INBOX.select");
     public static final MailboxPath INBOX = new MailboxPath("#private", "receiver", "INBOX");
 
     private UsersRepository usersRepository;
     private MailboxManager mailboxManager;
-    private SieveRepository sieveRepository;
+    private ResourceLocator resourceLocator;
     private SieveMailet sieveMailet;
     private FakeMailContext fakeMailContext;
     private FakeMailetConfig fakeMailetConfig;
 
     @Before
     public void setUp() throws Exception {
-        sieveRepository = mock(SieveRepository.class);
+        resourceLocator = mock(ResourceLocator.class);
         usersRepository = mock(UsersRepository.class);
         mailboxManager = mock(MailboxManager.class);
         fakeMailContext = new FakeMailContext();
         fakeMailetConfig = new FakeMailetConfig("sieveMailet", fakeMailContext);
-        sieveMailet = new SieveMailet(usersRepository, mailboxManager, sieveRepository, "INBOX");
+        sieveMailet = new SieveMailet(usersRepository, mailboxManager, resourceLocator, "INBOX");
     }
 
     @Test
@@ -104,7 +112,7 @@ public class SieveMailetTest {
                 return true;
             }
         });
-        when(sieveRepository.getActive("receiver@domain.com")).thenThrow(new ScriptNotFoundException());
+        when(resourceLocator.get("receiver@domain.com")).thenThrow(new ScriptNotFoundException());
         final MessageManager messageManager = prepareMessageManagerOn(new MailboxPath("#private", "receiver@domain.com", "INBOX"));
         sieveMailet.init(fakeMailetConfig);
         sieveMailet.service(createMail());
@@ -118,7 +126,7 @@ public class SieveMailetTest {
                 return false;
             }
         });
-        when(sieveRepository.getActive("receiver")).thenThrow(new ScriptNotFoundException());
+        when(resourceLocator.get("receiver")).thenThrow(new ScriptNotFoundException());
         final MessageManager messageManager = prepareMessageManagerOn(INBOX);
         sieveMailet.init(fakeMailetConfig);
         sieveMailet.service(createMail());
@@ -419,9 +427,8 @@ public class SieveMailetTest {
         sieveMailet.service(createMail());
         verifyZeroInteractions(mailboxManager);
 
-        List<FakeMailContext.SentMail> sentMails = fakeMailContext.getSentMails();
-        assertEquals(sentMails.size(), 1);
-        assertEquals(sentMails.get(0), new FakeMailContext.SentMail(new MailAddress("sender@any.com"), Lists.newArrayList(new MailAddress("redirect@apache.org")), null));
+        assertThat(fakeMailContext.getSentMails())
+            .containsExactly(new FakeMailContext.SentMail(new MailAddress("sender@any.com"), Lists.newArrayList(new MailAddress("redirect@apache.org")), null));
     }
 
     @Test
@@ -774,9 +781,117 @@ public class SieveMailetTest {
         verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
     }
 
-    private void prepareTestUsingScript(String script) throws Exception {
+    @Test
+    public void doubleVacationShouldNotBeExecuted() throws Exception {
+        prepareTestUsingScript("org/apache/james/transport/mailets/delivery/doubleVacation.script");
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).isEmpty();
+    }
+
+    @Test
+    public void vacationShouldWork() throws Exception {
+        prepareTestUsingScript("org/apache/james/transport/mailets/delivery/vacationReason.script");
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).containsExactly(new FakeMailContext.SentMail(new MailAddress("receiver@domain.com"), Lists.newArrayList(new MailAddress("sender@any.com")), null));
+    }
+
+    @Test
+    public void vacationShouldNotSendNotificationToMailingLists() throws Exception {
+        prepareTestUsingScript("org/apache/james/transport/mailets/delivery/vacationReason.script");
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        Mail mail = createMail();
+        mail.getMessage().addHeader("List-Id", "0123456789");
+        sieveMailet.service(mail);
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).isEmpty();
+    }
+
+    @Test
+    public void vacationShouldNotGenerateNotificationIfTooOld() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationReason.script", DATE_OLD, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).isEmpty();
+    }
+
+    @Test
+    public void vacationShouldNotCancelFileIntoActionIfNotExecuted() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationReasonAndFileInto.script", DATE_OLD, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(SELECTED_MAILBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).isEmpty();
+    }
+
+    @Test
+    public void vacationDaysParameterShouldFilterTooOldDates() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationDaysReason.script", DATE_DEFAULT, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).isEmpty();
+    }
+
+    @Test
+    public void vacationDaysParameterShouldKeepDatesInRange() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationDaysReason.script", DATE_CLOSE, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).containsExactly(new FakeMailContext.SentMail(new MailAddress("receiver@domain.com"), Lists.newArrayList(new MailAddress("sender@any.com")), null));
+    }
+
+    @Test
+    public void vacationShouldNotCancelFileIntoActionIfExecuted() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationReasonAndFileInto.script", DATE_DEFAULT, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(SELECTED_MAILBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).containsExactly(new FakeMailContext.SentMail(new MailAddress("receiver@domain.com"), Lists.newArrayList(new MailAddress("sender@any.com")), null));
+    }
+
+    @Test
+    public void vacationFromSubjectShouldWork() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationSubjectFromReason.script", DATE_DEFAULT, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).containsExactly(new FakeMailContext.SentMail(new MailAddress("benwa@apache.org"), Lists.newArrayList(new MailAddress("sender@any.com")), null));
+    }
+
+    @Test
+    public void vacationDaysAddressesShouldWork() throws Exception {
+        prepareTestUsingScriptAndDates("org/apache/james/transport/mailets/delivery/vacationDaysAddressesReason.script", DATE_CLOSE, DATE_NEW);
+        MessageManager messageManager = prepareMessageManagerOn(INBOX);
+        sieveMailet.service(createMail());
+        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+
+        assertThat(fakeMailContext.getSentMails()).containsExactly(new FakeMailContext.SentMail(new MailAddress("receiver@domain.com"), Lists.newArrayList(new MailAddress("sender@any.com")), null));
+    }
+
+    private void prepareTestUsingScript(final String script) throws Exception {
+        prepareTestUsingScriptAndDates(script, DATE_DEFAULT, DATE_DEFAULT);
+    }
+
+    private void prepareTestUsingScriptAndDates(String script, DateTime scriptCreationDate, DateTime scriptExecutionDate) throws Exception {
         when(usersRepository.supportVirtualHosting()).thenReturn(false);
-        when(sieveRepository.getActive("receiver")).thenReturn(ClassLoader.getSystemResourceAsStream(script));
+        when(resourceLocator.get("//receiver@localhost/sieve")).thenReturn(new ResourceLocator.UserSieveInformation(scriptCreationDate,
+            scriptExecutionDate,
+            ClassLoader.getSystemResourceAsStream(script)));
         sieveMailet.init(fakeMailetConfig);
     }
 

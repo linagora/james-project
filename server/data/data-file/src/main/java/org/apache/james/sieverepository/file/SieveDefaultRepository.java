@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -38,6 +39,7 @@ import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.sieverepository.api.exception.UserNotFoundException;
+import org.joda.time.DateTime;
 
 /**
  * <code>SieveFileRepository</code> manages sieve scripts stored on the file system.
@@ -78,13 +80,22 @@ public class SieveDefaultRepository implements SieveRepository {
         }
     }
 
-    public File retrieveUserFile(String user) throws FileNotFoundException {
+    @Override
+    public DateTime getActivationDateForActiveScript(String user) throws StorageException, UserNotFoundException, ScriptNotFoundException {
+        return new DateTime(retrieveUserFile(user).lastModified());
+    }
+
+    public File retrieveUserFile(String user) throws ScriptNotFoundException {
         // RFC 5228 permits extensions: .siv .sieve
         String sieveFilePrefix = FileSystem.FILE_PROTOCOL + "sieve/" + user + ".";
         try {
             return fileSystem.getFile(sieveFilePrefix + "sieve");
         } catch (FileNotFoundException e) {
-            return fileSystem.getFile(sieveFilePrefix + "siv");
+            try {
+                return fileSystem.getFile(sieveFilePrefix + "siv");
+            } catch (FileNotFoundException fileNotFoundException) {
+                throw new ScriptNotFoundException(fileNotFoundException);
+            }
         }
     }
 
