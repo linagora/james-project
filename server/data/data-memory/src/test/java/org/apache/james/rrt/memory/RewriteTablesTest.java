@@ -16,34 +16,17 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.rrt.memory;
 
-package org.apache.james.jmap.methods.cassandra;
+import org.junit.runner.RunWith;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.JmapServer;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMailboxesMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
-import org.junit.Rule;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import cucumber.api.CucumberOptions;
+import cucumber.api.junit.Cucumber;
 
-public class CassandraGetMailboxesMethodTest extends GetMailboxesMethodTest {
-
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
-
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
-
-    @Override
-    protected JmapServer getJmapServer() {
-        return jmapServer;
-    }
-
+@RunWith(Cucumber.class)
+@CucumberOptions(
+        features = { "classpath:cucumber/" },
+        glue = { "org.apache.james.rrt.lib", "org.apache.james.rrt.memory" }
+    )
+public class RewriteTablesTest {
 }

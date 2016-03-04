@@ -17,33 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods.cassandra;
+package org.apache.james.jmap.memory;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
+import org.apache.james.jmap.JMAPAuthenticationTest;
 import org.apache.james.jmap.JmapServer;
 import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMailboxesMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
-public class CassandraGetMailboxesMethodTest extends GetMailboxesMethodTest {
+import com.google.inject.util.Modules;
+
+public class MemoryJmapAuthenticationTest extends JMAPAuthenticationTest {
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+    private JmapServer jmapServer = CassandraJmapServer.createMemoryServer(
+        Modules.combine(
+            CassandraJmapServer.memoryOverrideModule(temporaryFolder),
+            (binder) -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider)));
 
     @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+    public RuleChain ruleChain = RuleChain.outerRule(temporaryFolder).around(jmapServer);
 
     @Override
     protected JmapServer getJmapServer() {
         return jmapServer;
     }
-
+    
 }

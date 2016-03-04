@@ -48,6 +48,10 @@ public class CassandraJmapServer implements JmapServer {
 
     private final Module module;
 
+    public static CassandraJmapServer createMemoryServer(Module overrideModule) {
+        return new CassandraJmapServer(CassandraJamesServerMain.memoryModule, overrideModule);
+    }
+
     public static Module defaultOverrideModule(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
         return Modules.combine(new TestElasticSearchModule(embeddedElasticSearch),
                 new TestFilesystemModule(temporaryFolder),
@@ -67,9 +71,17 @@ public class CassandraJmapServer implements JmapServer {
         });
     }
 
-    
+    public static Module memoryOverrideModule(TemporaryFolder temporaryFolder) {
+        return Modules.combine(new TestFilesystemModule(temporaryFolder),
+            new TestJMAPServerModule(LIMIT_TO_3_MESSAGES));
+    }
+
     public CassandraJmapServer(Module overrideModule) {
-        this.module = Modules.override(CassandraJamesServerMain.defaultModule).with(overrideModule);
+        this(CassandraJamesServerMain.defaultModule, overrideModule);
+    }
+
+    private CassandraJmapServer(Module baseModule, Module overrideModule) {
+        this.module = Modules.override(baseModule).with(overrideModule);
     }
     
     @Override

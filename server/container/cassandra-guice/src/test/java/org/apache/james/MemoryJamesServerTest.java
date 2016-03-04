@@ -17,33 +17,27 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods.cassandra;
+package org.apache.james;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.JmapServer;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMailboxesMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.apache.james.jmap.methods.GetMessageListMethod;
+import org.apache.james.modules.TestFilesystemModule;
+import org.apache.james.modules.TestJMAPServerModule;
 import org.junit.Rule;
-import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
-public class CassandraGetMailboxesMethodTest extends GetMailboxesMethodTest {
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+public class MemoryJamesServerTest extends AbstractJamesServerTest {
 
     @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Override
-    protected JmapServer getJmapServer() {
-        return jmapServer;
+    protected Module createModule() {
+        return Modules.override(CassandraJamesServerMain.memoryModule)
+                .with(new TestFilesystemModule(temporaryFolder),
+                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT));
     }
 
 }

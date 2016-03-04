@@ -36,7 +36,6 @@ import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
@@ -60,13 +59,13 @@ public class GuiceServerProbe implements ExtendedServerProbe {
     private static final Logger LOGGER = LoggerFactory.getLogger(GuiceServerProbe.class);
 
     private final MailboxManager mailboxManager;
-    private final MailboxMapperFactory<CassandraId> mailboxMapperFactory;
+    private final MailboxMapperFactory mailboxMapperFactory;
     private final DomainList domainList;
     private final UsersRepository usersRepository;
     private final SieveRepository sieveRepository;
 
     @Inject
-    private GuiceServerProbe(MailboxManager mailboxManager, MailboxMapperFactory<CassandraId> mailboxMapperFactory,
+    private GuiceServerProbe(MailboxManager mailboxManager, MailboxMapperFactory mailboxMapperFactory,
                              DomainList domainList, UsersRepository usersRepository, SieveRepository sieveRepository) {
         this.mailboxManager = mailboxManager;
         this.mailboxMapperFactory = mailboxMapperFactory;
@@ -174,11 +173,11 @@ public class GuiceServerProbe implements ExtendedServerProbe {
     }
 
     @Override
-    public Mailbox<CassandraId> getMailbox(String namespace, String user, String name) {
+    public Mailbox getMailbox(String namespace, String user, String name) {
         MailboxSession mailboxSession = null;
         try {
             mailboxSession = mailboxManager.createSystemSession(user, LOGGER);
-            MailboxMapper<CassandraId> mailboxMapper = mailboxMapperFactory.getMailboxMapper(mailboxSession);
+            MailboxMapper mailboxMapper = mailboxMapperFactory.getMailboxMapper(mailboxSession);
             return mailboxMapper.findMailboxByPath(new MailboxPath(namespace, user, name));
         } catch (MailboxException e) {
             throw Throwables.propagate(e);

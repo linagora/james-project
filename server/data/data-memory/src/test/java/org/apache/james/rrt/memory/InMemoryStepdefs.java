@@ -17,33 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods.cassandra;
+package org.apache.james.rrt.memory;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.JmapServer;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMailboxesMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
-import org.junit.Rule;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
+import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
+import org.apache.james.rrt.lib.RewriteTablesStepdefs;
+import org.slf4j.LoggerFactory;
 
-public class CassandraGetMailboxesMethodTest extends GetMailboxesMethodTest {
+import cucumber.api.java.Before;
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+public class InMemoryStepdefs {
 
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+    private final RewriteTablesStepdefs mainStepdefs;
 
-    @Override
-    protected JmapServer getJmapServer() {
-        return jmapServer;
+    public InMemoryStepdefs(RewriteTablesStepdefs mainStepdefs) {
+        this.mainStepdefs = mainStepdefs;
     }
 
+    @Before
+    public void setup() throws Throwable {
+        mainStepdefs.rewriteTable = getRecipientRewriteTable(); 
+    }
+
+    private AbstractRecipientRewriteTable getRecipientRewriteTable() throws Exception {
+        MemoryRecipientRewriteTable rrt = new MemoryRecipientRewriteTable();
+        rrt.setLog(LoggerFactory.getLogger("MockLog"));
+        rrt.configure(new DefaultConfigurationBuilder());
+        return rrt;
+    }
 }

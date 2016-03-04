@@ -34,9 +34,19 @@ import java.security.Security;
 
 public class JMAPServerModule extends AbstractModule {
 
+    private final JMAPModule jmapModule;
+
+    public JMAPServerModule(JMAPModule jmapModule) {
+        this.jmapModule = jmapModule;
+    }
+
+    public JMAPServerModule() {
+        this(new JMAPModule());
+    }
+
     @Override
     protected void configure() {
-        install(new JMAPModule());
+        install(jmapModule);
         Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(JMAPModuleConfigurationPerformer.class);
     }
 

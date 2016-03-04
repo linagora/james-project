@@ -36,5 +36,5 @@ public interface ExtendedServerProbe extends ServerProbe {
     void appendMessage(String username, MailboxPath mailboxPath, InputStream message, Date internalDate, boolean isRecent, Flags flags) 
             throws BadCredentialsException, MailboxException;
 
-    Mailbox<CassandraId> getMailbox(String namespace, String user, String name);
+    Mailbox getMailbox(String namespace, String user, String name);
 }

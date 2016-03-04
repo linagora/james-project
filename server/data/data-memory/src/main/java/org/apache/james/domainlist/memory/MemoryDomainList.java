@@ -17,37 +17,46 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods.cassandra;
+package org.apache.james.domainlist.memory;
 
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.jmap.JmapServer;
-import org.apache.james.jmap.cassandra.CassandraJmapServer;
-import org.apache.james.jmap.methods.GetMessagesMethodTest;
-import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
-import org.junit.Rule;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import java.util.ArrayList;
+import java.util.List;
 
-public class CassandraGetMessagesMethodTest extends GetMessagesMethodTest {
+import org.apache.james.domainlist.api.DomainListException;
+import org.apache.james.domainlist.lib.AbstractDomainList;
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
-    private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
-    private JmapServer jmapServer = new CassandraJmapServer(CassandraJmapServer.defaultOverrideModule(temporaryFolder, embeddedElasticSearch, cassandra));
+import com.google.common.collect.ImmutableList;
 
-    @Rule
-    public RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch)
-        .around(jmapServer);
+public class MemoryDomainList extends AbstractDomainList {
 
-    @Override
-    protected JmapServer getJmapServer() {
-        return jmapServer;
+    private List<String> domains;
+
+    public MemoryDomainList() {
+        domains = new ArrayList<String>();
     }
 
     @Override
-    protected void await() {
-        embeddedElasticSearch.awaitForElasticSearch();
+    protected List<String> getDomainListInternal() throws DomainListException {
+        return ImmutableList.copyOf(domains);
+    }
+
+    @Override
+    public boolean containsDomain(String domain) throws DomainListException {
+        return domains.contains(domain.toLowerCase());
+    }
+
+    @Override
+    public void addDomain(String domain) throws DomainListException {
+        if (containsDomain(domain)) {
+            throw new DomainListException(domain.toLowerCase() + " already exists.");
+        }
+        domains.add(domain.toLowerCase());
+    }
+
+    @Override
+    public void removeDomain(String domain) throws DomainListException {
+        if (!domains.remove(domain.toLowerCase())) {
+            throw new DomainListException(domain.toLowerCase() + " was not found");
+        }
     }
 }
