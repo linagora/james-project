@@ -52,11 +52,13 @@ public class FirstUserConnectionFilter implements Filter {
     private static final Logger LOGGER = LoggerFactory.getLogger(FirstUserConnectionFilter.class);
     private final UsersRepository usersRepository;
     private final MailboxManager mailboxManager;
+    private final Object lock;
 
     @Inject
     @VisibleForTesting FirstUserConnectionFilter(UsersRepository usersRepository, MailboxManager mailboxManager) {
         this.usersRepository = usersRepository;
         this.mailboxManager = mailboxManager;
+        this.lock = new Object();
     }
     
     @Override
@@ -71,18 +73,21 @@ public class FirstUserConnectionFilter implements Filter {
     }
     
     private void createAccountIfNeeded(MailboxSession session) {
-        try {
+        synchronized (lock) {
             User user = session.getUser();
-            if (needsAccountCreation(user)) {
-                createAccount(user);
+            String userName = user.getUserName();
+            try {
+                if (needsAccountCreation(userName)) {
+                    createAccount(user);
+                }
+            } catch (UsersRepositoryException|MailboxException e) {
+                throw Throwables.propagate(e);
             }
-        } catch (UsersRepositoryException|MailboxException e) {
-            throw Throwables.propagate(e);
         }
     }
 
-    private boolean needsAccountCreation(User user) throws UsersRepositoryException {
-        return !usersRepository.contains(user.getUserName());
+    private boolean needsAccountCreation(String userName) throws UsersRepositoryException {
+        return !usersRepository.contains(userName);
     }
 
     private void createAccount(User user) throws UsersRepositoryException, BadCredentialsException, MailboxException {
