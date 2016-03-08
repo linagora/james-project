@@ -1,4 +1,5 @@
 Apache James Project
+
 ====================
 
 This is the parent module for all Apache James artifacts. It contains useful values to be inherited by other Maven projects. 
