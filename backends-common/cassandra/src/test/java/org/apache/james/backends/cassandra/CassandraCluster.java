@@ -18,7 +18,8 @@
  ****************************************************************/
 package org.apache.james.backends.cassandra;
 
-import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
@@ -29,12 +30,12 @@ import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.backends.cassandra.init.ClusterFactory;
 import org.apache.james.backends.cassandra.init.ClusterWithKeyspaceCreatedFactory;
 import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
-import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.google.common.base.Throwables;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public final class CassandraCluster {
     private static final String CLUSTER_IP = "localhost";
@@ -50,15 +51,20 @@ public final class CassandraCluster {
     private CassandraTypesProvider typesProvider;
 
     public static CassandraCluster create(CassandraModule module) throws RuntimeException {
-        return new CassandraCluster(module, EmbeddedCassandra.createStartServer());
+        return new CassandraCluster(module, EmbeddedCassandra.createStartServer(), Executors.newSingleThreadScheduledExecutor());
     }
 
     @Inject
-    private CassandraCluster(CassandraModule module, EmbeddedCassandra embeddedCassandra) throws RuntimeException {
+    private CassandraCluster(CassandraModule module, EmbeddedCassandra embeddedCassandra, ScheduledExecutorService scheduler) throws RuntimeException {
         this.module = module;
         try {
-            session = new FunctionRunnerWithRetry(MAX_RETRY).executeAndRetrieveObject(CassandraCluster.this::tryInitializeSession);
-            typesProvider = new CassandraTypesProvider(module, session);
+            AsyncRetryExecutor executor = new AsyncRetryExecutor(scheduler);
+            session = executor.retryOn(NoHostAvailableException.class)
+                    .withMaxRetries(MAX_RETRY)
+                    .withMinDelay(SLEEP_BEFORE_RETRY)
+                    .getWithRetry(CassandraCluster.this::initializeSession)
+                    .get();
+            typesProvider = new CassandraTypesProvider(module, this.session);
         } catch (Exception exception) {
             Throwables.propagate(exception);
         }
@@ -77,27 +83,14 @@ public final class CassandraCluster {
         new CassandraTableManager(module, session).clearAllTables();
     }
 
-    private Optional<Session> tryInitializeSession() {
-        try {
-            Cluster clusterWithInitializedKeyspace = ClusterWithKeyspaceCreatedFactory
-                .clusterWithInitializedKeyspace(getCluster(), KEYSPACE_NAME, REPLICATION_FACTOR);
-            return Optional.of(new SessionWithInitializedTablesFactory(module).createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME));
-        } catch (NoHostAvailableException exception) {
-            sleep(SLEEP_BEFORE_RETRY);
-            return Optional.empty();
-        }
+    private Session initializeSession() {
+        Cluster clusterWithInitializedKeyspace = ClusterWithKeyspaceCreatedFactory
+            .clusterWithInitializedKeyspace(getCluster(), KEYSPACE_NAME, REPLICATION_FACTOR);
+        return new SessionWithInitializedTablesFactory(module).createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME);
     }
 
     public Cluster getCluster() {
         return ClusterFactory.createTestingCluster(CLUSTER_IP, CLUSTER_PORT_TEST);
-    }
-
-    private void sleep(long sleepMs) {
-        try {
-            Thread.sleep(sleepMs);
-        } catch(InterruptedException interruptedException) {
-            Throwables.propagate(interruptedException);
-        }
     }
 
     public CassandraTypesProvider getTypesProvider() {

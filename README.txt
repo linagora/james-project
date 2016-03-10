@@ -61,9 +61,9 @@ $ docker run -v $PWD/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/sprin
 
 Where:
 
-- $PWD/.m2:/root/.m2: is the first volume used to share the maven repository, 
+- $PWD/.m2:/root/.m2: is the first volume used to share the maven repository,
 as we don't want to download all dependencies on each build
-- $PWD/dockerfiles/run/spring/destination:/destination: is the third volume used to get the compiled elements, 
+- $PWD/dockerfiles/run/spring/destination:/destination: is the third volume used to get the compiled elements,
 as it is needed by the container that will run James.
 - SHA1 (optional): is the given git SHA1 of the james-project repository to build or trunk if none.
 - -s option: given tests will not be played while building. Not specifying means play tests.

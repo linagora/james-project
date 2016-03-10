@@ -18,6 +18,10 @@
  ****************************************************************/
 package org.apache.james.mailbox.cassandra;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.AbstractMailboxManagerTest;
@@ -37,6 +41,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
+
 /**
  * CassandraMailboxManagerTest that extends the StoreMailboxManagerTest.
  * 
@@ -51,6 +58,8 @@ public class CassandraMailboxManagerTest extends AbstractMailboxManagerTest {
         new CassandraUidAndModSeqModule(),
         new CassandraSubscriptionModule()));
 
+    private ImmutableList.Builder<ScheduledExecutorService> schedulers = ImmutableList.builder();
+
     /**
      * Setup the mailboxManager.
      * 
@@ -60,8 +69,11 @@ public class CassandraMailboxManagerTest extends AbstractMailboxManagerTest {
     public void setup() throws Exception {
         CASSANDRA.ensureAllTables();
         CASSANDRA.clearAllTables();
+        schedulers = ImmutableList.<ScheduledExecutorService>builder();
         createMailboxManager();
     }
+
+
 
     /**
      * Close the system session and entityManagerFactory
@@ -74,6 +86,17 @@ public class CassandraMailboxManagerTest extends AbstractMailboxManagerTest {
         deleteAllMailboxes();
         MailboxSession session = getMailboxManager().createSystemSession("test", LoggerFactory.getLogger("Test"));
         session.close();
+        shutDownSchedulers();
+    }
+
+    private void shutDownSchedulers() {
+        schedulers.build().asList().stream()
+                .filter(this::isNeitherNullNorShutdown)
+                .forEach(ExecutorService::shutdown);
+    }
+
+    private boolean isNeitherNullNorShutdown(ScheduledExecutorService scheduler) {
+        return scheduler != null && (!scheduler.isShutdown() || !scheduler.isTerminated());
     }
 
     /*
@@ -83,12 +106,12 @@ public class CassandraMailboxManagerTest extends AbstractMailboxManagerTest {
      */
     @Override
     protected void createMailboxManager() throws MailboxException {
-        final CassandraUidProvider uidProvider = new CassandraUidProvider(CASSANDRA.getConf());
-        final CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(CASSANDRA.getConf());
+        final CassandraUidProvider uidProvider = new CassandraUidProvider(CASSANDRA.getConf(), buildRetryer());
+        final CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(CASSANDRA.getConf(), buildRetryer());
         final CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(uidProvider,
             modSeqProvider,
             CASSANDRA.getConf(),
-            CASSANDRA.getTypesProvider());
+            CASSANDRA.getTypesProvider(), createSingleThreadedScheduler());
 
         final CassandraMailboxManager manager = new CassandraMailboxManager(mapperFactory, null, new JVMMailboxPathLocker());
         manager.init();
@@ -96,6 +119,16 @@ public class CassandraMailboxManagerTest extends AbstractMailboxManagerTest {
         setMailboxManager(manager);
 
         deleteAllMailboxes();
+    }
+
+    private AsyncRetryExecutor buildRetryer() {
+        return new AsyncRetryExecutor(createSingleThreadedScheduler());
+    }
+
+    private ScheduledExecutorService createSingleThreadedScheduler() {
+        ScheduledExecutorService newScheduler = Executors.newSingleThreadScheduledExecutor();
+        schedulers.add(newScheduler);
+        return newScheduler;
     }
 
     private void deleteAllMailboxes() throws BadCredentialsException, MailboxException {

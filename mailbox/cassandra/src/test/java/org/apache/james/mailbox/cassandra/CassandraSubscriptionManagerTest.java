@@ -19,6 +19,10 @@
 
 package org.apache.james.mailbox.cassandra;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.mailbox.AbstractSubscriptionManagerTest;
 import org.apache.james.mailbox.SubscriptionManager;
@@ -26,22 +30,52 @@ import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
 import org.apache.james.mailbox.cassandra.modules.CassandraSubscriptionModule;
 
+import com.google.common.collect.ImmutableList;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
+
 /**
  * Test Cassandra subscription against some general purpose written code.
  */
 public class CassandraSubscriptionManagerTest extends AbstractSubscriptionManagerTest {
 
     private static final CassandraCluster cassandra = CassandraCluster.create(new CassandraSubscriptionModule());
-    
+    private ImmutableList.Builder<ScheduledExecutorService> schedulers = ImmutableList.builder();
+
     @Override
     public SubscriptionManager createSubscriptionManager() {
         return new CassandraSubscriptionManager(
             new CassandraMailboxSessionMapperFactory(
-                new CassandraUidProvider(cassandra.getConf()),
-                new CassandraModSeqProvider(cassandra.getConf()),
+                new CassandraUidProvider(cassandra.getConf(), createRetryer()),
+                new CassandraModSeqProvider(cassandra.getConf(), createRetryer()),
                 cassandra.getConf(),
-                cassandra.getTypesProvider()
-            )
+                cassandra.getTypesProvider(),
+                    createSingleThreadedScheduler())
         );
+    }
+
+    @Override
+    protected void initialize() {
+        schedulers = ImmutableList.builder();
+    }
+
+    @Override
+    protected void shutDown() {
+        schedulers.build().asList().stream()
+                .filter(this::isNeitherNullNorShutdown)
+                .forEach(ExecutorService::shutdown);
+    }
+
+    private boolean isNeitherNullNorShutdown(ScheduledExecutorService scheduler) {
+        return scheduler != null && (!scheduler.isShutdown() || !scheduler.isTerminated());
+    }
+
+    private AsyncRetryExecutor createRetryer() {
+        return new AsyncRetryExecutor(createSingleThreadedScheduler());
+    }
+
+    private ScheduledExecutorService createSingleThreadedScheduler() {
+        ScheduledExecutorService newScheduler = Executors.newSingleThreadScheduledExecutor();
+        schedulers.add(newScheduler);
+        return newScheduler;
     }
 }

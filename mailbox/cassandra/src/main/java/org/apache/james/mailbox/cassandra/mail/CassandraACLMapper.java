@@ -27,11 +27,13 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.update;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.LightweightTransactionException;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.mailbox.cassandra.table.CassandraACLTable;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxTable;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -49,6 +51,7 @@ import com.datastax.driver.core.Session;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class CassandraACLMapper {
 
@@ -87,20 +90,35 @@ public class CassandraACLMapper {
     }
 
     public void updateACL(MailboxACL.MailboxACLCommand command) throws MailboxException {
+        ScheduledExecutorService scheduler = null;
         try {
-            new FunctionRunnerWithRetry(maxRetry).execute(
-                () -> {
-                    codeInjector.inject();
-                    ResultSet resultSet = getAclWithVersion()
-                        .map((x) -> x.apply(command))
-                        .map(this::updateStoredACL)
-                        .orElseGet(() -> insertACL(applyCommandOnEmptyACL(command)));
-                    return resultSet.one().getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED);
-                }
-            );
-        } catch (LightweightTransactionException e) {
-            throw new MailboxException("Exception during lightweight transaction", e);
+            scheduler = Executors.newSingleThreadScheduledExecutor();
+            new AsyncRetryExecutor(scheduler)
+                    .withMaxRetries(maxRetry)
+                    .retryOn(LightweightTransactionException.class)
+                    .getWithRetry(ctx -> {
+                        codeInjector.inject();
+                        ResultSet resultSet = getAclWithVersion()
+                            .map((x) -> x.apply(command))
+                            .map(this::updateStoredACL)
+                            .orElseGet(() -> insertACL(applyCommandOnEmptyACL(command)));
+                        if (!resultSet.one().getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED)) {
+                            throw new LightweightTransactionException(ctx.getRetryCount());
+                        }
+                        return true;
+                    }).get();
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("Can not retrieve mailbox ACL", e);
+            throw new MailboxException("Error during mailbox ACL update", e);
+        } finally {
+            if (isNeitherNullNorShutdown(scheduler)) {
+                scheduler.shutdown();
+            }
         }
+    }
+
+    private static boolean isNeitherNullNorShutdown(ScheduledExecutorService scheduler) {
+        return scheduler != null && (!scheduler.isShutdown() || !scheduler.isTerminated());
     }
 
     private MailboxACL applyCommandOnEmptyACL(MailboxACL.MailboxACLCommand command) {
