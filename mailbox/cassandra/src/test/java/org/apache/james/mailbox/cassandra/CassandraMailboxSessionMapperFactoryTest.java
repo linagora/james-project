@@ -22,6 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
@@ -32,10 +36,14 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 /**
  * The MailboxSessionMapperFactory test.
@@ -44,11 +52,24 @@ import org.slf4j.LoggerFactory;
 public class CassandraMailboxSessionMapperFactoryTest {
     private static final CassandraCluster CLUSTER = CassandraCluster.create(new CassandraUidAndModSeqModule());
     private final static Logger LOG = LoggerFactory.getLogger(CassandraMailboxSessionMapperFactoryTest.class);
+    private ImmutableList.Builder<ScheduledExecutorService> schedulers = ImmutableList.builder();
 
     @Before
     public void beforeMethod() {
         CLUSTER.ensureAllTables();
         CLUSTER.clearAllTables();
+        schedulers = ImmutableList.<ScheduledExecutorService>builder();
+    }
+
+    @After
+    public void tearDown() {
+        schedulers.build().asList().stream()
+                .filter(this::isNeitherNullNorShutdown)
+                .forEach(ExecutorService::shutdown);
+    }
+
+    private boolean isNeitherNullNorShutdown(ScheduledExecutorService scheduler) {
+        return scheduler != null && (!scheduler.isShutdown() || !scheduler.isTerminated());
     }
 
     /**
@@ -59,7 +80,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateMessageMapper() throws Exception {
         LOG.info("createMessageMapper");
         MailboxSession session = null;
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, createSingleThreadedScheduler());
         MessageMapper<CassandraId> messageMapper = instance.createMessageMapper(session);
         assertNotNull(messageMapper);
         assertTrue(messageMapper instanceof MessageMapper);
@@ -73,7 +94,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateMailboxMapper() throws Exception {
         LOG.info("createMailboxMapper");
         MailboxSession session = null;
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, createSingleThreadedScheduler());
         MailboxMapper<CassandraId> mailboxMapper = instance.createMailboxMapper(session);
         assertNotNull(mailboxMapper);
         assertTrue(mailboxMapper instanceof MailboxMapper);
@@ -87,7 +108,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateSubscriptionMapper() throws Exception {
         LOG.info("createSubscriptionMapper");
         MailboxSession session = null;
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, createSingleThreadedScheduler());
         SubscriptionMapper subscriptionMapper = instance.createSubscriptionMapper(session);
         assertNotNull(subscriptionMapper);
         assertTrue(subscriptionMapper instanceof SubscriptionMapper);
@@ -100,8 +121,8 @@ public class CassandraMailboxSessionMapperFactoryTest {
     @Test
     public void testGetModSeqProvider() {
         LOG.info("getModSeqProvider");
-        ModSeqProvider<CassandraId> expResult = new CassandraModSeqProvider(CLUSTER.getConf());
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, expResult, null, null);
+        ModSeqProvider<CassandraId> expResult = new CassandraModSeqProvider(CLUSTER.getConf(), buildRetryer());
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, expResult, null, null, createSingleThreadedScheduler());
         ModSeqProvider<CassandraId> result = instance.getModSeqProvider();
         assertEquals(expResult, result);
     }
@@ -113,9 +134,20 @@ public class CassandraMailboxSessionMapperFactoryTest {
     @Test
     public void testGetUidProvider() {
         LOG.info("getUidProvider");
-        UidProvider<CassandraId> expResult = new CassandraUidProvider(CLUSTER.getConf());
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory((CassandraUidProvider) expResult, null, null, null);
+        UidProvider<CassandraId> expResult = new CassandraUidProvider(CLUSTER.getConf(), buildRetryer());
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory((CassandraUidProvider) expResult, null, null, null, createSingleThreadedScheduler());
         UidProvider<CassandraId> result = instance.getUidProvider();
         assertEquals(expResult, result);
+    }
+
+
+    private AsyncRetryExecutor buildRetryer() {
+        return new AsyncRetryExecutor(createSingleThreadedScheduler());
+    }
+
+    private ScheduledExecutorService createSingleThreadedScheduler() {
+        ScheduledExecutorService newScheduler = Executors.newSingleThreadScheduledExecutor();
+        schedulers.add(newScheduler);
+        return newScheduler;
     }
 }

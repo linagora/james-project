@@ -35,6 +35,14 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.BOD
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.FIELDS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.FULL_CONTENT_OCTETS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.HEADERS;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.ANSWERED;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DELETED;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DRAFT;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.FLAGGED;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.RECENT;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.SEEN;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER_FLAGS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.HEADER_CONTENT;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.IMAP_UID;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.INTERNAL_DATE;
@@ -44,14 +52,6 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.MOD
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.PROPERTIES;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.TEXTUAL_LINE_COUNT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.ANSWERED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DELETED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DRAFT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.FLAGGED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER_FLAGS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.RECENT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.SEEN;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
 import javax.mail.Flags;
@@ -71,14 +72,12 @@ import javax.mail.util.SharedByteArrayInputStream;
 
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.Select;
-import com.google.common.base.Throwables;
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.mailbox.cassandra.mail.utils.MessageDeletedDuringFlagsUpdateException;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxCountersTable;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageTable;
@@ -105,8 +104,10 @@ import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.Assignment;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Where;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Bytes;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class CassandraMessageMapper implements MessageMapper<CassandraId> {
 
@@ -116,14 +117,16 @@ public class CassandraMessageMapper implements MessageMapper<CassandraId> {
     private final UidProvider<CassandraId> uidProvider;
     private final CassandraTypesProvider typesProvider;
     private final int maxRetries;
+    private final ScheduledExecutorService scheduler;
 
-    public CassandraMessageMapper(Session session, UidProvider<CassandraId> uidProvider, ModSeqProvider<CassandraId> modSeqProvider, MailboxSession mailboxSession, int maxRetries, CassandraTypesProvider typesProvider) {
+    public CassandraMessageMapper(Session session, UidProvider<CassandraId> uidProvider, ModSeqProvider<CassandraId> modSeqProvider, MailboxSession mailboxSession, int maxRetries, CassandraTypesProvider typesProvider, ScheduledExecutorService scheduler) {
         this.session = session;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
         this.mailboxSession = mailboxSession;
         this.maxRetries = maxRetries;
         this.typesProvider = typesProvider;
+        this.scheduler = scheduler;
     }
 
     @Override
@@ -393,23 +396,22 @@ public class CassandraMessageMapper implements MessageMapper<CassandraId> {
 
     private Optional<UpdatedFlags> handleRetries(Mailbox<CassandraId> mailbox, FlagsUpdateCalculator flagUpdateCalculator, long uid) {
         try {
-            return Optional.of(
-                new FunctionRunnerWithRetry(maxRetries)
-                    .executeAndRetrieveObject(() -> retryMessageFlagsUpdate(mailbox, uid, flagUpdateCalculator)));
+            return new AsyncRetryExecutor(scheduler)
+                    .withMaxRetries(maxRetries)
+                    .retryOn(MessageDeletedDuringFlagsUpdateException.class)
+                    .getWithRetry(ctx -> {
+                        return tryMessageFlagsUpdate(flagUpdateCalculator, mailbox,
+                                message(Optional.ofNullable(session.execute(selectMessage(mailbox, uid, FetchType.Metadata)).one())
+                                .<MessageDeletedDuringFlagsUpdateException>orElseThrow(() -> new MessageDeletedDuringFlagsUpdateException(mailbox.getMailboxId(), uid)),
+                                FetchType.Metadata));
+                    })
+                    .get();
         } catch (MessageDeletedDuringFlagsUpdateException e) {
             mailboxSession.getLog().warn(e.getMessage());
             return Optional.empty();
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
-    }
-
-    private Optional<UpdatedFlags> retryMessageFlagsUpdate(Mailbox<CassandraId> mailbox, long uid, FlagsUpdateCalculator flagUpdateCalculator) {
-        return tryMessageFlagsUpdate(flagUpdateCalculator,
-            mailbox,
-            message(Optional.ofNullable(session.execute(selectMessage(mailbox, uid, FetchType.Metadata)).one())
-                .orElseThrow(() -> new MessageDeletedDuringFlagsUpdateException(mailbox.getMailboxId(), uid)),
-                FetchType.Metadata));
     }
 
     private boolean conditionalSave(MailboxMessage<CassandraId> message, long oldModSeq) {

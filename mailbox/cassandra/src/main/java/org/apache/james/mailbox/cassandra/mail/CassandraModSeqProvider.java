@@ -29,13 +29,14 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageModseqTab
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageModseqTable.TABLE_NAME;
 
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+
 import javax.inject.Inject;
 
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.LightweightTransactionException;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.BuiltStatement;
-import com.google.common.base.Throwables;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class CassandraModSeqProvider implements ModSeqProvider<CassandraId> {
 
@@ -54,16 +55,16 @@ public class CassandraModSeqProvider implements ModSeqProvider<CassandraId> {
     private static final ModSeq FIRST_MODSEQ = new ModSeq(0);
     
     private final Session session;
-    private final FunctionRunnerWithRetry runner;
+    private final AsyncRetryExecutor executor;
 
-    public CassandraModSeqProvider(Session session, int maxRetry) {
+    private CassandraModSeqProvider(Session session, int maxRetry, AsyncRetryExecutor executor) {
         this.session = session;
-        this.runner = new FunctionRunnerWithRetry(maxRetry);
+        this.executor = executor.withMaxRetries(maxRetry);
     }
 
     @Inject
-    public CassandraModSeqProvider(Session session) {
-        this(session, DEFAULT_MAX_RETRY);
+    public CassandraModSeqProvider(Session session, AsyncRetryExecutor executor) {
+        this(session, DEFAULT_MAX_RETRY, executor);
     }
 
     @Override
@@ -76,17 +77,14 @@ public class CassandraModSeqProvider implements ModSeqProvider<CassandraId> {
         }
 
         try {
-            return runner.executeAndRetrieveObject(
-                        () -> {
-                            try {
-                                return tryUpdateModSeq(mailbox, findHighestModSeq(mailboxSession, mailbox))
-                                        .map(ModSeq::getValue);
-                            } catch (Exception exception) {
-                                LOG.error("Can not retrieve next ModSeq", exception);
-                                throw Throwables.propagate(exception);
-                            }
-                        });
-        } catch (LightweightTransactionException e) {
+            return executor
+                    .retryOn(LightweightTransactionException.class)
+                    .getWithRetry(ctx -> tryUpdateModSeq(mailbox, findHighestModSeq(mailboxSession, mailbox))
+                            .map(ModSeq::getValue)
+                            .<LightweightTransactionException>orElseThrow(() -> new LightweightTransactionException(ctx.getRetryCount())))
+                    .get();
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("Can not retrieve next ModSeq", e);
             throw new MailboxException("Error during ModSeq update", e);
         }
     }
@@ -96,7 +94,7 @@ public class CassandraModSeqProvider implements ModSeqProvider<CassandraId> {
         return findHighestModSeq(mailboxSession, mailbox).getValue();
     }
     
-    private ModSeq findHighestModSeq(MailboxSession mailboxSession, Mailbox<CassandraId> mailbox) throws MailboxException {
+    private ModSeq findHighestModSeq(MailboxSession mailboxSession, Mailbox<CassandraId> mailbox) {
         ResultSet result = session.execute(
                 select(NEXT_MODSEQ)
                     .from(TABLE_NAME)

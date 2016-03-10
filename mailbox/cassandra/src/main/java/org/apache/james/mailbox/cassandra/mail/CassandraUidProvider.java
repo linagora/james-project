@@ -24,19 +24,17 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.update;
-import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageUidTable.NEXT_UID;
 
-import com.datastax.driver.core.querybuilder.BuiltStatement;
-import com.google.common.base.Throwables;
-import org.apache.james.backends.cassandra.utils.LightweightTransactionException;
-
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+
 import javax.inject.Inject;
 
+import org.apache.james.backends.cassandra.utils.CassandraConstants;
+import org.apache.james.backends.cassandra.utils.LightweightTransactionException;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageUidTable;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.UidProvider;
@@ -46,6 +44,8 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.BuiltStatement;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class CassandraUidProvider implements UidProvider<CassandraId> {
     public final static int DEFAULT_MAX_RETRY = 100000;
@@ -53,16 +53,16 @@ public class CassandraUidProvider implements UidProvider<CassandraId> {
     private static final Uid FIRST_UID = new Uid(0);
 
     private final Session session;
-    private final FunctionRunnerWithRetry runner;
+    private final AsyncRetryExecutor executor;
 
-    public CassandraUidProvider(Session session, int maxRetry) {
+    private CassandraUidProvider(Session session, int maxRetry, AsyncRetryExecutor executor) {
         this.session = session;
-        this.runner = new FunctionRunnerWithRetry(maxRetry);
+        this.executor = executor.withMaxRetries(maxRetry);
     }
 
     @Inject
-    public CassandraUidProvider(Session session) {
-        this(session, DEFAULT_MAX_RETRY);
+    public CassandraUidProvider(Session session, AsyncRetryExecutor executor) {
+        this(session, DEFAULT_MAX_RETRY, executor);
     }
 
     @Override
@@ -75,17 +75,13 @@ public class CassandraUidProvider implements UidProvider<CassandraId> {
         }
 
         try {
-            return runner.executeAndRetrieveObject(
-                () -> {
-                    try {
-                        return tryUpdateUid(mailbox, findHighestUid(mailbox))
-                            .map(Uid::getValue);
-                    } catch (Exception exception) {
-                        LOG.error("Can not retrieve next Uid", exception);
-                        throw Throwables.propagate(exception);
-                    }
-                });
-        } catch (LightweightTransactionException e) {
+            return executor
+                    .retryOn(LightweightTransactionException.class)
+                    .getWithRetry(ctx -> tryUpdateUid(mailbox, findHighestUid(mailbox)).map(Uid::getValue)
+                            .<LightweightTransactionException>orElseThrow(() -> new LightweightTransactionException(ctx.getRetryCount())))
+                    .get();
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("Can not retrieve next Uid", e);
             throw new MailboxException("Error during Uid update", e);
         }
     }
@@ -95,7 +91,7 @@ public class CassandraUidProvider implements UidProvider<CassandraId> {
         return findHighestUid(mailbox).getValue();
     }
 
-    private Uid findHighestUid(Mailbox<CassandraId> mailbox) throws MailboxException {
+    private Uid findHighestUid(Mailbox<CassandraId> mailbox) {
         ResultSet result = session.execute(
             select(NEXT_UID)
                 .from(CassandraMessageUidTable.TABLE_NAME)

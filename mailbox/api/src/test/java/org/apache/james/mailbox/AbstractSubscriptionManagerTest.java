@@ -41,8 +41,14 @@ public abstract class AbstractSubscriptionManagerTest {
 
     public abstract SubscriptionManager createSubscriptionManager();
 
+    protected void initialize() {
+    }
+    protected void shutDown() {
+    }
+
     @Before
     public void setup() {
+        initialize();
         manager = createSubscriptionManager();
         session = new MockMailboxSession(USER1);
         manager.startProcessingRequest(session);
@@ -53,6 +59,7 @@ public abstract class AbstractSubscriptionManagerTest {
         manager.unsubscribe(session, MAILBOX1);
         manager.unsubscribe(session, MAILBOX2);
         manager.endProcessingRequest(session);
+        shutDown();
     }
     
     @Test

@@ -599,7 +599,13 @@
             <!--
                 END HBASE/HADOOP
             -->
+            <dependency>
+		<groupId>com.nurkiewicz.asyncretry</groupId>
+                <artifactId>asyncretry</artifactId>
+                <version>0.0.7</version>
+            </dependency>
        </dependencies>
+
     </dependencyManagement>
 
     <build>

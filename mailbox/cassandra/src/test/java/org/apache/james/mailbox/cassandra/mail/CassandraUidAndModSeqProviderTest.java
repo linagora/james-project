@@ -23,6 +23,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongConsumer;
 import java.util.stream.LongStream;
@@ -41,6 +43,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 /**
  * Unit tests for UidProvider and ModSeqProvider.
@@ -63,19 +67,31 @@ public class CassandraUidAndModSeqProviderTest {
     private CassandraMailboxMapper mapper;
     private List<SimpleMailbox<CassandraId>> mailboxList;
     private List<MailboxPath> pathsList;
+    private ImmutableList.Builder<ScheduledExecutorService> schedulers;
 
     @Before
     public void setUpClass() throws Exception {
         CASSANDRA.ensureAllTables();
-        uidProvider = new CassandraUidProvider(CASSANDRA.getConf());
-        modSeqProvider = new CassandraModSeqProvider(CASSANDRA.getConf());
+        schedulers = ImmutableList.<ScheduledExecutorService>builder();
+        uidProvider = new CassandraUidProvider(CASSANDRA.getConf(), buildRetryer());
+        modSeqProvider = new CassandraModSeqProvider(CASSANDRA.getConf(), buildRetryer());
         mapper = new CassandraMailboxMapper(CASSANDRA.getConf(), CASSANDRA.getTypesProvider(), MAX_RETRY);
         fillMailboxList();
         for (SimpleMailbox<CassandraId> mailbox : mailboxList) {
             mapper.save(mailbox);
         }
     }
-    
+
+    private AsyncRetryExecutor buildRetryer() {
+        return new AsyncRetryExecutor(createSingleThreadedScheduler());
+    }
+
+    private ScheduledExecutorService createSingleThreadedScheduler() {
+        ScheduledExecutorService newScheduler = Executors.newSingleThreadScheduledExecutor();
+        schedulers.add(newScheduler);
+        return newScheduler;
+    }
+
     @After
     public void cleanUp() {
         CASSANDRA.clearAllTables();

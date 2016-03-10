@@ -18,6 +18,10 @@
  ****************************************************************/
 package org.apache.james.mpt.imapmailbox.cassandra.host;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
@@ -52,13 +56,17 @@ import org.apache.james.mpt.api.ImapFeatures.Feature;
 import org.apache.james.mpt.host.JamesImapHostSystem;
 import org.apache.james.mpt.imapmailbox.MailboxCreationDelegate;
 
+import com.google.common.collect.ImmutableList;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
+
 public class CassandraHostSystem extends JamesImapHostSystem {
 
     private static final ImapFeatures IMAP_FEATURES = ImapFeatures.of(Feature.NAMESPACE_SUPPORT);
-    
+
     private final CassandraMailboxManager mailboxManager;
     private final MockAuthenticator userManager;
     private final CassandraCluster cassandraClusterSingleton;
+    private ImmutableList.Builder<ScheduledExecutorService> schedulers = ImmutableList.builder();
 
     public CassandraHostSystem() throws Exception {
         CassandraModule mailboxModule = new CassandraModuleComposite(
@@ -72,10 +80,11 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         cassandraClusterSingleton = CassandraCluster.create(mailboxModule);
         userManager = new MockAuthenticator();
         com.datastax.driver.core.Session session = cassandraClusterSingleton.getConf();
-        CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(session);
-        CassandraUidProvider uidProvider = new CassandraUidProvider(session);
+        CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(session, buildRetryer());
+        CassandraUidProvider uidProvider = new CassandraUidProvider(session, buildRetryer());
 
-        CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(uidProvider, modSeqProvider, session, new CassandraTypesProvider(mailboxModule, session));
+        CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(uidProvider, modSeqProvider,
+                session, new CassandraTypesProvider(mailboxModule, session), Executors.newSingleThreadScheduledExecutor());
         
         mailboxManager = new CassandraMailboxManager(mapperFactory, userManager, new JVMMailboxPathLocker());
         QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver(mapperFactory);
@@ -108,9 +117,29 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         cassandraClusterSingleton.ensureAllTables();
     }
 
+    private AsyncRetryExecutor buildRetryer() {
+        return new AsyncRetryExecutor(createSingleThreadedScheduler());
+    }
+
+    private ScheduledExecutorService createSingleThreadedScheduler() {
+        ScheduledExecutorService newScheduler = Executors.newSingleThreadScheduledExecutor();
+        schedulers.add(newScheduler);
+        return newScheduler;
+    }
+
     @Override
     protected void resetData() throws Exception {
         cassandraClusterSingleton.clearAllTables();
+    }
+
+    private void shutdownSchedulers() {
+        schedulers.build().asList().stream()
+                .filter(this::isNeitherNullNorShutdown)
+                .forEach(ExecutorService::shutdown);
+    }
+
+    private boolean isNeitherNullNorShutdown(ScheduledExecutorService scheduler) {
+        return scheduler != null && (!scheduler.isShutdown() || !scheduler.isTerminated());
     }
 
     public boolean addUser(String user, String password) {
@@ -133,4 +162,9 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         return IMAP_FEATURES.supports(features);
     }
     
+    @Override
+    public void afterTests() throws Exception {
+        super.afterTests();
+        shutdownSchedulers();
+    }
 }

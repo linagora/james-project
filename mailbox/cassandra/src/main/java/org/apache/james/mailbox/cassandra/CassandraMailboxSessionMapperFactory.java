@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.cassandra;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import javax.inject.Inject;
 import org.apache.james.mailbox.MailboxSession;
@@ -44,13 +46,15 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
     private final UidProvider<CassandraId> uidProvider;
     private final ModSeqProvider<CassandraId> modSeqProvider;
     private final CassandraTypesProvider typesProvider;
+    private final ScheduledExecutorService scheduler;
     private int maxRetry;
 
     @Inject
-    public CassandraMailboxSessionMapperFactory(UidProvider<CassandraId> uidProvider, ModSeqProvider<CassandraId> modSeqProvider, Session session, CassandraTypesProvider typesProvider) {
+    public CassandraMailboxSessionMapperFactory(UidProvider<CassandraId> uidProvider, ModSeqProvider<CassandraId> modSeqProvider, Session session, CassandraTypesProvider typesProvider, ScheduledExecutorService scheduler) {
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
         this.session = session;
+        this.scheduler = scheduler;
         this.maxRetry = DEFAULT_MAX_RETRY;
         this.typesProvider = typesProvider;
     }
@@ -61,7 +65,7 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
 
     @Override
     public CassandraMessageMapper createMessageMapper(MailboxSession mailboxSession) {
-        return new CassandraMessageMapper(session, uidProvider, modSeqProvider, null, maxRetry, typesProvider);
+        return new CassandraMessageMapper(session, uidProvider, modSeqProvider, null, maxRetry, typesProvider, scheduler);
     }
 
     @Override
