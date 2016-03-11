@@ -35,11 +35,22 @@ import java.util.Map;
 public class MemoryUsersRepository extends AbstractUsersRepository {
 
     private final Map<String, User> userByName;
+    private final boolean supportVirtualHosting;
     private String algo;
 
     public MemoryUsersRepository() {
+       this(true);
+    }
+
+    public MemoryUsersRepository(boolean supportVirtualHosting) {
         this.userByName = new HashMap<String, User>();
         this.algo = "MD5";
+        this.supportVirtualHosting = supportVirtualHosting;
+    }
+
+    @Override
+    public boolean supportVirtualHosting() {
+        return supportVirtualHosting;
     }
 
     @Override

@@ -20,24 +20,30 @@
 package org.apache.james.mailbox.inmemory;
 
 import java.util.List;
+import javax.inject.Inject;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.store.Authenticator;
+import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 
 import com.google.common.collect.Lists;
 
 public class InMemoryMailboxManager extends StoreMailboxManager<InMemoryId> {
 
+    @Inject
+    public InMemoryMailboxManager(MailboxSessionMapperFactory<InMemoryId> mailboxSessionMapperFactory, Authenticator authenticator, MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver) {
+        super(mailboxSessionMapperFactory, authenticator, locker, aclResolver, groupMembershipResolver);
+    }
+
     public InMemoryMailboxManager(Authenticator authenticator, MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver) {
-        super(new InMemoryMailboxSessionMapperFactory(), authenticator, locker, aclResolver, groupMembershipResolver);
+        this(new InMemoryMailboxSessionMapperFactory(), authenticator, locker, aclResolver, groupMembershipResolver);
     }
 
     @Override
     public List<Capabilities> getSupportedCapabilities() {
         return Lists.newArrayList(Capabilities.Basic, Capabilities.Move);
-
     }
 }
