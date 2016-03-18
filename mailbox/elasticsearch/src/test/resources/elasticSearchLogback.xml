@@ -1,0 +1,3 @@
+<included>
+    <logger name="org.elasticsearch" level="ERROR"/>
+</included>

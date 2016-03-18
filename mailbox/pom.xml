@@ -113,6 +113,7 @@
         <geronimo-activation-spec.version>1.1</geronimo-activation-spec.version>
         <apache-mailet.version>2.5.1-SNAPSHOT</apache-mailet.version>
         <slf4j.version>1.7.7</slf4j.version>
+        <logback.version>1.1.6</logback.version>
         <junit.version>4.11</junit.version>
         <mockito-core.version>1.9.0</mockito-core.version>
         <jasypt.version>1.9.0</jasypt.version>
@@ -300,6 +301,12 @@
             <!--
                 START Logging
             -->
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+                <scope>test</scope>
+            </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>

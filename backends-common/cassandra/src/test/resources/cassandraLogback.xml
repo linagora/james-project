@@ -1,0 +1,4 @@
+<included>
+    <logger name="org.apache.cassandra" level="ERROR"/>
+    <logger name="com.datastax" level="ERROR"/>
+</included>
