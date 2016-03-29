@@ -16,15 +16,33 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.send.exception;
+package org.apache.james.jmap.model;
 
-import org.apache.james.jmap.model.mailbox.Role;
-import org.apache.james.queue.api.MailQueue.MailQueueException;
+import org.apache.commons.lang.NotImplementedException;
+import org.junit.Test;
 
-public class MailboxRoleNotFoundException extends MailQueueException {
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
-    public MailboxRoleNotFoundException(Role role) {
-        super("Unable to find a mailbox with role " + role.serialize());
+public class SetMailboxesRequestTest {
+
+    @Test(expected=NotImplementedException.class)
+    public void builderShouldThrowWhenAccountId() {
+        SetMailboxesRequest.builder().accountId("1");
     }
 
+    @Test(expected=NotImplementedException.class)
+    public void builderShouldThrowWhenIfInState() {
+        SetMailboxesRequest.builder().ifInState("1");
+    }
+
+    @Test(expected=NotImplementedException.class)
+    public void builderShouldThrowWhenUpdate() {
+        SetMailboxesRequest.builder().update(ImmutableMap.of());
+    }
+    
+    @Test(expected=NotImplementedException.class)
+    public void builderShouldThrowWhenDestroy() {
+        SetMailboxesRequest.builder().destroy(ImmutableList.of());
+    }
 }
