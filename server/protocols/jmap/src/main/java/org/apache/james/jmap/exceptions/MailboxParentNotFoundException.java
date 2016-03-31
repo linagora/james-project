@@ -17,37 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.utils;
+package org.apache.james.jmap.exceptions;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+public class MailboxParentNotFoundException extends RuntimeException {
 
-import org.apache.james.jmap.model.mailbox.Mailbox;
+    private final String parentId;
 
-import com.google.common.collect.Lists;
-
-public class MailboxHierarchySorter {
-
-    public List<Mailbox> sortFromRootToLeaf(List<Mailbox> mailboxes) {
-
-        Map<String, Mailbox> mapOfMailboxesById = indexMailboxesById(mailboxes);
-
-        DependencyGraph<Mailbox> graph = new DependencyGraph<>(m ->
-                m.getParentId().map(mapOfMailboxesById::get));
-
-        mailboxes.stream().forEach(graph::registerItem);
-
-        return graph.getBuildChain().collect(Collectors.toList());
+    public MailboxParentNotFoundException(String parentId) {
+        super(String.format("The parent mailbox '%s' was not found.", parentId));
+        this.parentId = parentId;
     }
 
-    private Map<String, Mailbox> indexMailboxesById(List<Mailbox> mailboxes) {
-        return mailboxes.stream()
-                .collect(Collectors.toMap(Mailbox::getId, Function.identity()));
-    }
-
-    public List<Mailbox> sortFromLeafToRoot(List<Mailbox> mailboxes) {
-        return Lists.reverse(sortFromRootToLeaf(mailboxes));
+    public String getParentId() {
+        return parentId;
     }
 }

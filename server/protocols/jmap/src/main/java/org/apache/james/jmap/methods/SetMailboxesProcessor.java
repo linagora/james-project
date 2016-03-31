@@ -21,10 +21,11 @@ package org.apache.james.jmap.methods;
 
 import org.apache.james.jmap.model.SetMailboxesRequest;
 import org.apache.james.jmap.model.SetMailboxesResponse;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 
 public interface SetMailboxesProcessor<Id extends MailboxId> {
 
-    SetMailboxesResponse process(SetMailboxesRequest request);
+    SetMailboxesResponse process(SetMailboxesRequest request, MailboxSession mailboxSession);
 
 }

@@ -25,11 +25,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.james.jmap.model.mailbox.Mailbox;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-public class MailboxHierarchySorterTest {
+public class CollectionHierarchySorterTest {
+
+    private CollectionHierarchySorter<Mailbox, String> sut;
+
+    @Before
+    public void setup() {
+        sut = new CollectionHierarchySorter<>(Mailbox::getId, Mailbox::getParentId);
+    }
 
     @Test
     public void sortFromRootToLeafShouldReturnOrderedMailbox() {
@@ -42,7 +50,6 @@ public class MailboxHierarchySorterTest {
         Mailbox e = Mailbox.builder().name("E").id("E").parentId("C").build();
         ImmutableList<Mailbox> input = ImmutableList.of(b, c, d, a, inbox, e);
 
-        MailboxHierarchySorter sut = new MailboxHierarchySorter();
         // When
         List<Mailbox> result = sut.sortFromRootToLeaf(input);
 
@@ -52,7 +59,6 @@ public class MailboxHierarchySorterTest {
 
     @Test
     public void sortFromRootToLeafEmptyMailboxShouldReturnEmpty() {
-        MailboxHierarchySorter sut = new MailboxHierarchySorter();
         ImmutableList<Mailbox> input = ImmutableList.of();
         List<Mailbox> result = sut.sortFromRootToLeaf(input);
         assertThat(result).isEmpty();
@@ -64,7 +70,6 @@ public class MailboxHierarchySorterTest {
         Mailbox b = Mailbox.builder().name("B").id("B").build();
         Mailbox c = Mailbox.builder().name("C").id("C").build();
 
-        MailboxHierarchySorter sut = new MailboxHierarchySorter();
         ImmutableList<Mailbox> input = ImmutableList.of(a, b, c);
         List<String> result = sut.sortFromRootToLeaf(input).stream()
                 .map(Mailbox::getName)
@@ -82,7 +87,7 @@ public class MailboxHierarchySorterTest {
         Mailbox c = Mailbox.builder().name("C").id("C").parentId("B").build();
         Mailbox d = Mailbox.builder().name("D").id("D").parentId("A").build();
         Mailbox e = Mailbox.builder().name("E").id("E").parentId("C").build();
-        MailboxHierarchySorter sut = new MailboxHierarchySorter();
+
         ImmutableList<Mailbox> input = ImmutableList.of(b, c, d, a, inbox, e);
 
         //When
@@ -93,7 +98,6 @@ public class MailboxHierarchySorterTest {
 
     @Test
     public void sortFromLeafToRootEmptyMailboxShouldReturnEmpty() {
-        MailboxHierarchySorter sut = new MailboxHierarchySorter();
         ImmutableList<Mailbox> input = ImmutableList.of();
         List<Mailbox> result = sut.sortFromLeafToRoot(input);
         assertThat(result).isEmpty();
@@ -105,7 +109,6 @@ public class MailboxHierarchySorterTest {
         Mailbox b = Mailbox.builder().name("B").id("B").build();
         Mailbox c = Mailbox.builder().name("C").id("C").build();
 
-        MailboxHierarchySorter sut = new MailboxHierarchySorter();
         ImmutableList<Mailbox> input = ImmutableList.of(a, b, c);
         List<String> result = sut.sortFromLeafToRoot(input).stream()
                 .map(Mailbox::getName)
