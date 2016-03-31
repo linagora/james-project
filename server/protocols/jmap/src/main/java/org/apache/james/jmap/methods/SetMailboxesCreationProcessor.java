@@ -22,14 +22,15 @@ package org.apache.james.jmap.methods;
 import org.apache.james.jmap.model.SetMailboxesRequest;
 import org.apache.james.jmap.model.SetMailboxesResponse;
 import org.apache.james.jmap.model.mailbox.Mailbox;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 
 public class SetMailboxesCreationProcessor<Id extends MailboxId> implements SetMailboxesProcessor<Id> {
 
-    public SetMailboxesResponse process(SetMailboxesRequest request) {
+    public SetMailboxesResponse process(SetMailboxesRequest request, MailboxSession mailboxSession) {
         SetMailboxesResponse.Builder builder = SetMailboxesResponse.builder();
         request.getCreate().entrySet().stream()
-            .forEach(entry -> builder.creation(
+            .forEach(entry -> builder.created(
                 entry.getKey(),
                 Mailbox.builder().name(entry.getValue().getName()).id("serverId").build()));
         return builder.build();

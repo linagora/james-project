@@ -93,7 +93,7 @@ public class SetMailboxesMethodTest {
         SetMailboxesRequest creationRequest = SetMailboxesRequest.builder().create(creationId, fooFolder).build();
 
         Mailbox createdfooFolder = Mailbox.builder().name("fooFolder").id("fooId").build();
-        SetMailboxesResponse creationResponse = SetMailboxesResponse.builder().creation(creationId, createdfooFolder).build();
+        SetMailboxesResponse creationResponse = SetMailboxesResponse.builder().created(creationId, createdfooFolder).build();
         JmapResponse jmapResponse = JmapResponse.builder()
             .response(creationResponse)
             .clientId(ClientId.of("clientId"))
@@ -103,7 +103,7 @@ public class SetMailboxesMethodTest {
         MailboxSession session = mock(MailboxSession.class);
         @SuppressWarnings("unchecked")
         SetMailboxesProcessor<TestId> creatorProcessor = mock(SetMailboxesProcessor.class);
-        when(creatorProcessor.process(creationRequest)).thenReturn(creationResponse);
+        when(creatorProcessor.process(creationRequest, session)).thenReturn(creationResponse);
 
         Stream<JmapResponse> actual =
             new SetMailboxesMethod<>(ImmutableSet.of(creatorProcessor))
