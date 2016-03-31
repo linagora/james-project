@@ -49,6 +49,8 @@ else
    mvn package -Pcassandra,inmemory,elasticsearch,exclude-lucene,with-assembly,with-jetm
 fi
 
+mvn sonar:sonar -Dsonar.host.url=http://62.210.101.42:9000 -Dsonar.github.oauth=671ba766764f5b4e1fa3323fbfae49a0c1e7a408 -Dsonar.github.repository=linagora/james-project -Dsonar.github.pullRequest=188 -Dsonar.analysis.mode=preview
+
 # Retrieve result
 
 if [ $? -eq 0 ]; then

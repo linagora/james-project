@@ -22,6 +22,8 @@ package org.apache.james.mailetcontainer.api;
 import org.apache.mailet.Mailet;
 import org.apache.mailet.MailetConfig;
 
+import java.util.List;
+
 import javax.mail.MessagingException;
 
 /**

@@ -20,6 +20,8 @@
 
 package org.apache.james.protocols.smtp;
 
+import java.util.List;
+
 public class MailAddressException extends Exception{
 
     /**
