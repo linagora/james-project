@@ -17,53 +17,15 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
+package org.apache.james.mpt.smtp;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects;
+import org.apache.james.mpt.api.HostSystem;
+import org.apache.james.mpt.smtp.dns.InMemoryDNSService;
 
-import java.util.Objects;
+public interface SmtpHostSystem extends HostSystem {
 
-public class EMailer {
+    void addAddressMapping(String user, String domain, String address) throws Exception;
 
-    private final String name;
-    private final String address;
+    InMemoryDNSService getInMemoryDnsService();
 
-    public EMailer(String name, String address) {
-        this.name = name;
-        this.address = address;
-    }
-
-    @JsonProperty(JsonMessageConstants.EMailer.NAME)
-    public String getName() {
-        return name;
-    }
-
-    @JsonProperty(JsonMessageConstants.EMailer.ADDRESS)
-    public String getAddress() {
-        return address;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof EMailer) {
-            EMailer otherEMailer = (EMailer) o;
-            return Objects.equals(name, otherEMailer.name)
-                && Objects.equals(address, otherEMailer.address);
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(name, address);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-            .add("name", name)
-            .add("address", address)
-            .toString();
-    }
 }

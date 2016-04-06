@@ -23,7 +23,7 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.FixedDateZonedDateTimeProvider;
 import org.apache.james.jmap.JMAPAuthenticationTest;
-import org.apache.james.jmap.servers.CassandraJmapServerModule;
+import org.apache.james.modules.CassandraJmapServerModule;
 import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
@@ -36,7 +36,7 @@ import com.google.inject.TypeLiteral;
 public class CassandraJmapAuthenticationTest extends JMAPAuthenticationTest {
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
+    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
 
     @Rule

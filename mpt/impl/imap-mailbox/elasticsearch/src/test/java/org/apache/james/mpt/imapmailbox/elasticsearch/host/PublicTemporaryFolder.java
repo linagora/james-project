@@ -17,8 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.api;
+package org.apache.james.mpt.imapmailbox.elasticsearch.host;
 
-public interface SmtpHostSystem extends HostSystem {
+import org.junit.rules.TemporaryFolder;
 
+public class PublicTemporaryFolder extends TemporaryFolder {
+
+    @Override
+    public void before() throws Throwable {
+        super.before();
+    }
+
+    @Override
+    public void after() {
+        super.after();
+    }
 }

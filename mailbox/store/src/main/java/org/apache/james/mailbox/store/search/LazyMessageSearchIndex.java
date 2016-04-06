@@ -19,14 +19,14 @@
 package org.apache.james.mailbox.store.search;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -64,8 +64,13 @@ public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessa
     }
 
     @Override
-    public void delete(MailboxSession session, Mailbox<Id> mailbox, MessageRange range) throws MailboxException {
-        index.delete(session, mailbox, range);
+    public void delete(MailboxSession session, Mailbox<Id> mailbox, List<Long> expungedUids) throws MailboxException {
+        index.delete(session, mailbox, expungedUids);
+    }
+
+    @Override
+    public void deleteAll(MailboxSession session, Mailbox<Id> mailbox) throws MailboxException {
+        index.deleteAll(session, mailbox);
     }
 
     /**
@@ -102,10 +107,8 @@ public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessa
         return index.search(session, mailbox, searchQuery);
     }
 
-
     @Override
-    public void update(MailboxSession session, Mailbox<Id> mailbox, MessageRange range, Flags flags, long modSeq) throws MailboxException {
-        index.update(session, mailbox, range, flags, modSeq);
+    public void update(MailboxSession session, Mailbox<Id> mailbox, List<UpdatedFlags> updatedFlagsList) throws MailboxException {
+        index.update(session, mailbox, updatedFlagsList);
     }
-
 }

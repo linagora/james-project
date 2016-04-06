@@ -29,62 +29,56 @@ import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
-
 public class IndexCreationFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexCreationFactory.class);
+    private static final int DEFAULT_NB_SHARDS = 1;
+    private static final int DEFAULT_NB_REPLICA = 0;
+    public static final String CASE_INSENSITIVE = "case_insensitive";
 
-    public static ClientProvider createIndex(ClientProvider clientProvider, int nbShards, int nbReplica) {
+    public static Client createIndex(Client client, int nbShards, int nbReplica) {
         try {
-            return createIndex(clientProvider, normalSettings(nbShards, nbReplica));
+            return createIndex(client, generateSetting(nbShards, nbReplica));
         } catch (IOException e) {
             LOGGER.error("Error while creating index : ", e);
-            return clientProvider;
+            return client;
         }
     }
 
-    public static ClientProvider createIndex(ClientProvider clientProvider) {
-        try {
-            return createIndex(clientProvider, settingForInMemory());
-        } catch (IOException e) {
-            LOGGER.error("Error while creating index : ", e);
-            return clientProvider;
-        }
+    public static Client createIndex(Client client) {
+        return createIndex(client, DEFAULT_NB_SHARDS, DEFAULT_NB_REPLICA);
     }
 
-    private static ClientProvider createIndex(ClientProvider clientProvider, XContentBuilder settings) {
+    private static Client createIndex(Client client, XContentBuilder settings) {
         try {
-            try (Client client = clientProvider.get()) {
                 client.admin()
                     .indices()
                     .prepareCreate(ElasticSearchIndexer.MAILBOX_INDEX)
                     .setSettings(settings)
                     .execute()
                     .actionGet();
-            }
         } catch (IndexAlreadyExistsException exception) {
             LOGGER.info("Index [" + ElasticSearchIndexer.MAILBOX_INDEX + "] already exist");
         }
-        return clientProvider;
+        return client;
     }
 
-    public static XContentBuilder settingForInMemory() throws IOException {
-        return generateSetting(1, 0, Optional.of(jsonBuilder().startObject().field("type", "memory").endObject()));
-    }
-
-    public static XContentBuilder normalSettings(int nbShards, int nbReplica) throws IOException{
-        return generateSetting(nbShards, nbReplica, Optional.empty());
-    }
-
-    private static XContentBuilder generateSetting(int nbShards, int nbReplica, Optional<XContentBuilder> store) throws IOException {
-        XContentBuilder contentBuilder = jsonBuilder().startObject()
-            .field("number_of_shards", nbShards)
-            .field("number_of_replicas", nbReplica);
-        if (store.isPresent()) {
-            contentBuilder.field("store", store.get());
-        }
-        return contentBuilder.endObject();
+    private static XContentBuilder generateSetting(int nbShards, int nbReplica) throws IOException {
+        return jsonBuilder()
+            .startObject()
+                .field("number_of_shards", nbShards)
+                .field("number_of_replicas", nbReplica)
+                .startObject("analysis")
+                    .startObject("analyzer")
+                        .startObject(CASE_INSENSITIVE)
+                            .field("tokenizer", "keyword")
+                            .startArray("filter")
+                                .value("lowercase")
+                            .endArray()
+                        .endObject()
+                    .endObject()
+                .endObject()
+            .endObject();
     }
 
 }

@@ -16,22 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.modules.server;
 
-package org.apache.james.mailbox.elasticsearch.query;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
+import javax.inject.Named;
 
-import org.apache.james.mailbox.model.SearchQuery;
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 
-public class FilteredQueryCollector {
+public class AsyncTasksExecutorModule extends AbstractModule {
 
-    public static Collector<FilteredQueryRepresentation, ?, FilteredQueryRepresentation> 
-        collector(SearchQuery.Conjunction type) {
-        
-        return Collectors.reducing(
-                FilteredQueryRepresentation.empty(),
-                (x, y) -> x.combine(type, y));
+    public static final int THREAD_POOL_SIZE = 8;
+
+    @Override
+    protected void configure() {
+
     }
 
+    @Provides
+    @Singleton
+    @Named("AsyncExecutor")
+    public ExecutorService provideAsyncExecutorService() {
+        return Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+    }
 }

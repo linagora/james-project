@@ -41,18 +41,23 @@ public class NodeMappingFactory {
     public static final String DATE = "date";
     public static final String FORMAT = "format";
     public static final String NESTED = "nested";
+    public static final String FIELDS = "fields";
+    public static final String RAW = "raw";
+    public static final String ANALYZER = "analyzer";
 
-    public static ClientProvider applyMapping(ClientProvider clientProvider) {
-        try (Client client = clientProvider.get()) {
-            client.admin()
-                .indices()
-                .preparePutMapping(ElasticSearchIndexer.MAILBOX_INDEX)
-                .setType(ElasticSearchIndexer.MESSAGE_TYPE)
-                .setSource(getMappingContent())
-                .execute()
-                .actionGet();
-        }
-        return clientProvider;
+    public static Client applyMapping(Client client) {
+        return applyMapping(client, getMappingContent());
+    }
+
+    public static Client applyMapping(Client client, XContentBuilder mappingsSources) {
+        client.admin()
+            .indices()
+            .preparePutMapping(ElasticSearchIndexer.MAILBOX_INDEX)
+            .setType(ElasticSearchIndexer.MESSAGE_TYPE)
+            .setSource(mappingsSources)
+            .execute()
+            .actionGet();
+        return client;
     }
 
     private static XContentBuilder getMappingContent() {
@@ -114,10 +119,26 @@ public class NodeMappingFactory {
                                 .startObject(PROPERTIES)
                                     .startObject(JsonMessageConstants.EMailer.NAME)
                                         .field(TYPE, STRING)
+                                        .startObject(FIELDS)
+                                            .startObject(RAW)
+                                                .field(TYPE, STRING)
+                                                .field(ANALYZER, IndexCreationFactory.CASE_INSENSITIVE)
+                                            .endObject()
+                                        .endObject()
                                     .endObject()
                                     .startObject(JsonMessageConstants.EMailer.ADDRESS)
                                         .field(TYPE, STRING)
                                         .field(INDEX, NOT_ANALYZED)
+                                    .endObject()
+                                .endObject()
+                            .endObject()
+
+                            .startObject(JsonMessageConstants.SUBJECT)
+                                .field(TYPE, STRING)
+                                .startObject(FIELDS)
+                                    .startObject(RAW)
+                                        .field(TYPE, STRING)
+                                        .field(ANALYZER, IndexCreationFactory.CASE_INSENSITIVE)
                                     .endObject()
                                 .endObject()
                             .endObject()
@@ -127,6 +148,12 @@ public class NodeMappingFactory {
                                 .startObject(PROPERTIES)
                                     .startObject(JsonMessageConstants.EMailer.NAME)
                                         .field(TYPE, STRING)
+                                        .startObject(FIELDS)
+                                            .startObject(RAW)
+                                                .field(TYPE, STRING)
+                                                .field(ANALYZER, IndexCreationFactory.CASE_INSENSITIVE)
+                                            .endObject()
+                                        .endObject()
                                     .endObject()
                                     .startObject(JsonMessageConstants.EMailer.ADDRESS)
                                         .field(TYPE, STRING)
