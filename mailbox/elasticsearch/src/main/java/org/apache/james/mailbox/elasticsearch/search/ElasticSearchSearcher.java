@@ -21,9 +21,11 @@ package org.apache.james.mailbox.elasticsearch.search;
 
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.apache.james.mailbox.elasticsearch.ClientProvider;
+import javax.inject.Inject;
+
 import org.apache.james.mailbox.elasticsearch.ElasticSearchIndexer;
 import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
 import org.apache.james.mailbox.elasticsearch.query.QueryConverter;
@@ -40,27 +42,31 @@ import org.elasticsearch.search.SearchHit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-
 public class ElasticSearchSearcher<Id extends MailboxId> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchSearcher.class);
+    private static final TimeValue TIMEOUT = new TimeValue(60000);
+    public static final int DEFAULT_SIZE = 100;
 
-    private final ClientProvider clientProvider;
+    private final Client client;
     private final QueryConverter queryConverter;
+    private final int size;
 
     @Inject
-    public ElasticSearchSearcher(ClientProvider clientProvider, QueryConverter queryConverter) {
-        this.clientProvider = clientProvider;
+    public ElasticSearchSearcher(Client client, QueryConverter queryConverter) {
+        this(client, queryConverter, DEFAULT_SIZE);
+    }
+
+    public ElasticSearchSearcher(Client client, QueryConverter queryConverter, int size) {
+        this.client = client;
         this.queryConverter = queryConverter;
+        this.size = size;
     }
 
     public Iterator<Long> search(Mailbox<Id> mailbox, SearchQuery searchQuery) throws MailboxException {
-        try (Client client = clientProvider.get()) {
-            return transformResponseToUidIterator(getSearchRequestBuilder(client, mailbox, searchQuery)
-                .get()
-            );
-        }
+        return new ScrollIterable(client, getSearchRequestBuilder(client, mailbox, searchQuery)).stream()
+            .flatMap(this::transformResponseToUidStream)
+            .iterator();
     }
 
     private SearchRequestBuilder getSearchRequestBuilder(Client client, Mailbox<Id> mailbox, SearchQuery searchQuery) {
@@ -69,20 +75,19 @@ public class ElasticSearchSearcher<Id extends MailboxId> {
             .reduce(
                 client.prepareSearch(ElasticSearchIndexer.MAILBOX_INDEX)
                     .setTypes(ElasticSearchIndexer.MESSAGE_TYPE)
-                    .setScroll(new TimeValue(60000))
+                    .setScroll(TIMEOUT)
+                    .setFetchSource(JsonMessageConstants.ID, "")
                     .setQuery(queryConverter.from(searchQuery, mailbox.getMailboxId().serialize()))
-                    .setSize(100),
+                    .setSize(size),
                 (searchBuilder, sort) -> searchBuilder.addSort(SortConverter.convertSort(sort)),
                 (partialResult1, partialResult2) -> partialResult1);
     }
 
-    private Iterator<Long> transformResponseToUidIterator(SearchResponse searchResponse) {
+    private Stream<Long> transformResponseToUidStream(SearchResponse searchResponse) {
         return StreamSupport.stream(searchResponse.getHits().spliterator(), false)
             .map(this::extractUidFromHit)
             .filter(Optional::isPresent)
-            .map(Optional::get)
-            .iterator();
-
+            .map(Optional::get);
     }
 
     private Optional<Long> extractUidFromHit(SearchHit hit) {

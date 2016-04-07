@@ -19,10 +19,11 @@
 
 package org.apache.james.backends.cassandra.utils;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 
 public class CassandraUtils {
 

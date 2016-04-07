@@ -19,6 +19,11 @@
 
 package org.apache.james.mpt.imapmailbox.elasticsearch.host;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.Executors;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.encode.main.DefaultImapEncoderFactory;
 import org.apache.james.imap.main.DefaultImapDecoderFactory;
@@ -27,7 +32,7 @@ import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
-import org.apache.james.mailbox.elasticsearch.ClientProvider;
+import org.apache.james.mailbox.elasticsearch.DeleteByQueryPerformer;
 import org.apache.james.mailbox.elasticsearch.ElasticSearchIndexer;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.elasticsearch.IndexCreationFactory;
@@ -52,28 +57,18 @@ import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
 import org.apache.james.mpt.host.JamesImapHostSystem;
 import org.apache.james.mpt.imapmailbox.MailboxCreationDelegate;
+import org.elasticsearch.client.Client;
 
 import com.google.common.base.Throwables;
-import com.google.inject.Inject;
 
 public class ElasticSearchHostSystem extends JamesImapHostSystem {
 
     private static final ImapFeatures SUPPORTED_FEATURES = ImapFeatures.of(Feature.NAMESPACE_SUPPORT);
-    
+
     private EmbeddedElasticSearch embeddedElasticSearch;
+    private Path tempDirectory;
     private StoreMailboxManager<InMemoryId> mailboxManager;
     private MockAuthenticator userManager;
-
-    @Inject
-    public ElasticSearchHostSystem() throws Throwable {
-        this.embeddedElasticSearch = new EmbeddedElasticSearch();
-        embeddedElasticSearch.before();
-        initFields();
-    }
-
-    public EmbeddedElasticSearch getEmbeddedElasticSearch() {
-        return embeddedElasticSearch;
-    }
 
     public boolean addUser(String user, String password) throws Exception {
         userManager.addUser(user, password);
@@ -81,16 +76,27 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
     }
 
     @Override
-    protected void resetData() throws Exception {
-        embeddedElasticSearch.after();
-        this.embeddedElasticSearch = new EmbeddedElasticSearch();
+    public void beforeTest() throws Exception {
+        this.tempDirectory = Files.createTempDirectory("elasticsearch");
+        this.embeddedElasticSearch = new EmbeddedElasticSearch(tempDirectory);
         embeddedElasticSearch.before();
         initFields();
     }
 
+    @Override
+    public void afterTest() throws Exception {
+        embeddedElasticSearch.after();
+        FileUtils.deleteDirectory(tempDirectory.toFile());
+    }
+
+    @Override
+    protected void resetData() throws Exception {
+
+    }
+
     private void initFields() {
-        ClientProvider clientProvider = NodeMappingFactory.applyMapping(
-            IndexCreationFactory.createIndex(new TestingClientProvider(embeddedElasticSearch.getNode()))
+        Client client = NodeMappingFactory.applyMapping(
+            IndexCreationFactory.createIndex(new TestingClientProvider(embeddedElasticSearch.getNode()).get())
         );
 
         userManager = new MockAuthenticator();
@@ -98,8 +104,8 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
 
         ElasticSearchListeningMessageSearchIndex<InMemoryId> searchIndex = new ElasticSearchListeningMessageSearchIndex<>(
             factory,
-            new ElasticSearchIndexer(clientProvider),
-            new ElasticSearchSearcher<>(clientProvider, new QueryConverter(new CriterionConverter())),
+            new ElasticSearchIndexer(client, new DeleteByQueryPerformer(client, Executors.newSingleThreadExecutor())),
+            new ElasticSearchSearcher<>(client, new QueryConverter(new CriterionConverter())),
             new MessageToElasticSearchJson(new DefaultTextExtractor()));
 
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
@@ -114,11 +120,11 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
             throw Throwables.propagate(e);
         }
 
-        final ImapProcessor defaultImapProcessorFactory = 
-                DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, 
-                        new StoreSubscriptionManager(factory), 
-                        new NoQuotaManager(), 
-                        new DefaultQuotaRootResolver(factory));
+        final ImapProcessor defaultImapProcessorFactory =
+            DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager,
+                new StoreSubscriptionManager(factory),
+                new NoQuotaManager(),
+                new DefaultQuotaRootResolver(factory));
         configure(new DefaultImapDecoderFactory().buildImapDecoder(),
             new DefaultImapEncoderFactory().buildImapEncoder(),
             defaultImapProcessorFactory);
@@ -135,5 +141,5 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
     public boolean supports(Feature... features) {
         return SUPPORTED_FEATURES.supports(features);
     }
-    
+
 }

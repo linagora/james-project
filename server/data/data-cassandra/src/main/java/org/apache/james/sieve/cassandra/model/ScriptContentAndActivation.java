@@ -17,8 +17,23 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.api;
+package org.apache.james.sieve.cassandra.model;
 
-public interface SmtpHostSystem extends HostSystem {
+public class ScriptContentAndActivation {
 
+    private final String content;
+    private final boolean activation;
+
+    public ScriptContentAndActivation(String content, boolean activation) {
+        this.content = content;
+        this.activation = activation;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public boolean isActive() {
+        return activation;
+    }
 }

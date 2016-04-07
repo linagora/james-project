@@ -31,7 +31,6 @@ public class SieveModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(SieveParser.class).to(Parser.class);
-        bind(SieveRepository.class).to(SieveFileRepository.class);
     }
 
 }

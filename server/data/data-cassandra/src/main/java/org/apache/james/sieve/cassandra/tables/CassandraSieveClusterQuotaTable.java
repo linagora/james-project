@@ -17,21 +17,13 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.query;
+package org.apache.james.sieve.cassandra.tables;
 
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
+public interface CassandraSieveClusterQuotaTable {
+    String TABLE_NAME = "sieve_cluster_quota";
 
-import org.apache.james.mailbox.model.SearchQuery;
+    String NAME = "name";
+    String VALUE = "value";
 
-public class FilteredQueryCollector {
-
-    public static Collector<FilteredQueryRepresentation, ?, FilteredQueryRepresentation> 
-        collector(SearchQuery.Conjunction type) {
-        
-        return Collectors.reducing(
-                FilteredQueryRepresentation.empty(),
-                (x, y) -> x.combine(type, y));
-    }
-
+    String DEFAULT_NAME = "cluster_quota";
 }

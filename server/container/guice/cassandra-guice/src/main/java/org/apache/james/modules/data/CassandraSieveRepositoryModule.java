@@ -17,10 +17,22 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.tables;
+package org.apache.james.modules.data;
 
-public interface CassandraDomainsTable {
-    String TABLE_NAME = "domains";
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.sieve.cassandra.CassandraSieveRepository;
+import org.apache.james.sieverepository.api.SieveRepository;
 
-    String DOMAIN = "domain";
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
+
+public class CassandraSieveRepositoryModule extends AbstractModule {
+
+    @Override
+    protected void configure() {
+        bind(SieveRepository.class).to(CassandraSieveRepository.class);
+
+        Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
+        cassandraDataDefinitions.addBinding().to(org.apache.james.sieve.cassandra.CassandraSieveRepositoryModule.class);
+    }
 }

@@ -23,7 +23,7 @@ import org.apache.james.CassandraJamesServerMain;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.methods.integration.GetMessageListMethodTest;
-import org.apache.james.jmap.servers.CassandraJmapServerModule;
+import org.apache.james.modules.CassandraJmapServerModule;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.junit.Rule;
@@ -35,7 +35,7 @@ import com.google.inject.TypeLiteral;
 public class CassandraGetMessageListMethodTest extends GetMessageListMethodTest {
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch();
+    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
 
     @Rule

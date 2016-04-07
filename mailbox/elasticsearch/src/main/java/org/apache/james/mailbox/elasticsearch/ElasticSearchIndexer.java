@@ -18,61 +18,76 @@
  ****************************************************************/
 package org.apache.james.mailbox.elasticsearch;
 
-import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryResponse;
-import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.update.UpdateResponse;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.QueryBuilders;
-
-import com.google.common.base.Preconditions;
+import java.util.List;
 
 import javax.inject.Inject;
 
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.common.Strings;
+import org.elasticsearch.index.query.QueryBuilder;
+
+import com.google.common.base.Preconditions;
+
 public class ElasticSearchIndexer {
+
+    public static class UpdatedRepresentation {
+        private final String id;
+        private final String updatedDocumentPart;
+
+        public UpdatedRepresentation(String id, String updatedDocumentPart) {
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(id), "Updated id must be specified " + id);
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(updatedDocumentPart), "Updated document must be specified");
+            this.id = id;
+            this.updatedDocumentPart = updatedDocumentPart;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getUpdatedDocumentPart() {
+            return updatedDocumentPart;
+        }
+    }
 
     public static final String MAILBOX_INDEX = "mailbox";
     public static final String MESSAGE_TYPE = "message";
     
-    private final ClientProvider clientProvider;
+    private final Client client;
+    private final DeleteByQueryPerformer deleteByQueryPerformer;
 
     @Inject
-    public ElasticSearchIndexer(ClientProvider clientProvider) {
-        this.clientProvider = clientProvider;
+    public ElasticSearchIndexer(Client client, DeleteByQueryPerformer deleteByQueryPerformer) {
+        this.client = client;
+        this.deleteByQueryPerformer = deleteByQueryPerformer;
     }
     
     public IndexResponse indexMessage(String id, String content) {
         checkArgument(content);
-        try (Client client = clientProvider.get()) {
-            return client.prepareIndex(MAILBOX_INDEX, MESSAGE_TYPE, id)
-                .setSource(content)
-                .get();
-        }
+        return client.prepareIndex(MAILBOX_INDEX, MESSAGE_TYPE, id)
+            .setSource(content)
+            .get();
     }
 
-    public UpdateResponse updateMessage(String id, String docUpdated) {
-        checkArgument(docUpdated);
-        try (Client client = clientProvider.get()) {
-            return client.prepareUpdate(MAILBOX_INDEX, MESSAGE_TYPE, id)
-                .setDoc(docUpdated)
-                .get();
-        }
+    public BulkResponse updateMessages(List<UpdatedRepresentation> updatedDocumentParts) {
+        Preconditions.checkNotNull(updatedDocumentParts);
+        BulkRequestBuilder bulkRequestBuilder = client.prepareBulk();
+        updatedDocumentParts.forEach(updatedDocumentPart -> bulkRequestBuilder.add(client.prepareUpdate(MAILBOX_INDEX, MESSAGE_TYPE, updatedDocumentPart.getId())
+            .setDoc(updatedDocumentPart.getUpdatedDocumentPart())));
+        return bulkRequestBuilder.get();
+    }
+
+    public BulkResponse deleteMessages(List<String> ids) {
+        BulkRequestBuilder bulkRequestBuilder = client.prepareBulk();
+        ids.forEach(id -> bulkRequestBuilder.add(client.prepareDelete(MAILBOX_INDEX, MESSAGE_TYPE, id)));
+        return bulkRequestBuilder.get();
     }
     
-    public DeleteResponse deleteMessage(String id) {
-        try (Client client = clientProvider.get()) {
-            return client.prepareDelete(MAILBOX_INDEX, MESSAGE_TYPE, id)
-                .get();
-        }
-    }
-    
-    public DeleteByQueryResponse deleteAllWithIdStarting(String idStart) {
-        try (Client client = clientProvider.get()) {
-            return client.prepareDeleteByQuery(MAILBOX_INDEX)
-                .setTypes(MESSAGE_TYPE)
-                .setQuery(QueryBuilders.prefixQuery("_id", idStart))
-                .get();
-        }
+    public void deleteAllMatchingQuery(QueryBuilder queryBuilder) {
+        deleteByQueryPerformer.perform(queryBuilder);
     }
 
     private void checkArgument(String content) {
