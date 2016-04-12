@@ -286,7 +286,7 @@ public class CassandraMessageMapper implements MessageMapper<CassandraId> {
     private MailboxMessage<CassandraId> message(Row row, FetchType fetchType) {
         SimpleMailboxMessage<CassandraId> message =
             new SimpleMailboxMessage<>(
-                row.getDate(INTERNAL_DATE),
+                row.getTimestamp(INTERNAL_DATE),
                 row.getLong(FULL_CONTENT_OCTETS),
                 row.getInt(BODY_START_OCTET),
                 buildContent(row, fetchType),
