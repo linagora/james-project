@@ -183,7 +183,7 @@ public class CassandraSieveDAO {
                 .setString(CassandraSieveTable.SCRIPT_CONTENT, content)
                 .setBool(CassandraSieveTable.IS_ACTIVE, isActive)
                 .setLong(CassandraSieveTable.SIZE, content.getBytes().length)
-                .setDate(CassandraSieveTable.DATE, new Date()));
+                .setTimestamp(CassandraSieveTable.DATE, new Date()));
     }
 
     public CompletableFuture<List<ScriptSummary>> listScripts(String user) {
@@ -236,7 +236,7 @@ public class CassandraSieveDAO {
             selectActiveScriptMetadataStatement.bind()
                 .setString(CassandraSieveTable.USER_NAME, user)
                 .setBool(CassandraSieveTable.IS_ACTIVE, true))
-            .thenApply(rowOptional -> rowOptional.map(row -> new DateTime(row.getDate(CassandraSieveTable.DATE).getTime())));
+            .thenApply(rowOptional -> rowOptional.map(row -> new DateTime(row.getTimestamp(CassandraSieveTable.DATE).getTime())));
     }
 
     public CompletableFuture<Boolean> deleteScriptInCassandra(String user, String name) {
