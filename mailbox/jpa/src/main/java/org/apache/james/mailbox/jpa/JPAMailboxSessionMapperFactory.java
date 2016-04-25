@@ -26,6 +26,7 @@ import org.apache.james.mailbox.jpa.mail.JPAMailboxMapper;
 import org.apache.james.mailbox.jpa.mail.JPAMessageMapper;
 import org.apache.james.mailbox.jpa.user.JPASubscriptionMapper;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
@@ -73,4 +74,8 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory<
         return entityManagerFactory.createEntityManager();
     }
 
+    @Override
+    public AttachmentMapper createAttachmentMapper() {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -28,9 +28,10 @@ import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
-import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
@@ -40,9 +41,12 @@ import org.apache.james.mailbox.store.search.MessageSearchIndex;
  */
 public class CassandraMessageManager extends StoreMessageManager<CassandraId> {
 
+    private final MailboxSessionMapperFactory<CassandraId> mailboxSessionMapperFactory;
+
     public CassandraMessageManager(MailboxSessionMapperFactory<CassandraId> mapperFactory, MessageSearchIndex<CassandraId> index, MailboxEventDispatcher<CassandraId> dispatcher, MailboxPathLocker locker, Mailbox<CassandraId> mailbox, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver) throws MailboxException {
         super(mapperFactory, index, dispatcher, locker, mailbox, new UnionMailboxACLResolver(), new SimpleGroupMembershipResolver(), quotaManager, quotaRootResolver);
 
+        mailboxSessionMapperFactory = mapperFactory;
     }
 
     /**
@@ -53,5 +57,10 @@ public class CassandraMessageManager extends StoreMessageManager<CassandraId> {
         Flags flags = super.getPermanentFlags(session);
         flags.add(Flags.Flag.USER);
         return flags;
+    }
+
+    @Override
+    protected AttachmentMapper getAttachmentMapper(MailboxSession session) {
+        return mailboxSessionMapperFactory.getAttachmentMapper(session);
     }
 }

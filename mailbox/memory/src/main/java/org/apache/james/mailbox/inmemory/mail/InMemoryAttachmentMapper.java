@@ -1,0 +1,78 @@
+/****************************************************************
+ * Licensed to the Apache Software Foundation (ASF) under one   *
+ * or more contributor license agreements.  See the NOTICE file *
+ * distributed with this work for additional information        *
+ * regarding copyright ownership.  The ASF licenses this file   *
+ * to you under the Apache License, Version 2.0 (the            *
+ * "License"); you may not use this file except in compliance   *
+ * with the License.  You may obtain a copy of the License at   *
+ *                                                              *
+ *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *                                                              *
+ * Unless required by applicable law or agreed to in writing,   *
+ * software distributed under the License is distributed on an  *
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
+ * KIND, either express or implied.  See the License for the    *
+ * specific language governing permissions and limitations      *
+ * under the License.                                           *
+ ****************************************************************/
+
+package org.apache.james.mailbox.inmemory.mail;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.commons.lang.NullArgumentException;
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.model.Attachment;
+import org.apache.james.mailbox.store.mail.model.AttachmentId;
+import org.apache.james.mailbox.store.transaction.Mapper;
+
+import com.google.common.base.Preconditions;
+
+public class InMemoryAttachmentMapper implements AttachmentMapper, Mapper {
+
+    private static final int INITIAL_SIZE = 64;
+    private final Map<AttachmentId, Attachment> attachmentsById;
+
+    public InMemoryAttachmentMapper() {
+        attachmentsById = new ConcurrentHashMap<AttachmentId, Attachment>(INITIAL_SIZE);
+    }
+
+    @Override
+    public void endRequest() {
+        // Do nothing
+    }
+
+    @Override
+    public <T> T execute(Mapper.Transaction<T> transaction) throws MailboxException {
+        return transaction.run();
+    }
+
+    @Override
+    public Attachment get(AttachmentId blobId) {
+        Preconditions.checkNotNull(blobId);
+        if (!attachmentsById.containsKey(blobId))
+            throw new IllegalArgumentException("blobId");
+        return attachmentsById.get(blobId);
+    }
+
+    @Override
+    public void put(Attachment attachment) {
+        AttachmentId id = attachment.getId();
+        Preconditions.checkNotNull(id);
+        if (attachmentsById.containsKey(id)) {
+            attachmentsById.remove(attachment);
+        }
+        attachmentsById.put(id, attachment);
+    }
+
+    @Override
+    public void delete(AttachmentId blobId) {
+        Preconditions.checkNotNull(blobId);
+        if (attachmentsById.containsKey(blobId)) {
+            attachmentsById.remove(blobId);
+        }
+    }
+}

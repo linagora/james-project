@@ -72,7 +72,8 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
     enum Capabilities {
         Basic,
         Move,
-        UserFlags
+        UserFlags,
+        AttachmentStore
     }
 
     List<Capabilities> getSupportedCapabilities();

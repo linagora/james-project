@@ -28,10 +28,10 @@ import javax.inject.Inject;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.elasticsearch.ElasticSearchIndexer;
-import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
 import org.apache.james.mailbox.elasticsearch.json.MessageToElasticSearchJson;
 import org.apache.james.mailbox.elasticsearch.search.ElasticSearchSearcher;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.message.json.JsonMessageConstants;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;

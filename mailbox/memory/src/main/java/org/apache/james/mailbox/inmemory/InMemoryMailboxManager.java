@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.inmemory;
 
 import java.util.List;
+
 import javax.inject.Inject;
 
 import org.apache.james.mailbox.MailboxPathLocker;
@@ -44,7 +45,7 @@ public class InMemoryMailboxManager extends StoreMailboxManager<InMemoryId> {
 
     @Override
     public List<Capabilities> getSupportedCapabilities() {
-        return Lists.newArrayList(Capabilities.Basic, Capabilities.Move, Capabilities.UserFlags);
+        return Lists.newArrayList(Capabilities.Basic, Capabilities.Move, Capabilities.UserFlags, Capabilities.AttachmentStore);
     }
 
     @Override

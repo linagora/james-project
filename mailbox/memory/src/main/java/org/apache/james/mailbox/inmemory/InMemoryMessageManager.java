@@ -7,10 +7,12 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.inmemory.mail.InMemoryAttachmentMapper;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.StoreMessageManager;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
@@ -26,5 +28,10 @@ public class InMemoryMessageManager extends StoreMessageManager<InMemoryId> {
         Flags permanentFlags = new Flags(super.getPermanentFlags(session));
         permanentFlags.add(Flags.Flag.USER);
         return permanentFlags;
+    }
+
+    @Override
+    protected AttachmentMapper getAttachmentMapper(MailboxSession session) {
+        return new InMemoryAttachmentMapper();
     }
 }

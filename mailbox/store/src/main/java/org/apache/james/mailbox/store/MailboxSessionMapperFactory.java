@@ -22,6 +22,8 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.RequestAware;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageMapper;
@@ -35,13 +37,12 @@ import org.apache.james.mailbox.store.user.SubscriptionMapperFactory;
  * Maintain mapper instances by {@link MailboxSession}. So only one mapper instance is used
  * in a {@link MailboxSession}
  */
-public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implements RequestAware, MailboxMapperFactory<Id>, MessageMapperFactory<Id>, SubscriptionMapperFactory{
+public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implements RequestAware, MailboxMapperFactory<Id>, MessageMapperFactory<Id>, SubscriptionMapperFactory, AttachmentMapperFactory {
 
     protected final static String MESSAGEMAPPER ="MESSAGEMAPPER";
     protected final static String MAILBOXMAPPER ="MAILBOXMAPPER";
     protected final static String SUBSCRIPTIONMAPPER ="SUBSCRIPTIONMAPPER";
-    
-    
+    protected final static String ATTACHMENT_MAPPER ="ATTACHMENT_MAPPER";
     
     /**
      * @see org.apache.james.mailbox.store.mail.MessageMapperFactory#getMessageMapper(MailboxSession)
@@ -64,6 +65,8 @@ public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implemen
      * @throws MailboxException
      */
     public abstract MessageMapper<Id> createMessageMapper(MailboxSession session) throws MailboxException;
+
+    public abstract AttachmentMapper createAttachmentMapper();
 
 
     /**
@@ -139,5 +142,13 @@ public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implemen
         
     }
 
-    
+    @Override
+    public AttachmentMapper getAttachmentMapper(MailboxSession session) {
+        AttachmentMapper mapper = (AttachmentMapper) session.getAttributes().get(ATTACHMENT_MAPPER);
+        if (mapper == null) {
+            mapper = createAttachmentMapper();
+            session.getAttributes().put(ATTACHMENT_MAPPER, mapper);
+        }
+        return mapper;
+    }
 }

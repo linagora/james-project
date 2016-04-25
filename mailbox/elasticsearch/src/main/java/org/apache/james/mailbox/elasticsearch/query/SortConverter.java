@@ -20,7 +20,7 @@
 package org.apache.james.mailbox.elasticsearch.query;
 
 import org.apache.james.mailbox.elasticsearch.NodeMappingFactory;
-import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
+import org.apache.james.mailbox.message.json.JsonMessageConstants;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;

@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -38,6 +39,7 @@ import javax.mail.util.SharedFileInputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.TeeInputStream;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
@@ -49,6 +51,7 @@ import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.ReadOnlyException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
+import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MessageMetaData;
@@ -61,13 +64,17 @@ import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
+import org.apache.james.mailbox.store.mail.model.Attachment;
+import org.apache.james.mailbox.store.mail.model.AttachmentBlobId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleAttachment;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.quota.QuotaChecker;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
@@ -373,6 +380,8 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
 
             final MailboxMessage<Id> message = createMessage(internalDate, size, bodyStartOctet, contentIn, flags, propertyBuilder);
 
+            final Iterable<Content> attachments = extractMessageAttachments(message);
+
             new QuotaChecker<Id>(quotaManager, quotaRootResolver, mailbox).tryAddition(1, size);
 
             return locker.executeWithLock(mailboxSession, new StoreMailboxPath<Id>(getMailboxEntity()), new MailboxPathLocker.LockAwareExecution<Long>() {
@@ -380,6 +389,7 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
                 @Override
                 public Long execute() throws MailboxException {
                     MessageMetaData data = appendMessageToStore(message, mailboxSession);
+                    addAttachmentsToStore(attachments, mailboxSession);
 
                     SortedMap<Long, MessageMetaData> uids = new TreeMap<Long, MessageMetaData>();
                     uids.put(data.getUid(), data);
@@ -408,6 +418,18 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
             }
         }
 
+    }
+
+    protected void addAttachmentsToStore(Iterable<Content> attachments, MailboxSession mailboxSession) {
+        AttachmentMapper attachmentMapper = getAttachmentMapper(mailboxSession);
+        for (Content attachment : attachments) {
+            Attachment newAttachment = new SimpleAttachment(AttachmentBlobId.getNewId(), attachment);
+            attachmentMapper.put(newAttachment);
+        }
+    }
+
+    protected Iterable<Content> extractMessageAttachments(MailboxMessage<Id> message) {
+        return new LinkedList<Content>();
     }
 
     /**
@@ -617,6 +639,10 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
             }
 
         });
+    }
+
+    protected AttachmentMapper getAttachmentMapper(MailboxSession session) {
+        throw new NotImplementedException("getAttachmentMapper is not implemented! ");
     }
 
     /**
