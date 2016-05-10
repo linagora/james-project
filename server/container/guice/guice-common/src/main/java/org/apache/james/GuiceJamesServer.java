@@ -18,10 +18,14 @@
  ****************************************************************/
 package org.apache.james;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import javax.annotation.PreDestroy;
 
+import org.apache.james.domainlist.api.DomainList;
+import org.apache.james.domainlist.api.DomainListException;
 import org.apache.james.jmap.JMAPServer;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.modules.CommonServicesModule;
@@ -32,6 +36,8 @@ import org.apache.james.utils.ExtendedServerProbe;
 import org.apache.james.utils.GuiceGenericType;
 import org.apache.james.utils.GuiceServerProbe;
 import org.apache.onami.lifecycle.core.Stager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
 import com.google.inject.Guice;
@@ -42,6 +48,8 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 
 public class GuiceJamesServer<Id extends MailboxId> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GuiceJamesServer.class);
 
     private final TypeLiteral<Id> type;
     private final Module module;
@@ -78,6 +86,20 @@ public class GuiceJamesServer<Id extends MailboxId> {
         preDestroy = injector.getInstance(Key.get(new TypeLiteral<Stager<PreDestroy>>() {}));
         serverProbe = injector.getInstance(Key.get(guiceGenericType.newGenericType(GuiceServerProbe.class)));
         jmapPort = injector.getInstance(JMAPServer.class).getPort();
+        createDefaultDomainIfNone(injector.getInstance(DomainList.class));
+    }
+
+    private void createDefaultDomainIfNone(DomainList domainList) {
+        try {
+            String hostName = InetAddress.getLocalHost().getHostName();
+            if (!domainList.containsDomain(hostName)) {
+                domainList.createDefaultDomain(hostName);
+            }
+        } catch (UnknownHostException e) {
+            LOGGER.warn("Unable to retrieve hostname.", e);
+        } catch (DomainListException e) {
+            LOGGER.error("An error occured while creating the default domain", e);
+        }
     }
 
     public void stop() {

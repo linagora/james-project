@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.dnsservice.api.mock.MockDNSService;
 import org.apache.james.domainlist.api.DomainList;
@@ -80,14 +81,14 @@ public abstract class AbstractDomainListTest {
 
     @Test
     public void listDomainsShouldReturnNullWhenThereIsNoDomains() throws DomainListException {
-        assertThat(domainList.getDomains()).isNull();
+        assertThat(domainList.getDomains()).isEmpty();
     }
 
     @Test
     public void testAddRemoveContainsSameDomain() throws DomainListException {
         domainList.addDomain(DOMAIN_1);
         domainList.removeDomain(DOMAIN_1);
-        assertThat(domainList.getDomains()).isNull();
+        assertThat(domainList.getDomains()).isEmpty();
     }
 
     @Test(expected = DomainListException.class)
@@ -137,6 +138,35 @@ public abstract class AbstractDomainListTest {
         assertThat(domainList.containsDomain(DOMAIN_UPPER_5)).isFalse();
     }
 
+    @Test
+    public void createDefaultDomainShouldSetDefaultDomain() throws Exception {
+        String defaultDomain = "myDomain.org";
+        domainList.createDefaultDomain(defaultDomain);
+
+        assertThat(domainList.getDefaultDomain()).isEqualTo(defaultDomain);
+    }
+
+    @Test
+    public void createDefaultDomainShouldCreateDomain() throws Exception {
+        String defaultDomain = "myDomain.org";
+        domainList.createDefaultDomain(defaultDomain);
+
+        assertThat(domainList.containsDomain(defaultDomain)).isTrue();
+    }
+
+    @Test
+    public void defaultDomainShouldNotBeSetWhenDifferentFromLocalhost() throws Exception {
+        String defaultDomain = "myDomain.org";
+        domainList.createDefaultDomain(defaultDomain);
+
+        try {
+            domainList.createDefaultDomain("myOtherDomain.org");
+            fail("Default domain has been changed");
+        } catch (DomainListException e) {
+            assertThat(e.getMessage()).isEqualTo("Default domain already set.");
+        }
+    }
+
     @Test(expected = DomainListException.class)
     public void addDomainShouldThrowIfWeAddTwoTimesTheSameDomain() throws DomainListException {
         try {
@@ -155,12 +185,10 @@ public abstract class AbstractDomainListTest {
     /**
      * Delete all possible domains from database.
      */
-    private void deleteAll() {
-        deleteWithoutError(DOMAIN_1);
-        deleteWithoutError(DOMAIN_2);
-        deleteWithoutError(DOMAIN_3);
-        deleteWithoutError(DOMAIN_4);
-        deleteWithoutError(DOMAIN_5);
+    private void deleteAll() throws DomainListException {
+        for (String domain : domainList.getDomains()) {
+            deleteWithoutError(domain);
+        }
     }
 
     private void deleteWithoutError(String domain) {

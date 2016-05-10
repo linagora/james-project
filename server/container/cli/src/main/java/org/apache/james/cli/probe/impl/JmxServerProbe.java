@@ -20,6 +20,7 @@ package org.apache.james.cli.probe.impl;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import javax.management.MBeanServerConnection;
@@ -167,6 +168,11 @@ public class JmxServerProbe implements ServerProbe {
     }
 
     @Override
+    public String getDefaultDomain() throws Exception {
+        return domainListProcxy.getDefaultDomain();
+    }
+
+    @Override
     public void addDomain(String domain) throws Exception {
         domainListProcxy.addDomain(domain);
     }
@@ -177,7 +183,7 @@ public class JmxServerProbe implements ServerProbe {
     }
 
     @Override
-    public String[] listDomains() throws Exception {
+    public List<String> listDomains() throws Exception {
         return domainListProcxy.getDomains();
     }
 

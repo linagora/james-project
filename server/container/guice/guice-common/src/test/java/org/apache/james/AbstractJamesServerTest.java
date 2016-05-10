@@ -24,6 +24,7 @@ import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -64,6 +65,13 @@ public abstract class AbstractJamesServerTest<Id extends MailboxId> {
     @After
     public void tearDown() throws Exception {
         server.stop();
+    }
+
+    @Test
+    public void hostnameShouldBeUsedAsDefaultDomain() throws Exception {
+        String expectedDefaultDomain = InetAddress.getLocalHost().getHostName();
+
+        assertThat(server.serverProbe().getDefaultDomain()).isEqualTo(expectedDefaultDomain);
     }
 
     @Test

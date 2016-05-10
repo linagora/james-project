@@ -30,6 +30,7 @@ import org.apache.james.domainlist.api.DomainListException;
 public class SimpleDomainList implements DomainList {
 
     private final List<String> domains = new LinkedList<String>();
+    private String defaultDomain = "localhost";
 
     @Override
     public boolean containsDomain(String domain) throws DomainListException {
@@ -37,8 +38,8 @@ public class SimpleDomainList implements DomainList {
     }
 
     @Override
-    public String[] getDomains() throws DomainListException {
-        return domains.toArray(new String[domains.size()]);
+    public List<String> getDomains() throws DomainListException {
+        return domains;
     }
 
     @Override
@@ -58,6 +59,12 @@ public class SimpleDomainList implements DomainList {
 
     @Override
     public String getDefaultDomain() {
-        return "localhost";
+        return defaultDomain;
+    }
+
+    @Override
+    public void createDefaultDomain(String defaultDomain) throws DomainListException {
+        addDomain(defaultDomain);
+        this.defaultDomain = defaultDomain;
     }
 }

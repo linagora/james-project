@@ -36,11 +36,16 @@ import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.slf4j.Logger;
 
+import com.google.common.base.Strings;
+
 /**
  * All implementations of the DomainList interface should extends this abstract
  * class
  */
 public abstract class AbstractDomainList implements DomainList, LogEnabled, Configurable {
+
+    private static final String LOCALHOST = "localhost";
+
     private DNSService dns;
     private boolean autoDetect = true;
     private boolean autoDetectIP = true;
@@ -62,7 +67,7 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
 
     @Override
     public void configure(HierarchicalConfiguration config) throws ConfigurationException {
-        defaultDomain = config.getString("defaultDomain", "localhost");
+        defaultDomain = config.getString("defaultDomain", LOCALHOST);
 
         setAutoDetect(config.getBoolean("autodetect", true));
         setAutoDetectIP(config.getBoolean("autodetectIP", true));
@@ -78,7 +83,21 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
     }
 
     @Override
-    public String[] getDomains() throws DomainListException {
+    public void createDefaultDomain(String defaultDomain) throws DomainListException {
+        if (mayChangeDefaultDomain()) {
+            throw new DomainListException("Default domain already set.");
+        }
+        addDomain(defaultDomain);
+        this.defaultDomain = defaultDomain;
+    }
+
+    private boolean mayChangeDefaultDomain() {
+        return !Strings.isNullOrEmpty(this.defaultDomain)
+                && !LOCALHOST.equals(this.defaultDomain);
+    }
+
+    @Override
+    public List<String> getDomains() throws DomainListException {
         List<String> domains = getDomainListInternal();
         if (domains != null) {
 
@@ -86,12 +105,12 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
             try {
                 hostName = getDNSServer().getHostName(getDNSServer().getLocalHost());
             } catch (UnknownHostException ue) {
-                hostName = "localhost";
+                hostName = LOCALHOST;
             }
 
             getLogger().info("Local host is: " + hostName);
 
-            if (autoDetect && (!hostName.equals("localhost"))) {
+            if (autoDetect && (!hostName.equals(LOCALHOST))) {
                 domains.add(hostName.toLowerCase(Locale.US));
             }
 
@@ -104,14 +123,8 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
                     getLogger().debug("Handling mail for: " + domain);
                 }
             }
-            if (domains.isEmpty()) {
-                return null;
-            } else {
-                return domains.toArray(new String[domains.size()]);
-            }
-        } else {
-            return null;
         }
+        return domains;
     }
 
     /**
