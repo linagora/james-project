@@ -37,8 +37,8 @@ public class SimpleDomainList implements DomainList {
     }
 
     @Override
-    public String[] getDomains() throws DomainListException {
-        return domains.toArray(new String[domains.size()]);
+    public List<String> getDomains() throws DomainListException {
+        return domains;
     }
 
     @Override

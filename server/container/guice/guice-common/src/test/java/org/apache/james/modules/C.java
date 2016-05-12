@@ -17,31 +17,8 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.modules;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.mailbox.inmemory.InMemoryId;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+public class C {
 
-import com.google.inject.TypeLiteral;
-
-public class MemoryJamesServerTest extends AbstractJamesServerTest<InMemoryId> {
-
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Override
-    protected GuiceJamesServer<InMemoryId> createJamesServer() {
-        return new GuiceJamesServer<>(new TypeLiteral<InMemoryId>(){})
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT));
-    }
-
-    @Override
-    protected void clean() {
-    }
 }

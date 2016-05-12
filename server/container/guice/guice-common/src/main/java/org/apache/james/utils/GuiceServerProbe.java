@@ -119,12 +119,17 @@ public class GuiceServerProbe<Id extends MailboxId> implements ExtendedServerPro
     }
 
     @Override
+    public String getDefaultDomain() throws Exception {
+        return domainList.getDefaultDomain();
+    }
+
+    @Override
     public void removeDomain(String domain) throws Exception {
         domainList.removeDomain(domain);
     }
 
     @Override
-    public String[] listDomains() throws Exception {
+    public List<String> listDomains() throws Exception {
         return domainList.getDomains();
     }
 

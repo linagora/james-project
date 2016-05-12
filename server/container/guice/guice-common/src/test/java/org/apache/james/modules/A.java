@@ -17,31 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.modules;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.mailbox.inmemory.InMemoryId;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import javax.inject.Inject;
 
-import com.google.inject.TypeLiteral;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.lifecycle.api.Configurable;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest<InMemoryId> {
+public class A implements Configurable {
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @SuppressWarnings("unused")
+    private final C c;
+    private boolean configured;
 
-    @Override
-    protected GuiceJamesServer<InMemoryId> createJamesServer() {
-        return new GuiceJamesServer<>(new TypeLiteral<InMemoryId>(){})
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT));
+    @Inject
+    private A(C c) {
+        this.c = c;
+        this.configured = false;
     }
 
     @Override
-    protected void clean() {
+    public void configure(HierarchicalConfiguration config) throws ConfigurationException {
+        configured = true;
+    }
+
+    public boolean isConfigured() {
+        return configured;
     }
 }

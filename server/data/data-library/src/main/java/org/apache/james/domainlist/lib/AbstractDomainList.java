@@ -35,12 +35,21 @@ import org.apache.james.domainlist.api.DomainListException;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
 /**
  * All implementations of the DomainList interface should extends this abstract
  * class
  */
 public abstract class AbstractDomainList implements DomainList, LogEnabled, Configurable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDomainList.class);
+
+    protected static final String LOCALHOST = "localhost";
+
     private DNSService dns;
     private boolean autoDetect = true;
     private boolean autoDetectIP = true;
@@ -62,10 +71,38 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
 
     @Override
     public void configure(HierarchicalConfiguration config) throws ConfigurationException {
-        defaultDomain = config.getString("defaultDomain", "localhost");
+        setDefaultDomain(config);
 
         setAutoDetect(config.getBoolean("autodetect", true));
         setAutoDetectIP(config.getBoolean("autodetectIP", true));
+    }
+
+    @VisibleForTesting void setDefaultDomain(HierarchicalConfiguration config) throws ConfigurationException {
+        
+        try {
+            defaultDomain = config.getString("defaultDomain", LOCALHOST);
+
+            String hostName = InetAddress.getLocalHost().getHostName();
+            if (mayChangeDefaultDomain()) {
+                setDefaultDomain(hostName);
+            }
+        } catch (UnknownHostException e) {
+            LOGGER.warn("Unable to retrieve hostname.", e);
+        } catch (DomainListException e) {
+            LOGGER.error("An error occured while creating the default domain", e);
+        }
+    }
+
+    private boolean mayChangeDefaultDomain() {
+        return !Strings.isNullOrEmpty(defaultDomain)
+                && LOCALHOST.equals(defaultDomain);
+    }
+
+    private void setDefaultDomain(String defaultDomain) throws DomainListException {
+        if (!containsDomain(defaultDomain)) {
+            addDomain(defaultDomain);
+        }
+        this.defaultDomain = defaultDomain;
     }
 
     @Override
@@ -78,7 +115,7 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
     }
 
     @Override
-    public String[] getDomains() throws DomainListException {
+    public List<String> getDomains() throws DomainListException {
         List<String> domains = getDomainListInternal();
         if (domains != null) {
 
@@ -104,14 +141,8 @@ public abstract class AbstractDomainList implements DomainList, LogEnabled, Conf
                     getLogger().debug("Handling mail for: " + domain);
                 }
             }
-            if (domains.isEmpty()) {
-                return null;
-            } else {
-                return domains.toArray(new String[domains.size()]);
-            }
-        } else {
-            return null;
         }
+        return domains;
     }
 
     /**

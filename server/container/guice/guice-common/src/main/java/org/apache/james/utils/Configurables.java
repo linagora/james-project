@@ -17,31 +17,28 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.utils;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.mailbox.inmemory.InMemoryId;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import java.util.Set;
 
-import com.google.inject.TypeLiteral;
+import org.apache.james.lifecycle.api.Configurable;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest<InMemoryId> {
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+public class Configurables {
 
-    @Override
-    protected GuiceJamesServer<InMemoryId> createJamesServer() {
-        return new GuiceJamesServer<>(new TypeLiteral<InMemoryId>(){})
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT));
+    private final Set<Class<? extends Configurable>> configurables;
+
+    public Configurables() {
+        this.configurables = Sets.newLinkedHashSet();
     }
 
-    @Override
-    protected void clean() {
+    public void add(Class<? extends Configurable> configurable) {
+        configurables.add(configurable);
+    }
+
+    public Set<Class<? extends Configurable>> get() {
+        return ImmutableSet.copyOf(configurables);
     }
 }

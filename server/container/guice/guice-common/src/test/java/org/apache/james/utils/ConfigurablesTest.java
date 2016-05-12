@@ -19,14 +19,51 @@
 
 package org.apache.james.utils;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.lifecycle.api.Configurable;
+import org.junit.Before;
+import org.junit.Test;
 
-public interface ConfigurationPerformer {
+public class ConfigurablesTest {
 
-    void initModule();
+    private Configurables sut;
 
-    List<Class<? extends Configurable>> forClasses();
+    @Before
+    public void setup() {
+        sut = new Configurables();
+    }
 
+    @Test
+    public void addShouldNotStoreTwoTimesWhenSameConfigurable() {
+        sut.add(MyConfigurable.class);
+        sut.add(MyConfigurable.class);
+
+        assertThat(sut.get()).hasSize(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void configurablesShouldKeepTheAddedElementsOrder() {
+        sut.add(MyConfigurable.class);
+        sut.add(MyConfigurable2.class);
+
+        assertThat(sut.get()).containsExactly(MyConfigurable.class, MyConfigurable2.class);
+    }
+
+    private static class MyConfigurable implements Configurable {
+
+        @Override
+        public void configure(HierarchicalConfiguration config) throws ConfigurationException {
+        }
+    }
+
+    private static class MyConfigurable2 implements Configurable {
+
+        @Override
+        public void configure(HierarchicalConfiguration config) throws ConfigurationException {
+        }
+    }
 }

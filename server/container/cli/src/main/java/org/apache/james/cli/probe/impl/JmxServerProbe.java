@@ -20,6 +20,7 @@ package org.apache.james.cli.probe.impl;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import javax.management.MBeanServerConnection;
@@ -57,7 +58,7 @@ public class JmxServerProbe implements ServerProbe {
 
     private JMXConnector jmxc;
     
-    private DomainListManagementMBean domainListProcxy;
+    private DomainListManagementMBean domainListProxy;
     private RecipientRewriteTableManagementMBean virtualUserTableProxy;
     private UsersRepositoryManagementMBean usersRepositoryProxy;
     private MailboxCopierManagementMBean mailboxCopierManagement;
@@ -108,7 +109,7 @@ public class JmxServerProbe implements ServerProbe {
         
         try {
             ObjectName name = new ObjectName(DOMAINLIST_OBJECT_NAME);
-            domainListProcxy = MBeanServerInvocationHandler.newProxyInstance(
+            domainListProxy = MBeanServerInvocationHandler.newProxyInstance(
                     mbeanServerConn, name, DomainListManagementMBean.class, true);
             name = new ObjectName(VIRTUALUSERTABLE_OBJECT_NAME);
             virtualUserTableProxy = MBeanServerInvocationHandler
@@ -163,22 +164,27 @@ public class JmxServerProbe implements ServerProbe {
 
     @Override
     public boolean containsDomain(String domain) throws Exception {
-        return domainListProcxy.containsDomain(domain);
+        return domainListProxy.containsDomain(domain);
+    }
+
+    @Override
+    public String getDefaultDomain() throws Exception {
+        return domainListProxy.getDefaultDomain();
     }
 
     @Override
     public void addDomain(String domain) throws Exception {
-        domainListProcxy.addDomain(domain);
+        domainListProxy.addDomain(domain);
     }
 
     @Override
     public void removeDomain(String domain) throws Exception {
-        domainListProcxy.removeDomain(domain);
+        domainListProxy.removeDomain(domain);
     }
 
     @Override
-    public String[] listDomains() throws Exception {
-        return domainListProcxy.getDomains();
+    public List<String> listDomains() throws Exception {
+        return domainListProxy.getDomains();
     }
 
     @Override
