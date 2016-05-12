@@ -93,7 +93,7 @@ public class CassandraVacationDAO {
     private Optional<ZonedDateTime> retrieveDate(Row row, String dateField) {
         return Optional.ofNullable(row.getUDTValue(dateField))
             .map(udtValue -> ZonedDateTimeRepresentation.fromDate(
-                udtValue.getDate(CassandraZonedDateTimeModule.DATE),
+                udtValue.getTimestamp(CassandraZonedDateTimeModule.DATE),
                 udtValue.getString(CassandraZonedDateTimeModule.TIME_ZONE))
                 .getZonedDateTime());
     }
@@ -101,7 +101,7 @@ public class CassandraVacationDAO {
     private UDTValue convertToUDTValue(Optional<ZonedDateTime> zonedDateTimeOptional) {
         return zonedDateTimeOptional.map(ZonedDateTimeRepresentation::fromZonedDateTime)
             .map(representation -> zonedDateTimeUserType.newValue()
-                .setDate(CassandraZonedDateTimeModule.DATE, representation.getDate())
+                .setTimestamp(CassandraZonedDateTimeModule.DATE, representation.getDate())
                 .setString(CassandraZonedDateTimeModule.TIME_ZONE, representation.getSerializedZoneId()))
             .orElse(null);
     }
