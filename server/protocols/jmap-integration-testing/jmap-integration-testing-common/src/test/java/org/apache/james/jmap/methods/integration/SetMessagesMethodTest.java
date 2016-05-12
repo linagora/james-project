@@ -59,6 +59,7 @@ import com.google.common.base.Charsets;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
 import com.jayway.awaitility.core.ConditionFactory;
+import com.jayway.awaitility.core.ConditionTimeoutException;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.ResponseSpecBuilder;
 import com.jayway.restassured.http.ContentType;
@@ -1344,6 +1345,60 @@ public abstract class SetMessagesMethodTest {
         // Then
         calmlyAwait.atMost(10, TimeUnit.SECONDS).until( () -> isHtmlMessageReceived(recipientToken));
     }
+
+
+    @Test(expected = ConditionTimeoutException.class)
+    public void setMessagesWhenSavingToDraftsShouldNotSendMessage() throws Exception {
+        // Sender
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "drafts");
+        // Recipient
+        String recipientAddress = "recipient" + "@" + USERS_DOMAIN;
+        String password = "password";
+        jmapServer.serverProbe().addUser(recipientAddress, password);
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, recipientAddress, "inbox");
+        await();
+        AccessToken recipientToken = JmapAuthentication.authenticateJamesUser(recipientAddress, password);
+
+        String draftsMailboxId = getAllMailboxesIds(accessToken).stream()
+                .filter(x -> x.get("role").equals("drafts"))
+                .map(x -> x.get("id"))
+                .findFirst().get();
+
+        String messageCreationId = "user|inbox|1";
+        String fromAddress = username;
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"" + recipientAddress + "\"}]," +
+                "        \"cc\": [{ \"name\": \"ALICE\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + draftsMailboxId + "\"]" +
+                "        \"isDraft\": false" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        // Given
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", this.accessToken.serialize())
+                .body(requestBody)
+        // When
+                .when()
+                .post("/jmap");
+
+        // Then
+        calmlyAwait.atMost(3, TimeUnit.SECONDS).until( () -> isAnyMessageFoundInRecipientsMailboxes(recipientToken));
+    }
+
 
     private boolean isHtmlMessageReceived(AccessToken recipientToken) {
         try {

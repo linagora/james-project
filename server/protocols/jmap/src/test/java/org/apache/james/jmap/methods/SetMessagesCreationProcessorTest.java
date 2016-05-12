@@ -21,105 +21,94 @@ package org.apache.james.jmap.methods;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import java.time.ZonedDateTime;
-import java.util.Optional;
-import java.util.function.Function;
 
 import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import org.apache.james.jmap.model.CreationMessageId;
-import org.apache.james.jmap.model.Message;
-import org.apache.james.jmap.model.MessageId;
+import org.apache.james.jmap.model.SetError;
 import org.apache.james.jmap.model.SetMessagesRequest;
 import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.jmap.send.MailFactory;
 import org.apache.james.jmap.send.MailMetadata;
 import org.apache.james.jmap.send.MailSpool;
+import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
+import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
-import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.mailet.Mail;
+import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
+@SuppressWarnings("unchecked")
 public class SetMessagesCreationProcessorTest {
 
-    private static final Message FAKE_MESSAGE = Message.builder()
-            .id(MessageId.of("user|outbox|1"))
-            .blobId("anything")
-            .threadId("anything")
-            .mailboxIds(ImmutableList.of("mailboxId"))
-            .headers(ImmutableMap.of())
-            .subject("anything")
-            .size(0)
-            .date(ZonedDateTime.now())
-            .preview("anything")
-            .build();
+    private static final String OUTBOX_ID = "1";
+    private static final long DRAFTS_ID = 2;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesCreationProcessorTest.class);
+
+    private MessageMapper<InMemoryId> mockMapper;
+    private MailboxSessionMapperFactory<InMemoryId> stubSessionMapperFactory;
+    private MailSpool mockedMailSpool;
+    private MailFactory<InMemoryId> mockedMailFactory;
+    private MailboxManager inMemoryMailboxManager;
+    private MailboxSession inMemoryMailboxSession;
+    private InMemoryMailboxSessionMapperFactory inMemoryMailboxMapperFactory;
+    private InMemoryIntegrationResources inMemoryIntegrationResources;
+
+    @Before
+    @SuppressWarnings("unchecked")
+    public void setUp() throws Exception {
+        mockMapper = mock(MessageMapper.class);
+        stubSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
+        when(stubSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
+                .thenReturn(mockMapper);
+        mockedMailSpool = mock(MailSpool.class);
+        mockedMailFactory = mock(MailFactory.class);
+
+        inMemoryIntegrationResources = new InMemoryIntegrationResources();
+        inMemoryMailboxManager = inMemoryIntegrationResources.createMailboxManager(inMemoryIntegrationResources.createGroupMembershipResolver());
+        inMemoryMailboxSession = inMemoryMailboxManager.login("user@domain.org", "pass", LOGGER);
+        inMemoryMailboxManager.createMailbox(new MailboxPath("#private", "user@domain.org", "outbox"), inMemoryMailboxSession);
+        inMemoryMailboxManager.createMailbox(new MailboxPath("#private", "user@domain.org", "drafts"), inMemoryMailboxSession);
+        inMemoryMailboxMapperFactory = new InMemoryMailboxSessionMapperFactory();
+    }
 
     @Test
     public void processShouldReturnEmptyCreatedWhenRequestHasEmptyCreate() {
-        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null, null, null, null, null) {
-            @Override
-            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
-                @SuppressWarnings("unchecked")
-				Mailbox<TestId> fakeOutbox = (Mailbox<TestId>) mock(Mailbox.class);
-                when(fakeOutbox.getName()).thenReturn("outbox");
-                return Optional.of(fakeOutbox);
-            }
-        };
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager, null, null, null, null);
         SetMessagesRequest requestWithEmptyCreate = SetMessagesRequest.builder().build();
 
-        SetMessagesResponse result = sut.process(requestWithEmptyCreate, buildStubbedSession());
+        SetMessagesResponse result = sut.process(requestWithEmptyCreate, inMemoryMailboxSession);
 
         assertThat(result.getCreated()).isEmpty();
         assertThat(result.getNotCreated()).isEmpty();
     }
 
-    private MailboxSession buildStubbedSession() {
-        MailboxSession.User stubUser = mock(MailboxSession.User.class);
-        when(stubUser.getUserName()).thenReturn("user");
-        MailboxSession stubSession = mock(MailboxSession.class);
-        when(stubSession.getPathDelimiter()).thenReturn('.');
-        when(stubSession.getUser()).thenReturn(stubUser);
-        when(stubSession.getPersonalSpace()).thenReturn("#private");
-        return stubSession;
-    }
-
     @Test
-    @SuppressWarnings("unchecked")
     public void processShouldReturnNonEmptyCreatedWhenRequestHasNonEmptyCreate() throws MailboxException {
         // Given
-        MessageMapper<TestId> stubMapper = mock(MessageMapper.class);
-        MailboxSessionMapperFactory<TestId> mockSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
-        when(mockSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
-                .thenReturn(stubMapper);
-
-        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null, mockSessionMapperFactory, null, null, null) {
-            @Override
-            protected MessageWithId<Message> createMessageInOutboxAndSend(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session, Mailbox<TestId> outbox, Function<Long, MessageId> buildMessageIdFromUid) {
-                return new MessageWithId<>(createdEntry.getCreationId(), FAKE_MESSAGE);
-            }
-            @Override
-            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
-                Mailbox<TestId> fakeOutbox = mock(Mailbox.class);
-                when(fakeOutbox.getName()).thenReturn("outbox");
-                return Optional.of(fakeOutbox);
-            }
-        };
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager, stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory);
         // When
-        SetMessagesResponse result = sut.process(buildFakeCreationRequest(), buildStubbedSession());
+        SetMessagesResponse result = sut.process(buildFakeCreationRequest(), inMemoryMailboxSession);
 
         // Then
         assertThat(result.getCreated()).isNotEmpty();
@@ -127,73 +116,35 @@ public class SetMessagesCreationProcessorTest {
     }
 
     @Test(expected = MailboxRoleNotFoundException.class)
-    public void processShouldThrowWhenOutboxNotFound() {
+    public void processShouldThrowWhenOutboxNotFound() throws Exception {
         // Given
-        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null, null, null, null, null) {
-            @Override
-            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
-                return Optional.empty();
-            }
-        };
+        MailboxManager mailboxManagerWithMissingOutbox = inMemoryIntegrationResources.createMailboxManager(inMemoryIntegrationResources.createGroupMembershipResolver());
+        inMemoryMailboxSession = mailboxManagerWithMissingOutbox .login("user@domain.org", "pass", LOGGER);
+        mailboxManagerWithMissingOutbox .createMailbox(new MailboxPath("#private", "user@domain.org", "drafts"), inMemoryMailboxSession);
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, mailboxManagerWithMissingOutbox, null, null, null, null);
         // When
-        sut.process(buildFakeCreationRequest(), null);
+        sut.process(buildFakeCreationRequest(), inMemoryMailboxSession);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void processShouldCallMessageMapperWhenRequestHasNonEmptyCreate() throws MailboxException {
         // Given
-        Mailbox<TestId> fakeOutbox = mock(Mailbox.class);
-        MessageMapper<TestId> mockMapper = mock(MessageMapper.class);
-        MailboxSessionMapperFactory<TestId> stubSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
-        when(stubSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
-                .thenReturn(mockMapper);
-        MailSpool mockedMailSpool = mock(MailSpool.class);
-        MailFactory<TestId> mockedMailFactory = mock(MailFactory.class);
-
-        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null,
-                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory) {
-            @Override
-            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
-                TestId stubMailboxId = mock(TestId.class);
-                when(stubMailboxId.serialize()).thenReturn("user|outbox|12345");
-                when(fakeOutbox.getMailboxId()).thenReturn(stubMailboxId);
-                when(fakeOutbox.getName()).thenReturn("outbox");
-                return Optional.of(fakeOutbox);
-            }
-        };
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager,
+                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory);
         // When
-        sut.process(buildFakeCreationRequest(), buildStubbedSession());
+        sut.process(buildFakeCreationRequest(), inMemoryMailboxSession);
 
         // Then
-        verify(mockMapper).add(eq(fakeOutbox), any(MailboxMessage.class));
+        verify(mockMapper).add(any(Mailbox.class), any(MailboxMessage.class));
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void processShouldSendMailWhenRequestHasNonEmptyCreate() throws Exception {
         // Given
-        Mailbox<TestId> fakeOutbox = mock(Mailbox.class);
-        MessageMapper<TestId> mockMapper = mock(MessageMapper.class);
-        MailboxSessionMapperFactory<TestId> stubSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
-        when(stubSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
-                .thenReturn(mockMapper);
-        MailSpool mockedMailSpool = mock(MailSpool.class);
-        MailFactory<TestId> mockedMailFactory = mock(MailFactory.class);
-
-        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null,
-                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory) {
-            @Override
-            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
-                TestId stubMailboxId = mock(TestId.class);
-                when(stubMailboxId.serialize()).thenReturn("user|outbox|12345");
-                when(fakeOutbox.getMailboxId()).thenReturn(stubMailboxId);
-                when(fakeOutbox.getName()).thenReturn("outbox");
-                return Optional.of(fakeOutbox);
-            }
-        };
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager,
+                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory);
         // When
-        sut.process(buildFakeCreationRequest(), buildStubbedSession());
+        sut.process(buildFakeCreationRequest(), inMemoryMailboxSession);
 
         // Then
         verify(mockedMailSpool).send(any(Mail.class), any(MailMetadata.class));
@@ -202,12 +153,76 @@ public class SetMessagesCreationProcessorTest {
     private SetMessagesRequest buildFakeCreationRequest() {
         return SetMessagesRequest.builder()
                 .create(ImmutableMap.of(CreationMessageId.of("anything-really"), CreationMessage.builder()
-                    .from(DraftEmailer.builder().name("alice").email("alice@example.com").build())
-                    .to(ImmutableList.of(DraftEmailer.builder().name("bob").email("bob@example.com").build()))
-                    .subject("Hey! ")
-                    .mailboxIds(ImmutableList.of("mailboxId"))
-                    .build()
+                        .from(DraftEmailer.builder().name("alice").email("alice@example.com").build())
+                        .to(ImmutableList.of(DraftEmailer.builder().name("bob").email("bob@example.com").build()))
+                        .subject("Hey! ")
+                        .mailboxIds(ImmutableList.of(OUTBOX_ID))
+                        .build()
                 ))
                 .build();
+    }
+
+    @Test
+    public void processShouldNotSpoolMailWhenNotSavingToOutbox() throws Exception {
+        // Given
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager,
+                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory);
+        // When
+        sut.process(buildCreationRequestNotForSending(), inMemoryMailboxSession);
+
+        // Then
+        verify(mockedMailSpool, never()).send(any(Mail.class), any(MailMetadata.class));
+    }
+
+    private SetMessagesRequest buildCreationRequestNotForSending() {
+        return SetMessagesRequest.builder()
+                .create(ImmutableMap.of(CreationMessageId.of("anything-really"), CreationMessage.builder()
+                        .from(DraftEmailer.builder().name("alice").email("alice@example.com").build())
+                        .to(ImmutableList.of(DraftEmailer.builder().name("bob").email("bob@example.com").build()))
+                        .subject("Hey! ")
+                        .mailboxIds(ImmutableList.of("any-id-but-outbox-id"))
+                        .build()
+                ))
+                .build();
+    }
+
+    @Test
+    public void processShouldReturnNotImplementedErrorWhenSavingToDrafts() {
+        // Given
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager,
+                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory);
+        // When
+        CreationMessageId creationMessageId = CreationMessageId.of("anything-really");
+        SetMessagesResponse actual = sut.process(buildSaveToDraftsRequest(InMemoryId.of(DRAFTS_ID), creationMessageId), inMemoryMailboxSession);
+
+        // Then
+        assertThat(actual.getNotCreated()).containsExactly(Maps.immutableEntry(creationMessageId, SetError.builder()
+                .type("error")
+                .description("Not yet implemented")
+                .build()));
+    }
+
+    private SetMessagesRequest buildSaveToDraftsRequest(InMemoryId draftsId, CreationMessageId creationMessageId) {
+        return SetMessagesRequest.builder()
+                .create(ImmutableMap.of(creationMessageId, CreationMessage.builder()
+                        .from(DraftEmailer.builder().name("alice").email("alice@example.com").build())
+                        .to(ImmutableList.of(DraftEmailer.builder().name("bob").email("bob@example.com").build()))
+                        .subject("Hey! ")
+                        .mailboxIds(ImmutableList.of(draftsId.serialize()))
+                        .build()
+                )).build();
+    }
+
+    @Test
+    public void processShouldNotSendWhenSavingToDrafts() throws Exception {
+        // Given
+        SetMessagesCreationProcessor<InMemoryId> sut = new SetMessagesCreationProcessor<>(inMemoryMailboxMapperFactory, inMemoryMailboxManager,
+                stubSessionMapperFactory, new MIMEMessageConverter(), mockedMailSpool, mockedMailFactory);
+        // When
+        CreationMessageId creationMessageId = CreationMessageId.of("anything-really");
+        sut.process(buildSaveToDraftsRequest(InMemoryId.of(DRAFTS_ID), creationMessageId), inMemoryMailboxSession);
+
+        // Then
+        verify(mockedMailSpool, never()).send(any(Mail.class), any(MailMetadata.class));
     }
 }

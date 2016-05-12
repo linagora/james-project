@@ -102,18 +102,26 @@ public class SetError {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof SetError) {
-            SetError other = (SetError) obj;
-            return Objects.equal(this.type, other.type)
-                && Objects.equal(this.description, other.description)
-                && Objects.equal(this.properties, other.properties);
-        }
-        return false;
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SetError setError = (SetError) o;
+        return Objects.equal(type, setError.type) &&
+                Objects.equal(description, setError.description) &&
+                Objects.equal(properties, setError.properties);
     }
 
     @Override
     public int hashCode() {
         return Objects.hashCode(type, description, properties);
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this)
+                .add("type", type)
+                .add("description", description)
+                .add("properties", properties)
+                .toString();
     }
 }
