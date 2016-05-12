@@ -31,15 +31,21 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
     private String user;
     private String name;
     private final long uidValidity;
+
     private MailboxACL acl = SimpleMailboxACL.EMPTY;
 
-    public SimpleMailbox(MailboxPath path, long uidValidity) {
+    public SimpleMailbox(MailboxPath path, long uidValidity, Id mailboxId) {
+        this.id = mailboxId;
         this.namespace = path.getNamespace();
         this.user = path.getUser();
         this.name = path.getName();
         this.uidValidity = uidValidity;
     }
-    
+
+    public SimpleMailbox(MailboxPath path, long uidValidity) {
+        this(path, uidValidity, null);
+    }
+
     public SimpleMailbox(Mailbox<Id> mailbox) {
         this.id = mailbox.getMailboxId();
         this.namespace = mailbox.getNamespace();
@@ -139,6 +145,7 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
         return result;
     }
 
+
     /**
      * @see java.lang.Object#toString()
      */
@@ -146,7 +153,6 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
     public String toString() {
         return namespace + ":" + user + ":" + name;
     }
-
 
     public void setMailboxId(Id id) {
         this.id = id;
@@ -167,5 +173,4 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
     public void setACL(MailboxACL acl) {
         this.acl = acl;
     }
-
 }

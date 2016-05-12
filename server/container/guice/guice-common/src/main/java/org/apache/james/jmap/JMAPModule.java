@@ -28,10 +28,13 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.jmap.methods.RequestHandler;
+import org.apache.james.jmap.utils.SystemMailboxesProvider;
+import org.apache.james.jmap.utils.SystemMailboxesProviderImpl;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
+import org.apache.james.utils.GuiceGenericType;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Preconditions;
@@ -45,9 +48,11 @@ import com.google.inject.multibindings.Multibinder;
 public class JMAPModule<Id extends MailboxId> extends AbstractModule {
     private static final int DEFAULT_JMAP_PORT = 80;
     private final TypeLiteral<Id> type;
+    private final GuiceGenericType<Id> guiceGenericType;
 
     public JMAPModule(TypeLiteral<Id> type) {
         this.type = type;
+        this.guiceGenericType = new GuiceGenericType<>(type);
     }
 
     @Override
@@ -55,6 +60,8 @@ public class JMAPModule<Id extends MailboxId> extends AbstractModule {
         install(new JMAPCommonModule());
         install(new MethodsModule<Id>(type));
         bind(RequestHandler.class).in(Singleton.class);
+        bind(guiceGenericType.newGenericType(SystemMailboxesProvider.class)).to(guiceGenericType.newGenericType(SystemMailboxesProviderImpl.class));
+
         Multibinder<ConfigurationPerformer> preconditions = Multibinder.newSetBinder(binder(), ConfigurationPerformer.class);
         preconditions.addBinding().to(MailetConfigurationPrecondition.class);
         preconditions.addBinding().to(MoveCapabilityPrecondition.class);

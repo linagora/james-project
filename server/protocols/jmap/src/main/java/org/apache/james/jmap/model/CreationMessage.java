@@ -22,10 +22,7 @@ package org.apache.james.jmap.model;
 import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
 
 import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.mail.internet.AddressException;
@@ -84,8 +81,12 @@ public class CreationMessage {
             headers = ImmutableMap.builder();
         }
 
-        public Builder mailboxIds(ImmutableList<String> mailboxIds) {
-            this.mailboxIds = mailboxIds;
+        public Builder mailboxId(String mailboxIds) {
+            return mailboxIds(Arrays.asList(mailboxIds));
+        }
+
+        public Builder mailboxIds(List<String> mailboxIds) {
+            this.mailboxIds = ImmutableList.copyOf(mailboxIds);
             return this;
         }
 

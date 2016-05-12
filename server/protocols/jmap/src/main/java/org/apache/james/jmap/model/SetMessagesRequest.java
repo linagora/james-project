@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.JmapRequest;
 import org.apache.james.jmap.methods.UpdateMessagePatchConverter;
 
@@ -34,7 +35,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.apache.commons.lang.NotImplementedException;
 
 @JsonDeserialize(builder = SetMessagesRequest.Builder.class)
 public class SetMessagesRequest implements JmapRequest {
@@ -70,6 +70,11 @@ public class SetMessagesRequest implements JmapRequest {
             if (ifInState != null) {
                 throw new NotImplementedException();
             }
+            return this;
+        }
+
+        public Builder create(CreationMessageId creationMessageId, CreationMessage creation) {
+            this.create.put(creationMessageId, creation);
             return this;
         }
 
