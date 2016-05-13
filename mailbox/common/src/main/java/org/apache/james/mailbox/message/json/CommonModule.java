@@ -17,46 +17,35 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.json;
+package org.apache.james.mailbox.message.json;
 
-import org.apache.james.mime4j.stream.Field;
-import org.apache.james.mime4j.util.ByteSequence;
+import org.apache.james.mailbox.message.EMailer;
+import org.apache.james.mailbox.message.IndexableMessage;
+import org.apache.james.mailbox.message.MessageUpdateJson;
+import org.apache.james.mailbox.message.MimePart;
 
-import java.util.Objects;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.core.json.PackageVersion;
+import com.fasterxml.jackson.databind.Module;
 
-public class FieldImpl implements Field {
-    private final String name;
-    private final String body;
+public class CommonModule extends Module {
 
-    public FieldImpl(String name, String body) {
-        this.name = name;
-        this.body = body;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public ByteSequence getRaw() {
-        return null;
+    @Override
+    public String getModuleName() {
+        return "CommonModule";
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(name, body);
+    public Version version() {
+        return PackageVersion.VERSION;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (o instanceof  FieldImpl) {
-            FieldImpl otherField = (FieldImpl) o;
-            return Objects.equals(name, otherField.name)
-                && Objects.equals(body, otherField.body);
-        }
-        return false;
+    public void setupModule(SetupContext context) {
+        context.setMixInAnnotations(EMailer.class, MixInEMailer.class);
+        context.setMixInAnnotations(MimePart.class, MixInMimePart.class);
+        context.setMixInAnnotations(IndexableMessage.class, MixInIndexableMessage.class);
+        context.setMixInAnnotations(MessageUpdateJson.class, MixInMessageUpdateJson.class);
     }
+
 }

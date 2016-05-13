@@ -17,11 +17,10 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.json;
+package org.apache.james.mailbox.message;
 
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 public class EMailer {
@@ -34,12 +33,10 @@ public class EMailer {
         this.address = address;
     }
 
-    @JsonProperty(JsonMessageConstants.EMailer.NAME)
     public String getName() {
         return name;
     }
 
-    @JsonProperty(JsonMessageConstants.EMailer.ADDRESS)
     public String getAddress() {
         return address;
     }

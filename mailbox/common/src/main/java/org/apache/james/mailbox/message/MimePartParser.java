@@ -17,9 +17,12 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
+package org.apache.james.mailbox.message;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.Deque;
+import java.util.LinkedList;
+
 import org.apache.james.mailbox.store.extractor.TextExtractor;
 import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mime4j.MimeException;
@@ -29,9 +32,7 @@ import org.apache.james.mime4j.stream.EntityState;
 import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.james.mime4j.stream.MimeTokenStream;
 
-import java.io.IOException;
-import java.util.Deque;
-import java.util.LinkedList;
+import com.google.common.base.Preconditions;
 
 public class MimePartParser {
 

@@ -17,23 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
-import org.apache.james.mailbox.store.search.SearchUtil;
-import org.apache.james.mime4j.dom.address.Address;
-import org.apache.james.mime4j.dom.address.Group;
-import org.apache.james.mime4j.dom.address.Mailbox;
-import org.apache.james.mime4j.field.address.LenientAddressParser;
-import org.apache.james.mime4j.stream.Field;
-import org.apache.james.mime4j.util.MimeUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package org.apache.james.mailbox.message;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +28,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.james.mailbox.store.search.SearchUtil;
+import org.apache.james.mime4j.dom.address.Address;
+import org.apache.james.mime4j.dom.address.Group;
+import org.apache.james.mime4j.dom.address.Mailbox;
+import org.apache.james.mime4j.field.address.LenientAddressParser;
+import org.apache.james.mime4j.stream.Field;
+import org.apache.james.mime4j.util.MimeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 
 public class HeaderCollection {
 

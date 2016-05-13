@@ -17,27 +17,26 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
+package org.apache.james.mailbox.message;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Multimap;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.james.mailbox.store.extractor.TextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mime4j.MimeException;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Multimap;
 
 public class IndexableMessage {
 
@@ -125,132 +124,106 @@ public class IndexableMessage {
     private List<MimePart> attachments;
     private Optional<String> bodyText;
 
-    @JsonProperty(JsonMessageConstants.ID)
     public Long getId() {
         return id;
     }
 
-    @JsonProperty(JsonMessageConstants.MAILBOX_ID)
     public String getMailboxId() {
         return mailboxId;
     }
 
-    @JsonProperty(JsonMessageConstants.MODSEQ)
     public long getModSeq() {
         return modSeq;
     }
 
-    @JsonProperty(JsonMessageConstants.SIZE)
     public long getSize() {
         return size;
     }
 
-    @JsonProperty(JsonMessageConstants.DATE)
     public String getDate() {
         return date;
     }
 
-    @JsonProperty(JsonMessageConstants.MEDIA_TYPE)
     public String getMediaType() {
         return mediaType;
     }
 
-    @JsonProperty(JsonMessageConstants.SUBTYPE)
     public String getSubType() {
         return subType;
     }
 
-    @JsonProperty(JsonMessageConstants.IS_UNREAD)
     public boolean isUnRead() {
         return isUnRead;
     }
 
-    @JsonProperty(JsonMessageConstants.IS_RECENT)
     public boolean isRecent() {
         return isRecent;
     }
 
-    @JsonProperty(JsonMessageConstants.IS_FLAGGED)
     public boolean isFlagged() {
         return isFlagged;
     }
 
-    @JsonProperty(JsonMessageConstants.IS_DELETED)
     public boolean isDeleted() {
         return isDeleted;
     }
 
-    @JsonProperty(JsonMessageConstants.IS_DRAFT)
     public boolean isDraft() {
         return isDraft;
     }
 
-    @JsonProperty(JsonMessageConstants.IS_ANSWERED)
     public boolean isAnswered() {
         return isAnswered;
     }
 
-    @JsonProperty(JsonMessageConstants.USER_FLAGS)
     public String[] getUserFlags() {
         return userFlags;
     }
 
-    @JsonProperty(JsonMessageConstants.HEADERS)
     public Multimap<String, String> getHeaders() {
         return headers;
     }
 
-    @JsonProperty(JsonMessageConstants.SUBJECT)
     public Set<String> getSubjects() {
         return subjects;
     }
 
-    @JsonProperty(JsonMessageConstants.FROM)
     public Set<EMailer> getFrom() {
         return from;
     }
 
-    @JsonProperty(JsonMessageConstants.TO)
     public Set<EMailer> getTo() {
         return to;
     }
 
-    @JsonProperty(JsonMessageConstants.CC)
     public Set<EMailer> getCc() {
         return cc;
     }
 
-    @JsonProperty(JsonMessageConstants.BCC)
     public Set<EMailer> getBcc() {
         return bcc;
     }
 
-    @JsonProperty(JsonMessageConstants.REPLY_TO)
     public Set<EMailer> getReplyTo() {
         return replyTo;
     }
 
-    @JsonProperty(JsonMessageConstants.SENT_DATE)
     public String getSentDate() {
         return sentDate;
     }
 
-    @JsonProperty(JsonMessageConstants.PROPERTIES)
     public List<Property> getProperties() {
         return properties;
     }
 
-    @JsonProperty(JsonMessageConstants.ATTACHMENTS)
     public List<MimePart> getAttachments() {
         return attachments;
     }
 
-    @JsonProperty(JsonMessageConstants.TEXT_BODY)
     public Optional<String> getBodyText() {
         return bodyText;
     }
 
-    @JsonProperty(JsonMessageConstants.HAS_ATTACHMENT)
     public boolean getHasAttachment() {
         return attachments.size() > 0;
     }

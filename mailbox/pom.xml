@@ -51,6 +51,7 @@
         <module>api</module>
         <module>caching</module>
         <module>cassandra</module>
+        <module>common</module>
         <module>elasticsearch</module>
         <module>hbase</module>
         <module>jcr</module>
@@ -200,6 +201,11 @@
            <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-cassandra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

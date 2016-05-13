@@ -17,31 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
+package org.apache.james.mailbox.message.json;
 
-import org.apache.james.mailbox.store.extractor.TextExtractor;
-import org.apache.james.mime4j.stream.Field;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.InputStream;
+public abstract class MixInMessageUpdateJson {
 
-public interface MimePartContainerBuilder {
-
-    MimePart build();
-
-    MimePartContainerBuilder using(TextExtractor textExtractor);
-
-    MimePartContainerBuilder addToHeaders(Field field);
-
-    MimePartContainerBuilder addBodyContent(InputStream bodyContent);
-
-    MimePartContainerBuilder addChild(MimePart mimePart);
-
-    MimePartContainerBuilder addFileName(String fileName);
-
-    MimePartContainerBuilder addMediaType(String mediaType);
-
-    MimePartContainerBuilder addSubType(String subType);
-
-    MimePartContainerBuilder addContentDisposition(String contentDisposition);
-
+    @JsonProperty(JsonMessageConstants.IS_ANSWERED) abstract boolean isAnswered();
+    @JsonProperty(JsonMessageConstants.IS_DELETED) abstract boolean isDeleted();
+    @JsonProperty(JsonMessageConstants.IS_DRAFT) abstract boolean isDraft();
+    @JsonProperty(JsonMessageConstants.IS_FLAGGED) abstract boolean isFlagged();
+    @JsonProperty(JsonMessageConstants.IS_RECENT) abstract boolean isRecent();
+    @JsonProperty(JsonMessageConstants.IS_UNREAD) abstract boolean isUnRead();
+    @JsonProperty(JsonMessageConstants.USER_FLAGS) abstract String[] getUserFlags();
+    @JsonProperty(JsonMessageConstants.MODSEQ) abstract long getModSeq();
 }

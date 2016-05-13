@@ -17,12 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.json;
+package org.apache.james.mailbox.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.format.DateTimeFormatter;
 
+import org.apache.james.mailbox.message.EMailer;
+import org.apache.james.mailbox.message.HeaderCollection;
 import org.junit.Test;
 
 public class HeaderCollectionTest {

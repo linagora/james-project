@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
-import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
+import org.apache.james.mailbox.message.json.JsonMessageConstants;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.elasticsearch.index.query.QueryBuilder;
 

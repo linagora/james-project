@@ -1,8 +1,11 @@
 
 
-package org.apache.james.mailbox.elasticsearch.json;
+package org.apache.james.mailbox.message;
 
 import javax.mail.Flags;
+
+import org.apache.james.mailbox.message.json.JsonMessageConstants;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class MessageUpdateJson {

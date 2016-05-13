@@ -17,7 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.json;
+package org.apache.james.mailbox.message.json;
 
 public interface JsonMessageConstants {
 

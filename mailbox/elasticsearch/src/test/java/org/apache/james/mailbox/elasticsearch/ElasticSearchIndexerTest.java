@@ -25,8 +25,8 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 
-import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
 import org.apache.james.mailbox.elasticsearch.utils.TestingClientProvider;
+import org.apache.james.mailbox.message.json.JsonMessageConstants;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilder;

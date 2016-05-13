@@ -28,15 +28,16 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonFilter;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.GetMessagesMethod;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
-import org.apache.james.jmap.model.message.EMailer;
-import org.apache.james.jmap.model.message.IndexableMessage;
+import org.apache.james.mailbox.message.EMailer;
+import org.apache.james.mailbox.message.IndexableMessage;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
@@ -46,8 +47,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.common.net.MediaType;
-
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 @JsonDeserialize(builder = Message.Builder.class)
 @JsonFilter(JmapResponseWriterImpl.PROPERTIES_FILTER)

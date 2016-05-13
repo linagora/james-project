@@ -17,7 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
+package org.apache.james.mailbox.message;
 
 import org.apache.james.mailbox.store.extractor.TextExtractor;
 import org.apache.james.mime4j.stream.Field;

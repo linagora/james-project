@@ -651,6 +651,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-common</artifactId>
+                <version>${mailbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-elasticsearch</artifactId>
                 <version>${mailbox.version}</version>
             </dependency>

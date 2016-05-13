@@ -37,8 +37,9 @@ import java.util.stream.Stream;
 
 import javax.mail.Flags;
 
-import org.apache.james.mailbox.elasticsearch.json.HeaderCollection;
-import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
+import org.apache.james.mailbox.message.DateResolutionFormater;
+import org.apache.james.mailbox.message.HeaderCollection;
+import org.apache.james.mailbox.message.json.JsonMessageConstants;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.HeaderOperator;

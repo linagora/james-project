@@ -17,11 +17,12 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.query;
+package org.apache.james.mailbox.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
+import org.apache.james.mailbox.message.DateResolutionFormater;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.junit.Test;
 

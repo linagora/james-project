@@ -17,7 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.query;
+package org.apache.james.mailbox.message;
 
 import org.apache.james.mailbox.model.SearchQuery;
 

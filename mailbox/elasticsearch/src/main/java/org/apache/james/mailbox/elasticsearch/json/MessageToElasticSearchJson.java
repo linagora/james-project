@@ -19,18 +19,22 @@
 
 package org.apache.james.mailbox.elasticsearch.json;
 
+import java.time.ZoneId;
+
 import javax.inject.Inject;
 import javax.mail.Flags;
 
-import java.time.ZoneId;
+import org.apache.james.mailbox.message.IndexableMessage;
+import org.apache.james.mailbox.message.MessageUpdateJson;
+import org.apache.james.mailbox.message.json.CommonModule;
+import org.apache.james.mailbox.store.extractor.TextExtractor;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.base.Preconditions;
-import org.apache.james.mailbox.store.extractor.TextExtractor;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 public class MessageToElasticSearchJson {
 
@@ -41,9 +45,10 @@ public class MessageToElasticSearchJson {
     public MessageToElasticSearchJson(TextExtractor textExtractor, ZoneId zoneId) {
         this.textExtractor = textExtractor;
         this.zoneId = zoneId;
-        this.mapper = new ObjectMapper();
-        this.mapper.registerModule(new GuavaModule());
-        this.mapper.registerModule(new Jdk8Module());
+        this.mapper = new ObjectMapper()
+                .registerModule(new GuavaModule())
+                .registerModule(new Jdk8Module())
+                .registerModule(new CommonModule());
     }
 
     @Inject

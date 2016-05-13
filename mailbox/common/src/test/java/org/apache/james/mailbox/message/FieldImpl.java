@@ -17,53 +17,46 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.model.message;
+package org.apache.james.mailbox.message;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects;
+import org.apache.james.mime4j.stream.Field;
+import org.apache.james.mime4j.util.ByteSequence;
 
 import java.util.Objects;
 
-public class EMailer {
-
+public class FieldImpl implements Field {
     private final String name;
-    private final String address;
+    private final String body;
 
-    public EMailer(String name, String address) {
+    public FieldImpl(String name, String body) {
         this.name = name;
-        this.address = address;
+        this.body = body;
     }
 
-    @JsonProperty(JsonMessageConstants.EMailer.NAME)
     public String getName() {
         return name;
     }
 
-    @JsonProperty(JsonMessageConstants.EMailer.ADDRESS)
-    public String getAddress() {
-        return address;
+    public String getBody() {
+        return body;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof EMailer) {
-            EMailer otherEMailer = (EMailer) o;
-            return Objects.equals(name, otherEMailer.name)
-                && Objects.equals(address, otherEMailer.address);
-        }
-        return false;
+    public ByteSequence getRaw() {
+        return null;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, address);
+        return Objects.hash(name, body);
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-            .add("name", name)
-            .add("address", address)
-            .toString();
+    public boolean equals(Object o) {
+        if (o instanceof  FieldImpl) {
+            FieldImpl otherField = (FieldImpl) o;
+            return Objects.equals(name, otherField.name)
+                && Objects.equals(body, otherField.body);
+        }
+        return false;
     }
 }

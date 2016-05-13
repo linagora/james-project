@@ -17,31 +17,12 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.elasticsearch.json;
+package org.apache.james.mailbox.message.json;
 
-import org.apache.james.mailbox.store.extractor.TextExtractor;
-import org.apache.james.mime4j.stream.Field;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.InputStream;
+public abstract class MixInEMailer {
 
-public interface MimePartContainerBuilder {
-
-    MimePart build();
-
-    MimePartContainerBuilder using(TextExtractor textExtractor);
-
-    MimePartContainerBuilder addToHeaders(Field field);
-
-    MimePartContainerBuilder addBodyContent(InputStream bodyContent);
-
-    MimePartContainerBuilder addChild(MimePart mimePart);
-
-    MimePartContainerBuilder addFileName(String fileName);
-
-    MimePartContainerBuilder addMediaType(String mediaType);
-
-    MimePartContainerBuilder addSubType(String subType);
-
-    MimePartContainerBuilder addContentDisposition(String contentDisposition);
-
+    @JsonProperty(JsonMessageConstants.EMailer.NAME) abstract String getName();
+    @JsonProperty(JsonMessageConstants.EMailer.ADDRESS) abstract String getAddress();
 }
