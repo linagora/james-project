@@ -37,7 +37,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 
 public class JMAPCommonModule extends AbstractModule {
@@ -53,8 +52,8 @@ public class JMAPCommonModule extends AbstractModule {
         bindConstant().annotatedWith(Names.named(AccessTokenRepository.TOKEN_EXPIRATION_IN_MS)).to(DEFAULT_TOKEN_EXPIRATION_IN_MS);
         bind(AccessTokenManager.class).to(AccessTokenManagerImpl.class).in(Scopes.SINGLETON);
 
-        bind(MailSpool.class).in(Singleton.class);
-        bind(MailFactory.class).in(Singleton.class);
+        bind(MailSpool.class).in(Scopes.SINGLETON);
+        bind(MailFactory.class).in(Scopes.SINGLETON);
     }
 
     @Provides
