@@ -63,7 +63,6 @@ public class CassandraMailboxModule extends AbstractModule {
         bind(MessageMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
         bind(MailboxMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
         bind(MailboxSessionMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
-        bind(MailboxSessionMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
 
         bind(ModSeqProvider.class).to(CassandraModSeqProvider.class);
         bind(UidProvider.class).to(CassandraUidProvider.class);
