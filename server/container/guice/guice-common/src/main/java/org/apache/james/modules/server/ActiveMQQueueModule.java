@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 
 public class ActiveMQQueueModule extends AbstractModule {
@@ -38,7 +39,8 @@ public class ActiveMQQueueModule extends AbstractModule {
     
     @Override
     protected void configure() {
-        bind(MailQueueItemDecoratorFactory.class).to(PostDequeueDecoratorFactory.class).in(Singleton.class);
+        bind(EmbeddedActiveMQ.class).in(Scopes.SINGLETON);
+        bind(MailQueueItemDecoratorFactory.class).to(PostDequeueDecoratorFactory.class).in(Scopes.SINGLETON);
     }
     
     @Provides

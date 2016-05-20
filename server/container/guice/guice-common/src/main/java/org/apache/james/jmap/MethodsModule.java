@@ -42,7 +42,7 @@ import org.apache.james.jmap.methods.SetMessagesUpdateProcessor;
 import org.apache.james.jmap.methods.SetVacationResponseMethod;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Singleton;
+import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
@@ -50,9 +50,12 @@ public class MethodsModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(JmapRequestParser.class).to(JmapRequestParserImpl.class).in(Singleton.class);
-        bind(JmapResponseWriter.class).to(JmapResponseWriterImpl.class).in(Singleton.class);
-        bind(ObjectMapperFactory.class).in(Singleton.class);
+        bind(JmapRequestParserImpl.class).in(Scopes.SINGLETON);
+        bind(JmapResponseWriterImpl.class).in(Scopes.SINGLETON);
+        bind(ObjectMapperFactory.class).in(Scopes.SINGLETON);
+
+        bind(JmapRequestParser.class).to(JmapRequestParserImpl.class);
+        bind(JmapResponseWriter.class).to(JmapResponseWriterImpl.class);
 
         bindConstant().annotatedWith(Names.named(GetMessageListMethod.MAXIMUM_LIMIT)).to(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT);
 

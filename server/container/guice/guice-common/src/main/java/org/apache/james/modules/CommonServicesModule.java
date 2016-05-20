@@ -39,6 +39,7 @@ import org.apache.onami.lifecycle.jsr250.PreDestroyModule;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 
 public class CommonServicesModule extends AbstractModule {
     
@@ -54,10 +55,11 @@ public class CommonServicesModule extends AbstractModule {
         install(new PreDestroyModule());
         install(new DNSServiceModule());
         install(new AsyncTasksExecutorModule());
-        
+
+        bind(FileSystemImpl.class).in(Scopes.SINGLETON);
+        bind(GuiceServerProbe.class).in(Scopes.SINGLETON);
+
         bind(FileSystem.class).to(FileSystemImpl.class);
-        bind(ConfigurationProvider.class).to(FileConfigurationProvider.class);
-        bind(GuiceServerProbe.class).in(Singleton.class);
     }
 
     @Provides @Singleton @Named(CONFIGURATION_PATH)
