@@ -228,6 +228,11 @@
                     <artifactId>james-server-util</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                    <version>3.3.2</version>
+                </dependency>
+                <dependency>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
                 </dependency>
@@ -279,6 +284,21 @@
                     <artifactId>bcpkix-jdk15on</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>org.javatuples</groupId>
+                    <artifactId>javatuples</artifactId>
+                    <version>1.2</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.jgrapht</groupId>
+                    <artifactId>jgrapht-core</artifactId>
+                    <version>0.9.1</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.jsoup</groupId>
+                    <artifactId>jsoup</artifactId>
+                    <version>1.9.2</version>
+                </dependency>
+                <dependency>
                     <groupId>org.apache.james</groupId>
                     <artifactId>apache-james-mailbox-store</artifactId>
                     <scope>test</scope>
@@ -310,6 +330,7 @@
                     <groupId>nl.jqno.equalsverifier</groupId>
                     <artifactId>equalsverifier</artifactId>
                     <version>1.7.5</version>
+                    <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.assertj</groupId>
@@ -326,16 +347,6 @@
                     <groupId>org.eclipse.jetty</groupId>
                     <artifactId>jetty-servlet</artifactId>
                     <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>org.javatuples</groupId>
-                    <artifactId>javatuples</artifactId>
-                    <version>1.2</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.jgrapht</groupId>
-                    <artifactId>jgrapht-core</artifactId>
-                    <version>0.9.1</version>
                 </dependency>
                 <dependency>
                     <groupId>org.mockito</groupId>
