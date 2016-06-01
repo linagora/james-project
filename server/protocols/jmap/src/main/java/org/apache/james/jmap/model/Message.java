@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.GetMessagesMethod;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
 import org.apache.james.jmap.model.message.EMailer;
@@ -60,11 +60,9 @@ public class Message {
     }
 
     public static Message fromMailboxMessage(MailboxMessage mailboxMessage,
+            List<org.apache.james.mailbox.store.mail.model.Attachment> attachments, 
             Function<Long, MessageId> uidToMessageId) {
         IndexableMessage im = IndexableMessage.from(mailboxMessage, new DefaultTextExtractor(), UTC_ZONE_ID);
-        if (im.getHasAttachment()) {
-            throw new NotImplementedException();
-        }
         MessageId messageId = uidToMessageId.apply(im.getId());
         return builder()
                 .id(messageId)
@@ -88,6 +86,7 @@ public class Message {
                 .preview(getPreview(im))
                 .textBody(getTextBody(im))
                 .htmlBody(getHtmlBody(im))
+                .attachments(getAttachments(attachments))
                 .build();
     }
 
@@ -179,6 +178,20 @@ public class Message {
         return isText(im)
             && im.getSubType() != null
             && im.getSubType().equals(MediaType.HTML_UTF_8.subtype());
+    }
+
+    private static List<Attachment> getAttachments(List<org.apache.james.mailbox.store.mail.model.Attachment> attachments) {
+        return attachments.stream()
+                .map(Message::fromAttachment)
+                .collect(org.apache.james.util.streams.Collectors.toImmutableList());
+    }
+
+    private static Attachment fromAttachment(org.apache.james.mailbox.store.mail.model.Attachment attachment) {
+        return Attachment.builder()
+                    .blobId(attachment.getAttachmentId().getId())
+                    .type(attachment.getType())
+                    .size(attachment.getSize())
+                    .build();
     }
 
     @JsonPOJOBuilder(withPrefix = "")
@@ -357,9 +370,19 @@ public class Message {
     }
 
     protected static boolean areAttachedMessagesKeysInAttachments(ImmutableList<Attachment> attachments, ImmutableMap<String, SubMessage> attachedMessages) {
-        return attachments.stream()
+        return attachedMessages.keySet().stream()
+                .filter(notInAttachments(attachments))
+                .collect(Collectors.toList())
+                .isEmpty();
+    }
+
+    private static Predicate<String> notInAttachments(ImmutableList<Attachment> attachments) {
+        return (key) -> {
+            return !attachments.stream()
                 .map(Attachment::getBlobId)
-                .allMatch(attachedMessages::containsKey);
+                .collect(Collectors.toList())
+                .contains(key);
+        };
     }
 
     private final MessageId id;
