@@ -17,15 +17,15 @@ This document aims at dividing existing and upcoming code into the following cat
 |Already existing code
 
 |Memory
-|supported
+|Unsupported
 |Reference for testing
 
 |Cassandra
 |experimental
-|Essentially we do not know about how performance will behave
+|Essentially we do not know about how performance will behave. Also consistency issues might arise.
 
 |ElasticSearch
-|experimental
+|supported
 |
 
 |HBase
@@ -57,6 +57,9 @@ What being "supported implies for a backend ?
  - Having full support in server/data/data-@backend@
  - Having its mappers passing generic unit tests for mappers
  - It should at least support USER_FLAGS and NAMESPACE features on MPT tests
+ - Be able to handle a constant gatling workload for at least 4 hours with constant latency
+ - Be tested with thunderbird (we should write scenari for that)
+
 
 .Feature matrix : mailbox capabilities
 |===
@@ -86,6 +89,10 @@ What being "supported implies for a backend ?
 
 === Short note about what needs to be DONE
 
+**General** :
+
+ - Define Thunderbird scenari
+ - Write Gatling tests for IMAP
 
 **Cassandra** :
 
@@ -118,6 +125,9 @@ Bonus : have quota support with JPA...
 
 |Guice memory
 |experimental
+
+|Cluster deployement
+|unsupported
 |===
 
 We need tests to ensure James starts when Spring is used.
