@@ -39,21 +39,26 @@ public class JMAPServer implements Configurable {
 
     @Inject
     private JMAPServer(JMAPConfiguration jmapConfiguration,
-                       AuthenticationServlet authenticationServlet, JMAPServlet jmapServlet,
+                       AuthenticationServlet authenticationServlet, JMAPServlet jmapServlet, DownloadServlet downloadServlet,
                        AuthenticationFilter authenticationFilter, FirstUserConnectionFilter firstUserConnectionFilter) {
 
         server = JettyHttpServer.create(
                 configurationBuilderFor(jmapConfiguration)
-                        .serve("/authentication")
+                        .serve(JMAPUrls.AUTHENTICATION)
                             .with(authenticationServlet)
-                        .filter("/authentication")
+                        .filter(JMAPUrls.AUTHENTICATION)
                             .with(new AllowAllCrossOriginRequests(bypass(authenticationFilter).on("POST").and("OPTIONS").only()))
                             .only()
-                        .serve("/jmap")
+                        .serve(JMAPUrls.JMAP)
                             .with(jmapServlet)
-                        .filter("/jmap")
+                        .filter(JMAPUrls.JMAP)
                             .with(new AllowAllCrossOriginRequests(bypass(authenticationFilter).on("OPTIONS").only()))
                             .and(firstUserConnectionFilter)
+                            .only()
+                        .serveAsOneLevelTemplate(JMAPUrls.DOWNLOAD)
+                            .with(downloadServlet)
+                        .filterAsOneLevelTemplate(JMAPUrls.DOWNLOAD)
+                            .with(new AllowAllCrossOriginRequests(bypass(authenticationFilter).on("OPTIONS").only()))
                             .only()
                         .build());
     }
