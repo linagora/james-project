@@ -53,10 +53,10 @@ This document aims at dividing existing and upcoming code into the following cat
 What being "supported implies for a backend ?
 
  - Being MPT tested
- - Deployement tests part of unit tests (ex : cassandra-guice)
- - Having full support in server/data/data-@backend@
+ - Deployment tests part of unit tests (ex : cassandra-guice)
+ - Having support for domain names, users and rewrite tables in server/data/data-@backend@
  - Having its mappers passing generic unit tests for mappers
- - It should at least support USER_FLAGS and NAMESPACE features on MPT tests
+ - It should at least support USER_FLAGS feature on MPT tests
  - Be able to handle a constant gatling workload for at least 4 hours with constant latency
  - Be tested with thunderbird (we should write scenari for that)
 
@@ -94,19 +94,8 @@ What being "supported implies for a backend ?
  - Define Thunderbird scenari
  - Write Gatling tests for IMAP
 
-**Cassandra** :
-
- - We need a Cassandra implementation for MailRepository
-
-**Memory** :
-
- - We need a Memory SieveRepository
- - We need a Memory implementation for MailRepository
-
 **JPA** :
 
- - We need JAMES-1693-2 to be merged.
- - We need JPA implementation for SieveRepository and MailRepository.
  - We need JPA to valid MessageMapper and MailboxMapper unit tests.
 
 Bonus : have quota support with JPA...
@@ -117,6 +106,9 @@ Bonus : have quota support with JPA...
 |===
 |Name |Status
 
+|Guice JPA
+|Supported
+
 |Spring
 |Supported
 
@@ -126,7 +118,7 @@ Bonus : have quota support with JPA...
 |Guice memory
 |experimental
 
-|Cluster deployement
+|Cluster deployment
 |unsupported
 |===
 
@@ -154,6 +146,8 @@ We need tests to ensure James starts when Spring is used.
 |===
 
 === What to do ?
+
+Write a JPA Guice project.
 
 Integration test on Spring. We need to ensure it starts in JPA flavour with some supported components.
 
@@ -217,8 +211,8 @@ Write a LocalDelivery mailet variant that do not rely on SieveMailet, to make SI
 |Following https://james.apache.org/protocols/imap4.html
 
 |RFC-2342 Namespace
-|supported
-|Following https://james.apache.org/protocols/imap4.html
+|unsupported
+|Following https://james.apache.org/protocols/imap4.html it is implemented. However we do not see any test of this. Even if it works, as there is no proper ACL support, activating it is dangerous.
 
 |RFC-2177 IDLE
 |supported
@@ -230,7 +224,7 @@ Write a LocalDelivery mailet variant that do not rely on SieveMailet, to make SI
 
 |RFC-5162 Resynch
 |supported
-|Following https://james.apache.org/protocols/imap4.html
+|Following https://james.apache.org/protocols/imap4.html Implemented, enabled, but no MPT tests
 
 |===
 
@@ -238,6 +232,8 @@ Write a LocalDelivery mailet variant that do not rely on SieveMailet, to make SI
 
  - I should be able to choose exposed IMAP commands
  - More SMTP integration tests
+ - NAMESPACE, and interacting with other user mailboxes should not be allowed
+ - MPT tests for RFC-5162 Resynch
 
 
 
