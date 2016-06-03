@@ -17,7 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap;
+package org.apache.james.jmap.utils;
 
 import static com.jayway.restassured.RestAssured.with;
 

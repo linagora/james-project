@@ -23,6 +23,7 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.endsWith;
@@ -37,18 +38,19 @@ import static org.hamcrest.collection.IsMapWithSize.anEmptyMap;
 
 import java.io.ByteArrayInputStream;
 import java.util.Date;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.mail.Flags;
 
 import org.apache.james.GuiceJamesServer;
-import org.apache.james.jmap.JmapAuthentication;
+import org.apache.james.jmap.utils.JmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.jmap.utils.MailboxRetriever;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -107,26 +109,256 @@ public abstract class SetMessagesMethodTest {
     public void teardown() {
         jmapServer.stop();
     }
-    
-    private String getOutboxId() {
-        // Find username's outbox (using getMailboxes command on /jmap endpoint)
-        return getAllMailboxesIds(accessToken).stream()
-                .filter(x -> x.get("role").equals("outbox"))
-                .map(x -> x.get("id"))
-                .findFirst().get();
+
+    @Test
+    public void iCanNotDeleteMessagesWithoutOutBox() throws Exception {
+        // Given
+        String user2 = "user2@" + USERS_DOMAIN;
+        String password = "password";
+        jmapServer.serverProbe().addUser(user2, password);
+        AccessToken user2AccessToken = JmapAuthentication.authenticateJamesUser(user2, password);
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, user2, "mailbox");
+
+        jmapServer.serverProbe().appendMessage(user2, new MailboxPath(MailboxConstants.USER_NAMESPACE, user2, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+
+        //Then
+        String presumedMessageId = user2 + "|mailbox|1";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", user2AccessToken.serialize())
+            .body("[[\"setMessages\", {\"destroy\": [\"" + presumedMessageId + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(500);
     }
 
-    private List<Map<String, String>> getAllMailboxesIds(AccessToken accessToken) {
-        return with()
-                .accept(ContentType.JSON)
-                .contentType(ContentType.JSON)
-                .header("Authorization", accessToken.serialize())
-                .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
-        .post("/jmap")
-                .andReturn()
-                .body()
-                .jsonPath()
-                .getList(ARGUMENTS + ".list");
+    @Test
+    public void iCanNotMarkMessagesAsReadWithoutOutBox() throws Exception {
+        // Given
+        String user2 = "user2@" + USERS_DOMAIN;
+        String password = "password";
+        jmapServer.serverProbe().addUser(user2, password);
+        AccessToken attackerAccessToken = JmapAuthentication.authenticateJamesUser(user2, password);
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, user2, "mailbox");
+
+        jmapServer.serverProbe().appendMessage(user2, new MailboxPath(MailboxConstants.USER_NAMESPACE, user2, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+
+        //Then
+        String presumedMessageId = user2 + "|mailbox|1";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", attackerAccessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false } } }, \"#0\"]]", presumedMessageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(500);
+    }
+
+    @Test
+    public void asAJMAPUserICanDeleteSomeBodyElseMessages() throws Exception {
+        // Given
+        String attacker = "attacker@" + USERS_DOMAIN;
+        String password = "password";
+        jmapServer.serverProbe().addUser(attacker, password);
+        AccessToken attackerAccessToken = JmapAuthentication.authenticateJamesUser(attacker, password);
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, attacker, "outbox");
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+
+        // When
+        String presumedMessageId = username + "|mailbox|1";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", attackerAccessToken.serialize())
+            .body("[[\"setMessages\", {\"destroy\": [\"" + presumedMessageId + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messagesSet"))
+            .body(ARGUMENTS + ".notDestroyed", anEmptyMap())
+            .body(ARGUMENTS + ".destroyed", hasSize(1))
+            .body(ARGUMENTS + ".destroyed", contains(username + "|mailbox|1"));
+        await();
+        Thread.sleep(10000L);
+
+        //Then
+        // Should not be empty
+        with()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + presumedMessageId + "\"]}, \"#0\"]]")
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", empty())
+            .log().ifValidationFails();
+    }
+
+    @Test
+    public void JMAPFlagsUpdatesDoNotUpdateSearchIndex() throws Exception {
+        // Given
+        SearchQuery searchQuery = new SearchQuery();
+        searchQuery.andCriteria(SearchQuery.flagIsUnSet(Flags.Flag.SEEN));
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        Mailbox mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+        assertThat(jmapServer.serverProbe().search(null, mailbox, searchQuery)).containsExactly(1L);
+
+        //When
+        String presumedMessageId = username + "|mailbox|1";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false } } }, \"#0\"]]", presumedMessageId))
+        .when()
+            .post("/jmap");
+        await();
+        Thread.sleep(1000L);
+
+        //Then
+        // Should be empty
+        assertThat(jmapServer.serverProbe().search(null, mailbox, searchQuery)).containsExactly(1L);
+    }
+
+    @Test
+    public void asAJMAPUserICanMarkYouMessagesAsRead() throws Exception {
+        // Given
+        String attacker = "attacker@" + USERS_DOMAIN;
+        String password = "password";
+        jmapServer.serverProbe().addUser(attacker, password);
+        AccessToken attackerAccessToken = JmapAuthentication.authenticateJamesUser(attacker, password);
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, attacker, "outbox");
+
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+
+        //When
+        String presumedMessageId = username + "|mailbox|1";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", attackerAccessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false } } }, \"#0\"]]", presumedMessageId))
+        .when()
+            .post("/jmap");
+
+        //Then
+        with()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + presumedMessageId + "\"]}, \"#0\"]]")
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].isUnread", equalTo(false))
+            .log().ifValidationFails();
+    }
+
+    @Test
+    public void deletionsUsingJmapDoNotUpdateTheSearchIndex() throws Exception {
+        // Given
+        SearchQuery searchQuery = new SearchQuery();
+        searchQuery.andCriteria(new SearchQuery.AllCriterion());
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        Mailbox mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+        assertThat(jmapServer.serverProbe().search(null, mailbox, searchQuery)).containsExactly(1L);
+
+        // WHen
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"setMessages\", {\"destroy\": [\"" + username + "|mailbox|1\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messagesSet"))
+            .body(ARGUMENTS + ".notDestroyed", anEmptyMap())
+            .body(ARGUMENTS + ".destroyed", hasSize(1))
+            .body(ARGUMENTS + ".destroyed", contains(username + "|mailbox|1"));
+        await();
+        Thread.sleep(10000L);
+
+        //Then
+        // Should be empty
+        assertThat(jmapServer.serverProbe().search(null, mailbox, searchQuery)).containsExactly(1L);
+    }
+
+    @Test
+    public void sentMailsAreIndexed() throws Exception {
+        // Given
+        SearchQuery searchQuery = new SearchQuery();
+        searchQuery.andCriteria(new SearchQuery.AllCriterion());
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+        Mailbox mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+        String sentMailboxId = MailboxRetriever.getSentId(accessToken);
+
+        String fromAddress = username;
+        String messageCreationId = "user|inbox|1";
+        String messageSubject = "Thank you for joining example.com!";
+        String requestBody = "[" +
+            "  [" +
+            "    \"setMessages\","+
+            "    {" +
+            "      \"create\": { \"" + messageCreationId  + "\" : {" +
+            "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+            "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+            "        \"subject\": \"" + messageSubject + "\"," +
+            "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+            "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
+            "      }}" +
+            "    }," +
+            "    \"#0\"" +
+            "  ]" +
+            "]";
+
+        //When
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+            // When
+            .when()
+            .post("/jmap");
+        calmlyAwait.atMost(30, TimeUnit.SECONDS).until( () -> messageHasBeenMovedToSentBox(sentMailboxId));
+        await();
+
+        //Then
+        // Should contains one message
+        assertThat(jmapServer.serverProbe().search(null, mailbox, searchQuery)).containsExactly(1L);
     }
 
     @Test
@@ -671,7 +903,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -718,7 +950,7 @@ public abstract class SetMessagesMethodTest {
         String presumedMessageId = "username@domain.tld|outbox|1";
         String fromAddress = username;
         String messageSubject = "Thank you for joining example.com!";
-        String outboxId = getOutboxId();
+        String outboxId = MailboxRetriever.getOutboxId(accessToken);
         String requestBody = "[" +
                 "  [" +
                 "    \"setMessages\","+
@@ -763,10 +995,7 @@ public abstract class SetMessagesMethodTest {
     public void setMessagesShouldMoveMessageInSentWhenMessageIsSent() throws MailboxException {
         // Given
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
-        String sentMailboxId = getAllMailboxesIds(accessToken).stream()
-                .filter(x -> x.get("role").equals("sent"))
-                .map(x -> x.get("id"))
-                .findFirst().get();
+        String sentMailboxId = MailboxRetriever.getSentId(accessToken);
 
         String fromAddress = username;
         String messageCreationId = "user|inbox|1";
@@ -780,7 +1009,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"subject\": \"" + messageSubject + "\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -833,7 +1062,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -870,7 +1099,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -910,7 +1139,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -949,7 +1178,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"htmlBody\": \"Hello <i>someone</i>, and thank <b>you</b> for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -977,10 +1206,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldMoveToSentWhenSendingMessageWithOnlyFromAddress() {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
-        String sentMailboxId = getAllMailboxesIds(accessToken).stream()
-                .filter(x -> x.get("role").equals("sent"))
-                .map(x -> x.get("id"))
-                .findFirst().get();
+        String sentMailboxId = MailboxRetriever.getSentId(accessToken);
 
         String messageCreationId = "user|inbox|1";
         String fromAddress = username;
@@ -994,7 +1220,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -1028,7 +1254,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -1067,7 +1293,7 @@ public abstract class SetMessagesMethodTest {
             "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
             "        \"subject\": \"Thank you for joining example.com!\"," +
             "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-            "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+            "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
             "      }}" +
             "    }," +
             "    \"#0\"" +
@@ -1117,7 +1343,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -1163,7 +1389,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -1201,10 +1427,7 @@ public abstract class SetMessagesMethodTest {
     public void setMessagesShouldKeepBccInSentMailbox() throws Exception {
         // Sender
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
-        String sentMailboxId = getAllMailboxesIds(accessToken).stream()
-                .filter(x -> x.get("role").equals("sent"))
-                .map(x -> x.get("id"))
-                .findFirst().get();
+        String sentMailboxId = MailboxRetriever.getSentId(accessToken);
 
         // Recipient
         String recipientAddress = "recipient" + "@" + USERS_DOMAIN;
@@ -1226,7 +1449,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -1290,7 +1513,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"cc\": [{ \"name\": \"ALICE\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +
@@ -1368,7 +1591,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"" + recipientAddress + "\"}]," +
                 "        \"subject\": \"Thank you for joining example.com!\"," +
                 "        \"htmlBody\": \"Hello <b>someone</b>, and thank you for joining example.com!\"," +
-                "        \"mailboxIds\": [\"" + getOutboxId() + "\"]" +
+                "        \"mailboxIds\": [\"" + MailboxRetriever.getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
                 "    \"#0\"" +

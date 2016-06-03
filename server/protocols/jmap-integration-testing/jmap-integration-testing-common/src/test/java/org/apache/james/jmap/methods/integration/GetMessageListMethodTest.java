@@ -37,8 +37,9 @@ import java.util.List;
 import javax.mail.Flags;
 
 import org.apache.james.GuiceJamesServer;
-import org.apache.james.jmap.JmapAuthentication;
+import org.apache.james.jmap.utils.JmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.jmap.utils.MailboxRetriever;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.After;
@@ -80,6 +81,33 @@ public abstract class GetMessageListMethodTest {
     @After
     public void teardown() {
         jmapServer.stop();
+    }
+
+    @Test
+    public void getMessagesShouldBehaveAsIfMailboxDidNotExistWhenUsedOnAnOtherUserMailbox() throws Exception {
+        String attacker = "attacker@" + domain;
+        String password = "password";
+        jmapServer.serverProbe().addUser(attacker, password);
+        AccessToken attackerAccessToken =  JmapAuthentication.authenticateJamesUser(attacker, password);
+
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "INBOX");
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "INBOX"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
+        await();
+
+        String victimInboxId = MailboxRetriever.getInboxId(accessToken);
+
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", attackerAccessToken.serialize())
+            .body("[[\"getMessageList\", {\"filter\":{\"inMailboxes\":[\"" + victimInboxId + "\"]}}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", empty());
     }
     
     @Test
@@ -186,14 +214,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
         await();
 
-        String mailboxId = 
-                with()
-                .accept(ContentType.JSON)
-                .contentType(ContentType.JSON)
-                .header("Authorization", accessToken.serialize())
-                .body("[[\"getMailboxes\", {}, \"#0\"]]")
-                .post("/jmap")
-                .path("[0][1].list[0].id");
+        String mailboxId = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox").getMailboxId().serialize();
         
         given()
             .accept(ContentType.JSON)
@@ -217,7 +238,7 @@ public abstract class GetMessageListMethodTest {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox2");
         await();
 
-        List<String> mailboxIds = 
+        List<String> mailboxIds =
                 with()
                 .accept(ContentType.JSON)
                 .contentType(ContentType.JSON)

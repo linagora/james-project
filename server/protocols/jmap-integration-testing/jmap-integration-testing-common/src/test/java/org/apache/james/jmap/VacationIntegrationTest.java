@@ -27,12 +27,12 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.jmap.utils.JmapAuthentication;
+import org.apache.james.jmap.utils.MailboxRetriever;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.junit.After;
 import org.junit.Before;
@@ -47,7 +47,6 @@ import com.jayway.restassured.http.ContentType;
 
 public abstract class VacationIntegrationTest {
 
-    private static final String ARGUMENTS = "[0][1]";
     private static final String SECOND_NAME = "[1][0]";
     private static final String SECOND_ARGUMENTS = "[1][1]";
     private static final String DOMAIN = "mydomain.tld";
@@ -109,16 +108,16 @@ public abstract class VacationIntegrationTest {
 
         // When
         // User 2 matthieu@mydomain.tld sends User 1 a mail
-        String user2OutboxId = getOutboxId(user2AccessToken);
+        String user2OutboxId = MailboxRetriever.getOutboxId(user2AccessToken);
         sendMail(user2AccessToken, user2OutboxId, "user|inbox|1");
 
         // Then
         // User 1 should well receive this mail
         calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> isTextMessageReceived(user1AccessToken, getInboxId(user1AccessToken), ORIGINAL_MESSAGE_TEXT_BODY, USER_2, USER_1));
+            .until(() -> isTextMessageReceived(user1AccessToken, MailboxRetriever.getInboxId(user1AccessToken), ORIGINAL_MESSAGE_TEXT_BODY, USER_2, USER_1));
         // User 2 should well receive a notification about user 1 vacation
         calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until( () -> isTextMessageReceived(user2AccessToken, getInboxId(user2AccessToken), REASON, USER_1, USER_2));
+            .until( () -> isTextMessageReceived(user2AccessToken, MailboxRetriever.getInboxId(user2AccessToken), REASON, USER_1, USER_2));
     }
 
     @Test
@@ -135,13 +134,13 @@ public abstract class VacationIntegrationTest {
 
         // When
         // User 2 matthieu@mydomain.tld sends User 1 a mail
-        String user2OutboxId = getOutboxId(user2AccessToken);
+        String user2OutboxId = MailboxRetriever.getOutboxId(user2AccessToken);
         sendMail(user2AccessToken, user2OutboxId, "user|inbox|1");
 
         // Then
         // User 1 should well receive this mail
         calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> isTextMessageReceived(user1AccessToken, getInboxId(user1AccessToken), ORIGINAL_MESSAGE_TEXT_BODY, USER_2, USER_1));
+            .until(() -> isTextMessageReceived(user1AccessToken, MailboxRetriever.getInboxId(user1AccessToken), ORIGINAL_MESSAGE_TEXT_BODY, USER_2, USER_1));
         // User 2 should not receive a notification
         Thread.sleep(1000L);
         with()
@@ -152,7 +151,7 @@ public abstract class VacationIntegrationTest {
                 "{" +
                 "  \"fetchMessages\": true, " +
                 "  \"filter\": {" +
-                "    \"inMailboxes\":[\"" + getInboxId(user2AccessToken) + "\"]" +
+                "    \"inMailboxes\":[\"" + MailboxRetriever.getInboxId(user2AccessToken) + "\"]" +
                 "  }" +
                 "}, \"#0\"]]")
             .post("/jmap")
@@ -180,17 +179,17 @@ public abstract class VacationIntegrationTest {
 
         // When
         // User 2 matthieu@mydomain.tld sends User 1 a mail
-        String user2OutboxId = getOutboxId(user2AccessToken);
+        String user2OutboxId = MailboxRetriever.getOutboxId(user2AccessToken);
         sendMail(user2AccessToken, user2OutboxId, "user|inbox|1");
         sendMail(user2AccessToken, user2OutboxId, "user|inbox|2");
 
         // Then
         // User 2 should well receive a notification about user 1 vacation
         calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> isTextMessageReceived(user2AccessToken, getInboxId(user2AccessToken), REASON, USER_1, USER_2));
+            .until(() -> isTextMessageReceived(user2AccessToken, MailboxRetriever.getInboxId(user2AccessToken), REASON, USER_1, USER_2));
         // User 2 should not receive another notification
         Thread.sleep(1000L);
-        assertOneMessageReceived(user2AccessToken, getInboxId(user2AccessToken), REASON, USER_1, USER_2);
+        assertOneMessageReceived(user2AccessToken, MailboxRetriever.getInboxId(user2AccessToken), REASON, USER_1, USER_2);
     }
 
     @Test
@@ -209,11 +208,11 @@ public abstract class VacationIntegrationTest {
         // User 1 benw@mydomain.tld sets a Vacation on its account
         setVacationResponse(user1AccessToken);
         // User 2 matthieu@mydomain.tld sends User 1 a mail
-        String user2OutboxId = getOutboxId(user2AccessToken);
+        String user2OutboxId = MailboxRetriever.getOutboxId(user2AccessToken);
         sendMail(user2AccessToken, user2OutboxId, "user|inbox|1");
         // Wait user 1 to receive the eMail before reset of vacation
         calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> isTextMessageReceived(user1AccessToken, getInboxId(user1AccessToken), ORIGINAL_MESSAGE_TEXT_BODY, USER_2, USER_1));
+            .until(() -> isTextMessageReceived(user1AccessToken, MailboxRetriever.getInboxId(user1AccessToken), ORIGINAL_MESSAGE_TEXT_BODY, USER_2, USER_1));
 
         // When
         // User 1 benw@mydomain.tld resets a Vacation on its account
@@ -224,7 +223,7 @@ public abstract class VacationIntegrationTest {
         // Then
         // User 2 should well receive two notification about user 1 vacation
         calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> areTwoTextMessageReceived(user2AccessToken, getInboxId(user2AccessToken)));
+            .until(() -> areTwoTextMessageReceived(user2AccessToken, MailboxRetriever.getInboxId(user2AccessToken)));
     }
 
     private void setVacationResponse(AccessToken user1AccessToken) {
@@ -331,35 +330,6 @@ public abstract class VacationIntegrationTest {
             .body(SECOND_ARGUMENTS + ".list[0].from.email", equalTo(expectedFrom))
             .body(SECOND_ARGUMENTS + ".list[0].to.email", hasSize(1))
             .body(SECOND_ARGUMENTS + ".list[0].to.email[0]", equalTo(expectedTo));
-    }
-
-    private String getOutboxId(AccessToken accessToken) {
-        return getMailboxIdByRole(accessToken, "outbox");
-    }
-
-    private String getInboxId(AccessToken accessToken) {
-        return getMailboxIdByRole(accessToken, "inbox");
-    }
-
-    private String getMailboxIdByRole(AccessToken accessToken, String role) {
-        return getAllMailboxesIds(accessToken).stream()
-            .filter(x -> x.get("role").equals(role))
-            .map(x -> x.get("id"))
-            .findFirst()
-            .get();
-    }
-
-    private List<Map<String, String>> getAllMailboxesIds(AccessToken accessToken) {
-        return with()
-            .accept(ContentType.JSON)
-            .contentType(ContentType.JSON)
-            .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
-            .post("/jmap")
-        .andReturn()
-            .body()
-            .jsonPath()
-            .getList(ARGUMENTS + ".list");
     }
 
 }

@@ -21,15 +21,18 @@ package org.apache.james.utils;
 
 import java.io.InputStream;
 import java.util.Date;
+import java.util.Iterator;
 
 import javax.mail.Flags;
 
 import org.apache.james.cli.probe.ServerProbe;
 import org.apache.james.jmap.api.vacation.AccountId;
 import org.apache.james.jmap.api.vacation.Vacation;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 public interface ExtendedServerProbe extends ServerProbe {
@@ -42,4 +45,6 @@ public interface ExtendedServerProbe extends ServerProbe {
     void modifyVacation(AccountId accountId, Vacation vacation);
 
     Vacation retrieveVacation(AccountId accountId);
+
+    Iterator<Long> search(MailboxSession session, Mailbox mailbox, SearchQuery searchQuery) throws MailboxException;
 }

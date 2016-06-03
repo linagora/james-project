@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,9 +45,11 @@ import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.lib.Mappings;
 import org.apache.james.sieverepository.api.SieveRepository;
@@ -69,11 +72,13 @@ public class GuiceServerProbe implements ExtendedServerProbe {
     private final SieveRepository sieveRepository;
     private final RecipientRewriteTable recipientRewriteTable;
     private final VacationRepository vacationRepository;
+    private final MessageSearchIndex messageSearchIndex;
 
     @Inject
     private GuiceServerProbe(MailboxManager mailboxManager, MailboxMapperFactory mailboxMapperFactory,
                              DomainList domainList, UsersRepository usersRepository, SieveRepository sieveRepository,
-                             RecipientRewriteTable recipientRewriteTable, VacationRepository vacationRepository) {
+                             RecipientRewriteTable recipientRewriteTable, VacationRepository vacationRepository,
+                             MessageSearchIndex messageSearchIndex) {
         this.mailboxManager = mailboxManager;
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.domainList = domainList;
@@ -81,6 +86,12 @@ public class GuiceServerProbe implements ExtendedServerProbe {
         this.sieveRepository = sieveRepository;
         this.recipientRewriteTable = recipientRewriteTable;
         this.vacationRepository = vacationRepository;
+        this.messageSearchIndex = messageSearchIndex;
+    }
+
+    @Override
+    public Iterator<Long> search(MailboxSession session, Mailbox mailbox, SearchQuery searchQuery) throws MailboxException {
+        return messageSearchIndex.search(session, mailbox, searchQuery);
     }
 
     @Override
