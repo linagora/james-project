@@ -352,7 +352,7 @@ public class MailboxMessageTest {
                 + "0000000000111111111122222222223333333333444444444455555555556666666666777777777788888888889999999999"
                 + "00000000001111111111222222222233333333334444444444555555";
         assertThat(body256.length()).isEqualTo(256);
-        assertThat(Message.computePreview(body256)).isEqualTo(body256);
+        assertThat(MessagePreview.getPreview(body256)).isEqualTo(body256);
     }
     
     @Test
@@ -365,7 +365,7 @@ public class MailboxMessageTest {
                 + "00000000001111111111222222222233333333334444444444555...";
         assertThat(body257.length()).isEqualTo(257);
         assertThat(expected.length()).isEqualTo(256);
-        assertThat(Message.computePreview(body257)).isEqualTo(expected);
+        assertThat(MessagePreview.getPreview(body257)).isEqualTo(expected);
     }
 
     @Test

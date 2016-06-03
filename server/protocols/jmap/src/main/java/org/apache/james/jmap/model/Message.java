@@ -53,7 +53,6 @@ import com.google.common.net.MediaType;
 public class Message {
     public static final String NO_SUBJECT = "(No subject)";
     public static final String MULTIVALUED_HEADERS_SEPARATOR = ", ";
-    public static final String NO_BODY = "(Empty)";
     public static final ZoneId UTC_ZONE_ID = ZoneId.of("Z");
 
     public static Builder builder() {
@@ -84,7 +83,7 @@ public class Message {
                 .replyTo(fromElasticSearchEmailers(im.getReplyTo()))
                 .size(im.getSize())
                 .date(getInternalDate(mailboxMessage, im))
-                .preview(getPreview(im))
+                .preview(MessagePreview.from(im))
                 .textBody(getTextBody(im))
                 .htmlBody(getHtmlBody(im))
                 .attachments(getAttachments(attachments))
@@ -118,22 +117,6 @@ public class Message {
                     .name(emailer.getName())
                     .email(emailer.getAddress())
                     .build();
-    }
-    
-    private static String getPreview(IndexableMessage im) {
-        return Optional.ofNullable(
-                Strings.emptyToNull(
-                    im.getBodyText()
-                        .map(Message::computePreview)
-                        .orElse(NO_BODY)))
-            .orElse(NO_BODY);
-    }
-
-    @VisibleForTesting static String computePreview(String body) {
-        if (body.length() <= 256) {
-            return body;
-        }
-        return body.substring(0, 253) + "...";
     }
     
     private static ImmutableMap<String, String> toMap(Multimap<String, String> multimap) {
