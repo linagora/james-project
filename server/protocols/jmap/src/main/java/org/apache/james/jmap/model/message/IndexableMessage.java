@@ -26,6 +26,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.james.mailbox.store.extractor.TextExtractor;
@@ -45,14 +46,22 @@ public class IndexableMessage {
         IndexableMessage indexableMessage = new IndexableMessage();
         try {
             MimePart parsingResult = new MimePartParser(message, textExtractor).parse();
-            indexableMessage.bodyText = parsingResult.locateFirstTextualBody();
+            Optional<MimePart> firstTextualMimePart = parsingResult.locateFirstTextualBody();
+            indexableMessage.bodyText = bodyText(firstTextualMimePart);
             indexableMessage.setFlattenedAttachments(parsingResult);
             indexableMessage.copyHeaderFields(parsingResult.getHeaderCollection(), getSanitizedInternalDate(message, zoneId));
+
+            indexableMessage.copyMessageFields(message, zoneId, firstTextualMimePart);
         } catch (IOException | MimeException e) {
             throw Throwables.propagate(e);
         }
-        indexableMessage.copyMessageFields(message, zoneId);
         return indexableMessage;
+    }
+
+    private static Optional<String> bodyText(Optional<MimePart> firstTextualMimePart) {
+        return firstTextualMimePart
+                .map(MimePart::getTextualBody)
+                .orElseGet(Optional::empty);
     }
 
     private void setFlattenedAttachments(MimePart parsingResult) {
@@ -71,14 +80,14 @@ public class IndexableMessage {
         this.sentDate = DateResolutionFormater.DATE_TIME_FOMATTER.format(headerCollection.getSentDate().orElse(internalDate));
     }
 
-    private void copyMessageFields(MailboxMessage message, ZoneId zoneId) {
+    private void copyMessageFields(MailboxMessage message, ZoneId zoneId, Optional<MimePart> firstTextualMimePart) {
         this.id = message.getUid();
         this.mailboxId = message.getMailboxId().serialize();
         this.modSeq = message.getModSeq();
         this.size = message.getFullContentOctets();
         this.date = DateResolutionFormater.DATE_TIME_FOMATTER.format(getSanitizedInternalDate(message, zoneId));
-        this.mediaType = message.getMediaType();
-        this.subType = message.getSubType();
+        this.mediaType = valueFromMimePart(firstTextualMimePart, MimePart::getMediaType, message.getMediaType());
+        this.subType = valueFromMimePart(firstTextualMimePart, MimePart::getSubType, message.getSubType());
         this.isAnswered = message.isAnswered();
         this.isDeleted = message.isDeleted();
         this.isDraft = message.isDraft();
@@ -87,6 +96,15 @@ public class IndexableMessage {
         this.isUnRead = ! message.isSeen();
         this.userFlags = message.createFlags().getUserFlags();
         this.properties = message.getProperties();
+    }
+
+    private String valueFromMimePart(Optional<MimePart> mimePart, 
+            Function<MimePart, Optional<String>> functionToValue,
+            String defaultValue) {
+        return mimePart
+                .map(functionToValue)
+                .orElseGet(() -> Optional.of(defaultValue))
+                .get();
     }
 
     private static ZonedDateTime getSanitizedInternalDate(MailboxMessage message, ZoneId zoneId) {

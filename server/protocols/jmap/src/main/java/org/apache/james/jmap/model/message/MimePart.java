@@ -19,12 +19,12 @@
 
 package org.apache.james.jmap.model.message;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import java.io.InputStream;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
 import org.apache.james.mailbox.store.extractor.ParsedContent;
@@ -33,10 +33,12 @@ import org.apache.james.mime4j.stream.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 
 public class MimePart {
 
@@ -244,13 +246,12 @@ public class MimePart {
     }
 
     @JsonIgnore
-    public Optional<String> locateFirstTextualBody() {
+    public Optional<MimePart> locateFirstTextualBody() {
         return Stream.concat(
                     Stream.of(this),
-                    attachments.stream())
-                .map((mimePart) -> mimePart.bodyTextContent)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                    getAttachmentsStream())
+                .filter((mimePart) -> mimePart.bodyTextContent.isPresent())
+                .sorted(new MimePartComparator())
                 .findFirst();
     }
 
@@ -260,4 +261,23 @@ public class MimePart {
                 .flatMap((mimePart) -> Stream.concat(Stream.of(mimePart), mimePart.getAttachmentsStream()));
     }
 
+    private static class MimePartComparator implements Comparator<MimePart> {
+
+        @Override
+        public int compare(MimePart mimePart1, MimePart mimePart2) {
+            Optional<String> subType1 = mimePart1.getSubType();
+            Optional<String> subType2 = mimePart2.getSubType();
+            if (subType1.isPresent() && subType2.isPresent()) {
+                return subType1.get().compareTo(subType2.get());
+            }
+            if (subType1.isPresent()) {
+                return -1;
+            }
+            if (subType2.isPresent()) {
+                return 1;
+            }
+            return 0;
+        }
+        
+    }
 }

@@ -368,4 +368,91 @@ public abstract class GetMessagesMethodTest {
             .body(SECOND_ATTACHMENT + ".type", equalTo("image/jpeg"))
             .body(SECOND_ATTACHMENT + ".size", equalTo(597));
     }
+
+    @Test
+    public void getMessagesShouldReturnHTMLBodyWhenSomeAttachmentsAndHTMLmail() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+
+        ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+                ClassLoader.getSystemResourceAsStream("twoAttachments.eml"), Date.from(dateTime.toInstant()), false, new Flags());
+        
+        await();
+        
+        String expectedBody = "<b>html</b>\n";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + username + "|inbox|1\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].hasAttachment", equalTo(true))
+            .body(ATTACHMENTS, hasSize(2))
+            .body(ARGUMENTS + ".list[0].preview", equalTo(expectedBody))
+            .body(ARGUMENTS + ".list[0].textBody", nullValue())
+            .body(ARGUMENTS + ".list[0].htmlBody", equalTo(expectedBody));
+    }
+
+    @Test
+    public void getMessagesShouldReturnTextBodyWhenSomeAttachmentsAndTextmail() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+
+        ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+                ClassLoader.getSystemResourceAsStream("twoAttachmentsTextPlain.eml"), Date.from(dateTime.toInstant()), false, new Flags());
+        
+        await();
+        
+        String expectedBody = "html\n";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + username + "|inbox|1\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].hasAttachment", equalTo(true))
+            .body(ATTACHMENTS, hasSize(2))
+            .body(ARGUMENTS + ".list[0].preview", equalTo(expectedBody))
+            .body(ARGUMENTS + ".list[0].textBody", equalTo(expectedBody))
+            .body(ARGUMENTS + ".list[0].htmlBody", nullValue());
+    }
+
+    @Test
+    public void getMessagesShouldReturnHTMLBodyWhenOneAttachmentAndBothHTMLAndTextmail() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "inbox");
+
+        ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
+        jmapServer.serverProbe().appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "inbox"),
+                ClassLoader.getSystemResourceAsStream("htmlAndTextMultipartWithOneAttachment.eml"), Date.from(dateTime.toInstant()), false, new Flags());
+        
+        await();
+        
+        String expectedBody = "<i>blabla</i>\n<b>bloblo</b>\n";
+        given()
+            .accept(ContentType.JSON)
+            .contentType(ContentType.JSON)
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + username + "|inbox|1\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].hasAttachment", equalTo(true))
+            .body(ATTACHMENTS, hasSize(1))
+            .body(ARGUMENTS + ".list[0].preview", equalTo(expectedBody))
+            .body(ARGUMENTS + ".list[0].textBody", nullValue())
+            .body(ARGUMENTS + ".list[0].htmlBody", equalTo(expectedBody));
+    }
 }
