@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 import javax.persistence.EntityManagerFactory;
 
+import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
@@ -58,7 +59,7 @@ public class JPAMailboxManagerTest {
      */
     private static EntityManagerFactory entityManagerFactory;
 
-    private IProducer<OpenJPAMailboxManager> producer = new IProducer<OpenJPAMailboxManager>() {
+    private IProducer<MailboxManager> producer = new IProducer<MailboxManager>() {
 
         private OpenJPAMailboxManager openJPAMailboxManager;
 
@@ -111,7 +112,7 @@ public class JPAMailboxManagerTest {
     };
 
     @Contract.Inject
-    public IProducer<OpenJPAMailboxManager> getProducer() {
+    public IProducer<MailboxManager> getProducer() {
         return producer;
     }
 

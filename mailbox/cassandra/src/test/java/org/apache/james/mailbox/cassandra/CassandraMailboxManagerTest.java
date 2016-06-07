@@ -20,6 +20,7 @@ package org.apache.james.mailbox.cassandra;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
@@ -59,7 +60,7 @@ public class CassandraMailboxManagerTest {
         new CassandraSubscriptionModule(),
         new CassandraAttachmentModule()));
 
-    private IProducer<CassandraMailboxManager> producer = new IProducer<CassandraMailboxManager>() {
+    private IProducer<MailboxManager> producer = new IProducer<MailboxManager>() {
 
         @Override
         public CassandraMailboxManager newInstance() {
@@ -88,7 +89,7 @@ public class CassandraMailboxManagerTest {
     };
 
     @Contract.Inject
-    public IProducer<CassandraMailboxManager> getProducer() {
+    public IProducer<MailboxManager> getProducer() {
         return producer;
     }
 

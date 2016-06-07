@@ -30,6 +30,7 @@ import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTIONS;
 import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTIONS_TABLE;
 import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTION_CF;
 
+import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -50,7 +51,7 @@ public class HBaseMailboxManagerTest {
 
     private static final HBaseClusterSingleton CLUSTER = HBaseClusterSingleton.build();
 
-    private IProducer<HBaseMailboxManager> producer = new IProducer<HBaseMailboxManager>() {
+    private IProducer<MailboxManager> producer = new IProducer<MailboxManager>() {
 
         @Override
         public HBaseMailboxManager newInstance() {
@@ -85,7 +86,7 @@ public class HBaseMailboxManagerTest {
     };
 
     @Contract.Inject
-    public IProducer<HBaseMailboxManager> getProducer() {
+    public IProducer<MailboxManager> getProducer() {
         return producer;
     }
 

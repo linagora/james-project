@@ -29,6 +29,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.jackrabbit.core.RepositoryImpl;
 import org.apache.jackrabbit.core.config.ConfigurationException;
 import org.apache.jackrabbit.core.config.RepositoryConfig;
+import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxManagerTest;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
@@ -56,7 +57,7 @@ public class JCRMailboxManagerTest extends MailboxManagerTest {
 
     private static RepositoryImpl repository;
 
-    private IProducer<JCRMailboxManager> producer = new IProducer<JCRMailboxManager>() {
+    private IProducer<MailboxManager> producer = new IProducer<MailboxManager>() {
 
         @Override
         public JCRMailboxManager newInstance() {
@@ -110,7 +111,7 @@ public class JCRMailboxManagerTest extends MailboxManagerTest {
     };
 
     @Contract.Inject
-    public IProducer<JCRMailboxManager> getProducer() {
+    public IProducer<MailboxManager> getProducer() {
         return producer;
     }
 
