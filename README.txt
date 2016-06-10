@@ -73,7 +73,7 @@ First step, you have to build the Docker image
 $ docker build -t james/project dockerfiles/compilation/java-8
 
 In order to run the build, you have to launch the following command:
-$ docker run -v $PWD/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/spring/destination:/destination -t james/project -s SHA1
+$ docker run -v $PWD/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/guice/destination:/destination -t james/project -s SHA1
 
 Where:
 
