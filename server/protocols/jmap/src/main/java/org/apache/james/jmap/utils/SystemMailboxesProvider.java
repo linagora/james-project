@@ -17,33 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods;
+package org.apache.james.jmap.utils;
 
-import org.apache.james.jmap.model.CreationMessage;
-import org.apache.james.jmap.model.CreationMessageId;
+import java.util.stream.Stream;
 
-public class MessageWithId<T> {
+import org.apache.james.jmap.model.mailbox.Role;
+import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 
-    private CreationMessageId creationId;
-    private T message;
-
-    public MessageWithId(CreationMessageId creationId, T message) {
-        this.creationId = creationId;
-        this.message = message;
-    }
-
-    public CreationMessageId getCreationId() {
-        return creationId;
-    }
-
-    public T getMessage() {
-        return message;
-    }
-
-    public static class CreationMessageEntry extends MessageWithId<CreationMessage> {
-        public CreationMessageEntry(CreationMessageId creationId, CreationMessage message) {
-            super(creationId, message);
-        }
-    }
-
+public interface SystemMailboxesProvider {
+    Stream<Mailbox> listMailboxes(Role aRole, MailboxSession session);
 }
