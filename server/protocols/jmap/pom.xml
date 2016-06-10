@@ -271,6 +271,11 @@
                     <scope>provided</scope>
                 </dependency>
                 <dependency>
+                    <groupId>no.finn.lambda</groupId>
+                    <artifactId>lambda-companion</artifactId>
+                    <version>0.18</version>
+                </dependency>
+                <dependency>
                     <groupId>org.bouncycastle</groupId>
                     <artifactId>bcprov-jdk15on</artifactId>
                 </dependency>

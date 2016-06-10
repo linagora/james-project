@@ -22,16 +22,14 @@ package org.apache.james.jmap.model;
 import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
 
 import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 import org.apache.james.jmap.methods.ValidationResult;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -84,8 +82,12 @@ public class CreationMessage {
             headers = ImmutableMap.builder();
         }
 
-        public Builder mailboxIds(ImmutableList<String> mailboxIds) {
-            this.mailboxIds = mailboxIds;
+        public Builder mailboxId(String mailboxIds) {
+            return mailboxIds(Arrays.asList(mailboxIds));
+        }
+
+        public Builder mailboxIds(List<String> mailboxIds) {
+            this.mailboxIds = ImmutableList.copyOf(mailboxIds);
             return this;
         }
 
@@ -349,6 +351,10 @@ public class CreationMessage {
         from.filter(f -> !f.hasValidEmail()).ifPresent(f -> errors.add(invalidPropertyFrom));
     }
 
+    public boolean isIn(Mailbox mailbox) {
+        return mailboxIds.contains(mailbox.getMailboxId().serialize());
+    }
+    
     @JsonDeserialize(builder = DraftEmailer.Builder.class)
     public static class DraftEmailer {
 
