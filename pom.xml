@@ -558,6 +558,7 @@
         <module>mpt</module>
         <module>protocols</module>
         <module>server</module>
+        <module>testcontainers</module>
     </modules>
     
     <build>

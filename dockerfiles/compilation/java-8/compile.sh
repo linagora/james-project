@@ -43,6 +43,8 @@ git checkout $SHA1
 
 # Compilation
 
+cat /etc/hosts
+ping -c 5 172.17.0.1
 if [ "$SKIPTESTS" = "skipTests" ]; then
    mvn package -DskipTests -Pcassandra,elasticsearch,inmemory,exclude-lucene,with-assembly,with-jetm
 else
