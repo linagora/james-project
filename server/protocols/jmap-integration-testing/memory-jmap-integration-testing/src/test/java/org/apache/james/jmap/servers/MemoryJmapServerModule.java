@@ -21,6 +21,7 @@ package org.apache.james.jmap.servers;
 
 import org.apache.james.modules.TestFilesystemModule;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.TestWebAdminServerModule;
 import org.junit.rules.TemporaryFolder;
 
 import com.google.inject.AbstractModule;
@@ -37,7 +38,8 @@ public class MemoryJmapServerModule extends AbstractModule {
     @Override
     protected void configure() {
         install(new TestFilesystemModule(temporaryFolder));
-        install(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES));    
+        install(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES));
+        install(new TestWebAdminServerModule());
     }
 
 }

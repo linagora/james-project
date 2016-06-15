@@ -17,30 +17,24 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.modules;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.modules.TestWebAdminServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.apache.james.modules.server.WebAdminModule;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest {
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+public class TestWebAdminServerModule extends AbstractModule {
 
     @Override
-    protected GuiceJamesServer createJamesServer() {
-        return new GuiceJamesServer()
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
-                        new TestWebAdminServerModule());
+    protected void configure() {
+
     }
 
-    @Override
-    protected void clean() {
+    @Provides
+    @Singleton
+    public WebAdminModule.WebAdminConfiguration provideWebAdminServer() {
+        return WebAdminModule.WebAdminConfiguration.enabledRandomPort();
     }
 }

@@ -32,6 +32,7 @@ import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestFilesystemModule;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.TestWebAdminServerModule;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,6 +67,7 @@ public class JamesCapabilitiesServerTest {
             .overrideWith(new TestElasticSearchModule(embeddedElasticSearch),
                 new TestFilesystemModule(temporaryFolder),
                 new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
+                new TestWebAdminServerModule(),
                 mockMailboxManager,
                 new AbstractModule() {
 

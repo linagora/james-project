@@ -138,6 +138,7 @@ $ docker run --hostname HOSTNAME -p "25:25" -p 80:80 -p "110:110" -p "143:143" -
 Where :
 - HOSTNAME: is the hostname you want to give to your James container. This DNS entry will be used to send mail to your James server.
 
+You can additionally expose the port 8000 to use the Web Administration interface.
 
 Run James with Java 6 + Spring + JPA
 ====================================

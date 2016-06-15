@@ -17,30 +17,38 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.webadmin.utils;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.modules.TestWebAdminServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest {
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+import org.apache.james.webadmin.Constants;
 
-    @Override
-    protected GuiceJamesServer createJamesServer() {
-        return new GuiceJamesServer()
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
-                        new TestWebAdminServerModule());
+import com.github.fge.lambdas.consumers.ThrowingConsumer;
+import com.google.common.base.Strings;
+
+public class ResourceAccessor {
+
+    public static void applyOnResource(HttpServletRequest req, HttpServletResponse resp, ThrowingConsumer<String> operation) throws Exception {
+        if (Strings.isNullOrEmpty(req.getPathInfo())) {
+            resp.setStatus(SC_BAD_REQUEST);
+        } else {
+            applyOnResource(resp, new PathAnalyzer(req.getPathInfo()), operation);
+        }
     }
 
-    @Override
-    protected void clean() {
+    private static void applyOnResource(HttpServletResponse resp, PathAnalyzer pathInfo, ThrowingConsumer<String> operation) throws Exception {
+        if (pathInfo.validate(2)) {
+            operation.accept(pathInfo.retrieveLastPart());
+
+            resp.setContentType(Constants.JSON_CONTENT_TYPE);
+            resp.setStatus(SC_OK);
+        } else {
+            resp.setStatus(SC_BAD_REQUEST);
+        }
     }
+
 }

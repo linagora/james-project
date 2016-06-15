@@ -17,63 +17,63 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap;
+package org.apache.james.webadmin;
 
-import static org.apache.james.jmap.BypassAuthOnRequestMethod.bypass;
+import java.util.Optional;
 
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.http.jetty.Configuration;
-import org.apache.james.http.jetty.Configuration.Builder;
 import org.apache.james.http.jetty.JettyHttpServer;
-import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.webadmin.servlet.DomainServlet;
+import org.apache.james.webadmin.servlet.UserServlet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
 
-public class JMAPServer implements Configurable {
+public class WebAdminServerImpl implements WebAdminServer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(WebAdminServerImpl.class);
 
     private final JettyHttpServer server;
+    private boolean started;
 
-    @Inject
-    private JMAPServer(JMAPConfiguration jmapConfiguration,
-                       AuthenticationServlet authenticationServlet, JMAPServlet jmapServlet, DownloadServlet downloadServlet,
-                       AuthenticationFilter authenticationFilter, FirstUserConnectionFilter firstUserConnectionFilter) {
-
-        server = JettyHttpServer.create(
-                Configuration.builder()
-                        .port(jmapConfiguration.getPort())
-                        .serve(JMAPUrls.AUTHENTICATION)
-                            .with(authenticationServlet)
-                        .filter(JMAPUrls.AUTHENTICATION)
-                            .with(new AllowAllCrossOriginRequests(bypass(authenticationFilter).on("POST").and("OPTIONS").only()))
-                            .only()
-                        .serve(JMAPUrls.JMAP)
-                            .with(jmapServlet)
-                        .filter(JMAPUrls.JMAP)
-                            .with(new AllowAllCrossOriginRequests(bypass(authenticationFilter).on("OPTIONS").only()))
-                            .and(firstUserConnectionFilter)
-                            .only()
-                        .serveAsOneLevelTemplate(JMAPUrls.DOWNLOAD)
-                            .with(downloadServlet)
-                        .build());
+    public WebAdminServerImpl(Optional<Integer> port, DomainServlet domainServlet, UserServlet userServlet) {
+        this.server = JettyHttpServer.create(
+            Configuration.builder()
+                .port(port)
+                .serve(Constants.DOMAIN + "/*")
+                    .with(domainServlet)
+                .serve(Constants.USER + "/*")
+                    .with(userServlet)
+                .build());
+        this.started = false;
     }
 
     @Override
     public void configure(HierarchicalConfiguration config) throws ConfigurationException {
         try {
             server.start();
+            started = true;
+            LOGGER.info("WebAdminServer started");
         } catch (Exception e) {
-            Throwables.propagate(e);
+            throw Throwables.propagate(e);
         }
     }
 
     @PreDestroy
     public void stop() {
         try {
-            server.stop();
+            if (started) {
+                server.stop();
+                started = false;
+                LOGGER.info("WebAdminServer stopped");
+            } else {
+                LOGGER.info("Attempt to shut WebAdminServer down but it was not started");
+            }
         } catch (Exception e) {
             Throwables.propagate(e);
         }
@@ -82,4 +82,5 @@ public class JMAPServer implements Configurable {
     public int getPort() {
         return server.getPort();
     }
+
 }

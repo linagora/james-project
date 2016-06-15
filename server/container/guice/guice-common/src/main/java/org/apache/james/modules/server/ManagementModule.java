@@ -17,30 +17,20 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.modules.server;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.modules.TestWebAdminServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.apache.james.domainlist.api.DomainListManagementMBean;
+import org.apache.james.domainlist.lib.DomainListManagement;
+import org.apache.james.user.api.UsersRepositoryManagementMBean;
+import org.apache.james.user.lib.UsersRepositoryManagement;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest {
+import com.google.inject.AbstractModule;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+public class ManagementModule extends AbstractModule {
 
     @Override
-    protected GuiceJamesServer createJamesServer() {
-        return new GuiceJamesServer()
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
-                        new TestWebAdminServerModule());
-    }
-
-    @Override
-    protected void clean() {
+    protected void configure() {
+        bind(DomainListManagementMBean.class).to(DomainListManagement.class);
+        bind(UsersRepositoryManagementMBean.class).to(UsersRepositoryManagement.class);
     }
 }

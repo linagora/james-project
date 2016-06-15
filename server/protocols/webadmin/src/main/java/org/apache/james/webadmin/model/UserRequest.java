@@ -17,30 +17,24 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.webadmin.model;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.modules.TestWebAdminServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest {
+public class UserRequest {
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    private final String password;
 
-    @Override
-    protected GuiceJamesServer createJamesServer() {
-        return new GuiceJamesServer()
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
-                        new TestWebAdminServerModule());
+    @JsonCreator
+    public UserRequest(@JsonProperty("password") String password) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(password));
+        this.password = password;
     }
 
-    @Override
-    protected void clean() {
+    public String getPassword() {
+        return password;
     }
 }

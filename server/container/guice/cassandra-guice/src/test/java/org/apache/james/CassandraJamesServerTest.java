@@ -26,6 +26,7 @@ import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestFilesystemModule;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.TestWebAdminServerModule;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
@@ -51,6 +52,7 @@ public class CassandraJamesServerTest extends AbstractJamesServerTest {
                 .overrideWith(new TestElasticSearchModule(embeddedElasticSearch),
                         new TestFilesystemModule(temporaryFolder),
                         new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
+                        new TestWebAdminServerModule(),
                         new AbstractModule() {
                     
                     @Override

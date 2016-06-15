@@ -13,7 +13,7 @@ FROM java:openjdk-8-jdk
 # 587 SMTP with authentication and startTLS enabled
 # 993 IMAP with socketTLS enabled
 
-EXPOSE 25 110 143 465 587 993
+EXPOSE 25 110 143 465 587 993 8000
 
 WORKDIR /root
 

@@ -17,28 +17,39 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james.webadmin.utils;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.List;
 
-import org.junit.Test;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
-public class PropertiesReadTest {
+public class PathAnalyzer {
 
-    @Test
-    public void getPropertyShouldWork() throws Exception {
-        PropertiesReader propertiesReader = new PropertiesReader("test.properties");
-        assertThat(propertiesReader.getProperty("cassandra.ip")).isEqualTo("127.0.0.1");
-    }
-    
-    @Test
-    public void getAbsentPropertyShouldReturnNull() throws Exception {
-        PropertiesReader propertiesReader = new PropertiesReader("test.properties");
-        assertThat(propertiesReader.getProperty("cassandra.isslow")).isNull();
+    private final List<String> pathParts;
+
+    public PathAnalyzer(String path) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(path));
+        this.pathParts = ImmutableList.copyOf(Splitter.on('/').split(path));
     }
 
-    @Test(expected = RuntimeException.class)
-    public void buildingAPropertiesReaderOnNonExistingValuesShouldThrow() throws Exception {
-        new PropertiesReader("fake.properties");
+    public boolean validate(int expectedLength) {
+        return validateLength(expectedLength) && ensurePartNotEmpty(expectedLength - 1);
+    }
+
+    private boolean validateLength(int expectedLength) {
+        return pathParts.size() == expectedLength;
+    }
+
+    private boolean ensurePartNotEmpty(int expectedPosition) {
+        Preconditions.checkArgument(expectedPosition < pathParts.size());
+        return !Strings.isNullOrEmpty(pathParts.get(expectedPosition));
+    }
+
+    public String retrieveLastPart() {
+        Preconditions.checkState(pathParts.size() > 0);
+        return pathParts.get(pathParts.size() - 1);
     }
 }

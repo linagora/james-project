@@ -32,6 +32,7 @@ import org.apache.james.filesystem.api.JamesDirectoriesProvider;
 import org.apache.james.modules.server.AsyncTasksExecutorModule;
 import org.apache.james.modules.server.ConfigurationProviderModule;
 import org.apache.james.modules.server.DNSServiceModule;
+import org.apache.james.modules.server.ManagementModule;
 import org.apache.james.utils.GuiceServerProbe;
 import org.apache.onami.lifecycle.jsr250.PreDestroyModule;
 
@@ -53,6 +54,7 @@ public class CommonServicesModule extends AbstractModule {
         install(new PreDestroyModule());
         install(new DNSServiceModule());
         install(new AsyncTasksExecutorModule());
+        install(new ManagementModule());
 
         bind(FileSystemImpl.class).in(Scopes.SINGLETON);
         bind(GuiceServerProbe.class).in(Scopes.SINGLETON);

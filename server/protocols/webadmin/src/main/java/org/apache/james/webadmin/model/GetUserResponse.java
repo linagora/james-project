@@ -17,30 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.webadmin.model;
 
-import org.apache.james.jmap.methods.GetMessageListMethod;
-import org.apache.james.modules.TestFilesystemModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.modules.TestWebAdminServerModule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import java.util.List;
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest {
+public class GetUserResponse {
+    private final List<String> usernames;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Override
-    protected GuiceJamesServer createJamesServer() {
-        return new GuiceJamesServer()
-                .combineWith(MemoryJamesServerMain.inMemoryServerModule)
-                .overrideWith(new TestFilesystemModule(temporaryFolder),
-                        new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
-                        new TestWebAdminServerModule());
+    public GetUserResponse(List<String> domains) {
+        this.usernames = domains;
     }
 
-    @Override
-    protected void clean() {
+    public List<String> getUsernames() {
+        return usernames;
     }
 }

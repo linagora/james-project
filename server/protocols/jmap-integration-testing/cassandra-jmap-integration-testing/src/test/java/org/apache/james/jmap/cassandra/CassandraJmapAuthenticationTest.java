@@ -25,6 +25,7 @@ import org.apache.james.jmap.FixedDateZonedDateTimeProvider;
 import org.apache.james.jmap.JMAPAuthenticationTest;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.modules.CassandraJmapServerModule;
+import org.apache.james.modules.TestWebAdminServerModule;
 import org.apache.james.util.date.ZonedDateTimeProvider;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
@@ -46,7 +47,8 @@ public class CassandraJmapAuthenticationTest extends JMAPAuthenticationTest {
         return new GuiceJamesServer()
                     .combineWith(CassandraJamesServerMain.cassandraServerModule)
                     .overrideWith(new CassandraJmapServerModule(temporaryFolder, embeddedElasticSearch, cassandra),
-                            (binder) -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider));
+                            (binder) -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider),
+                            new TestWebAdminServerModule());
     }
     
 }

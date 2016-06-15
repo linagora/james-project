@@ -19,25 +19,28 @@
 
 package org.apache.james.utils;
 
-import java.io.IOException;
-import java.util.Properties;
+import java.io.FileNotFoundException;
 
-import com.google.common.base.Throwables;
+import javax.inject.Inject;
 
-public class PropertiesReader {
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.james.filesystem.api.FileSystem;
 
-    private final Properties properties;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-    public PropertiesReader(String fileName) {
-        properties = new Properties();
-        try {
-            properties.load(ClassLoader.getSystemResourceAsStream(fileName));
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
+public class PropertiesProvider {
+
+    private final FileSystem fileSystem;
+
+    @Inject
+    public PropertiesProvider(FileSystem fileSystem) {
+        this.fileSystem = fileSystem;
     }
 
-    public String getProperty(String key) {
-        return properties.getProperty(key);
+    public PropertiesConfiguration getConfiguration(String fileName) throws FileNotFoundException, ConfigurationException {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(fileName));
+        return new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + fileName + ".properties"));
     }
 }

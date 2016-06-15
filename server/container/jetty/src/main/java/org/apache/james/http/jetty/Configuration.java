@@ -135,6 +135,13 @@ public class Configuration {
             return this;
         }
 
+        public Builder port(Optional<Integer> port) {
+            Preconditions.checkNotNull(port);
+            port.ifPresent(aPort -> Preconditions.checkArgument(VALID_PORT_RANGE.contains(aPort)));
+            this.port = port;
+            return this;
+        }
+
         public Builder randomPort() {
             this.port = Optional.empty();
             return this;

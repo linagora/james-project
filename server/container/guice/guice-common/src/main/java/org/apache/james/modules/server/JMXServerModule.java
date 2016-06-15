@@ -61,8 +61,6 @@ public class JMXServerModule extends AbstractModule {
         bind(MailboxCopier.class).annotatedWith(Names.named("mailboxcopier")).to(MailboxCopierImpl.class);
         bind(MailboxCopierManagementMBean.class).to(MailboxCopierManagement.class);
         bind(MailboxManagerResolver.class).to(GuiceMailboxManagerResolver.class);
-        bind(DomainListManagementMBean.class).to(DomainListManagement.class);
-        bind(UsersRepositoryManagementMBean.class).to(UsersRepositoryManagement.class);
         bind(MailboxManagerManagementMBean.class).to(MailboxManagerManagement.class);
         bind(RecipientRewriteTableManagementMBean.class).to(RecipientRewriteTableManagement.class);
         bind(MailSpoolerMBean.class).to(JamesMailSpooler.class);

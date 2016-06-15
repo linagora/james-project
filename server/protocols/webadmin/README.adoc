@@ -1,0 +1,104 @@
+= Web administration for JAMES
+
+The web administration supports for now the CRUD operations on the domains and the users, as described in the following sections.
+
+== Administrating domains
+
+=== Create a domain
+
+.bash
+====
+curl -XPOST http://ip:port/domain/domainToBeCreated
+====
+
+Response codes :
+ - 200 : The domain was successfully added
+ - 400 : The URL do not match the specification
+ - 406 : The domain already exist
+ - 500 : Internal error while adding the domain
+
+=== Delete a domain
+
+.bash
+====
+curl -XDELETE http://ip:port/domain/domainToBeDeleted
+====
+
+Response codes :
+ - 200 : The domain was successfully removed
+ - 400 : The URL do not match the specification
+ - 406 : The domain did not exist
+ - 500 : Internal error while removing the domain
+
+=== Get the list of domains
+
+.bash
+====
+curl -XGET http://ip:port/domain
+====
+
+Possible response :
+
+.json
+====
+{"domains":["domain1", "domain2"]}
+====
+
+Response codes :
+ - 200 : The domain list was successfully retrieved
+ - 400 : The URL do not match the specification
+ - 500 : Internal error while accessing the domains
+
+== Administrating users
+
+=== Create a user
+
+.bash
+====
+curl -XPOST http://ip:port/user/userToBeCreated -d '{"password":"passwordToBeUsed"}'
+====
+
+Response codes :
+ - 200 : The user was successfully created
+ - 400 : The URL do not match the specification
+ - 500 : Internal error while adding the user
+
+Note : if the user is already, its password will be updated.
+
+=== Updating a user password
+
+Same than Create, but a user need to exist.
+
+If the user do not exist, then it will be created.
+
+=== Deleting a user
+
+.bash
+====
+curl -XDELETE http://ip:port/user/userToBeDeleted
+====
+
+Response codes :
+ - 200 : The user was successfully deleted
+ - 400 : The URL do not match the specification
+ - 406 : The user did not exist
+ - 500 : Internal error while deleting the user
+
+=== Retrieving the user list
+
+.bash
+====
+curl -XGET http://ip:port/user
+====
+
+The answer looks like :
+
+.json
+====
+{"usernames":["username@domain-jmapauthentication.tld","username@domain.tld"]}
+====
+
+Response codes :
+ - 200 : The user name list was successfully retrieved
+ - 400 : The URL do not match the specification
+ - 500 : Internal error while retrieving the users
