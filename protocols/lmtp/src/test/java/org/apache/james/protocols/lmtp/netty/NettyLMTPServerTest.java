@@ -24,12 +24,13 @@ import org.apache.james.protocols.api.Protocol;
 import org.apache.james.protocols.api.ProtocolServer;
 import org.apache.james.protocols.lmtp.AbstractLMTPServerTest;
 import org.apache.james.protocols.netty.NettyServer;
+import org.jboss.netty.util.HashedWheelTimer;
 
 public class NettyLMTPServerTest extends AbstractLMTPServerTest {
 
     @Override
     protected ProtocolServer createServer(Protocol protocol, InetSocketAddress address) {
-        NettyServer server =  new NettyServer(protocol);
+        NettyServer server =  new NettyServer(protocol, new HashedWheelTimer());
         server.setListenAddresses(address);
         return server;
     }

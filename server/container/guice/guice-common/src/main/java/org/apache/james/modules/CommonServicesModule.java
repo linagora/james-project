@@ -34,6 +34,7 @@ import org.apache.james.modules.server.ConfigurationProviderModule;
 import org.apache.james.modules.server.DNSServiceModule;
 import org.apache.james.utils.GuiceServerProbe;
 import org.apache.onami.lifecycle.jsr250.PreDestroyModule;
+import org.jboss.netty.util.HashedWheelTimer;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -58,6 +59,7 @@ public class CommonServicesModule extends AbstractModule {
         bind(GuiceServerProbe.class).in(Scopes.SINGLETON);
 
         bind(FileSystem.class).to(FileSystemImpl.class);
+        bind(HashedWheelTimer.class).in(Scopes.SINGLETON);
     }
 
     @Provides @Singleton @Named(CONFIGURATION_PATH)

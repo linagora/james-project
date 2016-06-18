@@ -41,20 +41,23 @@ public abstract class AbstractChannelPipelineFactory implements ChannelPipelineF
     public final static int MAX_LINE_LENGTH = 8192;
     protected final ConnectionLimitUpstreamHandler connectionLimitHandler;
     protected final ConnectionPerIpLimitUpstreamHandler connectionPerIpLimitHandler;
-    private final HashedWheelTimer timer = new HashedWheelTimer();
+    private final HashedWheelTimer timer;
     private final ChannelGroupHandler groupHandler;
 	private final int timeout;
     private final ExecutionHandler eHandler;
-    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels) {
-        this(timeout, maxConnections, maxConnectsPerIp, channels, null);
+    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels,
+            HashedWheelTimer timer) {
+        this(timeout, maxConnections, maxConnectsPerIp, channels, null, timer);
     }
     
-    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels, ExecutionHandler eHandler) {
+    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels, ExecutionHandler eHandler,
+            HashedWheelTimer timer) {
         this.connectionLimitHandler = new ConnectionLimitUpstreamHandler(maxConnections);
         this.connectionPerIpLimitHandler = new ConnectionPerIpLimitUpstreamHandler(maxConnectsPerIp);
         this.groupHandler = new ChannelGroupHandler(channels);
         this.timeout = timeout;
         this.eHandler = eHandler;
+        this.timer = timer;
     }
     
     
@@ -106,6 +109,6 @@ public abstract class AbstractChannelPipelineFactory implements ChannelPipelineF
      * @see org.jboss.netty.util.ExternalResourceReleasable#releaseExternalResources()
      */
     public void releaseExternalResources() {
-        timer.stop();
+        //timer.stop();
     }
 }

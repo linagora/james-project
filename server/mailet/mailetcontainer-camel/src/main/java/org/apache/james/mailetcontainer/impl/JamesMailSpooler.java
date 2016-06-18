@@ -100,9 +100,9 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
      * @see org.apache.james.lifecycle.api.Configurable#configure(org.apache.commons.configuration.HierarchicalConfiguration)
      */
     public void configure(HierarchicalConfiguration config) throws ConfigurationException {
-        numDequeueThreads = config.getInt("dequeueThreads", 2);
+        numDequeueThreads = config.getInt("dequeueThreads", 1);
 
-        numThreads = config.getInt("threads", 100);
+        numThreads = config.getInt("threads", 1);
     }
 
     /**

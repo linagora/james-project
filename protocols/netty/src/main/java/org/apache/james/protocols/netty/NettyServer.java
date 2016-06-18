@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.util.HashedWheelTimer;
 
 
 /**
@@ -47,16 +48,19 @@ public class NettyServer extends AbstractAsyncServer {
     private int maxCurConnections;
 
     private int maxCurConnectionsPerIP;
+
+    private HashedWheelTimer timer;
    
-    public NettyServer(Protocol protocol) {
-        this(protocol, null);
+    public NettyServer(Protocol protocol, HashedWheelTimer timer) {
+        this(protocol, null, timer);
     }
     
     
-    public NettyServer(Protocol protocol, Encryption secure) {
+    public NettyServer(Protocol protocol, Encryption secure, HashedWheelTimer timer) {
         super();
         this.protocol = protocol;
         this.secure = secure;
+        this.timer = timer;
     }
     
     protected ExecutionHandler createExecutionHandler(int size) {
@@ -106,7 +110,7 @@ public class NettyServer extends AbstractAsyncServer {
     @Override
     protected ChannelPipelineFactory createPipelineFactory(ChannelGroup group) {
 
-        return new AbstractSSLAwareChannelPipelineFactory(getTimeout(), maxCurConnections, maxCurConnectionsPerIP, group, eHandler) {
+        return new AbstractSSLAwareChannelPipelineFactory(getTimeout(), maxCurConnections, maxCurConnectionsPerIP, group, eHandler, timer) {
 
             @Override
             protected ChannelUpstreamHandler createHandler() {

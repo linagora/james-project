@@ -51,6 +51,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.util.HashedWheelTimer;
 import org.slf4j.Logger;
 
 /**
@@ -115,11 +116,18 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
     private MBeanServer mbeanServer;
 
+    private HashedWheelTimer timer;
+
     @Inject
     public final void setFileSystem(FileSystem filesystem) {
         this.fileSystem = filesystem;
     }
 
+    @Inject
+    public void setHashWheelTimer(HashedWheelTimer timer) {
+        this.timer = timer;
+    }
+    
     /**
      * @see org.apache.james.lifecycle.api.LogEnabled#setLog(org.slf4j.Logger)
      */
@@ -466,12 +474,12 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     
     @Override
     protected Executor createBossExecutor() {
-        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), "boss");
+        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), getDefaultJMXName() + "-boss");
     }
 
     @Override
     protected Executor createWorkerExecutor() {
-        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), "worker");
+        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), getDefaultJMXName() + "-worker");
     }
 
     /**
@@ -561,7 +569,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
      * @return ehandler
      */
     protected ExecutionHandler createExecutionHander() {
-        return new ExecutionHandler(new JMXEnabledOrderedMemoryAwareThreadPoolExecutor(maxExecutorThreads, 0, 0, getThreadPoolJMXPath(), "executor"));
+        return new ExecutionHandler(new JMXEnabledOrderedMemoryAwareThreadPoolExecutor(maxExecutorThreads, 0, 0, getThreadPoolJMXPath(), getDefaultJMXName() + "-executor"));
     }
 
     /**
@@ -577,7 +585,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     
     @Override
     protected ChannelPipelineFactory createPipelineFactory(ChannelGroup group) {
-        return new AbstractExecutorAwareChannelPipelineFactory(getTimeout(), connectionLimit, connPerIP, group, enabledCipherSuites, getExecutionHandler()) {
+        return new AbstractExecutorAwareChannelPipelineFactory(getTimeout(), connectionLimit, connPerIP, group, enabledCipherSuites, getExecutionHandler(), timer) {
             @Override
             protected SSLContext getSSLContext() {
                 if (encryption == null) {

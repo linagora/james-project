@@ -25,12 +25,13 @@ import org.apache.james.protocols.api.Protocol;
 import org.apache.james.protocols.api.ProtocolServer;
 import org.apache.james.protocols.netty.NettyServer;
 import org.apache.james.protocols.pop3.AbstractPOP3SServerTest;
+import org.jboss.netty.util.HashedWheelTimer;
 
 public class NettyPOP3SServerTest extends AbstractPOP3SServerTest {
 
     @Override
     protected ProtocolServer createEncryptedServer(Protocol protocol, InetSocketAddress address, Encryption enc) {
-        NettyServer server = new NettyServer(protocol, enc);
+        NettyServer server = new NettyServer(protocol, enc, new HashedWheelTimer());
         server.setListenAddresses(address);
         return server;
     }

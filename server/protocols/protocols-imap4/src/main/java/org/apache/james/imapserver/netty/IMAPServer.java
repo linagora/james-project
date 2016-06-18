@@ -66,6 +66,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private boolean plainAuthDisallowed;
     private int timeout;
     private int literalSizeLimit;
+    private HashedWheelTimer timer;
 
     public final static int DEFAULT_MAX_LINE_LENGTH = 65536; // Use a big default
     public final static int DEFAULT_IN_MEMORY_SIZE_LIMIT = 10485760; // Use 10MB as default
@@ -87,6 +88,11 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
         this.encoder = encoder;
     }
 
+    @Inject
+    public void setHashWheelTimer(HashedWheelTimer timer) {
+        this.timer = timer;
+    }
+    
     @Override
     public void doConfigure(HierarchicalConfiguration configuration) throws ConfigurationException {
         
@@ -131,7 +137,6 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
         return new ChannelPipelineFactory() {
             
             private final ChannelGroupHandler groupHandler = new ChannelGroupHandler(group);
-            private final HashedWheelTimer timer = new HashedWheelTimer();
             
             private final TimeUnit TIMEOUT_UNIT = TimeUnit.SECONDS;
 
