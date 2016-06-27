@@ -40,15 +40,19 @@ public class UserStepdefs {
     }
 
     @Given("^a domain named \"([^\"]*)\"$")
-    public void createDomain(String domain) throws Throwable {
+    public void createDomain(String domain) throws Exception {
         mainStepdefs.jmapServer.serverProbe().addDomain(domain);
     }
 
     @Given("^a current user with username \"([^\"]*)\" and password \"([^\"]*)\"$")
-    public void createUserWithPasswordAndAuthenticate(String username, String password) throws Throwable {
+    public void createUserWithPasswordAndAuthenticate(String username, String password) throws Exception {
         this.username = username;
         mainStepdefs.jmapServer.serverProbe().addUser(username, password);
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
     }
 
+    @Given("^the user has a mailbox named \"([^\"]*)\"$")
+    public void createMailbox(String mailbox) throws Exception {
+        mainStepdefs.jmapServer.serverProbe().createMailbox("#private", username, mailbox);
+    }
 }

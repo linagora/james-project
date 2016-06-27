@@ -26,6 +26,7 @@ import org.apache.james.GuiceJamesServer;
 
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.builder.RequestSpecBuilder;
 
 import cucumber.runtime.java.guice.ScenarioScoped;
 
@@ -40,6 +41,10 @@ public class MainStepdefs {
         RestAssured.port = jmapServer.getJmapPort();
         RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        RestAssured.requestSpecification = new RequestSpecBuilder()
+                .setAccept(com.jayway.restassured.http.ContentType.JSON)
+                .setContentType(com.jayway.restassured.http.ContentType.JSON)
+                .build();
     }
     
     public void tearDown() {
