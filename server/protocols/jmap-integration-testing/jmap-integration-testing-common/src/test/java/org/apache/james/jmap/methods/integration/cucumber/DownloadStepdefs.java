@@ -33,6 +33,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 
 import com.jayway.restassured.http.ContentType;
 import com.jayway.restassured.response.Response;
+import com.jayway.restassured.response.ValidatableResponse;
 import com.jayway.restassured.specification.RequestSpecification;
 
 import cucumber.api.java.en.Given;
@@ -43,9 +44,12 @@ import cucumber.runtime.java.guice.ScenarioScoped;
 @ScenarioScoped
 public class DownloadStepdefs {
 
+    private static final String NAME = "myFileName.txt";
+
     private final UserStepdefs userStepdefs;
     private final MainStepdefs mainStepdefs;
     private Response response;
+    private ValidatableResponse validatableResponse;
 
     @Inject
     private DownloadStepdefs(MainStepdefs mainStepdefs, UserStepdefs userStepdefs) {
@@ -63,7 +67,7 @@ public class DownloadStepdefs {
     }
 
     @When("^checking for the availability of the attachment endpoint$")
-    public void optionDownload() throws Throwable {
+    public void optionDownload() {
         RequestSpecification requestSpecification = with()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON);
@@ -76,7 +80,7 @@ public class DownloadStepdefs {
     }
 
     @When("^asking for an attachment$")
-    public void getDownload() throws Exception {
+    public void getDownload() {
         RequestSpecification requestSpecification = with()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON);
@@ -89,7 +93,7 @@ public class DownloadStepdefs {
     }
 
     @When("^asking for an attachment without blobId parameter$")
-    public void getDownloadWithoutBlobId() throws Throwable {
+    public void getDownloadWithoutBlobId() {
         response = with()
             .accept(ContentType.JSON)
             .contentType(ContentType.JSON)
@@ -98,7 +102,7 @@ public class DownloadStepdefs {
     }
 
     @When("^getting the attachment with its correct blobId$")
-    public void getDownloadWithKnownBlobId() throws Throwable {
+    public void getDownloadWithKnownBlobId() {
         response = with()
                 .accept(ContentType.JSON)
                 .contentType(ContentType.JSON)
@@ -107,7 +111,7 @@ public class DownloadStepdefs {
     }
 
     @When("^getting the attachment with an unknown blobId$")
-    public void getDownloadWithUnknownBlobId() throws Throwable {
+    public void getDownloadWithUnknownBlobId() {
         response = with()
                 .accept(ContentType.JSON)
                 .contentType(ContentType.JSON)
@@ -115,34 +119,48 @@ public class DownloadStepdefs {
                 .get("/download/badbadbadbadbadbadbadbadbadbadbadbadbadb");
     }
 
+    @When("^getting the attachment with its correct blobId and a desired name$")
+    public void getDownloadWithKnownBlobIdAndName() {
+        response = with()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", userStepdefs.accessToken.serialize())
+                .get("/download/4000c5145f633410b80be368c44e1c394bff9437/" + NAME);
+    }
+
     @Then("^the user should be authorized$")
-    public void httpStatusDifferentFromUnauthorized() throws Exception {
+    public void httpStatusDifferentFromUnauthorized() {
         response.then()
             .statusCode(not(401));
     }
 
     @Then("^the user should not be authorized$")
-    public void httpUnauthorizedStatus() throws Exception {
+    public void httpUnauthorizedStatus() {
         response.then()
             .statusCode(401);
     }
 
     @Then("^the user should receive a bad request response$")
-    public void httpBadRequestStatus() throws Throwable {
+    public void httpBadRequestStatus() {
         response.then()
             .statusCode(400);
     }
 
     @Then("^the user should receive that attachment$")
-    public void httpOkStatusAndExpectedContent() throws Throwable {
-        response.then()
+    public void httpOkStatusAndExpectedContent() {
+        validatableResponse = response.then()
             .statusCode(200)
             .content(notNullValue());
     }
 
     @Then("^the user should receive a not found response$")
-    public void httpNotFoundStatus() throws Throwable {
+    public void httpNotFoundStatus() {
         response.then()
             .statusCode(404);
+    }
+
+    @Then("^the response contains a Content-Disposition header file with that desired name$")
+    public void assertContentDisposition() {
+        validatableResponse.header("Content-Disposition", NAME);
     }
 }

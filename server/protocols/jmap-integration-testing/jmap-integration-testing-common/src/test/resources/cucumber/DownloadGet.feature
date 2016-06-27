@@ -14,3 +14,9 @@ Feature: Download GET
   Scenario: Getting an attachment with an unknown blobId
     When getting the attachment with an unknown blobId
     Then the user should receive a not found response
+
+  Scenario: Getting an attachment previously stored with a desired name
+    Given a message containing an attachment
+    When getting the attachment with its correct blobId and a desired name
+    Then the user should receive that attachment
+    And the response contains a Content-Disposition header file with that desired name

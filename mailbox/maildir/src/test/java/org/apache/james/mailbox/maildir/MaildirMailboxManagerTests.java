@@ -48,7 +48,7 @@ import com.google.common.base.Throwables;
 
 public class MaildirMailboxManagerTests {
 
-    public static abstract class MaildirMailboxManagerTest extends MailboxManagerTest {
+    public static abstract class MaildirMailboxManagerTest extends MailboxManagerTest<StoreMailboxManager> {
         protected StoreMailboxManager createMailboxManager(String configuration, TemporaryFolder temporaryFolder) throws MailboxException, IOException {
             MaildirStore store = new MaildirStore(temporaryFolder.newFolder().getPath() + configuration, new JVMMailboxPathLocker());
             MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);

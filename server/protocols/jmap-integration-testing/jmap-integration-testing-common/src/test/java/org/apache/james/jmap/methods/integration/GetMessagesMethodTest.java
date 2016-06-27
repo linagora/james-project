@@ -450,9 +450,11 @@ public abstract class GetMessagesMethodTest {
             .body(ATTACHMENTS, hasSize(2))
             .body(FIRST_ATTACHMENT + ".blobId", equalTo("223a76c0e8c1b1762487d8e0598bd88497d73ef2"))
             .body(FIRST_ATTACHMENT + ".type", equalTo("image/jpeg"))
+            .body(FIRST_ATTACHMENT + ".name", equalTo("4037_014.jpg"))
             .body(FIRST_ATTACHMENT + ".size", equalTo(846))
             .body(SECOND_ATTACHMENT + ".blobId", equalTo("58aa22c2ec5770fb9e574ba19008dbfc647eba43"))
             .body(SECOND_ATTACHMENT + ".type", equalTo("image/jpeg"))
+            .body(SECOND_ATTACHMENT + ".name", equalTo("4037_015.jpg"))
             .body(SECOND_ATTACHMENT + ".size", equalTo(597));
     }
 
