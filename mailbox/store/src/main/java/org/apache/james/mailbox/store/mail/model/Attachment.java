@@ -26,6 +26,7 @@ import java.util.Arrays;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
@@ -35,23 +36,16 @@ public class Attachment {
         return new Builder();
     }
 
-    public static Attachment from(byte[] bytes, String type) {
-        return builder()
-                .attachmentId(AttachmentId.forPayload(bytes))
-                .bytes(bytes)
-                .type(type)
-                .size(bytes.length)
-                .build();
-    }
-
     public static class Builder {
 
         private AttachmentId attachmentId;
         private byte[] bytes;
         private String type;
+        private Optional<String> name;
         private Long size;
 
         private Builder() {
+            name = Optional.absent();
         }
 
         public Builder attachmentId(AttachmentId attachmentId) {
@@ -72,29 +66,50 @@ public class Attachment {
             return this;
         }
 
+        public Builder name(Optional<String> name) {
+            Preconditions.checkArgument(name != null);
+            this.name = name;
+            return this;
+        }
+
         public Builder size(long size) {
             this.size = size;
             return this;
         }
 
         public Attachment build() {
-            Preconditions.checkState(attachmentId != null, "'attachmentId' is mandatory");
             Preconditions.checkState(bytes != null, "'bytes' is mandatory");
+            AttachmentId builtAttachmentId = attachmentId();
+            Long builtSize = size();
+            Preconditions.checkState(builtAttachmentId != null, "'attachmentId' is mandatory");
             Preconditions.checkState(type != null, "'type' is mandatory");
-            Preconditions.checkState(size != null, "'size' is mandatory");
-            return new Attachment(bytes, attachmentId, type, size);
+            Preconditions.checkState(builtSize != null, "'size' is mandatory");
+            return new Attachment(bytes, builtAttachmentId, type, name, builtSize);
+        }
+
+        private AttachmentId attachmentId() {
+            if (attachmentId != null) {
+                return attachmentId;
+            }
+            return AttachmentId.forPayload(bytes);
+        }
+
+        private Long size() {
+            return MoreObjects.firstNonNull(size, Long.valueOf(bytes.length));
         }
     }
 
     private final byte[] bytes;
     private final AttachmentId attachmentId;
     private final String type;
+    private final Optional<String> name;
     private final long size;
 
-    private Attachment(byte[] bytes, AttachmentId attachmentId, String type, long size) {
+    private Attachment(byte[] bytes, AttachmentId attachmentId, String type, Optional<String> name, long size) {
         this.bytes = bytes;
         this.attachmentId = attachmentId;
         this.type = type;
+        this.name = name;
         this.size = size;
     }
 
@@ -104,6 +119,10 @@ public class Attachment {
 
     public String getType() {
         return type;
+    }
+
+    public Optional<String> getName() {
+        return name;
     }
 
     public long getSize() {
@@ -121,6 +140,7 @@ public class Attachment {
             return Objects.equal(attachmentId, other.attachmentId)
                 && Arrays.equals(bytes, other.bytes)
                 && Objects.equal(type, other.type)
+                && Objects.equal(name, other.name)
                 && Objects.equal(size, other.size);
         }
         return false;
@@ -128,7 +148,7 @@ public class Attachment {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(attachmentId, bytes, type, size);
+        return Objects.hashCode(attachmentId, bytes, type, name, size);
     }
 
     @Override
@@ -138,6 +158,7 @@ public class Attachment {
                 .add("attachmentId", attachmentId)
                 .add("bytes", bytes)
                 .add("type", type)
+                .add("name", name)
                 .add("size", size)
                 .toString();
     }

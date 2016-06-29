@@ -19,25 +19,19 @@
 
 package org.apache.james.jmap;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.james.jmap.utils.DownloadPath;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.junit.Test;
 
 public class DownloadServletTest {
-
-    @Test
-    public void blobIdFromShouldSkipTheFirstCharacter() {
-        String blobId = new DownloadServlet(null).blobIdFrom("1234");
-        assertThat(blobId).isEqualTo("234");
-    }
 
     @Test
     public void downloadMayFailWhenUnableToCreateAttachmentMapper() throws Exception {
@@ -48,9 +42,8 @@ public class DownloadServletTest {
 
         DownloadServlet testee = new DownloadServlet(mailboxSessionMapperFactory);
 
-        String blobId = null;
         HttpServletResponse resp = mock(HttpServletResponse.class);
-        testee.download(mailboxSession, blobId, resp);
+        testee.download(mailboxSession, DownloadPath.from("/blobId"), resp);
 
         verify(resp).setStatus(500);
     }
