@@ -24,25 +24,28 @@ import java.time.format.DateTimeFormatter;
 
 import javax.inject.Inject;
 
-import org.apache.james.jmap.api.ContinuationTokenManager;
+import org.apache.james.jmap.api.SimpleTokenManager;
+import org.apache.james.jmap.model.AttachmentAccessToken;
 import org.apache.james.jmap.model.ContinuationToken;
+import org.apache.james.jmap.model.SignedExpiringToken;
 import org.apache.james.util.date.ZonedDateTimeProvider;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-public class SignedContinuationTokenManager implements ContinuationTokenManager {
+public class SignedTokenManager implements SimpleTokenManager {
 
     private final SignatureHandler signatureHandler;
     private final ZonedDateTimeProvider zonedDateTimeProvider;
 
     @Inject
-    public SignedContinuationTokenManager(SignatureHandler signatureHandler, ZonedDateTimeProvider zonedDateTimeProvider) {
+    public SignedTokenManager(SignatureHandler signatureHandler, ZonedDateTimeProvider zonedDateTimeProvider) {
         this.signatureHandler = signatureHandler;
         this.zonedDateTimeProvider = zonedDateTimeProvider;
     }
 
     @Override
-    public ContinuationToken generateToken(String username) {
+    public ContinuationToken generateContinuationToken(String username) {
         Preconditions.checkNotNull(username);
         ZonedDateTime expirationTime = zonedDateTimeProvider.get().plusMinutes(15);
         return new ContinuationToken(username,
@@ -51,28 +54,39 @@ public class SignedContinuationTokenManager implements ContinuationTokenManager 
     }
 
     @Override
-    public ContinuationTokenStatus getValidity(ContinuationToken token) {
+    public AttachmentAccessToken generateAttachmentAccessToken(String blobId) {
+        Preconditions.checkArgument(! Strings.isNullOrEmpty(blobId));
+        ZonedDateTime expirationTime = zonedDateTimeProvider.get().plusMinutes(5);
+        return AttachmentAccessToken.builder()
+                .blobId(blobId)
+                .expirationDate(expirationTime)
+                .signature(signatureHandler.sign(blobId + AttachmentAccessToken.SEPARATOR + DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(expirationTime)))
+                .build();
+    }
+
+    @Override
+    public TokenStatus getValidity(SignedExpiringToken token) {
         Preconditions.checkNotNull(token);
         if (! isCorrectlySigned(token)) {
-            return ContinuationTokenStatus.INVALID;
+            return TokenStatus.INVALID;
         }
         if (isExpired(token)) {
-            return ContinuationTokenStatus.EXPIRED;
+            return TokenStatus.EXPIRED;
         }
-        return ContinuationTokenStatus.OK;
+        return TokenStatus.OK;
     }
     
     @Override
-    public boolean isValid(ContinuationToken token) {
+    public boolean isValid(SignedExpiringToken token) {
         Preconditions.checkNotNull(token);
-        return ContinuationTokenStatus.OK.equals(getValidity(token));
+        return TokenStatus.OK.equals(getValidity(token));
     }
 
-    private boolean isCorrectlySigned(ContinuationToken token) {
+    private boolean isCorrectlySigned(SignedExpiringToken token) {
         return signatureHandler.verify(token.getContent(), token.getSignature());
     }
 
-    private boolean isExpired(ContinuationToken token) {
+    private boolean isExpired(SignedExpiringToken token) {
         return token.getExpirationDate().isBefore(zonedDateTimeProvider.get());
     }
 }

@@ -17,16 +17,24 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.table;
+package org.apache.james.jmap.api;
 
-public interface CassandraAttachmentTable {
+import org.apache.james.jmap.model.AttachmentAccessToken;
+import org.apache.james.jmap.model.ContinuationToken;
+import org.apache.james.jmap.model.SignedExpiringToken;
 
-    String TABLE_NAME = "attachment";
-    String ID = "id";
-    String PAYLOAD = "payload";
-    String TYPE = "type";
-    String NAME = "name";
-    String SIZE = "size";
-    String[] FIELDS = { ID, PAYLOAD, TYPE, NAME, SIZE };
+public interface SimpleTokenManager {
+    enum TokenStatus {
+        OK,
+        INVALID,
+        EXPIRED
+    }
 
+    ContinuationToken generateContinuationToken(String username);
+
+    AttachmentAccessToken generateAttachmentAccessToken(String blobId);
+
+    TokenStatus getValidity(SignedExpiringToken token);
+
+    boolean isValid(SignedExpiringToken token);
 }

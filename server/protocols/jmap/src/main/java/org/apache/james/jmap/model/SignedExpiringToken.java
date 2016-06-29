@@ -16,22 +16,15 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.jmap.model;
 
-package org.apache.james.jmap.api;
+import java.time.ZonedDateTime;
 
-import org.apache.james.jmap.model.ContinuationToken;
+public interface SignedExpiringToken {
 
-public interface ContinuationTokenManager {
-    enum ContinuationTokenStatus {
-        OK,
-        INVALID,
-        EXPIRED
-    }
+    ZonedDateTime getExpirationDate();
 
-    ContinuationToken generateToken(String username);
-    
-    ContinuationTokenStatus getValidity(ContinuationToken token);
+    String getContent();
 
-    boolean isValid(ContinuationToken token);
-
+    String getSignature();
 }
