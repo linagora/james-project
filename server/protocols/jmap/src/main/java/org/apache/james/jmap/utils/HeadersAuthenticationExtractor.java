@@ -17,16 +17,22 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.table;
+package org.apache.james.jmap.utils;
 
-public interface CassandraAttachmentTable {
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.stream.Stream;
 
-    String TABLE_NAME = "attachment";
-    String ID = "id";
-    String PAYLOAD = "payload";
-    String TYPE = "type";
-    String NAME = "name";
-    String SIZE = "size";
-    String[] FIELDS = { ID, PAYLOAD, TYPE, NAME, SIZE };
+import javax.servlet.http.HttpServletRequest;
+
+public class HeadersAuthenticationExtractor {
+
+    private static final String AUTHORIZATION_HEADERS = "Authorization";
+
+    public static Stream<String> authHeaders(HttpServletRequest httpRequest) {
+        Enumeration<String> authHeaders = httpRequest.getHeaders(AUTHORIZATION_HEADERS);
+
+        return authHeaders != null ? Collections.list(authHeaders).stream() : Stream.of();
+    }
 
 }

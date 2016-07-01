@@ -18,15 +18,18 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.james.jmap.crypto.JwtTokenVerifier;
+import org.apache.james.jmap.api.SimpleTokenManager;
 import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
 import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
-import org.apache.james.jmap.utils.HeadersAuthenticationExtractor;
+import org.apache.james.jmap.exceptions.UnauthorizedException;
+import org.apache.james.jmap.model.AttachmentAccessToken;
+import org.apache.james.jmap.utils.DownloadPath;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -35,16 +38,17 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class JWTAuthenticationStrategy implements AuthenticationStrategy {
+public class QueryParameterAccessTokenAuthenticationStrategy implements AuthenticationStrategy {
 
-    private static final Logger LOG = LoggerFactory.getLogger(JWTAuthenticationStrategy.class);
-    @VisibleForTesting static final String AUTHORIZATION_HEADER_PREFIX = "Bearer ";
-    private final JwtTokenVerifier tokenManager;
+    private static final Logger LOG = LoggerFactory.getLogger(QueryParameterAccessTokenAuthenticationStrategy.class);
+    private static final String ACCESS_TOKEN = "access_token";
+
+    private final SimpleTokenManager tokenManager;
     private final MailboxManager mailboxManager;
 
     @Inject
     @VisibleForTesting
-    JWTAuthenticationStrategy(JwtTokenVerifier tokenManager, MailboxManager mailboxManager) {
+    QueryParameterAccessTokenAuthenticationStrategy(SimpleTokenManager tokenManager, MailboxManager mailboxManager) {
         this.tokenManager = tokenManager;
         this.mailboxManager = mailboxManager;
     }
@@ -52,33 +56,36 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy {
     @Override
     public MailboxSession createMailboxSession(HttpServletRequest httpRequest) throws MailboxSessionCreationException, NoValidAuthHeaderException {
 
-        Stream<String> userLoginStream = extractTokensFromAuthHeaders(HeadersAuthenticationExtractor.authHeaders(httpRequest))
-                .filter(tokenManager::verify)
-                .map(tokenManager::extractLogin);
+        Optional<String> username = getAccessToken(httpRequest)
+            .map(AttachmentAccessToken::getUsername)
+            .findFirst();
 
-        Stream<MailboxSession> mailboxSessionStream = userLoginStream
-                .map(l -> {
-                    try {
-                        return mailboxManager.createSystemSession(l, LOG);
-                    } catch (MailboxException e) {
-                        throw new MailboxSessionCreationException(e);
-                    }
-                });
-
-        return mailboxSessionStream
-                .findFirst()
-                .orElseThrow(() -> new NoValidAuthHeaderException());
+        if (username.isPresent()) {
+            try {
+                return mailboxManager.createSystemSession(username.get(), LOG);
+            } catch (MailboxException e) {
+                throw new MailboxSessionCreationException(e);
+            }
+        }
+        throw new UnauthorizedException();
     }
 
     @Override
     public boolean checkAuthorizationHeader(HttpServletRequest httpRequest) {
-        return extractTokensFromAuthHeaders(HeadersAuthenticationExtractor.authHeaders(httpRequest))
-                .anyMatch(tokenManager::verify);
+        return getAccessToken(httpRequest)
+                .anyMatch(tokenManager::isValid);
     }
 
-    private Stream<String> extractTokensFromAuthHeaders(Stream<String> authHeaders) {
-        return authHeaders
-                .filter(h -> h.startsWith(AUTHORIZATION_HEADER_PREFIX))
-                .map(h -> h.substring(AUTHORIZATION_HEADER_PREFIX.length()));
+    private Stream<AttachmentAccessToken> getAccessToken(HttpServletRequest httpRequest) {
+        try {
+            return Stream.of(AttachmentAccessToken.from(httpRequest.getParameter(ACCESS_TOKEN), getBlobId(httpRequest)));
+        } catch (IllegalArgumentException e) {
+            return Stream.of();
+        }
+    }
+
+    private String getBlobId(HttpServletRequest httpRequest) {
+        String pathInfo = httpRequest.getPathInfo();
+        return DownloadPath.from(pathInfo).getBlobId();
     }
 }

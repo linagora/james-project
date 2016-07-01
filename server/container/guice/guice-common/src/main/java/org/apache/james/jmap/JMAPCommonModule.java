@@ -74,10 +74,12 @@ public class JMAPCommonModule extends AbstractModule {
     @Provides
     public List<AuthenticationStrategy> authStrategies(
             AccessTokenAuthenticationStrategy accessTokenAuthenticationStrategy,
-            JWTAuthenticationStrategy jwtAuthenticationStrategy) {
+            JWTAuthenticationStrategy jwtAuthenticationStrategy,
+            QueryParameterAccessTokenAuthenticationStrategy queryParameterAccessTokenAuthenticationStrategy) {
 
         return ImmutableList.of(
                 jwtAuthenticationStrategy,
-                accessTokenAuthenticationStrategy);
+                accessTokenAuthenticationStrategy,
+                queryParameterAccessTokenAuthenticationStrategy);
     }
 }
