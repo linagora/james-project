@@ -37,15 +37,15 @@ import com.google.common.collect.ImmutableList;
 
 public class BypassAuthOnRequestMethod implements Filter {
 
-    public static Builder bypass(AuthenticationFilter authenticationFilter) {
+    public static Builder bypass(Filter authenticationFilter) {
         return new Builder(authenticationFilter);
     }
 
     public static class Builder {
         private final ImmutableList.Builder<Predicate<HttpServletRequest>> reasons = new ImmutableList.Builder<>();
-        private final AuthenticationFilter authenticationFilter;
+        private final Filter authenticationFilter;
 
-        private Builder(AuthenticationFilter authenticationFilter) {
+        private Builder(Filter authenticationFilter) {
             this.authenticationFilter = authenticationFilter;
         }
 
@@ -75,10 +75,10 @@ public class BypassAuthOnRequestMethod implements Filter {
     }
 
 
-    private final AuthenticationFilter authenticationFilter;
+    private final Filter authenticationFilter;
     private final List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth;
 
-    private BypassAuthOnRequestMethod(AuthenticationFilter authenticationFilter, List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth) {
+    private BypassAuthOnRequestMethod(Filter authenticationFilter, List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth) {
         this.authenticationFilter = authenticationFilter;
         this.listOfReasonsToBypassAuth = listOfReasonsToBypassAuth;
     }
