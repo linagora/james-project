@@ -19,9 +19,8 @@
 
 package org.apache.james.jmap.model;
 
-import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
-
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +31,8 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 import org.apache.james.jmap.methods.ValidationResult;
+import org.apache.james.jmap.model.MessageProperties.MessageProperty;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -84,8 +85,13 @@ public class CreationMessage {
             headers = ImmutableMap.builder();
         }
 
-        public Builder mailboxIds(ImmutableList<String> mailboxIds) {
-            this.mailboxIds = mailboxIds;
+        public Builder mailboxId(String... mailboxIds) {
+            return mailboxIds(Arrays.asList(mailboxIds));
+        }
+
+        @JsonDeserialize
+        public Builder mailboxIds(List<String> mailboxIds) {
+            this.mailboxIds = ImmutableList.copyOf(mailboxIds);
             return this;
         }
 
@@ -164,6 +170,11 @@ public class CreationMessage {
             return this;
         }
 
+        public Builder attachments(Attachment... attachments) {
+            return attachments(Arrays.asList(attachments));
+        }
+        
+        @JsonDeserialize
         public Builder attachments(List<Attachment> attachments) {
             this.attachments.addAll(attachments);
             return this;
@@ -185,7 +196,8 @@ public class CreationMessage {
             Preconditions.checkState(headers != null, "'headers' is mandatory");
             ImmutableList<Attachment> attachments = this.attachments.build();
             ImmutableMap<String, SubMessage> attachedMessages = this.attachedMessages.build();
-            Preconditions.checkState(areAttachedMessagesKeysInAttachments(attachments, attachedMessages), "'attachedMessages' keys must be in 'attachments'");
+            //TODO: need to be sorted out
+            //Preconditions.checkState(areAttachedMessagesKeysInAttachments(attachments, attachedMessages), "'attachedMessages' keys must be in 'attachments'");
 
             if (date == null) {
                 date = ZonedDateTime.now();
@@ -349,6 +361,10 @@ public class CreationMessage {
         from.filter(f -> !f.hasValidEmail()).ifPresent(f -> errors.add(invalidPropertyFrom));
     }
 
+    public boolean isIn(Mailbox mailbox) {
+        return mailboxIds.contains(mailbox.getMailboxId().serialize());
+    }
+    
     @JsonDeserialize(builder = DraftEmailer.Builder.class)
     public static class DraftEmailer {
 

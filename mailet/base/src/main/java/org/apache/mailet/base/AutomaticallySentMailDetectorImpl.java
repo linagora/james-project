@@ -32,6 +32,7 @@ import org.apache.james.mime4j.parser.MimeStreamParser;
 import org.apache.james.mime4j.stream.BodyDescriptor;
 import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
 
 public class AutomaticallySentMailDetectorImpl implements AutomaticallySentMailDetector {
 
@@ -42,23 +43,40 @@ public class AutomaticallySentMailDetectorImpl implements AutomaticallySentMailD
     }
 
     public boolean isMailingList(Mail mail) throws MessagingException {
-        String localPart = mail.getSender().getLocalPart();
-        return localPart.startsWith("owner-")
-            || localPart.endsWith("-request")
-            || localPart.equalsIgnoreCase("MAILER-DAEMON")
-            || localPart.equalsIgnoreCase("LISTSERV")
-            || localPart.equalsIgnoreCase("majordomo")
-            || mail.getMessage()
-            .getMatchingHeaders(new String[]{"List-Help",
-                "List-Subscribe",
-                "List-Unsubscribe",
-                "List-Owner",
-                "List-Post",
-                "List-Id",
-                "List-Archive"})
-            .hasMoreElements();
+    	
+        return senderIsMailingList(mail)
+            || headerIsMailingList(mail);
     }
 
+	private boolean senderIsMailingList(Mail mail) {
+		MailAddress sender = mail.getSender();
+    	if (sender == null) {
+    		return false;
+    	}
+    	
+        String localPart = sender.getLocalPart();
+		return localPart.startsWith("owner-")
+			|| localPart.endsWith("-request")
+			|| localPart.equalsIgnoreCase("MAILER-DAEMON")
+			|| localPart.equalsIgnoreCase("LISTSERV")
+			|| localPart.equalsIgnoreCase("majordomo");
+	}
+
+
+	private boolean headerIsMailingList(Mail mail) throws MessagingException {
+		return mail.getMessage()
+			.getMatchingHeaders(
+					new String[]{
+							"List-Help",
+						    "List-Subscribe",
+						    "List-Unsubscribe",
+						    "List-Owner",
+						    "List-Post",
+						    "List-Id",
+						    "List-Archive"})
+			.hasMoreElements();
+	}
+	
     public boolean isAutoSubmitted(Mail mail) throws MessagingException {
         String[] headers = mail.getMessage().getHeader(AUTO_SUBMITTED_HEADER);
         if (headers != null) {

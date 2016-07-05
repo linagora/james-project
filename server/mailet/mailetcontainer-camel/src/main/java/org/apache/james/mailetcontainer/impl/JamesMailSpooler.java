@@ -192,11 +192,11 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
                     logger.error("Exception dequeue mail", e1);
 
                 }
-            }
+            } catch (InterruptedException interrupted) {
+            	//MailSpooler is stopping
+			}
         }
-        if (logger.isInfoEnabled()) {
-            logger.info("Stop " + getClass().getName() + ": " + Thread.currentThread().getName());
-        }
+        logger.info("Stop {} : {}", getClass().getName(), Thread.currentThread().getName());
     }
 
     /**

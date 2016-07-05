@@ -17,33 +17,24 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.methods;
+package org.apache.james.jmap.exceptions;
 
-import org.apache.james.jmap.model.CreationMessage;
-import org.apache.james.jmap.model.CreationMessageId;
+import java.util.List;
 
-public class MessageWithId<T> {
+import org.apache.james.jmap.model.BlobId;
 
-    private CreationMessageId creationId;
-    private T message;
+import com.google.common.collect.ImmutableList;
 
-    public MessageWithId(CreationMessageId creationId, T message) {
-        this.creationId = creationId;
-        this.message = message;
+public class AttachmentsNotFoundException extends Exception {
+    
+    private List<BlobId> attachmentIds;
+
+
+    public AttachmentsNotFoundException(List<BlobId> attachmentIds) {
+        this.attachmentIds = ImmutableList.copyOf(attachmentIds);
     }
-
-    public CreationMessageId getCreationId() {
-        return creationId;
+    
+    public List<BlobId> getAttachmentIds() {
+        return attachmentIds;
     }
-
-    public T getMessage() {
-        return message;
-    }
-
-    public static class CreationMessageEntry extends MessageWithId<CreationMessage> {
-        public CreationMessageEntry(CreationMessageId creationId, CreationMessage message) {
-            super(creationId, message);
-        }
-    }
-
 }

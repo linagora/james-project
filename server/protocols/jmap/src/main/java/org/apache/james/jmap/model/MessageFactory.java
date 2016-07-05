@@ -61,7 +61,7 @@ public class MessageFactory {
         MessageId messageId = uidToMessageId.apply(im.getId());
         return Message.builder()
                 .id(messageId)
-                .blobId(String.valueOf(im.getId()))
+                .blobId(BlobId.of(String.valueOf(im.getId())))
                 .threadId(messageId.serialize())
                 .mailboxIds(ImmutableList.of(im.getMailboxId()))
                 .inReplyToMessageId(getHeaderAsSingleValue(im, "in-reply-to"))
@@ -158,7 +158,7 @@ public class MessageFactory {
 
     private Attachment fromMailboxAttachment(org.apache.james.mailbox.store.mail.model.Attachment attachment) {
         return Attachment.builder()
-                    .blobId(attachment.getAttachmentId().getId())
+                    .blobId(BlobId.of(attachment.getAttachmentId().getId()))
                     .type(attachment.getType())
                     .name(attachment.getName().orNull())
                     .size(attachment.getSize())
