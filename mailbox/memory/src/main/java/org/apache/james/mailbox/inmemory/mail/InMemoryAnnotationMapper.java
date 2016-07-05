@@ -43,7 +43,7 @@ import com.google.common.collect.Table;
 
 public class InMemoryAnnotationMapper implements AnnotationMapper {
     private final InMemoryId mailboxId;
-    private final Table<InMemoryId, MailboxAnnotationKey, String> mailboxesAnnotations;
+    private final Table<InMemoryId, String, String> mailboxesAnnotations;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public InMemoryAnnotationMapper(InMemoryId mailboxId) {
@@ -66,9 +66,9 @@ public class InMemoryAnnotationMapper implements AnnotationMapper {
         try {
             return Iterables.transform(
                 mailboxesAnnotations.row(mailboxId).entrySet(), 
-                new Function<Map.Entry<MailboxAnnotationKey, String>, MailboxAnnotation>() {
-                    public MailboxAnnotation apply(Entry<MailboxAnnotationKey, String> input) {
-                        return MailboxAnnotation.newInstance(input.getKey(), input.getValue());
+                new Function<Map.Entry<String, String>, MailboxAnnotation>() {
+                    public MailboxAnnotation apply(Entry<String, String> input) {
+                        return MailboxAnnotation.newInstance(new MailboxAnnotationKey(input.getKey()), input.getValue());
                     }
                 });
         } finally {
@@ -139,7 +139,7 @@ public class InMemoryAnnotationMapper implements AnnotationMapper {
         Preconditions.checkArgument(!mailboxAnnotation.isNil());
         lock.writeLock().lock();
         try {
-            mailboxesAnnotations.put(mailboxId, mailboxAnnotation.getKey(), mailboxAnnotation.getValue().get());
+            mailboxesAnnotations.put(mailboxId, mailboxAnnotation.getKey().getKey(), mailboxAnnotation.getValue().get());
         } finally {
             lock.writeLock().unlock();
         }
@@ -149,7 +149,7 @@ public class InMemoryAnnotationMapper implements AnnotationMapper {
     public void deleteAnnotation(MailboxAnnotationKey key) {
         lock.writeLock().lock();
         try {
-            mailboxesAnnotations.remove(mailboxId, key);
+            mailboxesAnnotations.remove(mailboxId, key.getKey());
         } finally {
             lock.writeLock().unlock();
         }
