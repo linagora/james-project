@@ -28,15 +28,11 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.*;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLCommand;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
-import org.apache.james.mailbox.model.MailboxAnnotation;
-import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
-import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.store.SimpleMailboxSession;
 import org.apache.james.user.lib.mock.InMemoryUsersRepository;
 import org.junit.Test;
@@ -211,7 +207,7 @@ public class FirstUserConnectionFilterThreadTest {
         }
 
         @Override
-        public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotation.MailboxAnnotationKey> keys) throws MailboxException {
+        public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotationKey> keys) throws MailboxException {
             return null;
         }
 
@@ -227,13 +223,13 @@ public class FirstUserConnectionFilterThreadTest {
 
         @Override
         public List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxPath mailboxPath, MailboxSession session,
-                Set<MailboxAnnotation.MailboxAnnotationKey> keys) throws MailboxException {
+                Set<MailboxAnnotationKey> keys) throws MailboxException {
             return null;
         }
 
         @Override
         public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxPath mailboxPath, MailboxSession session,
-                Set<MailboxAnnotation.MailboxAnnotationKey> keys) throws MailboxException {
+                Set<MailboxAnnotationKey> keys) throws MailboxException {
             return null;
         }
     }
