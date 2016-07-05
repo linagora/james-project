@@ -211,7 +211,7 @@ public class FirstUserConnectionFilterThreadTest {
         }
 
         @Override
-        public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<String> keys) throws MailboxException {
+        public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotation.MailboxAnnotationKey> keys) throws MailboxException {
             return null;
         }
 
@@ -223,6 +223,18 @@ public class FirstUserConnectionFilterThreadTest {
         @Override
         public boolean hasCapability(MailboxCapabilities capability) {
             return false;
+        }
+
+        @Override
+        public List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxPath mailboxPath, MailboxSession session,
+                Set<MailboxAnnotation.MailboxAnnotationKey> keys) throws MailboxException {
+            return null;
+        }
+
+        @Override
+        public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxPath mailboxPath, MailboxSession session,
+                Set<MailboxAnnotation.MailboxAnnotationKey> keys) throws MailboxException {
+            return null;
         }
     }
 }
