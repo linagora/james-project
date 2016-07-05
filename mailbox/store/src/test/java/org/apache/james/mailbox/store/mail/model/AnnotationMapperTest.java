@@ -147,7 +147,7 @@ public class AnnotationMapperTest<T extends MapperProvider> {
     }
 
     @ContractTest
-    public void getAnnotationsByKeysWithOneDepthShouldReturnTheChildrenEntriesEnvenItDoesNotExist() throws Exception {
+    public void getAnnotationsByKeysWithOneDepthShouldReturnTheChildrenEntriesEvenItDoesNotExist() throws Exception {
         annotationMapper.insertAnnotation(PRIVATE_CHILD_ANNOTATION);
         annotationMapper.insertAnnotation(PRIVATE_GRANDCHILD_ANNOTATION);
         annotationMapper.insertAnnotation(SHARED_ANNOTATION);

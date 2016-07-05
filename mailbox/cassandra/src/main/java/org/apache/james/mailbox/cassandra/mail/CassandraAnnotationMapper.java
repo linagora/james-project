@@ -134,7 +134,7 @@ public class CassandraAnnotationMapper extends NonTransactionalMapper implements
     }
 
     private boolean isChild(MailboxAnnotationKey key, MailboxAnnotation annotation) {
-        return annotation.getKey().countSlash() <= key.countSlash();
+        return annotation.getKey().countSlash() <= key.countSlash() + 1;
     }
 
     @Override
