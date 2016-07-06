@@ -19,8 +19,6 @@
 
 package org.apache.james.imap.decode.parser;
 
-import static org.apache.james.imap.message.request.GetAnnotationRequest.GetAnnotationRequestBuilder;
-
 import org.apache.james.imap.message.request.GetAnnotationRequest;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import com.google.common.base.CharMatcher;
@@ -58,7 +56,7 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
     }
 
     private ImapMessage buildAnnotationRequest(ImapCommand command, ImapRequestLineReader requestReader, String tag) throws DecodingException {
-        GetAnnotationRequestBuilder builder = GetAnnotationRequest.builder().tag(tag).command(command);
+        GetAnnotationRequest.Builder builder = GetAnnotationRequest.builder().tag(tag).command(command);
         builder.mailboxName(requestReader.mailbox());
 
         consumeOptionsAndKeys(requestReader, builder);
@@ -70,7 +68,7 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
         return builder.build();
     }
 
-    private void consumeOptionsAndKeys(ImapRequestLineReader requestReader, GetAnnotationRequestBuilder builder) throws DecodingException {
+    private void consumeOptionsAndKeys(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         while (requestReader.nextNonSpaceChar() == '(') {
             requestReader.consumeChar('(');
             switch (requestReader.nextChar()) {
@@ -89,7 +87,7 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
         }
     }
 
-    private void consumeDepthOpt(ImapRequestLineReader requestReader, GetAnnotationRequestBuilder builder) throws DecodingException {
+    private void consumeDepthOpt(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         if (requestReader.atom().equalsIgnoreCase(DEPTH)) {
             builder.depth(Depth.fromString(requestReader.atom()));
         } else {
@@ -98,7 +96,7 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
         requestReader.consumeChar(')');
     }
 
-    private void consumeMaxsizeOpt(ImapRequestLineReader requestReader, GetAnnotationRequestBuilder builder) throws DecodingException {
+    private void consumeMaxsizeOpt(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         if (requestReader.atom().equalsIgnoreCase(MAXSIZE)) {
             builder.maxsize(requestReader.number(true));
         } else {
@@ -107,12 +105,12 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
         requestReader.consumeChar(')');
     }
 
-    private void consumeKey(ImapRequestLineReader requestReader, GetAnnotationRequestBuilder builder) throws DecodingException {
+    private void consumeKey(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         builder.keys(ImmutableSet.of(new MailboxAnnotationKey(requestReader.atom())));
         requestReader.eol();
     }
 
-    private void consumeKeys(ImapRequestLineReader requestReader, GetAnnotationRequestBuilder builder) throws DecodingException {
+    private void consumeKeys(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         Builder<MailboxAnnotationKey> keys = ImmutableSet.builder();
 
         do {

@@ -72,7 +72,7 @@ public class GetAnnotationProcessorTest {
     private Set<MailboxAnnotationKey> KEYS;
     private StatusResponse statusResponse;
 
-    private GetAnnotationRequest.GetAnnotationRequestBuilder annotationRequestBuilder;
+    private GetAnnotationRequest.Builder annotationRequestBuilder;
     private MailboxPath inbox;
     private Logger log;
     private ArgumentCaptor<HumanReadableText> humanTextCaptor;

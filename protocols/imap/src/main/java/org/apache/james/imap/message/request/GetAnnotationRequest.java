@@ -28,7 +28,7 @@ import com.google.common.base.Preconditions;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 
 public class GetAnnotationRequest extends AbstractImapRequest {
-    public static class GetAnnotationRequestBuilder {
+    public static class Builder {
         private String tag;
         private ImapCommand command;
         private String mailboxName;
@@ -36,39 +36,39 @@ public class GetAnnotationRequest extends AbstractImapRequest {
         private long maxsize;
         private Depth depth;
 
-        private GetAnnotationRequestBuilder() {
+        private Builder() {
             this.depth = Depth.ZERO;
             keys = ImmutableSet.of();
         }
 
-        public GetAnnotationRequestBuilder tag(String tag) {
+        public Builder tag(String tag) {
             this.tag = tag;
             return this;
         }
 
-        public GetAnnotationRequestBuilder command(ImapCommand command) {
+        public Builder command(ImapCommand command) {
             this.command = command;
             return this;
         }
 
-        public GetAnnotationRequestBuilder mailboxName(String mailboxName) {
+        public Builder mailboxName(String mailboxName) {
             Preconditions.checkNotNull(mailboxName);
             this.mailboxName = mailboxName;
             return this;
         }
 
-        public GetAnnotationRequestBuilder keys(Set<MailboxAnnotationKey> keys) {
+        public Builder keys(Set<MailboxAnnotationKey> keys) {
             this.keys = ImmutableSet.copyOf(keys);
             return this;
         }
 
-        public GetAnnotationRequestBuilder maxsize(long maxsize) {
+        public Builder maxsize(long maxsize) {
             Preconditions.checkArgument(maxsize > 0);
             this.maxsize = maxsize;
             return this;
         }
 
-        public GetAnnotationRequestBuilder depth(Depth depth) {
+        public Builder depth(Depth depth) {
             this.depth = depth;
             return this;
         }
@@ -93,11 +93,11 @@ public class GetAnnotationRequest extends AbstractImapRequest {
     private final long maxsize;
     private final Depth depth;
 
-    public static GetAnnotationRequestBuilder builder() {
-        return new GetAnnotationRequestBuilder();
+    public static Builder builder() {
+        return new Builder();
     }
 
-    private GetAnnotationRequest(GetAnnotationRequestBuilder builder) {
+    private GetAnnotationRequest(Builder builder) {
         super(builder.tag, builder.command);
         this.mailboxName = builder.mailboxName;
         this.depth = builder.depth;
