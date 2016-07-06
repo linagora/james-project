@@ -63,7 +63,7 @@ public class MIMEMessageConverter {
         this.bodyFactory = new BasicBodyFactory();
     }
 
-    public byte[] convert(MessageWithId.CreationMessageEntry creationMessageEntry) {
+    public byte[] convert(ValueWithId.CreationMessageEntry creationMessageEntry) {
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         DefaultMessageWriter writer = new DefaultMessageWriter();
@@ -75,14 +75,14 @@ public class MIMEMessageConverter {
         return buffer.toByteArray();
     }
 
-    @VisibleForTesting Message convertToMime(MessageWithId.CreationMessageEntry creationMessageEntry) {
-        if (creationMessageEntry == null || creationMessageEntry.getMessage() == null) {
+    @VisibleForTesting Message convertToMime(ValueWithId.CreationMessageEntry creationMessageEntry) {
+        if (creationMessageEntry == null || creationMessageEntry.getValue() == null) {
             throw new IllegalArgumentException("creationMessageEntry is either null or has null message");
         }
 
         Message message = messageBuilder.newMessage();
-        message.setBody(createTextBody(creationMessageEntry.getMessage()));
-        message.setHeader(buildMimeHeaders(creationMessageEntry.getCreationId(), creationMessageEntry.getMessage()));
+        message.setBody(createTextBody(creationMessageEntry.getValue()));
+        message.setHeader(buildMimeHeaders(creationMessageEntry.getCreationId(), creationMessageEntry.getValue()));
         return message;
     }
 
