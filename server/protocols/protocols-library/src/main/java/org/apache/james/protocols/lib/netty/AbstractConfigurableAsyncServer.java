@@ -115,6 +115,8 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
     private MBeanServer mbeanServer;
 
+    private int port;
+
     @Inject
     public final void setFileSystem(FileSystem filesystem) {
         this.fileSystem = filesystem;
@@ -269,6 +271,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
             preInit();
             executionHandler = createExecutionHander();
             bind();
+            port = retrieveFirstBindedPort();
 
             mbeanServer = ManagementFactory.getPlatformMBeanServer();
             registerMBean();
@@ -277,6 +280,20 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
         }
     
+    }
+
+    private int retrieveFirstBindedPort() {
+        List<InetSocketAddress> listenAddresses = getListenAddresses();
+        InetSocketAddress inetSocketAddress = listenAddresses.get(0);
+        return inetSocketAddress.getPort();
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public boolean useSSL() {
+        return useSSL;
     }
 
     @PreDestroy
