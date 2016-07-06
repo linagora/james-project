@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import org.apache.commons.net.pop3.POP3Reply;
 import org.apache.commons.net.pop3.POP3SClient;
@@ -32,11 +33,12 @@ import org.apache.james.protocols.api.handler.WiringException;
 import org.apache.james.protocols.api.utils.BogusSslContextFactory;
 import org.apache.james.protocols.api.utils.BogusTrustManagerFactory;
 import org.apache.james.protocols.api.utils.MockLogger;
-import org.apache.james.protocols.api.utils.TestUtils;
 import org.apache.james.protocols.pop3.core.AbstractPassCmdHandler;
 import org.apache.james.protocols.pop3.utils.MockMailbox;
 import org.apache.james.protocols.pop3.utils.TestPassCmdHandler;
 import org.junit.Test;
+
+import com.google.common.base.Preconditions;
 
 public abstract class AbstractStartTlsPOP3ServerTest {
 
@@ -55,7 +57,7 @@ public abstract class AbstractStartTlsPOP3ServerTest {
     
     @Test
     public void testStartTls() throws Exception {
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", TestUtils.getFreePort());
+        InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
         
         ProtocolServer server = null;
         try {
@@ -67,7 +69,8 @@ public abstract class AbstractStartTlsPOP3ServerTest {
             server.bind();
             
             POP3SClient client = createClient();
-            client.connect(address.getAddress().getHostAddress(), address.getPort());
+            InetSocketAddress bindedAddress = retrieveBindedAddress(server);
+            client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
             
             // TODO: Make use of client.capa() once possible
             //       See NET-438
@@ -98,4 +101,9 @@ public abstract class AbstractStartTlsPOP3ServerTest {
         
     }
 
+    private InetSocketAddress retrieveBindedAddress(ProtocolServer server) {
+        List<InetSocketAddress> listenAddresses = server.getListenAddresses();
+        Preconditions.checkState(listenAddresses.size() == 1, "Unexpected number of binded addresses");
+        return listenAddresses.get(0);
+    }
 }
