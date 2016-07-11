@@ -23,9 +23,6 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Objects;
 import org.apache.commons.lang.StringUtils;
 
-/**
- * Created by quynh on 04/07/2016.
- */
 public class MailboxAnnotationKey {
     public static final String SLASH_CHARACTER = "/";
 
