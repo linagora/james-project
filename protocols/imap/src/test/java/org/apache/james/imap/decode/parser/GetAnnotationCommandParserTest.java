@@ -56,7 +56,7 @@ public class GetAnnotationCommandParserTest {
 
     @Test(expected = DecodingException.class)
     public void decodeMessageShouldThrowsExceptionWhenCommandHasNotMailbox() throws DecodingException {
-        InputStream inputStream = new ByteArrayInputStream(" \n".getBytes());
+        InputStream inputStream = new ByteArrayInputStream(" \n".getBytes(Charsets.US_ASCII));
         ImapRequestStreamLineReader lineReader = new ImapRequestStreamLineReader(inputStream, outputStream);
 
         parser.decode(command, lineReader, TAG, session);
@@ -64,7 +64,7 @@ public class GetAnnotationCommandParserTest {
 
     @Test
     public void decodeMessageShouldReturnRequestWhenCommandHasMailboxOnly() throws DecodingException {
-        InputStream inputStream = new ByteArrayInputStream((INBOX + "    \n").getBytes());
+        InputStream inputStream = new ByteArrayInputStream((INBOX + "    \n").getBytes(Charsets.US_ASCII));
         ImapRequestStreamLineReader lineReader = new ImapRequestStreamLineReader(inputStream, outputStream);
 
         GetAnnotationRequest request = (GetAnnotationRequest) parser.decode(command, lineReader, TAG, session);
@@ -79,7 +79,7 @@ public class GetAnnotationCommandParserTest {
 
     @Test(expected = DecodingException.class)
     public void decodeMessageShouldThrowExceptionWhenCommandHasOneKeyButInWrongFormat() throws DecodingException {
-        InputStream inputStream = new ByteArrayInputStream((INBOX + " /private/comment extrastring \n").getBytes());
+        InputStream inputStream = new ByteArrayInputStream((INBOX + " /private/comment extrastring \n").getBytes(Charsets.US_ASCII));
         ImapRequestStreamLineReader lineReader = new ImapRequestStreamLineReader(inputStream, outputStream);
 
         parser.decode(command, lineReader, TAG, session);
@@ -87,7 +87,7 @@ public class GetAnnotationCommandParserTest {
 
     @Test
     public void decodeMessageShouldReturnRequestWhenCommandHasOnlyOneKey() throws DecodingException {
-        InputStream inputStream = new ByteArrayInputStream((INBOX + " /private/comment \n").getBytes());
+        InputStream inputStream = new ByteArrayInputStream((INBOX + " /private/comment \n").getBytes(Charsets.US_ASCII));
         ImapRequestStreamLineReader lineReader = new ImapRequestStreamLineReader(inputStream, outputStream);
 
         GetAnnotationRequest request = (GetAnnotationRequest) parser.decode(command, lineReader, TAG, session);
@@ -100,19 +100,12 @@ public class GetAnnotationCommandParserTest {
         assertThat(request.getMaxsize()).isEqualTo(0);
     }
 
-    @Test
-    public void decodeMessageShouldReturnRequestWhenCommandHasOneKeyEvenItsInvalid() throws DecodingException {
-        InputStream inputStream = new ByteArrayInputStream((INBOX + " private/comment \n").getBytes(Charsets.US_ASCII));
+    @Test(expected = DecodingException.class)
+    public void decodeMessageShouldThrowExceptionWhenCommandHasOneInvalidKey() throws DecodingException {
+        InputStream inputStream = new ByteArrayInputStream((INBOX + "/shared/comment private/comment \n").getBytes(Charsets.US_ASCII));
         ImapRequestStreamLineReader lineReader = new ImapRequestStreamLineReader(inputStream, outputStream);
 
-        GetAnnotationRequest request = (GetAnnotationRequest) parser.decode(command, lineReader, TAG, session);
-
-        assertThat(request.getTag()).isEqualTo(TAG);
-        assertThat(request.getCommand()).isEqualTo(command);
-        assertThat(request.getMailboxName()).isEqualTo(INBOX);
-        assertThat(request.getKeys()).containsOnly(new MailboxAnnotationKey("private/comment"));
-        assertThat(request.getDepth()).isEqualTo(Depth.ZERO);
-        assertThat(request.getMaxsize()).isEqualTo(0);
+        parser.decode(command, lineReader, TAG, session);
     }
 
     @Test

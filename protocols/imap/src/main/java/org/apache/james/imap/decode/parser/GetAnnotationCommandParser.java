@@ -52,6 +52,8 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, e.getMessage());
         } catch (IllegalArgumentException e) {
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, e.getMessage());
+        } catch (IllegalStateException e) {
+            throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, e.getMessage());
         }
     }
 
@@ -90,19 +92,21 @@ public class GetAnnotationCommandParser extends AbstractImapCommandParser {
     private void consumeDepthOpt(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         if (requestReader.atom().equalsIgnoreCase(DEPTH)) {
             builder.depth(Depth.fromString(requestReader.atom()));
+
+            requestReader.consumeChar(')');
         } else {
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Wrong on, it should be DEPTH");
         }
-        requestReader.consumeChar(')');
     }
 
     private void consumeMaxsizeOpt(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {
         if (requestReader.atom().equalsIgnoreCase(MAXSIZE)) {
             builder.maxsize(requestReader.number(true));
+
+            requestReader.consumeChar(')');
         } else {
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Wrong on, it should be MAXSIZE");
         }
-        requestReader.consumeChar(')');
     }
 
     private void consumeKey(ImapRequestLineReader requestReader, GetAnnotationRequest.Builder builder) throws DecodingException {

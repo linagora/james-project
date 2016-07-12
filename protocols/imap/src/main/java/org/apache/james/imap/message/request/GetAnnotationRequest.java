@@ -74,7 +74,7 @@ public class GetAnnotationRequest extends AbstractImapRequest {
         }
 
         public GetAnnotationRequest build() {
-            Preconditions.checkArgument(isNoDepth() || isDepthAndKeysNotEmpty());
+            Preconditions.checkState(isNoDepth() || isDepthAndKeysNotEmpty());
             return new GetAnnotationRequest(this);
         }
 
@@ -88,14 +88,14 @@ public class GetAnnotationRequest extends AbstractImapRequest {
 
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     private final String mailboxName;
     private final Set<MailboxAnnotationKey> keys;
     private final long maxsize;
     private final Depth depth;
-
-    public static Builder builder() {
-        return new Builder();
-    }
 
     private GetAnnotationRequest(Builder builder) {
         super(builder.tag, builder.command);
