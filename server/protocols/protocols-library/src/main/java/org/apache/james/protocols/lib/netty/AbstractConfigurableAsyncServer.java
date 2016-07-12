@@ -18,7 +18,7 @@
  ****************************************************************/
 package org.apache.james.protocols.lib.netty;
 
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -40,6 +40,8 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.filesystem.api.JamesDirectoriesProvider;
+import org.apache.james.filesystem.api.ResourceFactory;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.protocols.api.Encryption;
@@ -83,6 +85,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     private String x509Algorithm = defaultX509algorithm;
 
     private FileSystem fileSystem;
+    private JamesDirectoriesProvider directoryProvider;
 
     private Logger logger;
 
@@ -115,9 +118,16 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
     private MBeanServer mbeanServer;
 
+    private int port;
+
     @Inject
     public final void setFileSystem(FileSystem filesystem) {
         this.fileSystem = filesystem;
+    }
+
+    @Inject
+    public final void setDirectoryProvider(JamesDirectoriesProvider directoryProvider) {
+        this.directoryProvider = directoryProvider;
     }
 
     /**
@@ -269,6 +279,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
             preInit();
             executionHandler = createExecutionHander();
             bind();
+            port = retrieveFirstBindedPort();
 
             mbeanServer = ManagementFactory.getPlatformMBeanServer();
             registerMBean();
@@ -277,6 +288,20 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
         }
     
+    }
+
+    private int retrieveFirstBindedPort() {
+        List<InetSocketAddress> listenAddresses = getListenAddresses();
+        InetSocketAddress inetSocketAddress = listenAddresses.get(0);
+        return inetSocketAddress.getPort();
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public boolean useSSL() {
+        return useSSL;
     }
 
     @PreDestroy
@@ -325,6 +350,10 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
      */
     protected FileSystem getFileSystem() {
         return fileSystem;
+    }
+
+    protected JamesDirectoriesProvider getDirectoryProvider() {
+        return directoryProvider;
     }
 
     /**
@@ -398,10 +427,10 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
     private void buildSSLContext() throws Exception {
         if (useStartTLS || useSSL) {
-            FileInputStream fis = null;
+            InputStream fis = null;
             try {
                 KeyStore ks = KeyStore.getInstance("JKS");
-                fis = new FileInputStream(fileSystem.getFile(keystore));
+                fis = new ResourceFactory(directoryProvider).getResource(keystore).getInputStream();
                 ks.load(fis, secret.toCharArray());
 
                 // Set up key manager factory to use our key store

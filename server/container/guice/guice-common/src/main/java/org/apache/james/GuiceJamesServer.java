@@ -19,14 +19,20 @@
 package org.apache.james;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.PreDestroy;
 
+import org.apache.james.imapserver.netty.IMAPServerFactory;
 import org.apache.james.jmap.JMAPServer;
+import org.apache.james.lmtpserver.netty.LMTPServerFactory;
 import org.apache.james.modules.CommonServicesModule;
 import org.apache.james.modules.MailetProcessingModule;
 import org.apache.james.modules.ProtocolsModule;
+import org.apache.james.pop3server.netty.POP3ServerFactory;
+import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
+import org.apache.james.smtpserver.netty.SMTPServerFactory;
 import org.apache.james.utils.ConfigurationsPerformer;
 import org.apache.james.utils.ExtendedServerProbe;
 import org.apache.james.utils.GuiceServerProbe;
@@ -48,6 +54,11 @@ public class GuiceJamesServer {
     private Stager<PreDestroy> preDestroy;
     private GuiceServerProbe serverProbe;
     private int jmapPort;
+    private int imapPort;
+    private int imapPortSSl;
+    private int pop3Port;
+    private int smtpPort;
+    private int lmtpPort;
     private Optional<Port> webadminPort;
 
     public GuiceJamesServer() {
@@ -74,8 +85,32 @@ public class GuiceJamesServer {
         preDestroy = injector.getInstance(Key.get(new TypeLiteral<Stager<PreDestroy>>() {}));
         injector.getInstance(ConfigurationsPerformer.class).initModules();
         serverProbe = injector.getInstance(GuiceServerProbe.class);
-        jmapPort = injector.getInstance(JMAPServer.class).getPort();
+        retrievePorts(injector);
         webadminPort =locateWebAdminPort(injector);
+    }
+
+    private void retrievePorts(Injector injector) {
+        jmapPort = injector.getInstance(JMAPServer.class).getPort();
+        List<AbstractConfigurableAsyncServer> imapServers = injector.getInstance(IMAPServerFactory.class).getServers();
+        for (AbstractConfigurableAsyncServer server : imapServers) {
+            if (server.useSSL()) {
+                imapPortSSl = server.getPort();
+            } else {
+                imapPort = server.getPort();
+            }
+        }
+        injector.getInstance(POP3ServerFactory.class).getServers()
+            .stream()
+            .findFirst()
+            .ifPresent(server -> pop3Port = server.getPort());
+        injector.getInstance(SMTPServerFactory.class).getServers()
+            .stream()
+            .findFirst()
+            .ifPresent(server -> smtpPort = server.getPort());
+        injector.getInstance(LMTPServerFactory.class).getServers()
+            .stream()
+            .findFirst()
+            .ifPresent(server -> lmtpPort = server.getPort());
     }
 
     private Optional<Port> locateWebAdminPort(Injector injector) {
@@ -100,7 +135,39 @@ public class GuiceJamesServer {
         return jmapPort;
     }
 
+    public int getImapPort() {
+        return imapPort;
+    }
+
+    public int getImapPortSSl() {
+        return imapPortSSl;
+    }
+
+    public int getPop3Port() {
+        return pop3Port;
+    }
+
+    public int getSmtpPort() {
+        return smtpPort;
+    }
+
+    public int getLmtpPort() {
+        return lmtpPort;
+    }
+
     public Optional<Port> getWebadminPort() {
         return webadminPort;
+    }
+
+    public Module getModule() {
+        return module;
+    }
+
+    public Stager<PreDestroy> getPreDestroy() {
+        return preDestroy;
+    }
+
+    public GuiceServerProbe getServerProbe() {
+        return serverProbe;
     }
 }

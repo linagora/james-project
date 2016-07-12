@@ -16,26 +16,44 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.core.filesystem;
+package org.apache.james.filesystem.api;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.net.URISyntaxException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 
-public class ResourceUtils {
+public class UrlResource implements Resource {
     public static final String URL_PROTOCOL_FILE = "file";
+    private final URL url;
 
-    public static File getFile(URL url, String description) throws FileNotFoundException {
-        if (!URL_PROTOCOL_FILE.equals(url.getProtocol())) {
-            throw new FileNotFoundException(description + " cannot be resolved to absolute file path " + "because it does not reside in the file system: " + url);
-        }
+    public UrlResource(URL url) {
+        this.url = url;
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+        URLConnection con = this.url.openConnection();
+        useCachesIfNecessary(con);
         try {
-            return new File(url.toURI().getSchemeSpecificPart());
-        } catch (URISyntaxException ex) {
-            // Fallback for URLs that are not valid URIs (should hardly ever
-            // happen).
-            return new File(url.getFile());
+            return con.getInputStream();
+        } catch (IOException ex) {
+            // Close the HTTP connection (if applicable).
+            if (con instanceof HttpURLConnection) {
+                ((HttpURLConnection) con).disconnect();
+            }
+            throw ex;
         }
+    }
+
+    public static void useCachesIfNecessary(URLConnection con) {
+        con.setUseCaches(con.getClass().getSimpleName().startsWith("JNLP"));
+    }
+
+    @Override
+    public File getFile() throws IOException {
+        return ResourceUtils.getFile(url, "URL [" + this.url + "]");
     }
 }

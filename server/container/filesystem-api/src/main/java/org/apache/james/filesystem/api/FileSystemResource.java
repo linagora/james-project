@@ -16,14 +16,29 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.core.filesystem;
+package org.apache.james.filesystem.api;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public interface Resource {
-    File getFile() throws IOException;
+class FileSystemResource implements Resource {
 
-    InputStream getInputStream() throws IOException;
+    private final File file;
+
+    public FileSystemResource(File file) {
+        this.file = file;
+    }
+
+    @Override
+    public File getFile() {
+        return this.file;
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+        return new FileInputStream(this.file);
+    }
+
 }

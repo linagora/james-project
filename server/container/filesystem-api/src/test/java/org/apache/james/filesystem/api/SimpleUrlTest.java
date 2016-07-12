@@ -16,10 +16,11 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.core.filesystem;
+package org.apache.james.filesystem.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.james.filesystem.api.SimpleUrl;
 import org.junit.Test;
 
 public class SimpleUrlTest {

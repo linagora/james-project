@@ -27,6 +27,7 @@ import javax.inject.Inject;
 
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.filesystem.api.JamesDirectoriesProvider;
+import org.apache.james.filesystem.api.ResourceFactory;
 
 public class FileSystemImpl implements FileSystem {
 

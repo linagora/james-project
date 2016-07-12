@@ -16,29 +16,26 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.core.filesystem;
+package org.apache.james.filesystem.api;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.FileNotFoundException;
+import java.net.URISyntaxException;
+import java.net.URL;
 
-class FileSystemResource implements Resource {
+public class ResourceUtils {
+    public static final String URL_PROTOCOL_FILE = "file";
 
-    private final File file;
-
-    public FileSystemResource(File file) {
-        this.file = file;
+    public static File getFile(URL url, String description) throws FileNotFoundException {
+        if (!URL_PROTOCOL_FILE.equals(url.getProtocol())) {
+            throw new FileNotFoundException(description + " cannot be resolved to absolute file path " + "because it does not reside in the file system: " + url);
+        }
+        try {
+            return new File(url.toURI().getSchemeSpecificPart());
+        } catch (URISyntaxException ex) {
+            // Fallback for URLs that are not valid URIs (should hardly ever
+            // happen).
+            return new File(url.getFile());
+        }
     }
-
-    @Override
-    public File getFile() {
-        return this.file;
-    }
-
-    @Override
-    public InputStream getInputStream() throws IOException {
-        return new FileInputStream(this.file);
-    }
-
 }
