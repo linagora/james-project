@@ -29,7 +29,7 @@ under the License.
 			<!-- To create a new keystore execute:
             keytool -genkey -alias james -keyalg RSA -keystore /path/to/james/conf/keystore
               -->
-			<keystore>file://conf/keystore</keystore>
+			<keystore>keystore</keystore>
 			<secret>james72laBalle</secret>
 			<provider>org.bouncycastle.jce.provider.BouncyCastleProvider</provider>
 		</tls>
@@ -40,11 +40,11 @@ under the License.
 		<jmxName>imapserver-ssl</jmxName>
 		<bind>0.0.0.0:1993</bind>
 		<connectionBacklog>200</connectionBacklog>
-		<tls socketTLS="false" startTLS="false">
+		<tls socketTLS="true" startTLS="false">
 			<!-- To create a new keystore execute:
               keytool -genkey -alias james -keyalg RSA -keystore /path/to/james/conf/keystore
              -->
-			<keystore>file://conf/keystore</keystore>
+			<keystore>keystore</keystore>
 			<secret>james72laBalle</secret>
 			<provider>org.bouncycastle.jce.provider.BouncyCastleProvider</provider>
 		</tls>

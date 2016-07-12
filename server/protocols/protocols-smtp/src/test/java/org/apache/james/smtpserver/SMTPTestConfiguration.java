@@ -149,7 +149,7 @@ public class SMTPTestConfiguration extends DefaultConfigurationBuilder {
         addProperty("addressBracketsEnforcement", m_addressBracketsEnforcement);
 
         addProperty("tls.[@startTLS]", m_startTLS);
-        addProperty("tls.keystore", "file://conf/test_keystore");
+        addProperty("tls.keystore", "test_keystore");
         addProperty("tls.secret", "jamestest");
         if (m_verifyIdentity)
             addProperty("verifyIdentity", m_verifyIdentity);

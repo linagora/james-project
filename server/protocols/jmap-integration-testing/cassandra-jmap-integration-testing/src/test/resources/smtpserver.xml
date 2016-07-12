@@ -25,7 +25,7 @@
         <bind>0.0.0.0:0</bind>
         <connectionBacklog>200</connectionBacklog>
         <tls socketTLS="false" startTLS="false">
-            <keystore>file://conf/keystore</keystore>
+            <keystore>keystore</keystore>
             <secret>james72laBalle</secret>
             <provider>org.bouncycastle.jce.provider.BouncyCastleProvider</provider>
             <algorithm>SunX509</algorithm>
@@ -48,8 +48,8 @@
         <jmxName>smtpserver-TLS</jmxName>
         <bind>0.0.0.0:0</bind>
         <connectionBacklog>200</connectionBacklog>
-        <tls socketTLS="false" startTLS="false">
-            <keystore>file://conf/keystore</keystore>
+        <tls socketTLS="true" startTLS="false">
+            <keystore>keystore</keystore>
             <secret>james72laBalle</secret>
             <provider>org.bouncycastle.jce.provider.BouncyCastleProvider</provider>
             <algorithm>SunX509</algorithm>
@@ -77,7 +77,7 @@
         <bind>0.0.0.0:0</bind>
         <connectionBacklog>200</connectionBacklog>
         <tls socketTLS="false" startTLS="false">
-            <keystore>file://conf/keystore</keystore>
+            <keystore>keystore</keystore>
             <secret>james72laBalle</secret>
             <provider>org.bouncycastle.jce.provider.BouncyCastleProvider</provider>
             <algorithm>SunX509</algorithm>

@@ -16,14 +16,11 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.core.filesystem;
+package org.apache.james.filesystem.api;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-
-import org.apache.james.filesystem.api.FileSystem;
-import org.apache.james.filesystem.api.JamesDirectoriesProvider;
 
 public class ResourceFactory {
 

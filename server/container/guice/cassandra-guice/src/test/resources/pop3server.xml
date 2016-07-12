@@ -28,7 +28,7 @@
             <!-- To create a new keystore execute:
                   keytool -genkey -alias james -keyalg RSA -keystore /path/to/james/conf/keystore
              -->
-            <keystore>file://conf/keystore</keystore>
+            <keystore>classpath:keystore</keystore>
             <secret>james72laBalle</secret>
             <provider>org.bouncycastle.jce.provider.BouncyCastleProvider</provider>
         </tls>

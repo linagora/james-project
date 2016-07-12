@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.core.filesystem;
+package org.apache.james.filesystem.api;
 
 import java.io.File;
 import java.io.FileNotFoundException;
