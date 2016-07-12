@@ -21,6 +21,7 @@ package org.apache.james.mailbox.model;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 
 public class MailboxAnnotationKey {
@@ -35,10 +36,12 @@ public class MailboxAnnotationKey {
     private final String key;
 
     public MailboxAnnotationKey(String key) {
+        Preconditions.checkArgument(isValid(key),
+            "Key must start with '/' and not end with '/' and does not contain charater with hex from '\u0000' to '\u00019' or {'*', '%', two consecutive '/'} ");
         this.key = key;
     }
 
-    public boolean isValid() {
+    private boolean isValid(String key) {
         if (StringUtils.isBlank(key)) {
             return false;
         }
