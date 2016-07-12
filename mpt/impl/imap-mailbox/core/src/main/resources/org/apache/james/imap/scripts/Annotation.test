@@ -94,8 +94,7 @@ C: g6 GETMETADATA "INBOX" (/shared/comment /private/comment
 S: g6 BAD GETMETADATA failed. Illegal arguments.
 
 C: g7 GETMETADATA "INBOX" private/comment
-S: \* METADATA "INBOX"
-S: g7 OK GETMETADATA completed.
+S: g7 BAD GETMETADATA failed. Illegal arguments.
 
 C: g8 GETMETADATA "INBOX" (MAXSIZE 15)
 S: \* METADATA "INBOX" \(\/private\/comment "My own comment"\)
