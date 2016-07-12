@@ -371,12 +371,23 @@ public class SMTPServerTest {
 
         smtpProtocol.quit();
         smtpProtocol.disconnect();
+        ensureIsDisconnected(smtpProtocol);
         smtpProtocol2.quit();
         smtpProtocol2.disconnect();
+        ensureIsDisconnected(smtpProtocol2);
 
         smtpProtocol3.connect("127.0.0.1", port);
         Thread.sleep(3000);
 
+    }
+
+    private void ensureIsDisconnected(SMTPClient smtpProtocol) {
+        try {
+            smtpProtocol.isConnected();
+            Thread.sleep(10);
+            ensureIsDisconnected(smtpProtocol);
+        } catch (Exception e) {
+        }
     }
 
     @After
