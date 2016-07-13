@@ -45,15 +45,9 @@ import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxAnnotation;
-import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.*;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxMetaData.Selectability;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
-import org.apache.james.mailbox.model.MessageRange;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.event.DefaultDelegatingMailboxListener;
@@ -718,7 +712,7 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
-    public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<String> keys) 
+    public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotationKey> keys)
             throws MailboxException {
         AnnotationMapper annotationMapper = getAnnotationMapper(mailboxPath, session);
         return annotationMapper.getAnnotationsByKeys(keys);
@@ -740,5 +734,19 @@ public class StoreMailboxManager implements MailboxManager {
     @Override
     public boolean hasCapability(MailboxCapabilities capability) {
         return getSupportedMailboxCapabilities().contains(capability);
+    }
+
+    @Override
+    public List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxPath mailboxPath, MailboxSession session,
+            Set<MailboxAnnotationKey> keys) throws MailboxException {
+        AnnotationMapper annotationMapper = getAnnotationMapper(mailboxPath, session);
+        return annotationMapper.getAnnotationsByKeysWithOneDepth(keys);
+    }
+
+    @Override
+    public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxPath mailboxPath, MailboxSession session,
+            Set<MailboxAnnotationKey> keys) throws MailboxException {
+        AnnotationMapper annotationMapper = getAnnotationMapper(mailboxPath, session);
+        return annotationMapper.getAnnotationsByKeysWithAllDepth(keys);
     }
 }
