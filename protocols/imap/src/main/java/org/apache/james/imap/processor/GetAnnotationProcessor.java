@@ -76,7 +76,7 @@ public class GetAnnotationProcessor extends AbstractMailboxProcessor<GetAnnotati
         MailboxPath mailboxPath = buildFullPath(session, mailboxName);
 
         List<MailboxAnnotation> mailboxAnnotations = getMailboxAnnotations(session, message.getKeys(), message.getDepth(), mailboxPath);
-        Optional<Integer> maximumOversizedSize = getMaxSizeOfItemsOversize(mailboxAnnotations, maxsize);
+        Optional<Integer> maximumOversizedSize = getMaxSizeValue(mailboxAnnotations, maxsize);
 
         respond(tag, command, responder, mailboxName, mailboxAnnotations, maxsize, maximumOversizedSize);
     }
@@ -92,9 +92,9 @@ public class GetAnnotationProcessor extends AbstractMailboxProcessor<GetAnnotati
         }
     }
 
-    private Optional<Integer> getMaxSizeOfItemsOversize(List<MailboxAnnotation> mailboxAnnotations, long maxsize) {
+    private Optional<Integer> getMaxSizeValue(List<MailboxAnnotation> mailboxAnnotations, long maxsize) {
         if (maxsize > 0) {
-            return getMaxValueOverSize(mailboxAnnotations, maxsize);
+            return getMaxSizeOfOversizedItems(mailboxAnnotations, maxsize);
         } else {
             return Optional.absent();
         }
@@ -132,7 +132,7 @@ public class GetAnnotationProcessor extends AbstractMailboxProcessor<GetAnnotati
         }
     }
 
-    private Optional<Integer> getMaxValueOverSize(List<MailboxAnnotation> mailboxAnnotations, final long maxsize) {
+    private Optional<Integer> getMaxSizeOfOversizedItems(List<MailboxAnnotation> mailboxAnnotations, final long maxsize) {
         Predicate<MailboxAnnotation> filterOverSizedAnnotation = new Predicate<MailboxAnnotation>() {
             public boolean apply(MailboxAnnotation input) {
                 return (input.size() >= maxsize);
