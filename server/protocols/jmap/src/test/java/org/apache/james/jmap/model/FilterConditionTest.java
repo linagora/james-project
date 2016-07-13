@@ -28,6 +28,8 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+
 public class FilterConditionTest {
 
     @Test
@@ -141,7 +143,7 @@ public class FilterConditionTest {
     public void buildShouldWork() {
         FilterCondition expectedFilterCondition = new FilterCondition(Optional.of(ImmutableList.of("1")), Optional.of(ImmutableList.of("2")), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), 
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), 
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), ImmutableList.of());
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 
         FilterCondition filterCondition = FilterCondition.builder()
                 .inMailboxes(Optional.of(ImmutableList.of("1")))
@@ -149,5 +151,10 @@ public class FilterConditionTest {
                 .build();
 
         assertThat(filterCondition).isEqualToComparingFieldByField(expectedFilterCondition);
+    }
+
+    @Test
+    public void shouldRespectJavaBeanContract() {
+        EqualsVerifier.forClass(FilterCondition.class).verify();
     }
 }

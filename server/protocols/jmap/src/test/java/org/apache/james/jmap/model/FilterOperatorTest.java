@@ -21,9 +21,13 @@ package org.apache.james.jmap.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Optional;
+
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
 
 public class FilterOperatorTest {
 
@@ -53,5 +57,42 @@ public class FilterOperatorTest {
             .build();
 
         assertThat(filterOperator).isEqualToComparingFieldByField(expectedFilterOperator);
+    }
+
+    @Test
+    public void shouldRespectJavaBeanContract() {
+        EqualsVerifier.forClass(FilterOperator.class).verify();
+    }
+
+    @Test
+    public void toStringShouldBePretty() {
+        FilterOperator testee = FilterOperator.builder()
+                .operator(Operator.AND)
+                .conditions(ImmutableList.of(
+                        FilterCondition.builder()
+                            .inMailboxes(Optional.of(ImmutableList.of("12","34")))
+                            .build(),
+                        FilterOperator.builder()
+                            .operator(Operator.OR)
+                            .conditions(ImmutableList.of(
+                                    FilterOperator.builder()
+                                        .operator(Operator.NOT)
+                                        .conditions(ImmutableList.of(
+                                                FilterCondition.builder()
+                                                    .notInMailboxes(Optional.of(ImmutableList.of("45")))
+                                                    .build()))
+                                        .build(),
+                                    FilterCondition.builder()
+                                        .build()
+                                )).build()))
+                .build();
+        String expected = "FilterOperator{operator=AND}\n" +
+                          "  FilterCondition{inMailboxes=[12, 34]}\n" +
+                          "  FilterOperator{operator=OR}\n" +
+                          "    FilterOperator{operator=NOT}\n" +
+                          "      FilterCondition{notInMailboxes=[45]}\n" +
+                          "    FilterCondition{}\n";
+        String actual = testee.toString();
+        assertThat(actual).isEqualTo(expected);
     }
 }
