@@ -39,7 +39,7 @@ public class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest
     @Override
     protected void initializeMailboxManager() throws Exception {
         MailboxSessionMapperFactory mapperFactory = new InMemoryMailboxSessionMapperFactory();
-        messageSearchIndex = new SimpleMessageSearchIndex(mapperFactory);
+        messageSearchIndex = new SimpleMessageSearchIndex(mapperFactory, mapperFactory);
         storeMailboxManager = new InMemoryMailboxManager(
             mapperFactory,
             new MockAuthenticator(),
@@ -213,5 +213,15 @@ public class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest
     @Ignore
     @Override
     public void sortShouldOrderMessages() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void multimailboxSearchShouldReturnUidOfMessageWithExpectedFromInTwoMailboxes() throws MailboxException {
+    }
+
+    @Ignore
+    @Override
+    public void multimailboxSearchShouldReturnUidOfMessageWithExpectedFromInAllMailboxes() throws MailboxException {
     }
 }

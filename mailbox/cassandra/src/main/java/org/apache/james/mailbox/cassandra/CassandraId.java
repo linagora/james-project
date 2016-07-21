@@ -20,12 +20,19 @@ package org.apache.james.mailbox.cassandra;
 
 import java.util.UUID;
 
-import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.model.MailboxId;
 
 import com.datastax.driver.core.utils.UUIDs;
 
 public class CassandraId implements MailboxId {
 
+    public static class Factory implements MailboxId.Factory {
+        @Override
+        public MailboxId fromString(String serialized) {
+            return of(UUID.fromString(serialized));
+        }
+    }
+    
     private final UUID id;
 
     public static CassandraId timeBased() {
