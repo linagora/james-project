@@ -213,11 +213,13 @@
     }
   ],
   "textBody": "Forward as attachment !\n\n\n",
+  "htmlBody": null,
   "isDraft": false,
   "isFlagged": true,
   "isRecent": false,
   "isAnswered": false,
   "isDeleted": true,
   "hasAttachment": true,
-  "isUnread": false
+  "isUnread": false,
+  "text": "Matthieu Baechler mbaechler@linagora.com btellier@linagora.com btellier@linagora.com Fwd: Courbe Sprint Forward as attachment !\n\n\n"
 }

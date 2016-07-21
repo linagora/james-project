@@ -19,57 +19,32 @@
 
 package org.apache.james.mailbox.elasticsearch.json;
 
-import java.util.Objects;
+import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
 
-public class EMailer implements Serializable {
+public class Subjects implements Serializable {
 
-    private final String name;
-    private final String address;
-
-    public EMailer(String name, String address) {
-        this.name = name;
-        this.address = address;
+    public static Subjects from(Set<String> subjects) {
+        Preconditions.checkNotNull(subjects, "'subjects' is mandatory");
+        return new Subjects(subjects);
     }
 
-    @JsonProperty(JsonMessageConstants.EMailer.NAME)
-    public String getName() {
-        return name;
+    private final Set<String> subjects;
+
+    private Subjects(Set<String> subjects) {
+        this.subjects = subjects;
     }
 
-    @JsonProperty(JsonMessageConstants.EMailer.ADDRESS)
-    public String getAddress() {
-        return address;
+    @JsonValue
+    public Set<String> getSubjects() {
+        return subjects;
     }
 
     @Override
     public String serialize() {
-        return Joiner.on(" ").join(name, address);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof EMailer) {
-            EMailer otherEMailer = (EMailer) o;
-            return Objects.equals(name, otherEMailer.name)
-                && Objects.equals(address, otherEMailer.address);
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(name, address);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-            .add("name", name)
-            .add("address", address)
-            .toString();
+        return Joiner.on(" ").join(subjects);
     }
 }

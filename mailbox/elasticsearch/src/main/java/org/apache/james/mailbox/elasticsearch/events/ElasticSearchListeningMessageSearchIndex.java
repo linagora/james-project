@@ -20,6 +20,7 @@ package org.apache.james.mailbox.elasticsearch.events;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,7 +48,8 @@ public class ElasticSearchListeningMessageSearchIndex extends ListeningMessageSe
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ElasticSearchListeningMessageSearchIndex.class);
     private final static String ID_SEPARATOR = ":";
-    
+    private static final EnumSet<MessageSearchIndexCapabilities> SUPPORTED_CAPABILITIES = EnumSet.of(MessageSearchIndexCapabilities.Text);
+
     private final ElasticSearchIndexer indexer;
     private final ElasticSearchSearcher searcher;
     private final MessageToElasticSearchJson messageToElasticSearchJson;
@@ -59,6 +61,11 @@ public class ElasticSearchListeningMessageSearchIndex extends ListeningMessageSe
         this.indexer = indexer;
         this.messageToElasticSearchJson = messageToElasticSearchJson;
         this.searcher = searcher;
+    }
+
+    @Override
+    public boolean hasCapability(MessageSearchIndexCapabilities capability) {
+        return SUPPORTED_CAPABILITIES.contains(capability);
     }
 
     @Override

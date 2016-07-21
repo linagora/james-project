@@ -45,7 +45,6 @@ import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
-import org.apache.james.mailbox.store.search.SimpleMessageSearchIndex;
 import org.apache.james.mailbox.store.user.SubscriptionMapperFactory;
 import org.apache.james.mailbox.tika.extractor.TikaTextExtractor;
 import org.apache.james.modules.Names;
@@ -76,7 +75,7 @@ public class MemoryMailboxModule extends AbstractModule {
         bind(MailboxACLResolver.class).to(UnionMailboxACLResolver.class);
         bind(GroupMembershipResolver.class).to(SimpleGroupMembershipResolver.class);
 
-        bind(MessageSearchIndex.class).to(SimpleMessageSearchIndex.class);
+        bind(MessageSearchIndex.class).to(MemoryMessageSearchIndex.class);
         bind(TextExtractor.class).to(TikaTextExtractor.class);
 
         bind(InMemoryMailboxSessionMapperFactory.class).in(Scopes.SINGLETON);

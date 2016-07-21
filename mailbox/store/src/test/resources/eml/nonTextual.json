@@ -85,14 +85,14 @@
       "contentDisposition":null,
       "fileMetadata":{
         "X-Parsed-By":["org.apache.tika.parser.DefaultParser","org.apache.tika.parser.txt.TXTParser"],
-        "Content-Encoding":["ISO-8859-1"],
-        "Content-Type":["text/plain; charset=ISO-8859-1"]
+        "Content-Encoding":["windows-1252"],
+        "Content-Type":["text/plain; charset=windows-1252"]
       },
       "headers":{
         "content-transfer-encoding":["7bit"],
         "content-type":["text/plain; charset=utf-8"]
       },
-      "textContent":"This mail have a non textual attachment !\n\n"
+      "textContent":"This mail have a non textual attachment !\r\n\n"
     },
     {
       "mediaType":"application",
@@ -146,12 +146,14 @@
       },
       "textContent":"Awesome document provided for text extraction !\n"}
   ],
-  "textBody":"This mail have a non textual attachment !\n\n",
+  "textBody":"This mail have a non textual attachment !\r\n\n",
+  "htmlBody": null,
   "isAnswered":false,
   "isDeleted":false,
   "isDraft":false,
   "isFlagged":false,
   "isRecent":false,
   "hasAttachment":true,
-  "isUnread":true
+  "isUnread":true,
+  "text": "Benoit Tellier btellier@linagora.com btellier@linagora.com btellier@linagora.com Test message This mail have a non textual attachment !\r\n\n"
 }

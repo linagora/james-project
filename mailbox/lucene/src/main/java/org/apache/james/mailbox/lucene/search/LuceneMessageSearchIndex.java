@@ -351,6 +351,11 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
     }
 
     @Override
+    public boolean hasCapability(MessageSearchIndexCapabilities capability) {
+        return false;
+    }
+
+    @Override
     public ListenerType getType() {
         return ListenerType.EACH_NODE;
     }
@@ -1328,6 +1333,7 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
             throw new MailboxException("Unable to delete message from index", e);
         }
     }
+
     
 
 

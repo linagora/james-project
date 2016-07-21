@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.search;
 
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
@@ -49,11 +50,17 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
  */
 public class SimpleMessageSearchIndex implements MessageSearchIndex {
 
+    private static final EnumSet<MessageSearchIndexCapabilities> SUPPORTED_CAPABILITIES = EnumSet.of(MessageSearchIndexCapabilities.Text);
     private final MessageMapperFactory factory;
     
     @Inject
     public SimpleMessageSearchIndex(MessageMapperFactory factory) {
         this.factory = factory;
+    }
+
+    @Override
+    public boolean hasCapability(MessageSearchIndexCapabilities capability) {
+        return SUPPORTED_CAPABILITIES.contains(capability);
     }
     
     /**

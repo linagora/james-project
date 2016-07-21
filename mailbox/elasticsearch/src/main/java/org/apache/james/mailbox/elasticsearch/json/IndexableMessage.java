@@ -25,8 +25,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.james.mailbox.elasticsearch.query.DateResolutionFormater;
 import org.apache.james.mailbox.store.extractor.TextExtractor;
@@ -36,6 +36,7 @@ import org.apache.james.mime4j.MimeException;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Multimap;
 
@@ -46,9 +47,11 @@ public class IndexableMessage {
         IndexableMessage indexableMessage = new IndexableMessage();
         try {
             MimePart parsingResult = new MimePartParser(message, textExtractor).parse();
-            indexableMessage.bodyText = parsingResult.locateFirstTextualBody();
+            indexableMessage.bodyText = parsingResult.locateFirstTextBody();
+            indexableMessage.bodyHtml = parsingResult.locateFirstHtmlBody();
             indexableMessage.setFlattenedAttachments(parsingResult);
             indexableMessage.copyHeaderFields(parsingResult.getHeaderCollection(), getSanitizedInternalDate(message, zoneId));
+            indexableMessage.generateText();
         } catch (IOException | MimeException e) {
             throw Throwables.propagate(e);
         }
@@ -63,12 +66,12 @@ public class IndexableMessage {
 
     private void copyHeaderFields(HeaderCollection headerCollection, ZonedDateTime internalDate) {
         this.headers = headerCollection.getHeaders();
-        this.subjects = headerCollection.getSubjectSet();
-        this.from = headerCollection.getFromAddressSet();
-        this.to = headerCollection.getToAddressSet();
-        this.replyTo = headerCollection.getReplyToAddressSet();
-        this.cc = headerCollection.getCcAddressSet();
-        this.bcc = headerCollection.getBccAddressSet();
+        this.subjects = Subjects.from(headerCollection.getSubjectSet());
+        this.from = EMailers.from(headerCollection.getFromAddressSet());
+        this.to = EMailers.from(headerCollection.getToAddressSet());
+        this.replyTo = EMailers.from(headerCollection.getReplyToAddressSet());
+        this.cc = EMailers.from(headerCollection.getCcAddressSet());
+        this.bcc = EMailers.from(headerCollection.getBccAddressSet());
         this.sentDate = DateResolutionFormater.DATE_TIME_FOMATTER.format(headerCollection.getSentDate().orElse(internalDate));
     }
 
@@ -99,6 +102,18 @@ public class IndexableMessage {
             zoneId);
     }
 
+    private void generateText() {
+        this.text = Stream.of(from.serialize(),
+                to.serialize(),
+                cc.serialize(),
+                bcc.serialize(),
+                subjects.serialize(),
+                bodyText.orElse(null),
+                bodyHtml.orElse(null))
+            .filter(str -> !Strings.isNullOrEmpty(str))
+            .collect(Collectors.joining(" "));
+    }
+
     private Long id;
     private String mailboxId;
     private long modSeq;
@@ -114,16 +129,18 @@ public class IndexableMessage {
     private boolean isAnswered;
     private String[] userFlags;
     private Multimap<String, String> headers;
-    private Set<EMailer> from;
-    private Set<EMailer> to;
-    private Set<EMailer> cc;
-    private Set<EMailer> bcc;
-    private Set<EMailer> replyTo;
-    private Set<String> subjects;
+    private EMailers from;
+    private EMailers to;
+    private EMailers cc;
+    private EMailers bcc;
+    private EMailers replyTo;
+    private Subjects subjects;
     private String sentDate;
     private List<Property> properties;
     private List<MimePart> attachments;
     private Optional<String> bodyText;
+    private Optional<String> bodyHtml;
+    private String text;
 
     @JsonProperty(JsonMessageConstants.ID)
     public Long getId() {
@@ -201,32 +218,32 @@ public class IndexableMessage {
     }
 
     @JsonProperty(JsonMessageConstants.SUBJECT)
-    public Set<String> getSubjects() {
+    public Subjects getSubjects() {
         return subjects;
     }
 
     @JsonProperty(JsonMessageConstants.FROM)
-    public Set<EMailer> getFrom() {
+    public EMailers getFrom() {
         return from;
     }
 
     @JsonProperty(JsonMessageConstants.TO)
-    public Set<EMailer> getTo() {
+    public EMailers getTo() {
         return to;
     }
 
     @JsonProperty(JsonMessageConstants.CC)
-    public Set<EMailer> getCc() {
+    public EMailers getCc() {
         return cc;
     }
 
     @JsonProperty(JsonMessageConstants.BCC)
-    public Set<EMailer> getBcc() {
+    public EMailers getBcc() {
         return bcc;
     }
 
     @JsonProperty(JsonMessageConstants.REPLY_TO)
-    public Set<EMailer> getReplyTo() {
+    public EMailers getReplyTo() {
         return replyTo;
     }
 
@@ -250,8 +267,18 @@ public class IndexableMessage {
         return bodyText;
     }
 
+    @JsonProperty(JsonMessageConstants.HTML_BODY)
+    public Optional<String> getBodyHtml() {
+        return bodyHtml;
+    }
+
     @JsonProperty(JsonMessageConstants.HAS_ATTACHMENT)
     public boolean getHasAttachment() {
         return attachments.size() > 0;
+    }
+
+    @JsonProperty(JsonMessageConstants.TEXT)
+    public String getText() {
+        return text;
     }
 }

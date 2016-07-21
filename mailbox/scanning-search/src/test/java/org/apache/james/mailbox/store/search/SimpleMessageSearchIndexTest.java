@@ -214,4 +214,14 @@ public class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest
     @Override
     public void sortShouldOrderMessages() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void searchWithFullTextShouldReturnMailsWhenTextBodyMatchesAndNonContinuousWords() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void searchWithFullTextShouldReturnMailsWhenHtmlBodyMatchesAndNonContinuousWords() throws Exception {
+    }
 }

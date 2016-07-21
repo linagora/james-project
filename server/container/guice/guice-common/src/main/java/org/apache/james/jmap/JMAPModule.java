@@ -34,6 +34,7 @@ import org.apache.james.jmap.utils.SystemMailboxesProvider;
 import org.apache.james.jmap.utils.SystemMailboxesProviderImpl;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailetcontainer.impl.MatcherMailetPair;
 import org.apache.james.modules.server.CamelMailetContainerModule;
 import org.apache.james.transport.mailets.RemoveMimeHeader;
@@ -94,10 +95,12 @@ public class JMAPModule extends AbstractModule {
     public static class RequiredCapabilitiesPrecondition implements ConfigurationPerformer {
 
         private final MailboxManager mailboxManager;
+        private final MessageSearchIndex messageSearchIndex;
 
         @Inject
-        public RequiredCapabilitiesPrecondition(MailboxManager mailboxManager) {
+        public RequiredCapabilitiesPrecondition(MailboxManager mailboxManager, MessageSearchIndex messageSearchIndex) {
             this.mailboxManager = mailboxManager;
+            this.messageSearchIndex = messageSearchIndex;
         }
 
         @Override
@@ -106,6 +109,9 @@ public class JMAPModule extends AbstractModule {
                     "MOVE support in MailboxManager is required by JMAP Module");
             Preconditions.checkArgument(mailboxManager.getSupportedMessageCapabilities().contains(MailboxManager.MessageCapabilities.Attachment),
                     "Attachment support in MailboxManager is required by JMAP Module");
+
+            Preconditions.checkArgument(messageSearchIndex.hasCapability(MessageSearchIndex.MessageSearchIndexCapabilities.Text),
+                    "Text support in MessageSearchIndex is required by JMAP Module");
         }
 
         @Override

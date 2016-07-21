@@ -29,6 +29,7 @@ import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.jmap.methods.GetMessageListMethod;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestFilesystemModule;
 import org.apache.james.modules.TestJMAPServerModule;
@@ -58,8 +59,9 @@ public class JamesCapabilitiesServerTest {
         server.stop();
     }
     
-    private GuiceJamesServer createCassandraJamesServer(final MailboxManager mailboxManager) {
+    private GuiceJamesServer createCassandraJamesServer(final MailboxManager mailboxManager, MessageSearchIndex messageSearchIndex) {
         Module mockMailboxManager = (binder) -> binder.bind(MailboxManager.class).toInstance(mailboxManager);
+        Module mockMessageSearchIndex = (binder) -> binder.bind(MessageSearchIndex.class).toInstance(messageSearchIndex);
         
         return new GuiceJamesServer()
             .combineWith(CassandraJamesServerMain.cassandraServerModule)
@@ -67,6 +69,7 @@ public class JamesCapabilitiesServerTest {
                 new TestFilesystemModule(temporaryFolder),
                 new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
                 mockMailboxManager,
+                mockMessageSearchIndex,
                 new AbstractModule() {
 
                     @Override
@@ -90,7 +93,12 @@ public class JamesCapabilitiesServerTest {
             .thenReturn(EnumSet.complementOf(EnumSet.of(MailboxManager.MailboxCapabilities.Move)));
         when(mailboxManager.getSupportedMessageCapabilities())
             .thenReturn(EnumSet.of(MailboxManager.MessageCapabilities.Attachment));
-        server = createCassandraJamesServer(mailboxManager);
+
+        MessageSearchIndex messageSearchIndex = mock(MessageSearchIndex.class);
+        when(messageSearchIndex.hasCapability(MessageSearchIndex.MessageSearchIndexCapabilities.Text))
+            .thenReturn(true);
+
+        server = createCassandraJamesServer(mailboxManager, messageSearchIndex);
         
         assertThatThrownBy(() -> server.start()).isInstanceOf(IllegalArgumentException.class);
     }
@@ -102,7 +110,29 @@ public class JamesCapabilitiesServerTest {
             .thenReturn(EnumSet.allOf(MailboxManager.MailboxCapabilities.class));
         when(mailboxManager.getSupportedMessageCapabilities())
             .thenReturn(EnumSet.noneOf(MailboxManager.MessageCapabilities.class));
-        server = createCassandraJamesServer(mailboxManager);
+
+        MessageSearchIndex messageSearchIndex = mock(MessageSearchIndex.class);
+        when(messageSearchIndex.hasCapability(MessageSearchIndex.MessageSearchIndexCapabilities.Text))
+            .thenReturn(true);
+
+        server = createCassandraJamesServer(mailboxManager, messageSearchIndex);
+
+        assertThatThrownBy(() -> server.start()).isInstanceOf(IllegalArgumentException.class);
+    }
+    
+    @Test
+    public void startShouldFailWhenNoTextCapability() throws Exception {
+        MailboxManager mailboxManager = mock(MailboxManager.class);
+        when(mailboxManager.getSupportedMailboxCapabilities())
+            .thenReturn(EnumSet.allOf(MailboxManager.MailboxCapabilities.class));
+        when(mailboxManager.getSupportedMessageCapabilities())
+            .thenReturn(EnumSet.allOf(MailboxManager.MessageCapabilities.class));
+
+        MessageSearchIndex messageSearchIndex = mock(MessageSearchIndex.class);
+        when(messageSearchIndex.hasCapability(MessageSearchIndex.MessageSearchIndexCapabilities.Text))
+            .thenReturn(false);
+
+        server = createCassandraJamesServer(mailboxManager, messageSearchIndex);
 
         assertThatThrownBy(() -> server.start()).isInstanceOf(IllegalArgumentException.class);
     }
@@ -113,7 +143,12 @@ public class JamesCapabilitiesServerTest {
         when(mailboxManager.hasCapability(MailboxManager.MailboxCapabilities.Move)).thenReturn(true);
         when(mailboxManager.getSupportedMessageCapabilities())
             .thenReturn(EnumSet.of(MailboxManager.MessageCapabilities.Attachment));
-        server = createCassandraJamesServer(mailboxManager);
+
+        MessageSearchIndex messageSearchIndex = mock(MessageSearchIndex.class);
+        when(messageSearchIndex.hasCapability(MessageSearchIndex.MessageSearchIndexCapabilities.Text))
+            .thenReturn(true);
+
+        server = createCassandraJamesServer(mailboxManager, messageSearchIndex);
 
         server.start();
     }

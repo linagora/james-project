@@ -44,6 +44,8 @@ public class NodeMappingFactory {
     public static final String FIELDS = "fields";
     public static final String RAW = "raw";
     public static final String ANALYZER = "analyzer";
+    public static final String IGNORE_ABOVE = "ignore_above";
+    public static final int LUCENE_LIMIT = 32766;
 
     public static Client applyMapping(Client client) {
         return applyMapping(client, getMappingContent());
@@ -205,6 +207,39 @@ public class NodeMappingFactory {
                                     .endObject()
                                     .startObject(JsonMessageConstants.Property.VALUE)
                                         .field(TYPE, STRING)
+                                    .endObject()
+                                .endObject()
+                            .endObject()
+
+                            .startObject(JsonMessageConstants.TEXT_BODY)
+                                .field(TYPE, STRING)
+                                .startObject(FIELDS)
+                                    .startObject(RAW)
+                                        .field(TYPE, STRING)
+                                        .field(ANALYZER, IndexCreationFactory.CASE_INSENSITIVE)
+                                        .field(IGNORE_ABOVE, LUCENE_LIMIT)
+                                    .endObject()
+                                .endObject()
+                            .endObject()
+
+                            .startObject(JsonMessageConstants.HTML_BODY)
+                                .field(TYPE, STRING)
+                                .startObject(FIELDS)
+                                    .startObject(RAW)
+                                        .field(TYPE, STRING)
+                                        .field(ANALYZER, IndexCreationFactory.CASE_INSENSITIVE)
+                                        .field(IGNORE_ABOVE, LUCENE_LIMIT)
+                                    .endObject()
+                                .endObject()
+                            .endObject()
+
+                            .startObject(JsonMessageConstants.TEXT)
+                                .field(TYPE, STRING)
+                                .startObject(FIELDS)
+                                    .startObject(RAW)
+                                        .field(TYPE, STRING)
+                                        .field(ANALYZER, IndexCreationFactory.CASE_INSENSITIVE)
+                                        .field(IGNORE_ABOVE, LUCENE_LIMIT)
                                     .endObject()
                                 .endObject()
                             .endObject()

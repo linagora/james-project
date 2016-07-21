@@ -53,6 +53,11 @@ public class LazyMessageSearchIndex extends ListeningMessageSearchIndex {
     }
 
     @Override
+    public boolean hasCapability(MessageSearchIndexCapabilities capability) {
+        return false;
+    }
+
+    @Override
     public ListenerType getType() {
         return index.getType();
     }
