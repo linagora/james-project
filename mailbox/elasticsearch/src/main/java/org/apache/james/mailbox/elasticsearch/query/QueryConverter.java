@@ -20,16 +20,21 @@
 package org.apache.james.mailbox.elasticsearch.query;
 
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
-import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
+import org.apache.james.mailbox.MailboxSession.User;
 import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.elasticsearch.index.query.QueryBuilder;
+
+import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class QueryConverter {
 
@@ -41,11 +46,10 @@ public class QueryConverter {
         this.criterionConverter = criterionConverter;
     }
 
-    public QueryBuilder from(SearchQuery searchQuery, String mailboxUUID) {
-        return Stream.of(generateQueryBuilder(searchQuery))
-            .map((rep) -> addMailboxFilters(rep, mailboxUUID))
-            .findAny()
-            .get();
+    public QueryBuilder from(SearchQuery searchQuery, List<User> users, Collection<MailboxId> mailboxIds) {
+        QueryBuilder queryBuilder = generateQueryBuilder(searchQuery);
+        queryBuilder = addUsersFilter(queryBuilder, users);
+        return addMailboxFilters(queryBuilder, mailboxIds);
     }
 
     private QueryBuilder generateQueryBuilder(SearchQuery searchQuery) {
@@ -59,9 +63,26 @@ public class QueryConverter {
         }
     }
 
-    private QueryBuilder addMailboxFilters(QueryBuilder queryBuilder, String mailboxUUID) {
+    private QueryBuilder addUsersFilter(QueryBuilder queryBuilder, List<User> users) {
+        if (users.isEmpty()) {
+            return queryBuilder;
+        }
+        ImmutableList<String> usernames = users.stream()
+                .map(User::getUserName)
+                .collect(Guavate.toImmutableList());
         return boolQuery().must(queryBuilder)
-            .filter(termQuery(JsonMessageConstants.MAILBOX_ID, mailboxUUID));
+            .filter(termsQuery(JsonMessageConstants.USERS, usernames));
+    }
+
+    private QueryBuilder addMailboxFilters(QueryBuilder queryBuilder, Collection<MailboxId> mailboxIds) {
+        if (mailboxIds.isEmpty()) {
+            return queryBuilder;
+        }
+        ImmutableList<String> ids = mailboxIds.stream()
+                .map(MailboxId::serialize)
+                .collect(Guavate.toImmutableList());
+        return boolQuery().must(queryBuilder)
+            .filter(termsQuery(JsonMessageConstants.MAILBOX_ID, ids));
     }
 
 }

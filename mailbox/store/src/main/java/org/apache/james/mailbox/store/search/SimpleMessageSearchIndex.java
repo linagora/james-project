@@ -18,26 +18,40 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.search;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import javax.inject.Inject;
 
+import org.apache.james.mailbox.MailboxManager.SearchCapabilities;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.ConjunctionCriterion;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.NumericRange;
 import org.apache.james.mailbox.model.SearchQuery.UidCriterion;
+import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableMultimap.Builder;
+import com.google.common.collect.Multimap;
 
 /**
  * {@link MessageSearchIndex} which just fetch {@link MailboxMessage}'s from the {@link MessageMapper} and use {@link MessageSearcher}
@@ -48,12 +62,20 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
  *
  */
 public class SimpleMessageSearchIndex implements MessageSearchIndex {
+    private static final String WILDCARD = "%";
 
-    private final MessageMapperFactory factory;
+    private final MessageMapperFactory messageMapperFactory;
+    private final MailboxMapperFactory mailboxMapperFactory;
     
     @Inject
-    public SimpleMessageSearchIndex(MessageMapperFactory factory) {
-        this.factory = factory;
+    public SimpleMessageSearchIndex(MessageMapperFactory messageMapperFactory, MailboxMapperFactory mailboxMapperFactory) {
+        this.messageMapperFactory = messageMapperFactory;
+        this.mailboxMapperFactory = mailboxMapperFactory;
+    }
+    
+    @Override
+    public EnumSet<SearchCapabilities> getSupportedCapabilities() {
+        return EnumSet.of(SearchCapabilities.MultimailboxSearch);
     }
     
     /**
@@ -77,7 +99,25 @@ public class SimpleMessageSearchIndex implements MessageSearchIndex {
     
     @Override
     public Iterator<Long> search(MailboxSession session, Mailbox mailbox, SearchQuery query) throws MailboxException {
-        MessageMapper mapper = factory.getMessageMapper(session);
+        return searchMultimap(session, ImmutableList.of(mailbox), query)
+                .get(mailbox.getMailboxId())
+                .iterator();
+    }
+    
+    private Multimap<MailboxId, Long> searchMultimap(MailboxSession session, List<Mailbox> mailboxes, SearchQuery query) throws MailboxException {
+        Builder<MailboxId, Long> multimap = ImmutableMultimap.builder();
+        for (Mailbox mailbox: mailboxes) {
+            multimap.putAll(searchMultimap(session, mailbox, query));
+        }
+        return multimap.build();
+
+    }
+    
+    private Multimap<MailboxId, Long> searchMultimap(MailboxSession session, Mailbox mailbox, SearchQuery query) throws MailboxException {
+        if (!mailbox.getUser().equals(session.getUser().getUserName())) {
+            return ImmutableMultimap.of();
+        }
+        MessageMapper mapper = messageMapperFactory.getMessageMapper(session);
 
         final SortedSet<MailboxMessage> hitSet = new TreeSet<MailboxMessage>();
 
@@ -102,11 +142,27 @@ public class SimpleMessageSearchIndex implements MessageSearchIndex {
         }
         
         // MessageSearches does the filtering for us
-        if (session == null) {
-			return new MessageSearches(hitSet.iterator(), query).iterator();
-		} else {
-			return new MessageSearches(hitSet.iterator(), query, session.getLog()).iterator();
-		}
+        return ImmutableMultimap.<MailboxId, Long>builder()
+                    .putAll(mailbox.getMailboxId(), ImmutableList.copyOf(new MessageSearches(hitSet.iterator(), query, session).iterator()))
+                    .build();
+    }
+
+    @Override
+    public Map<MailboxId, Collection<Long>> search(MailboxSession session, MultimailboxesSearchQuery searchQuery) throws MailboxException {
+        List<Mailbox> allUserMailboxes = mailboxMapperFactory.getMailboxMapper(session)
+                .findMailboxWithPathLike(new MailboxPath(session.getPersonalSpace(), session.getUser().getUserName(), WILDCARD));
+        if (searchQuery.getMailboxIds().isEmpty()) {
+            return searchMultimap(session, allUserMailboxes, searchQuery.getSearchQuery())
+                    .asMap();
+        }
+        List<Mailbox> queriedMailboxes = new ArrayList<Mailbox>();
+        for (Mailbox mailbox: allUserMailboxes) {
+            if (searchQuery.getMailboxIds().contains(mailbox.getMailboxId())) {
+                queriedMailboxes.add(mailbox);
+            }
+        }
+        return searchMultimap(session, queriedMailboxes, searchQuery.getSearchQuery())
+                .asMap();
     }
 
 }

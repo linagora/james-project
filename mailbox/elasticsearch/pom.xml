@@ -163,6 +163,12 @@
                     <artifactId>apache-james-mailbox-api</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>${project.groupId}</groupId>
+                    <artifactId>apache-james-mailbox-api</artifactId>
+                    <type>test-jar</type>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
                     <groupId>org.apache.james</groupId>
                     <artifactId>apache-james-mailbox-store</artifactId>
                 </dependency>
@@ -188,6 +194,11 @@
                 <dependency>
                     <groupId>com.fasterxml.jackson.datatype</groupId>
                     <artifactId>jackson-datatype-jdk8</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.steveash.guavate</groupId>
+                    <artifactId>guavate</artifactId>
+                    <version>1.0.0</version>
                 </dependency>
                 <dependency>
                     <groupId>com.google.guava</groupId>
