@@ -173,7 +173,7 @@ public class StoreMailboxManager implements MailboxManager {
         dispatcher = new MailboxEventDispatcher(getDelegationListener());
 
         if (index == null) {
-            index = new SimpleMessageSearchIndex(mailboxSessionMapperFactory);
+            index = new SimpleMessageSearchIndex(mailboxSessionMapperFactory, mailboxSessionMapperFactory);
         }
         if (index instanceof ListeningMessageSearchIndex) {
             this.addGlobalListener((MailboxListener) index, null);
@@ -209,6 +209,12 @@ public class StoreMailboxManager implements MailboxManager {
         return EnumSet.noneOf(MessageCapabilities.class);
     }
     
+    @Override
+    public EnumSet<SearchCapabilities> getSupportedSearchCapabilities() {
+        return index.getSupportedCapabilities();
+    }
+    
+
     /**
      * Return the {@link DelegatingMailboxListener} which is used by this {@link MailboxManager}
      *
