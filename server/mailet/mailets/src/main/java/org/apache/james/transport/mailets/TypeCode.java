@@ -17,35 +17,33 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.transport.matchers.utils;
+package org.apache.james.transport.mailets;
+import java.util.Locale;
 
-import java.util.Set;
+public enum TypeCode {
 
-import javax.mail.internet.AddressException;
+    UNALTERED, HEADS, BODY, ALL, NONE, MESSAGE;
 
-import org.apache.mailet.MailAddress;
-
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
-import com.google.common.collect.FluentIterable;
-
-public class MailAddressCollectionReader {
-
-    public static Set<MailAddress> read(String condition) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(condition));
-        return FluentIterable.from(Splitter.onPattern(",( |\t)").split(condition)).transform(new Function<String, MailAddress>() {
-            @Override
-            public MailAddress apply(String s) {
-                try {
-                    return new MailAddress(s);
-                } catch (AddressException e) {
-                    throw Throwables.propagate(e);
-                }
-            }
-        }).toSet();
+    public static TypeCode from(String parameter) {
+        String lowerCase = parameter.toLowerCase(Locale.US);
+        if (lowerCase.equals("unaltered")) {
+            return UNALTERED;
+        }
+        if (lowerCase.equals("heads")) {
+            return HEADS;
+        }
+        if (lowerCase.equals("body")) {
+            return BODY;
+        }
+        if (lowerCase.equals("all")) {
+            return ALL;
+        }
+        if (lowerCase.equals("none")) {
+            return NONE;
+        }
+        if (lowerCase.equals("message")) {
+            return MESSAGE;
+        }
+        return NONE;
     }
-
 }

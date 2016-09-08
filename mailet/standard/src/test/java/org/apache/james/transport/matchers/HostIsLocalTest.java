@@ -46,7 +46,7 @@ public class HostIsLocalTest {
 
     @Before
     public void setUp() throws Exception {
-        mockedMail = new FakeMail();
+        mockedMail = FakeMail.builder().build();
 
         MailetContext mailContext = mock(MailetContext.class);
         when(mailContext.isLocalServer(JAMES_APACHE_ORG)).thenReturn(true);

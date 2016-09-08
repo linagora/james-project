@@ -42,7 +42,7 @@ public class HostIsTest {
 
     @Before
     public void setUp() throws Exception {
-        fakeMail = new FakeMail();
+        fakeMail = FakeMail.builder().build();
 
         matcher = new HostIs();
         FakeMatcherConfig mci = new FakeMatcherConfig("HostIs=" + JAMES_APACHE_ORG, FakeMailContext.defaultContext());

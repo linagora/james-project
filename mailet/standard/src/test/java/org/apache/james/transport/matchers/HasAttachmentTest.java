@@ -36,8 +36,6 @@ import org.apache.mailet.base.test.FakeMail;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
-
 public class HasAttachmentTest {
 
     private HasAttachment testee;
@@ -49,9 +47,10 @@ public class HasAttachmentTest {
         testee = new HasAttachment();
 
         mimeMessage = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        mail = new FakeMail();
-        mail.setRecipients(ImmutableList.of(new MailAddress("me@james.apache.org")));
-        mail.setMessage(mimeMessage);
+        mail = FakeMail.builder()
+                .recipient(new MailAddress("me@james.apache.org"))
+                .mimeMessage(mimeMessage)
+                .build();
     }
 
     @Test

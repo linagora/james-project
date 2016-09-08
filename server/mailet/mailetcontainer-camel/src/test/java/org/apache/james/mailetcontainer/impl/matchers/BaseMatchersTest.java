@@ -19,8 +19,6 @@
 
 package org.apache.james.mailetcontainer.impl.matchers;
 
-import java.util.Arrays;
-
 import javax.mail.MessagingException;
 
 import org.apache.james.transport.matchers.All;
@@ -40,9 +38,9 @@ public class BaseMatchersTest {
 
     @Before
     public void setUp() throws Exception {
-        mockedMail = new FakeMail();
-        mockedMail.setRecipients(Arrays.asList(new MailAddress("test@james.apache.org"), new MailAddress(
-                "test2@james.apache.org")));
+        mockedMail = FakeMail.builder()
+                .recipients(new MailAddress("test@james.apache.org"), new MailAddress("test2@james.apache.org"))
+                .build();
     }
 
     void setupCompositeMatcher(String matcherName, Class<? extends GenericCompositeMatcher> matcherClass)
