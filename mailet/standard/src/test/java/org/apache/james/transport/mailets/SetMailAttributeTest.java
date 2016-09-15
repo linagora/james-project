@@ -45,7 +45,7 @@ public class SetMailAttributeTest {
 
     @Before
     public void setupMailet() throws MessagingException {
-        mockedMail = MailUtil.createMockMail2Recipients(null);
+        mockedMail = MailUtil.createMockMail2Recipients();
         mailet = new SetMailAttribute();
         FakeMailetConfig mci = new FakeMailetConfig("Test",
                 FakeMailContext.defaultContext());

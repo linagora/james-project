@@ -36,8 +36,6 @@ import org.apache.mailet.base.test.FakeMatcherConfig;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
-
 public class RelayLimitTest {
 
     private RelayLimit testee;
@@ -49,10 +47,11 @@ public class RelayLimitTest {
     public void setUp() throws Exception {
         testee = new RelayLimit();
         mailAddress = new MailAddress("mail@domain.com");
-        mail = new FakeMail();
-        mail.setRecipients(ImmutableList.of(mailAddress));
         mimeMessage = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        mail.setMessage(mimeMessage);
+        mail = FakeMail.builder()
+                .recipient(mailAddress)
+                .mimeMessage(mimeMessage)
+                .build();
     }
 
     @Test(expected = MessagingException.class)

@@ -33,8 +33,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.google.common.collect.ImmutableList;
-
 public class SizeGreaterThanTest {
 
     @Rule
@@ -48,9 +46,10 @@ public class SizeGreaterThanTest {
     public void setUp() throws Exception {
         matcher = new SizeGreaterThan();
 
-        fakeMail = new FakeMail();
         mailAddress = new MailAddress("test@email");
-        fakeMail.setRecipients(ImmutableList.of(mailAddress));
+        fakeMail = FakeMail.builder()
+                .recipient(mailAddress)
+                .build();
     }
 
     @Test
