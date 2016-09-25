@@ -53,7 +53,6 @@ import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimePart;
 import javax.mail.internet.ParseException;
 
-import com.sun.mail.smtp.SMTPTransport;
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.dnsservice.api.TemporaryResolutionException;
 import org.apache.james.dnsservice.library.MXHostAddressIterator;
@@ -73,6 +72,9 @@ import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.MailetContext;
 import org.apache.mailet.base.GenericMailet;
+
+import com.google.common.base.Optional;
+import com.sun.mail.smtp.SMTPTransport;
 
 /**
  * <p>The RemoteDelivery mailet delivers messages to a remote SMTP server able to deliver or forward messages to their final
@@ -151,6 +153,8 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
      * Default Delay Time (Default is 6*60*60*1000 Milliseconds (6 hours)).
      */
     private static final long DEFAULT_DELAY_TIME = 21600000;
+
+    private static final String RETRY_ATTRIBUTE_KEY = "RemoteDelivery_retries";
 
     /**
      * Pattern to match [attempts*]delay[units].
@@ -633,6 +637,7 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
         }
         Collection<MailAddress> recipients = mail.getRecipients();
 
+        mail.setAttribute(RETRY_ATTRIBUTE_KEY, 0);
         if (usePriority) {
 
             // Use highest prio for new emails. See JAMES-1311
@@ -795,15 +800,8 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
                             // Something happened that will delay delivery.
                             // Store it back in the retry repository.
                             // workRepository.store(mail);
-                            int retries = 0;
-                            try {
-                                retries = Integer.parseInt(mail.getErrorMessage());
-                            } catch (NumberFormatException e) {
-                                // Something strange was happen with the
-                                // errorMessage..
-                            }
 
-                            long delay = getNextDelay(retries);
+                            long delay = getNextDelay(retrieveRetries(mail));
 
                             if (usePriority) {
                                 // Use lowest priority for retries. See JAMES-1311
@@ -853,6 +851,15 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
         } finally {
             // Restore the thread state to non-interrupted.
             Thread.interrupted();
+        }
+    }
+
+    private int retrieveRetries(Mail mail) {
+        try {
+            return Optional.fromNullable((Integer) mail.getAttribute(RETRY_ATTRIBUTE_KEY)).or(0);
+        } catch(ClassCastException e) {
+            log("Unable to parse retries for mail " + mail.getName(), e);
+            return 0;
         }
     }
 
@@ -909,12 +916,7 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
                     log("No mail server found for: " + host);
                     String exceptionBuffer = "There are no DNS entries for the hostname " + host + ".  I cannot determine where to send this message.";
 
-                    int retry = 0;
-                    try {
-                        retry = Integer.parseInt(mail.getErrorMessage());
-                    } catch (NumberFormatException e) {
-                        // Unable to parse retryCount
-                    }
+                    int retry = retrieveRetries(mail);
                     if (retry == 0 || retry > dnsProblemRetry) {
                         // The domain has no dns entry.. Return a permanent
                         // error
@@ -1464,22 +1466,16 @@ public class RemoteDelivery extends GenericMailet implements Runnable {
         if (!permanent) {
             if (!mail.getState().equals(Mail.ERROR)) {
                 mail.setState(Mail.ERROR);
-                mail.setErrorMessage("0");
+                mail.setAttribute(RETRY_ATTRIBUTE_KEY, 0);
                 mail.setLastUpdated(new Date());
             }
 
-            int retries = 0;
-            try {
-                retries = Integer.parseInt(mail.getErrorMessage());
-            } catch (NumberFormatException e) {
-                // Something strange was happen with the errorMessage..
-            }
+            int retries = retrieveRetries(mail);
 
             if (retries < maxRetries) {
                 logBuffer = new StringBuilder(128).append("Storing message ").append(mail.getName()).append(" into outgoing after ").append(retries).append(" retries");
                 log(logBuffer.toString());
-                ++retries;
-                mail.setErrorMessage(retries + "");
+                mail.setAttribute(RETRY_ATTRIBUTE_KEY, retries + 1);
                 mail.setLastUpdated(new Date());
                 return false;
             } else {
