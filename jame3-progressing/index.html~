@@ -14,26 +14,17 @@
   </div>
   <script>
     function createChart(x, y, title, height) {
-			if (!height) {
-				height = 210;
-			} else if (height && (height < 400)) {
-				height = 400;
-			}
+      if (height < 400) height = 400;
 
       return {
         data: [{
           type: 'bar',
-//color: key,	
-//marker: list(color=c("blue","grey","darkred","green","orange","black","purple","yellow")),
           x: x,
           y: y,
           orientation: 'h'
         }],
         layout: {
           hovermode: 'closest',
-					shapes: {
-						fillcolor: '#444'
-					},
           title: title,
           height: height,
           xaxis: {
@@ -55,19 +46,17 @@
 
       if (task.hasOwnProperty('children') && task.children.length) {
         var sum = 0;
+
         task.children.forEach(function(subtask) {
-					if (subtask.hasOwnProperty('completion')) {
-          	sum += subtask.completion;
-					} else if (subtask.hasOwnProperty('children')) {
-						sum += parseInt(getTaskPercent(subtask));
-					}
+          sum += subtask.completion;
         });
+
         return (sum / task.children.length).toFixed(0);
       }
 
       return 0;
     }
-	
+
     function createCharts(jsonData) {
       var jsonData = jsonData
       var charts = [];
@@ -94,7 +83,6 @@
         }
       }
 
-			charts.push(createChart([getTaskPercent(jsonData)], ['summarize'], jsonData.name + '(summarize)'));
       return charts;
     }
 
@@ -102,15 +90,14 @@
       var charts = createCharts(jsonData);
 
       charts.forEach(function(chart, index) {
-        var parentDiv = document.createElement('div');
-        parentDiv.id = chart.layout.title;
-
         var div = document.createElement('div');
         var divID = 'chart-' + index;
         div.id = divID;
-        parentDiv.appendChild(div);
+        var subDiv = document.createElement('div');
+        subDiv.id = chart.layout.title;
+        div.appendChild(subDiv);
 
-        document.getElementById('myDiv').appendChild(parentDiv);
+        document.getElementById('myDiv').appendChild(div);
 
         Plotly.newPlot(div.id, chart.data, chart.layout);
 
@@ -122,9 +109,7 @@
           }
           if (document.getElementById(pts)) {
             window.location.href = '#' + pts;
-          } else {
-						window.location.href = '#' + jsonData.name + '(summarize)';
-					}
+          }
         });
 
 
@@ -136,7 +121,7 @@
       req.addEventListener('load', function() {
         callback(JSON.parse(this.responseText))
       });
-      req.open('GET', 'progress.json');
+      req.open('GET', '/progress.json');
       req.send();
     }
 

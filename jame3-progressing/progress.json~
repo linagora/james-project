@@ -3,96 +3,96 @@
  "children": [
    {
      "name" : "Use only mailbox-api from jmap",
-     "completion" : 100
+     "size" : 100
    },
    {
      "name" : "Marketing James 3.0 website",
-     "completion" : 15
+     "size" : 15
    },
    {
      "name" : "Message unique Id",
-     "completion" : 20
+     "size" : 20
    },
    {
      "name" : "deploy James @ Linagora",
-     "completion" : 11
+     "size" : 11
    },
    {
      "name" : "load and endurance testing",
-     "completion" : 10
+     "size" : 10
    },
    {
      "name" : "hasAttachment in search",
-     "completion" : 12
+     "size" : 12
    },
    {
      "name" : "jmap support report",
-     "completion" : 13
+     "size" : 13
    },
    {
      "name" : "Vacation partial update",
-     "completion" : 14
+     "size" : 14
    },
    {
      "name" : "INBOX-298 : handle generated-bodyText",
-     "completion" : 15
+     "size" : 15
    },
    {
      "name" : "Complete IMAP METADATA",
-     "completion" : 80
+     "size" : 80
    },
    {
      "name" : "Docker 1.12 and swarm capabilities to speedup build",
-     "completion" : 18
+     "size" : 18
    },
    {
      "name" : "cleanup james public repositories",
-     "completion" : 17
+     "size" : 17
    },
    {
      "name" : "tag often",
-     "completion" : 16
+     "size" : 16
    },
    {
      "name" : "handle PR build on apache github",
-     "completion" : 19
+     "size" : 19
    },
    {
      "name" : "James logo for contest",
-     "completion" : 50
+     "size" : 50
    },
    {
      "name" : "Implement a Guice JPA + ES module",
-     "completion" : 21
+     "size" : 21
    },
    {
      "name" : "make sure default (JPA + ES) backends work well",
-     "completion" : 22
+     "size" : 22
    },
    {
      "name" : "make a security audit",
-     "completion" : 23
+     "size" : 23
    },
    {
      "name" : "bug triaging",
-     "completion" : 24
+     "size" : 24
    },
   {
    "name": "Sub task 1",
    "children": [
-      {"name": "mailet A", "completion": 100},
-      {"name": "mailet B", "completion": 100},
-      {"name": "mailet C", "completion": 50},
-      {"name": "mailet D", "completion": 0}
+      {"name": "mailet A", "size": 100},
+      {"name": "mailet B", "size": 100},
+      {"name": "mailet C", "size": 50},
+      {"name": "mailet D", "size": 0}
      ]
     },
   {
    "name": "Sub task 2",
    "children": [
-      {"name": "mailet A", "completion": 50},
-      {"name": "mailet B", "completion": 30},
-      {"name": "mailet C", "completion": 50},
-      {"name": "mailet D", "completion": 0}
+      {"name": "mailet A", "size": 50},
+      {"name": "mailet B", "size": 30},
+      {"name": "mailet C", "size": 50},
+      {"name": "mailet D", "size": 0}
      ]
     }
  ]
