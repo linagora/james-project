@@ -3,97 +3,118 @@
  "children": [
    {
      "name" : "Use only mailbox-api from jmap",
-     "completion" : 100
+     "completion" : 100,
+     "complexity" : 10
    },
    {
      "name" : "Marketing James 3.0 website",
-     "completion" : 15
+     "completion" : 15,
+     "complexity" : 10
    },
    {
      "name" : "Message unique Id",
-     "completion" : 20
+     "completion" : 20,
+     "complexity" : 10
    },
    {
      "name" : "deploy James @ Linagora",
-     "completion" : 11
+     "completion" : 11,
+     "complexity" : 10
    },
    {
      "name" : "load and endurance testing",
-     "completion" : 10
+     "completion" : 10,
+     "complexity" : 10
    },
    {
      "name" : "hasAttachment in search",
-     "completion" : 12
+     "completion" : 12,
+     "complexity" : 10
    },
    {
      "name" : "jmap support report",
-     "completion" : 13
+     "completion" : 13,
+     "complexity" : 10
    },
    {
      "name" : "Vacation partial update",
-     "completion" : 14
+     "completion" : 14,
+     "complexity" : 10
    },
    {
      "name" : "INBOX-298 : handle generated-bodyText",
-     "completion" : 15
+     "completion" : 15,
+     "complexity" : 10
    },
    {
      "name" : "Complete IMAP METADATA",
-     "completion" : 80
+     "completion" : 80,
+     "complexity" : 10
    },
    {
      "name" : "Docker 1.12 and swarm capabilities to speedup build",
-     "completion" : 18
+     "completion" : 18,
+     "complexity" : 10
    },
    {
      "name" : "cleanup james public repositories",
-     "completion" : 17
+     "completion" : 17,
+     "complexity" : 10
    },
    {
      "name" : "tag often",
-     "completion" : 16
+     "completion" : 16,
+     "complexity" : 10
    },
    {
      "name" : "handle PR build on apache github",
-     "completion" : 19
+     "completion" : 19,
+     "complexity" : 10
    },
    {
      "name" : "James logo for contest",
-     "completion" : 50
+     "completion" : 50,
+     "complexity" : 10
    },
    {
      "name" : "Implement a Guice JPA + ES module",
-     "completion" : 21
+     "completion" : 21,
+     "complexity" : 10
    },
    {
      "name" : "make sure default (JPA + ES) backends work well",
-     "completion" : 22
+     "completion" : 22,
+     "complexity" : 10
    },
    {
      "name" : "make a security audit",
-     "completion" : 23
+     "completion" : 23,
+     "complexity" : 10
    },
    {
      "name" : "bug triaging",
-     "completion" : 24
+     "completion" : 24,
+     "complexity" : 10
    },
   {
    "name": "Sub task 1",
    "children": [
-      {"name": "mailet A", "completion": 100},
-      {"name": "mailet B", "completion": 100},
-      {"name": "mailet C", "completion": 50},
-      {"name": "mailet D", "completion": 0}
-     ]
+      {"name": "mailet A", "completion": 100, "complexity" : 11},
+      {"name": "mailet B", "completion": 100, "complexity" : 11},
+      {"name": "mailet C", "completion": 50, "complexity" : 11},
+      {"name": "mailet D", "completion": 0, "complexity" : 11}
+     ],
+     "complexity" : 40
     },
   {
    "name": "Sub task 2",
    "children": [
-      {"name": "mailet A", "completion": 50},
-      {"name": "mailet B", "completion": 30},
-      {"name": "mailet C", "completion": 50},
-      {"name": "mailet D", "completion": 0}
-     ]
+      {"name": "mailet A", "completion": 50, "complexity" : 11},
+      {"name": "mailet B", "completion": 30, "complexity" : 11},
+      {"name": "mailet C", "completion": 50, "complexity" : 11},
+      {"name": "mailet D", "completion": 0, "complexity" : 11}
+     ],
+     "complexity" : 50
     }
  ]
 }
