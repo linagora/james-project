@@ -27,6 +27,8 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import javax.inject.Inject;
 
@@ -36,51 +38,52 @@ import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
 import org.apache.james.backends.cassandra.utils.ZonedDateTimeRepresentation;
 import org.apache.james.jmap.api.vacation.AccountId;
 import org.apache.james.jmap.api.vacation.Vacation;
+import org.apache.james.jmap.api.vacation.VacationPatch;
 import org.apache.james.jmap.cassandra.vacation.tables.CassandraVacationTable;
+import org.apache.james.util.ValuePatch;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.UserType;
+import com.datastax.driver.core.querybuilder.Insert;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraVacationDAO {
 
     private final CassandraAsyncExecutor cassandraAsyncExecutor;
-    private final PreparedStatement insertStatement;
     private final PreparedStatement readStatement;
     private final UserType zonedDateTimeUserType;
+    private final BiFunction<VacationPatch, Insert, Insert> insertGeneratorPipeline;
 
     @Inject
     public CassandraVacationDAO(Session session, CassandraTypesProvider cassandraTypesProvider) {
         this.zonedDateTimeUserType = cassandraTypesProvider.getDefinedUserType(CassandraZonedDateTimeModule.ZONED_DATE_TIME);
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
 
-        this.insertStatement = session.prepare(insertInto(CassandraVacationTable.TABLE_NAME)
-            .value(CassandraVacationTable.ACCOUNT_ID, bindMarker(CassandraVacationTable.ACCOUNT_ID))
-            .value(CassandraVacationTable.IS_ENABLED, bindMarker(CassandraVacationTable.IS_ENABLED))
-            .value(CassandraVacationTable.FROM_DATE, bindMarker(CassandraVacationTable.FROM_DATE))
-            .value(CassandraVacationTable.TO_DATE, bindMarker(CassandraVacationTable.TO_DATE))
-            .value(CassandraVacationTable.TEXT, bindMarker(CassandraVacationTable.TEXT))
-            .value(CassandraVacationTable.SUBJECT, bindMarker(CassandraVacationTable.SUBJECT))
-            .value(CassandraVacationTable.HTML, bindMarker(CassandraVacationTable.HTML)));
-
         this.readStatement = session.prepare(select()
             .from(CassandraVacationTable.TABLE_NAME)
             .where(eq(CassandraVacationTable.ACCOUNT_ID,
                 bindMarker(CassandraVacationTable.ACCOUNT_ID))));
+
+        insertGeneratorPipeline = ImmutableList.of(
+            applyPatchForField(CassandraVacationTable.SUBJECT, VacationPatch::getSubject),
+            applyPatchForField(CassandraVacationTable.HTML, VacationPatch::getHtmlBody),
+            applyPatchForField(CassandraVacationTable.TEXT, VacationPatch::getTextBody),
+            applyPatchForField(CassandraVacationTable.IS_ENABLED, VacationPatch::getIsEnabled),
+            applyPatchForFieldZonedDateTime(CassandraVacationTable.FROM_DATE, VacationPatch::getFromDate),
+            applyPatchForFieldZonedDateTime(CassandraVacationTable.TO_DATE, VacationPatch::getToDate))
+            .stream()
+            .reduce((vacation, insert) -> insert, 
+                    (a, b) -> (vacation, insert) -> b.apply(vacation, a.apply(vacation, insert)));
     }
 
-    public CompletableFuture<Void> modifyVacation(AccountId accountId, Vacation vacation) {
+    public CompletableFuture<Void> modifyVacation(AccountId accountId, VacationPatch vacationPatch) {
         return cassandraAsyncExecutor.executeVoid(
-            insertStatement.bind()
-                .setString(CassandraVacationTable.ACCOUNT_ID, accountId.getIdentifier())
-                .setBool(CassandraVacationTable.IS_ENABLED, vacation.isEnabled())
-                .setUDTValue(CassandraVacationTable.FROM_DATE, convertToUDTValue(vacation.getFromDate()))
-                .setUDTValue(CassandraVacationTable.TO_DATE, convertToUDTValue(vacation.getToDate()))
-                .setString(CassandraVacationTable.TEXT, vacation.getTextBody().orElse(null))
-                .setString(CassandraVacationTable.SUBJECT, vacation.getSubject().orElse(null))
-                .setString(CassandraVacationTable.HTML, vacation.getHtmlBody().orElse(null)));
+            createSpecificUpdate(vacationPatch,
+                insertInto(CassandraVacationTable.TABLE_NAME)
+                    .value(CassandraVacationTable.ACCOUNT_ID, accountId.getIdentifier())));
     }
 
     public CompletableFuture<Optional<Vacation>> retrieveVacation(AccountId accountId) {
@@ -104,11 +107,32 @@ public class CassandraVacationDAO {
                 .getZonedDateTime());
     }
 
-    private UDTValue convertToUDTValue(Optional<ZonedDateTime> zonedDateTimeOptional) {
+    private Insert createSpecificUpdate(VacationPatch vacationPatch, Insert baseInsert) {
+        return insertGeneratorPipeline.apply(vacationPatch, baseInsert);
+    }
+
+    public <T> BiFunction<VacationPatch, Insert, Insert> applyPatchForField(String field, Function<VacationPatch, ValuePatch<T>> getter) {
+        return (vacation, insert) -> 
+            getter.apply(vacation)
+                .mapNotKeptToOptional(optionalValue -> applyPatchForField(field, optionalValue, insert))
+                .orElse(insert);
+    }
+
+    public BiFunction<VacationPatch, Insert, Insert> applyPatchForFieldZonedDateTime(String field, Function<VacationPatch, ValuePatch<ZonedDateTime>> getter) {
+        return (vacation, insert) -> 
+            getter.apply(vacation)
+                .mapNotKeptToOptional(optionalValue -> applyPatchForField(field, convertToUDTOptional(optionalValue), insert))
+                .orElse(insert);
+    }
+
+    private <T> Insert applyPatchForField(String field, Optional<T> value, Insert insert) {
+        return insert.value(field, value.orElse(null));
+    }
+
+    private Optional<UDTValue> convertToUDTOptional(Optional<ZonedDateTime> zonedDateTimeOptional) {
         return zonedDateTimeOptional.map(ZonedDateTimeRepresentation::fromZonedDateTime)
             .map(representation -> zonedDateTimeUserType.newValue()
                 .setDate(CassandraZonedDateTimeModule.DATE, representation.getDate())
-                .setString(CassandraZonedDateTimeModule.TIME_ZONE, representation.getSerializedZoneId()))
-            .orElse(null);
+                .setString(CassandraZonedDateTimeModule.TIME_ZONE, representation.getSerializedZoneId()));
     }
 }
