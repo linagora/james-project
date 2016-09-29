@@ -19,12 +19,22 @@
 
 package org.apache.james.transport.mailets;
 
-import org.apache.mailet.MailAddress;
+import java.util.Collection;
+import java.util.List;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
-import java.util.HashSet;
-import java.util.Collection;
+
+import org.apache.james.transport.mailets.redirect.AbstractRedirect;
+import org.apache.james.transport.mailets.redirect.AddressExtractor;
+import org.apache.james.transport.mailets.redirect.InitParameters;
+import org.apache.james.transport.mailets.redirect.NotifyMailetInitParameters;
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.MailetConfig;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * <p>
@@ -38,7 +48,7 @@ import java.util.Collection;
  * A notice text can be specified, and in such case will be inserted into the
  * notification inline text.<br>
  * If the notified message has an "error message" set, it will be inserted into
- * the notification inline text. If the <code>attachStackTrace</code> init
+ * the notification inline text. If the <code>attachError</code> init
  * parameter is set to true, such error message will be attached to the
  * notification message.<br>
  * The notified messages are attached in their entirety (headers and content)
@@ -93,68 +103,62 @@ import java.util.Collection;
  * </code>
  * </pre>
  * <p>
- * <i>notice</i>, <i>sendingAddress</i> and <i>attachStackTrace</i> can be used
+ * <i>notice</i>, <i>sendingAddress</i> and <i>attachError</i> can be used
  * instead of <i>message</i>, <i>sender</i> and <i>attachError</i>; such names
  * are kept for backward compatibility.
  * </p>
  */
-public class NotifyPostmaster extends AbstractNotify {
+public class NotifyPostmaster extends AbstractRedirect {
 
-    /**
-     * Return a string describing this mailet.
-     * 
-     * @return a string describing this mailet
-     */
+    private static final String[] CONFIGURABLE_PARAMETERS = new String[]{
+            "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "notice", "sender", "sendingAddress", "prefix", "attachError", "to" };
+    private static final List<String> ALLOWED_SPECIALS = ImmutableList.of("postmaster", "unaltered");
+
+    private Optional<String> to = Optional.absent();
+
+    @Override
+    public void init(MailetConfig mailetConfig) throws MessagingException {
+        super.init(mailetConfig);
+        to = Optional.fromNullable(getInitParameter("to"));
+    }
+
+    @Override
     public String getMailetInfo() {
         return "NotifyPostmaster Mailet";
     }
 
-    /** Gets the expected init parameters. */
+    @Override
+    protected InitParameters getInitParameters() {
+        return NotifyMailetInitParameters.from(this);
+    }
+
+    @Override
     protected String[] getAllowedInitParameters() {
-        return new String[]{
-                // "static",
-                "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "notice", "sender", "sendingAddress", "prefix", "attachError", "attachStackTrace", "to" };
+        return CONFIGURABLE_PARAMETERS;
     }
 
-    /**
-     * @return the postmaster address
-     */
+    @Override
+    protected boolean isNotifyMailet() {
+        return true;
+    }
+
+    @Override
     protected Collection<MailAddress> getRecipients() {
-        Collection<MailAddress> newRecipients = new HashSet<MailAddress>();
-        newRecipients.add(getMailetContext().getPostmaster());
-        return newRecipients;
+        return ImmutableSet.of(getMailetContext().getPostmaster());
     }
 
-    /**
-     * @return <code>SpecialAddress.UNALTERED</code> if specified or postmaster
-     *         if missing
-     */
+    @Override
     protected InternetAddress[] getTo() throws MessagingException {
-        String addressList = getInitParameter("to");
-        InternetAddress[] iaarray = new InternetAddress[1];
-        iaarray[0] = getMailetContext().getPostmaster().toInternetAddress();
-        if (addressList != null) {
-            MailAddress specialAddress = getSpecialAddress(addressList, new String[] { "postmaster", "unaltered" });
-            if (specialAddress != null) {
-                iaarray[0] = specialAddress.toInternetAddress();
-            } else {
-                log("\"to\" parameter ignored, set to postmaster");
+        if (to.isPresent()) {
+            Optional<MailAddress> specialAddress = AddressExtractor.withContext(getMailetContext())
+                    .allowedSpecials(ALLOWED_SPECIALS)
+                    .getSpecialAddress(to.get());
+            if (specialAddress.isPresent()) {
+                return new InternetAddress[] { specialAddress.get().toInternetAddress() };
             }
+            log("\"to\" parameter ignored, set to postmaster");
         }
-        return iaarray;
-    }
-
-    /**
-     * @return the <code>attachStackTrace</code> init parameter, or the
-     *         <code>attachError</code> init parameter if missing, or false if
-     *         missing
-     */
-    protected boolean attachError() throws MessagingException {
-        String parameter = getInitParameter("attachStackTrace");
-        if (parameter == null) {
-            return super.attachError();
-        }
-        return Boolean.valueOf(parameter);
+        return new InternetAddress[] { getMailetContext().getPostmaster().toInternetAddress() };
     }
 
 }

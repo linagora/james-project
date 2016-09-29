@@ -19,10 +19,10 @@
 
 package org.apache.james.transport.matchers;
 
-import static org.apache.mailet.base.MailAddressFixture.JAMES_APACHE_ORG;
 import static org.apache.mailet.base.MailAddressFixture.ANY_AT_JAMES;
-import static org.apache.mailet.base.MailAddressFixture.OTHER_AT_JAMES;
 import static org.apache.mailet.base.MailAddressFixture.ANY_AT_JAMES2;
+import static org.apache.mailet.base.MailAddressFixture.JAMES_APACHE_ORG;
+import static org.apache.mailet.base.MailAddressFixture.OTHER_AT_JAMES;
 import static org.apache.mailet.base.MailAddressFixture.OTHER_AT_JAMES2;
 import static org.assertj.core.api.Assertions.assertThat;
 

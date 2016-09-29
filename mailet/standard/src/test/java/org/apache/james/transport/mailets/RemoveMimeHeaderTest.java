@@ -68,7 +68,7 @@ public class RemoveMimeHeaderTest {
         mimeMessage.setHeader(HEADER1, "true");
         mimeMessage.setHeader(HEADER2, "true");
         mimeMessage.saveChanges();
-        Mail mail = createMail(mimeMessage);
+        Mail mail = FakeMail.from(mimeMessage);
 
         mailet.service(mail);
 
@@ -87,7 +87,7 @@ public class RemoveMimeHeaderTest {
         mimeMessage.setHeader(HEADER1, "true");
         mimeMessage.setHeader(HEADER2, "true");
         mimeMessage.saveChanges();
-        Mail mail = createMail(mimeMessage);
+        Mail mail = FakeMail.from(mimeMessage);
 
         mailet.service(mail);
 
@@ -106,7 +106,7 @@ public class RemoveMimeHeaderTest {
         mimeMessage.setHeader(HEADER1, "true");
         mimeMessage.setHeader(HEADER2, "true");
         mimeMessage.saveChanges();
-        Mail mail = createMail(mimeMessage);
+        Mail mail = FakeMail.from(mimeMessage);
 
         mailet.service(mail);
 
@@ -124,7 +124,7 @@ public class RemoveMimeHeaderTest {
         mimeMessage.setHeader(HEADER1, "true");
         mimeMessage.setHeader(HEADER2, "true");
         mimeMessage.saveChanges();
-        Mail mail = createMail(mimeMessage);
+        Mail mail = FakeMail.from(mimeMessage);
 
         mailet.service(mail);
 
@@ -151,11 +151,5 @@ public class RemoveMimeHeaderTest {
             .thenThrow(MessagingException.class);
 
         mailet.service(mail);
-    }
-
-    private Mail createMail(MimeMessage message) {
-        Mail mail = new FakeMail();
-        mail.setMessage(message);
-        return mail;
     }
 }

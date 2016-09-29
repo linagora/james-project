@@ -71,7 +71,7 @@ public class PostDequeueDecoratorTest {
         mailboxManager = inMemoryIntegrationResources.createMailboxManager(groupMembershipResolver);
 
         mockedMailQueueItem = mock(MailQueueItem.class);
-        mail = new FakeMail();
+        mail = FakeMail.builder().build();
         when(mockedMailQueueItem.getMail()).thenReturn(mail);
         testee = new PostDequeueDecorator(mockedMailQueueItem, mailboxManager);
     }
