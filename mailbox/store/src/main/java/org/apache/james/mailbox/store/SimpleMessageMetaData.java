@@ -23,76 +23,74 @@ import java.util.Date;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
+import com.google.common.base.Objects;
+
 
 public class SimpleMessageMetaData implements MessageMetaData{
-    private final long uid;
+    private final MessageUid uid;
     private final Flags flags;
     private final long size;
     private final Date internalDate;
     private final long modSeq;
+    private final MessageId messageId;
 
-    public SimpleMessageMetaData(long uid, long modSeq, Flags flags, long size, Date internalDate) {
+    public SimpleMessageMetaData(MessageUid uid, long modSeq, Flags flags, long size, Date internalDate, MessageId messageId) {
         this.uid = uid;
         this.flags = flags;
         this.size = size;
         this.modSeq = modSeq;
         this.internalDate = internalDate;
+        this.messageId = messageId;
     }
     
     public SimpleMessageMetaData(MailboxMessage message) {
-        this(message.getUid(), message.getModSeq(), message.createFlags(), message.getFullContentOctets(), message.getInternalDate());
+        this(message.getUid(), message.getModSeq(), message.createFlags(), message.getFullContentOctets(), message.getInternalDate(), message.getMessageId());
     }
     
-    /**
-     * @see org.apache.james.mailbox.model.MessageMetaData#getFlags()
-     */
+    @Override
     public Flags getFlags() {
         return flags;
     }
 
-    /**
-     * @see org.apache.james.mailbox.model.MessageMetaData#getSize()
-     */
+    @Override
     public long getSize() {
         return size;
     }
 
-    /**
-     * @see org.apache.james.mailbox.model.MessageMetaData#getInternalDate()
-     */
+    @Override
     public Date getInternalDate() {
         return internalDate;
     }
 
-    /**
-     * @see org.apache.james.mailbox.model.MessageMetaData#getUid()
-     */
-    public long getUid() {
+    @Override
+    public MessageUid getUid() {
         return uid;
     }
 
     @Override
+    public MessageId getMessageId() {
+        return messageId;
+    }
+    
+    @Override
     public boolean equals(Object obj) {
         if(obj instanceof SimpleMessageMetaData) {
-            return uid == ((SimpleMessageMetaData) obj).getUid();
+            return uid.equals(((SimpleMessageMetaData) obj).getUid());
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + (int) (uid ^ (uid >>> 32));
-        return result;
+        return Objects.hashCode(uid);
     }
 
-    /**
-     * @see org.apache.james.mailbox.model.MessageMetaData#getModSeq()
-     */
+    @Override
     public long getModSeq() {
         return modSeq;
     }

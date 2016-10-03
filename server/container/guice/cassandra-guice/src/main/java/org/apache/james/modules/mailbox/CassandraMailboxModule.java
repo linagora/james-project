@@ -28,6 +28,7 @@ import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
+import org.apache.james.mailbox.cassandra.CassandraMessageIdProvider;
 import org.apache.james.mailbox.cassandra.CassandraSubscriptionManager;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
@@ -38,6 +39,7 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.NoMailboxPathLocker;
 import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
+import org.apache.james.mailbox.store.mail.MessageIdProvider;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
@@ -61,6 +63,7 @@ public class CassandraMailboxModule extends AbstractModule {
         bind(CassandraSubscriptionManager.class).in(Scopes.SINGLETON);
         bind(CassandraModSeqProvider.class).in(Scopes.SINGLETON);
         bind(CassandraUidProvider.class).in(Scopes.SINGLETON);
+        bind(CassandraMessageIdProvider.class).in(Scopes.SINGLETON);
         bind(UserRepositoryAuthenticator.class).in(Scopes.SINGLETON);
         bind(CassandraId.Factory.class).in(Scopes.SINGLETON);
 
@@ -71,6 +74,7 @@ public class CassandraMailboxModule extends AbstractModule {
 
         bind(ModSeqProvider.class).to(CassandraModSeqProvider.class);
         bind(UidProvider.class).to(CassandraUidProvider.class);
+        bind(MessageIdProvider.class).to(CassandraMessageIdProvider.class);
         bind(SubscriptionManager.class).to(CassandraSubscriptionManager.class);
         bind(MailboxPathLocker.class).to(NoMailboxPathLocker.class);
         bind(Authenticator.class).to(UserRepositoryAuthenticator.class);

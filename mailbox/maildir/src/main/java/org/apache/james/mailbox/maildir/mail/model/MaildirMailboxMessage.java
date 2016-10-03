@@ -24,9 +24,12 @@ import java.io.IOException;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.maildir.MaildirFolder;
 import org.apache.james.mailbox.maildir.MaildirId;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
@@ -39,16 +42,18 @@ public class MaildirMailboxMessage extends DelegatingMailboxMessage {
     private boolean recent;
     private boolean seen;
     private final Mailbox mailbox;
-    private long uid;
+    private MessageUid uid;
+    private MessageId messageId;
     protected boolean newMessage;
     private long modSeq;
     
-    public MaildirMailboxMessage(Mailbox mailbox, long uid, MaildirMessageName messageName) throws IOException {
+    public MaildirMailboxMessage(Mailbox mailbox, MessageUid messageUid, MaildirMessageName messageName) throws IOException {
         super(new MaildirMessage(messageName));
 
         this.mailbox = mailbox;
-        setUid(uid);
+        setUid(messageUid);
         setModSeq(messageName.getFile().lastModified());
+        setMessageId(new DefaultMessageId(getMailboxId(), getUid()));
         Flags flags = messageName.getFlags();
         
         // Set the flags for the message and respect if its RECENT
@@ -74,15 +79,24 @@ public class MaildirMailboxMessage extends DelegatingMailboxMessage {
     }
 
     @Override
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
     }
 
     @Override
-    public void setUid(long uid) {
+    public void setUid(MessageUid uid) {
         this.uid = uid;
     }
 
+    @Override
+    public MessageId getMessageId() {
+        return messageId;
+    }
+
+    @Override
+    public void setMessageId(MessageId messageId) {
+        this.messageId = messageId;
+    }
 
     @Override
     public void setFlags(Flags flags) {

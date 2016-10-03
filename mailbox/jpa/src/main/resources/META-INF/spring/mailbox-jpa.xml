@@ -49,6 +49,7 @@
         <constructor-arg index="0" ref="entityManagerFactory"/>
         <constructor-arg index="1" ref="jpa-uidProvider"/>
         <constructor-arg index="2" ref="jpa-modSeqProvider"/>
+        <constructor-arg index="3" ref="jpa-messageIdProvider"/>
     </bean>
     <bean id="jpa-uidProvider" class="org.apache.james.mailbox.jpa.mail.JPAUidProvider">
         <constructor-arg index="0" ref="jpa-locker"/>
@@ -58,6 +59,7 @@
         <constructor-arg index="0" ref="jpa-locker"/>
         <constructor-arg index="1" ref="entityManagerFactory"/>
     </bean>
+    <bean id="jpa-messageIdProvider" class="org.apache.james.mailbox.store.mail.DefaultMessageIdProvider"/>
     <alias name="jvm-locker" alias="jpa-locker"/>
 
     <!-- 

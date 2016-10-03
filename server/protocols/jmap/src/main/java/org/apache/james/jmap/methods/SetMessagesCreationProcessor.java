@@ -41,7 +41,6 @@ import org.apache.james.jmap.model.CreationMessageId;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageFactory;
 import org.apache.james.jmap.model.MessageFactory.MetaDataWithContent;
-import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.MessageProperties;
 import org.apache.james.jmap.model.MessageProperties.MessageProperty;
 import org.apache.james.jmap.model.SetError;
@@ -63,6 +62,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Cid;
+import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
@@ -281,17 +281,17 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
         Date internalDate = Date.from(createdEntry.getValue().getDate().toInstant());
         Flags flags = getMessageFlags(createdEntry.getValue());
 
-        long uid = outbox.appendMessage(content, internalDate, session, flags.contains(Flags.Flag.RECENT), flags);
+        ComposedMessageId message = outbox.appendMessage(content, internalDate, session, flags.contains(Flags.Flag.RECENT), flags);
 
         return MetaDataWithContent.builder()
-                .uid(uid)
+                .uid(message.getUid())
                 .flags(flags)
                 .size(messageContent.length)
                 .internalDate(internalDate)
                 .sharedContent(content)
                 .attachments(messageAttachments)
                 .mailboxId(outbox.getId())
-                .messageId(new MessageId(session.getUser(), outbox.getMailboxPath(), uid))
+                .messageId(message.getMessageId())
                 .build();
     }
 

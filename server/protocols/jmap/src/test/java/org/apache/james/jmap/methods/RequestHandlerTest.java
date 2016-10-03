@@ -37,6 +37,7 @@ import org.apache.james.jmap.model.ProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -124,7 +125,7 @@ public class RequestHandlerTest {
 
     @Before
     public void setup() {
-        ObjectMapperFactory objectMapperFactory = new ObjectMapperFactory(new InMemoryId.Factory());
+        ObjectMapperFactory objectMapperFactory = new ObjectMapperFactory(new InMemoryId.Factory(), new InMemoryMessageId.Factory());
         jmapRequestParser = new JmapRequestParserImpl(objectMapperFactory);
         jmapResponseWriter = new JmapResponseWriterImpl(objectMapperFactory);
         mockHttpServletRequest = mock(HttpServletRequest.class);

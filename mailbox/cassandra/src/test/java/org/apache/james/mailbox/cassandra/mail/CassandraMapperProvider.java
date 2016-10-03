@@ -22,6 +22,7 @@ import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
+import org.apache.james.mailbox.cassandra.CassandraMessageIdProvider;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraAnnotationModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraAttachmentModule;
@@ -53,21 +54,29 @@ public class CassandraMapperProvider implements MapperProvider {
     @Override
     public MailboxMapper createMailboxMapper() throws MailboxException {
         return new CassandraMailboxSessionMapperFactory(
-            new CassandraUidProvider(cassandra.getConf()),
-            new CassandraModSeqProvider(cassandra.getConf()),
-            cassandra.getConf(),
-            cassandra.getTypesProvider()
-        ).getMailboxMapper(new MockMailboxSession("benwa"));
+                new CassandraUidProvider(cassandra.getConf()),
+                new CassandraModSeqProvider(cassandra.getConf()),
+                new CassandraMessageIdProvider(),
+                cassandra.getConf(),
+                cassandra.getTypesProvider(),
+                new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider()),
+                new CassandraMessageIdDAO(cassandra.getConf()),
+                new CassandraImapUidDAO(cassandra.getConf())
+            ).getMailboxMapper(new MockMailboxSession("benwa"));
     }
 
     @Override
     public MessageMapper createMessageMapper() throws MailboxException {
         return new CassandraMailboxSessionMapperFactory(
-            new CassandraUidProvider(cassandra.getConf()),
-            new CassandraModSeqProvider(cassandra.getConf()),
-            cassandra.getConf(),
-            cassandra.getTypesProvider()
-        ).getMessageMapper(new MockMailboxSession("benwa"));
+                new CassandraUidProvider(cassandra.getConf()),
+                new CassandraModSeqProvider(cassandra.getConf()),
+                new CassandraMessageIdProvider(),
+                cassandra.getConf(),
+                cassandra.getTypesProvider(),
+                new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider()),
+                new CassandraMessageIdDAO(cassandra.getConf()),
+                new CassandraImapUidDAO(cassandra.getConf())
+            ).getMessageMapper(new MockMailboxSession("benwa"));
     }
 
     @Override
@@ -75,8 +84,12 @@ public class CassandraMapperProvider implements MapperProvider {
         return new CassandraMailboxSessionMapperFactory(
                 new CassandraUidProvider(cassandra.getConf()),
                 new CassandraModSeqProvider(cassandra.getConf()),
+                new CassandraMessageIdProvider(),
                 cassandra.getConf(),
-                cassandra.getTypesProvider()
+                cassandra.getTypesProvider(),
+                new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider()),
+                new CassandraMessageIdDAO(cassandra.getConf()),
+                new CassandraImapUidDAO(cassandra.getConf())
             ).getAttachmentMapper(new MockMailboxSession("benwa"));
     }
 
@@ -105,8 +118,12 @@ public class CassandraMapperProvider implements MapperProvider {
         return new CassandraMailboxSessionMapperFactory(
                 new CassandraUidProvider(cassandra.getConf()),
                 new CassandraModSeqProvider(cassandra.getConf()),
+                new CassandraMessageIdProvider(),
                 cassandra.getConf(),
-                cassandra.getTypesProvider()
+                cassandra.getTypesProvider(),
+                new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider()),
+                new CassandraMessageIdDAO(cassandra.getConf()),
+                new CassandraImapUidDAO(cassandra.getConf())
             ).getAnnotationMapper(new MockMailboxSession("benwa"));
     }
 }

@@ -34,16 +34,13 @@ import org.apache.james.jmap.model.GetMessagesResponse;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageFactory;
 import org.apache.james.jmap.model.MessageFactory.MetaDataWithContent;
-import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.MessageProperties;
 import org.apache.james.jmap.model.MessageProperties.HeaderProperty;
-import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.model.FetchGroupImpl;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MessageResultIterator;
-import org.apache.james.util.streams.Iterators;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MessageResult;
 
 import com.fasterxml.jackson.databind.ser.PropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
@@ -59,15 +56,15 @@ public class GetMessagesMethod implements Method {
     public static final String HEADERS_FILTER = "headersFilter";
     private static final Method.Request.Name METHOD_NAME = Method.Request.name("getMessages");
     private static final Method.Response.Name RESPONSE_NAME = Method.Response.name("messages");
-    private final MailboxManager mailboxManager;
     private final MessageFactory messageFactory;
+    private final MessageIdManager messageIdManager;
 
     @Inject
     @VisibleForTesting GetMessagesMethod(
-            MailboxManager mailboxManager,
-            MessageFactory messageFactory) {
-        this.mailboxManager = mailboxManager;
+            MessageFactory messageFactory,
+            MessageIdManager messageIdManager) {
         this.messageFactory = messageFactory;
+        this.messageIdManager = messageIdManager;
     }
     
     @Override
@@ -126,12 +123,10 @@ public class GetMessagesMethod implements Method {
 
     private Function<MessageId, Stream<MetaDataWithContent>> loadMessage(MailboxSession mailboxSession) {
         ThrowingFunction<MessageId, Stream<MetaDataWithContent>> toMetaDataWithContentStream = (MessageId messageId) -> {
-            MailboxPath mailboxPath = messageId.getMailboxPath();
-            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
-            MessageResultIterator messageResultIterator = messageManager.getMessages(messageId.getUidAsRange(), FetchGroupImpl.FULL_CONTENT, mailboxSession);
-            return Iterators.toStream(messageResultIterator)
+            com.google.common.base.Optional<MessageResult> maybeMessage = messageIdManager.getMessages(messageId, FetchGroupImpl.FULL_CONTENT, mailboxSession);
+            
+            return maybeMessage.asSet().stream()
                     .map(Throwing.function(MetaDataWithContent::builderFromMessageResult).sneakyThrow())
-                    .map(builder -> builder.mailboxId(messageManager.getId()))
                     .map(builder -> builder.messageId(messageId))
                     .map(MetaDataWithContent.Builder::build);
         };

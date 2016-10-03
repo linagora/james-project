@@ -27,7 +27,6 @@ import javax.mail.internet.SharedInputStream;
 
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.model.Message;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 
 import com.google.common.collect.ImmutableList;
@@ -58,11 +57,6 @@ public class SimpleMessage implements Message {
 
     public SimpleMessage(SharedInputStream content, long size, Date internalDate, String subType, String mediaType, int bodyStartOctet, Long textualLineCount, List<Property> properties) {
         this(content, size, internalDate, subType, mediaType, bodyStartOctet, textualLineCount, properties, ImmutableList.<MessageAttachment>of());
-    }
-
-    @Override
-    public MessageId getMessageId() {
-        return null;
     }
 
     @Override

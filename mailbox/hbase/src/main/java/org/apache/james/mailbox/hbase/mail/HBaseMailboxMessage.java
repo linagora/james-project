@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -35,17 +36,20 @@ import javax.mail.Flags;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.hbase.io.ChunkInputStream;
 import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
-import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+import org.apache.james.mailbox.store.search.comparator.UidComparator;
+
+import com.google.common.base.Objects;
 
 /**
  * Concrete HBaseMailboxMessage implementation. This implementation does not store any
@@ -54,14 +58,14 @@ import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
  */
 public class HBaseMailboxMessage implements MailboxMessage {
 
-    private static final MessageUidComparator MESSAGE_UID_COMPARATOR = new MessageUidComparator();
+    private static final Comparator<MailboxMessage> MESSAGE_UID_COMPARATOR = new UidComparator();
     private static final String TOSTRING_SEPARATOR = " ";
     /** Configuration for the HBase cluster */
     private final Configuration conf;
     /** The value for the mailboxId field */
     private final HBaseId mailboxId;
     /** The value for the uid field */
-    private long uid;
+    private MessageUid uid;
     /** The value for the modSeq field */
     private long modSeq;
     /** The value for the internalDate field */
@@ -91,15 +95,17 @@ public class HBaseMailboxMessage implements MailboxMessage {
     /** Meta data for this message */
     private final List<Property> properties;
     private final List<String> userFlags;
+    private MessageId messageId;
     
     /**
      * Create a copy of the given message.
      * All properties are cloned except mailbox and UID.
      */
-    public HBaseMailboxMessage(Configuration conf, HBaseId mailboxId, long uid, long modSeq, MailboxMessage original) throws MailboxException {
+    public HBaseMailboxMessage(Configuration conf, HBaseId mailboxId, MessageUid uid, long modSeq, MailboxMessage original) throws MailboxException {
         this.conf = conf;
         this.mailboxId = mailboxId;
         this.uid = uid;
+        this.messageId = new DefaultMessageId(getMailboxId(), getUid());
         this.modSeq = modSeq;
         this.userFlags = new ArrayList<String>();
         setFlags(original.createFlags());
@@ -151,38 +157,17 @@ public class HBaseMailboxMessage implements MailboxMessage {
 
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + mailboxId.hashCode();
-        result = PRIME * result + (int) (uid ^ (uid >>> 32));
-        return result;
+        return Objects.hashCode(mailboxId, uid);
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
+        if (obj instanceof HBaseMailboxMessage) {
+            HBaseMailboxMessage other = (HBaseMailboxMessage) obj;
+            return Objects.equal(this.mailboxId, other.mailboxId) &&
+                    Objects.equal(this.uid, other.uid) ;
         }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final HBaseMailboxMessage other = (HBaseMailboxMessage) obj;
-        if (getMailboxId() != null) {
-            if (!getMailboxId().equals(other.getMailboxId())) {
-                return false;
-            }
-        } else {
-            if (other.getMailboxId() != null) {
-                return false;
-            }
-        }
-        if (uid != other.uid) {
-            return false;
-        }
-        return true;
+        return false;
     }
 
     @Override
@@ -252,7 +237,12 @@ public class HBaseMailboxMessage implements MailboxMessage {
 
     @Override
     public MessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), getUid());
+        return messageId;
+    }
+
+    @Override
+    public void setMessageId(MessageId messageId) {
+        this.messageId = messageId;
     }
 
     @Override
@@ -266,7 +256,7 @@ public class HBaseMailboxMessage implements MailboxMessage {
     }
 
     @Override
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
     }
 
@@ -301,7 +291,7 @@ public class HBaseMailboxMessage implements MailboxMessage {
     }
 
     @Override
-    public void setUid(long uid) {
+    public void setUid(MessageUid uid) {
         this.uid = uid;
     }
 

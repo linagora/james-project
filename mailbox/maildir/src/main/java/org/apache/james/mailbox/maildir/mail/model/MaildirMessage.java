@@ -33,7 +33,6 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.model.Message;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.streaming.CountingInputStream;
@@ -233,11 +232,6 @@ public class MaildirMessage implements Message {
     public List<Property> getProperties() {
         parseMessage();
         return propertyBuilder.toProperties();
-    }
-
-    @Override
-    public MessageId getMessageId() {
-        return null;
     }
 
     @Override

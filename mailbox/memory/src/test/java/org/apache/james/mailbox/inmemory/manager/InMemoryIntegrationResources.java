@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.inmemory.manager;
 
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
@@ -63,6 +64,11 @@ public class InMemoryIntegrationResources implements IntegrationResources {
         return manager;
     }
 
+    @Override
+    public MessageIdManager createMessageIdManager() {
+        return null;
+    }
+    
     @Override
     public QuotaManager createQuotaManager(MaxQuotaManager maxQuotaManager, MailboxManager mailboxManager) throws Exception {
         StoreQuotaManager quotaManager = new StoreQuotaManager();

@@ -27,11 +27,11 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.JPAMailboxMapper;
 import org.apache.james.mailbox.jpa.mail.JPAMessageMapper;
 import org.apache.james.mailbox.jpa.user.JPASubscriptionMapper;
-import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdProvider;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
@@ -47,11 +47,13 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
     private final EntityManagerFactory entityManagerFactory;
     private final UidProvider uidProvider;
     private final ModSeqProvider modSeqProvider;
+    private final MessageIdProvider messageIdProvider;
 
-    public JPAMailboxSessionMapperFactory(EntityManagerFactory entityManagerFactory, UidProvider uidProvider, ModSeqProvider modSeqProvider) {
+    public JPAMailboxSessionMapperFactory(EntityManagerFactory entityManagerFactory, UidProvider uidProvider, ModSeqProvider modSeqProvider, MessageIdProvider messageIdProvider) {
         this.entityManagerFactory = entityManagerFactory;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
+        this.messageIdProvider = messageIdProvider;
         createEntityManager().close();   
     }
     
@@ -62,7 +64,7 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
 
     @Override
     public MessageMapper createMessageMapper(MailboxSession session) {
-        return new JPAMessageMapper(session, uidProvider, modSeqProvider, entityManagerFactory);
+        return new JPAMessageMapper(session, uidProvider, modSeqProvider, messageIdProvider, entityManagerFactory);
     }
 
     @Override

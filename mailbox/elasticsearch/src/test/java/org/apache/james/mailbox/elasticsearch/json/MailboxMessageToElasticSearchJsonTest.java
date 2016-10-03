@@ -35,6 +35,7 @@ import javax.mail.util.SharedByteArrayInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxSession.User;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
@@ -55,7 +56,7 @@ public class MailboxMessageToElasticSearchJsonTest {
     public static final int BODY_START_OCTET = 100;
     public static final TestId MAILBOX_ID = TestId.of(18L);
     public static final long MOD_SEQ = 42L;
-    public static final long UID = 25L;
+    public static final MessageUid UID = MessageUid.of(25);
     public static final Charset CHARSET = Charsets.UTF_8;
 
     private Date date;

@@ -32,6 +32,7 @@ import org.apache.james.mailbox.jpa.mail.model.openjpa.AbstractJPAMailboxMessage
 import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMailboxMessage;
 import org.apache.james.mailbox.jpa.user.model.JPASubscription;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.store.mail.DefaultMessageIdProvider;
 import org.apache.openjpa.persistence.OpenJPAEntityManagerFactory;
 import org.apache.openjpa.persistence.OpenJPAPersistence;
 import org.junit.After;
@@ -67,7 +68,7 @@ public class JPASubscriptionManagerTest extends AbstractSubscriptionManagerTest{
     public SubscriptionManager createSubscriptionManager() {
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
 
-        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory));
+        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory), new DefaultMessageIdProvider());
 
         return new JPASubscriptionManager(mf);
     }

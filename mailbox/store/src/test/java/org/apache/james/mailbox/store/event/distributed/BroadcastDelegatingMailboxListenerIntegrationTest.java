@@ -25,9 +25,11 @@ import java.util.TreeMap;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.TestIdDeserializer;
 import org.apache.james.mailbox.store.event.EventFactory;
@@ -69,19 +71,22 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
         broadcastDelegatingMailboxListener1 = new BroadcastDelegatingMailboxListener(publisherReceiver,
             publisherReceiver,
             new MessagePackEventSerializer(
-                new EventConverter(new MailboxConverter(new TestIdDeserializer()))
+                new EventConverter(new MailboxConverter(new TestIdDeserializer())),
+                new TestMessageId.Factory()
             ),
             TOPIC);
         broadcastDelegatingMailboxListener2 = new BroadcastDelegatingMailboxListener(publisherReceiver,
             publisherReceiver,
             new MessagePackEventSerializer(
-                new EventConverter(new MailboxConverter(new TestIdDeserializer()))
+                new EventConverter(new MailboxConverter(new TestIdDeserializer())),
+                new TestMessageId.Factory()
             ),
             TOPIC);
         broadcastDelegatingMailboxListener3 = new BroadcastDelegatingMailboxListener(publisherReceiver,
             publisherReceiver,
             new MessagePackEventSerializer(
-                new EventConverter(new MailboxConverter(new TestIdDeserializer()))
+                new EventConverter(new MailboxConverter(new TestIdDeserializer())),
+                new TestMessageId.Factory()
             ),
             TOPIC);
         eventCollectorMailbox1 = new EventCollector(MailboxListener.ListenerType.MAILBOX);
@@ -109,7 +114,7 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
     public void mailboxEventListenersShouldBeTriggeredIfRegistered() throws Exception {
         SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42);
         simpleMailbox.setMailboxId(TestId.of(52));
-        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<Long, MessageMetaData>(), simpleMailbox);
+        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<MessageUid, MessageMetaData>(), simpleMailbox);
 
         broadcastDelegatingMailboxListener1.event(event);
 
@@ -122,7 +127,7 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
     public void onceEventListenersShouldBeTriggeredOnceAcrossTheCluster() {
         SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42);
         simpleMailbox.setMailboxId(TestId.of(52));
-        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<Long, MessageMetaData>(), simpleMailbox);
+        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<MessageUid, MessageMetaData>(), simpleMailbox);
 
         broadcastDelegatingMailboxListener1.event(event);
 
@@ -135,7 +140,7 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
     public void eachEventListenersShouldBeTriggeredOnEachNode() {
         SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42);
         simpleMailbox.setMailboxId(TestId.of(52));
-        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<Long, MessageMetaData>(), simpleMailbox);
+        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<MessageUid, MessageMetaData>(), simpleMailbox);
 
         broadcastDelegatingMailboxListener1.event(event);
 

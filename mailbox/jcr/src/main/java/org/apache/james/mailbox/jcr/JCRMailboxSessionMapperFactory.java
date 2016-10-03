@@ -25,11 +25,11 @@ import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.jcr.mail.JCRMailboxMapper;
 import org.apache.james.mailbox.jcr.mail.JCRMessageMapper;
 import org.apache.james.mailbox.jcr.user.JCRSubscriptionMapper;
-import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdProvider;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
@@ -49,17 +49,19 @@ public class JCRMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
     private final int messageScaling;
     private final UidProvider uidProvider;
     private final ModSeqProvider modSeqProvider;
+    private final MessageIdProvider messageIdProvider;
 
-    public JCRMailboxSessionMapperFactory(MailboxSessionJCRRepository repository, UidProvider uidProvider, ModSeqProvider modSeqProvider) {
-        this(repository, uidProvider, modSeqProvider, DEFAULT_SCALING, JCRMessageMapper.MESSAGE_SCALE_DAY);
+    public JCRMailboxSessionMapperFactory(MailboxSessionJCRRepository repository, UidProvider uidProvider, ModSeqProvider modSeqProvider, MessageIdProvider messageIdProvider) {
+        this(repository, uidProvider, modSeqProvider, messageIdProvider, DEFAULT_SCALING, JCRMessageMapper.MESSAGE_SCALE_DAY);
     }
 
-    public JCRMailboxSessionMapperFactory(MailboxSessionJCRRepository repository, UidProvider uidProvider, ModSeqProvider modSeqProvider, int scaling, int messageScaling) {
+    public JCRMailboxSessionMapperFactory(MailboxSessionJCRRepository repository, UidProvider uidProvider, ModSeqProvider modSeqProvider, MessageIdProvider messageIdProvider, int scaling, int messageScaling) {
         this.repository = repository;
         this.scaling = scaling;
         this.messageScaling = messageScaling;
         this.uidProvider= uidProvider;
         this.modSeqProvider = modSeqProvider;
+        this.messageIdProvider = messageIdProvider;
     }
     
     @Override
@@ -69,7 +71,7 @@ public class JCRMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
 
     @Override
     public MessageMapper createMessageMapper(MailboxSession session) throws MailboxException {
-        return new JCRMessageMapper(repository, session, uidProvider, modSeqProvider,  messageScaling);
+        return new JCRMessageMapper(repository, session, uidProvider, modSeqProvider, messageIdProvider, messageScaling);
     }
 
     @Override

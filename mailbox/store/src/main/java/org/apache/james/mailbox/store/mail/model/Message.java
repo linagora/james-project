@@ -27,8 +27,6 @@ import org.apache.james.mailbox.model.MessageAttachment;
 
 public interface Message {
 
-    MessageId getMessageId();
-
     Date getInternalDate();
 
     /**

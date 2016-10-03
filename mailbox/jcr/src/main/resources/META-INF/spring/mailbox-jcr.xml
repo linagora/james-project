@@ -45,6 +45,7 @@
         <constructor-arg index="0" ref="jcr-sessionJcrRepository"/>
         <constructor-arg index="1" ref="jcr-uidProvider"/>
         <constructor-arg index="2" ref="jcr-modSeqProvider"/>
+        <constructor-arg index="3" ref="jcr-messageIdProvider"/>
     </bean>
     <bean id ="jcr-sessionJcrRepository" class="org.apache.james.mailbox.jcr.GlobalMailboxSessionJCRRepository" depends-on="imapCndLoader">
         <constructor-arg index="0" ref="jcrRepository"/>
@@ -60,6 +61,7 @@
         <constructor-arg index="0" ref="jcr-locker"/>
         <constructor-arg index="1" ref="jcr-sessionJcrRepository"/>
     </bean>
+    <bean id="jcr-messageIdProvider" class="org.apache.james.mailbox.store.mail.DefaultMessageIdProvider"/>
     <bean id="jcrRepository" class="org.apache.jackrabbit.core.RepositoryImpl" destroy-method="shutdown">
         <constructor-arg index="0" ref="config" />
     </bean>

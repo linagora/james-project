@@ -19,17 +19,19 @@
 
 package org.apache.james.mailbox.store.json;
 
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.store.TestIdDeserializer;
 import org.apache.james.mailbox.store.event.EventSerializer;
 import org.apache.james.mailbox.store.json.event.EventConverter;
 import org.apache.james.mailbox.store.json.event.MailboxConverter;
 
-public class MailboxMessagePackEventSerializerTest extends EventSerializerTest {
+public class MessagePackEventSerializerTest extends EventSerializerTest {
 
     @Override
     EventSerializer createSerializer() {
         return new MessagePackEventSerializer(
             new EventConverter(
-                new MailboxConverter(new TestIdDeserializer())));
+                new MailboxConverter(new TestIdDeserializer())),
+            new TestMessageId.Factory());
     }
 }

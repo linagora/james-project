@@ -112,7 +112,7 @@ public class SimpleMailboxMessageTest {
 
         SimpleMailboxMessage copy = SimpleMailboxMessage.copy(TestId.of(1337), original);
 
-        assertThat((Object)copy).isEqualToIgnoringGivenFields(original, "message", "mailboxId").isNotSameAs(original);
+        assertThat((Object)copy).isEqualToIgnoringGivenFields(original, "message", "mailboxId", "messageId").isNotSameAs(original);
         assertThat(copy.getMessage()).usingComparator(new FieldByFieldComparator()).isEqualTo(original.getMessage());
         assertThat(SimpleMailboxMessage.copy(TEST_ID, original).getTextualLineCount()).isEqualTo(textualLineCount);
         assertThat(SimpleMailboxMessage.copy(TEST_ID, original).getMediaType()).isEqualTo(text);

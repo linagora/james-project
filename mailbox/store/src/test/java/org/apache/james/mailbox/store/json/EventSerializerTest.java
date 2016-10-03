@@ -27,9 +27,11 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
 import org.apache.james.mailbox.store.TestId;
@@ -43,12 +45,12 @@ import com.google.common.collect.Lists;
 
 public abstract class EventSerializerTest {
 
-    public static final long UID = 42L;
+    public static final MessageUid UID = MessageUid.of(42);
     public static final long MOD_SEQ = 24L;
     public static final UpdatedFlags UPDATED_FLAGS = new UpdatedFlags(UID, MOD_SEQ, new Flags(), new Flags(Flags.Flag.SEEN));
     public static final Flags FLAGS = new Flags();
     public static final long SIZE = 45L;
-    public static final SimpleMessageMetaData MESSAGE_META_DATA = new SimpleMessageMetaData(UID, MOD_SEQ, FLAGS, SIZE, null);
+    public static final SimpleMessageMetaData MESSAGE_META_DATA = new SimpleMessageMetaData(UID, MOD_SEQ, FLAGS, SIZE, null, TestMessageId.of(1));
     public static final MailboxPath FROM = new MailboxPath("namespace", "user", "name");
     private EventSerializer serializer;
     private EventFactory eventFactory;
@@ -68,7 +70,7 @@ public abstract class EventSerializerTest {
 
     @Test
     public void addedEventShouldBeWellConverted() throws Exception {
-        TreeMap<Long, MessageMetaData> treeMap = new TreeMap<Long, MessageMetaData>();
+        TreeMap<MessageUid, MessageMetaData> treeMap = new TreeMap<MessageUid, MessageMetaData>();
         treeMap.put(UID, MESSAGE_META_DATA);
         MailboxListener.Event event = eventFactory.added(mailboxSession, treeMap, mailbox);
         byte[] serializedEvent = serializer.serializeEvent(event);
@@ -82,7 +84,7 @@ public abstract class EventSerializerTest {
 
     @Test
     public void expungedEventShouldBeWellConverted() throws Exception {
-        TreeMap<Long, MessageMetaData> treeMap = new TreeMap<Long, MessageMetaData>();
+        TreeMap<MessageUid, MessageMetaData> treeMap = new TreeMap<MessageUid, MessageMetaData>();
         treeMap.put(UID, MESSAGE_META_DATA);
         MailboxListener.Event event = eventFactory.expunged(mailboxSession, treeMap, mailbox);
         byte[] serializedEvent = serializer.serializeEvent(event);

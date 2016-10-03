@@ -37,12 +37,12 @@ import org.apache.james.jmap.model.FilterCondition;
 import org.apache.james.jmap.model.GetMessageListRequest;
 import org.apache.james.jmap.model.GetMessageListResponse;
 import org.apache.james.jmap.model.GetMessagesRequest;
-import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.utils.FilterToSearchQuery;
 import org.apache.james.jmap.utils.SortToComparatorConvertor;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
@@ -117,11 +117,11 @@ public class GetMessageListMethod implements Method {
         GetMessageListResponse.Builder builder = GetMessageListResponse.builder();
         try {
             MultimailboxesSearchQuery searchQuery = convertToSearchQuery(messageListRequest);
-            Map<MailboxId, Collection<Long>> searchResults = mailboxManager.search(searchQuery, mailboxSession);
+            Map<MailboxId, Collection<MessageUid>> searchResults = mailboxManager.search(searchQuery, mailboxSession);
             
             aggregateResults(mailboxSession, searchResults).entries().stream()
                 .sorted(comparatorFor(messageListRequest))
-                .map(entry -> new MessageId(mailboxSession.getUser(), entry.getKey(), entry.getValue().getUid()))
+                .map(entry -> entry.getValue().getMessageId())
                 .skip(messageListRequest.getPosition())
                 .limit(limit(messageListRequest.getLimit()))
                 .forEach(builder::messageId);
@@ -132,9 +132,9 @@ public class GetMessageListMethod implements Method {
         }
     }
 
-    private Multimap<MailboxPath, MessageResult> aggregateResults(MailboxSession mailboxSession, Map<MailboxId, Collection<Long>> searchResults) {
+    private Multimap<MailboxPath, MessageResult> aggregateResults(MailboxSession mailboxSession, Map<MailboxId, Collection<MessageUid>> searchResults) {
         Multimap<MailboxPath, MessageResult> messages = LinkedHashMultimap.create();
-        for (Map.Entry<MailboxId, Collection<Long>> mailboxResults: searchResults.entrySet()) {
+        for (Map.Entry<MailboxId, Collection<MessageUid>> mailboxResults: searchResults.entrySet()) {
             try {
                 aggregate(mailboxSession, messages, mailboxResults);
             } catch (MailboxException e) {
@@ -145,7 +145,7 @@ public class GetMessageListMethod implements Method {
         return messages;
     }
 
-    private void aggregate(MailboxSession mailboxSession, Multimap<MailboxPath, MessageResult> aggregation, Map.Entry<MailboxId, Collection<Long>> mailboxResults) throws MailboxNotFoundException, MailboxException {
+    private void aggregate(MailboxSession mailboxSession, Multimap<MailboxPath, MessageResult> aggregation, Map.Entry<MailboxId, Collection<MessageUid>> mailboxResults) throws MailboxNotFoundException, MailboxException {
         MailboxPath mailboxPath = mailboxManager.getMailbox(mailboxResults.getKey(), mailboxSession).getMailboxPath();
         MessageManager messageManager = getMessageManager(mailboxPath, mailboxSession)
             .orElseThrow(() -> new MailboxNotFoundException(mailboxPath));

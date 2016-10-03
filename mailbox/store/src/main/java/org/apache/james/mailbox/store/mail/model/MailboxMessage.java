@@ -20,7 +20,9 @@ package org.apache.james.mailbox.store.mail.model;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 
 /**
  * A MIME message, consisting of meta-data (including MIME headers)
@@ -38,21 +40,19 @@ public interface MailboxMessage extends Message, Comparable<MailboxMessage> {
 
     /**
      * Return the uid
-     * 
-     * @return uid
      */
-    long getUid();
-    
+    MessageUid getUid();
+
     /**
      * Set the uid for the message. This must be called before the message is added to the store
      * and must be unique / sequential.
-     * 
-     * @param uid
      */
-    void setUid(long uid);
+    void setUid(MessageUid uid);
 
-    
-    
+    MessageId getMessageId();
+
+    void setMessageId(MessageId messageId);
+
     /**
      * Set the mod-sequence for the message. This must be called before the message is added to the store 
      * or any flags are changed. This must be unique / sequential.

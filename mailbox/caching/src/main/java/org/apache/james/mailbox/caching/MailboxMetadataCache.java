@@ -1,8 +1,11 @@
 package org.apache.james.mailbox.caching;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.base.Optional;
 
 /**
  * Caches the simple yet possibly expensive to compute metadata info 
@@ -17,10 +20,10 @@ public interface MailboxMetadataCache {
 	long countUnseenMessagesInMailbox(Mailbox mailbox,
 									  MessageMapper underlying) throws MailboxException;
 
-	Long findFirstUnseenMessageUid(Mailbox mailbox,
+	MessageUid findFirstUnseenMessageUid(Mailbox mailbox,
 								   MessageMapper underlying) throws MailboxException;
 
-	long getLastUid(Mailbox mailbox,
+	Optional<MessageUid> getLastUid(Mailbox mailbox,
 					MessageMapper underlying) throws MailboxException;
 
 	long getHighestModSeq(Mailbox mailbox,

@@ -38,6 +38,7 @@ import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMailboxMessage;
 import org.apache.james.mailbox.jpa.openjpa.OpenJPAMailboxManager;
 import org.apache.james.mailbox.jpa.user.model.JPASubscription;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.store.mail.DefaultMessageIdProvider;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.openjpa.persistence.OpenJPAPersistence;
 import org.junit.runner.RunWith;
@@ -80,7 +81,7 @@ public class JPAMailboxManagerTest {
 
             entityManagerFactory = OpenJPAPersistence.getEntityManagerFactory(properties);
             JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
-            JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory));
+            JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory), new DefaultMessageIdProvider());
 
             MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();

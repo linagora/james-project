@@ -40,8 +40,10 @@ import org.apache.james.mailbox.jcr.JCRUtils;
 import org.apache.james.mailbox.jcr.mail.JCRModSeqProvider;
 import org.apache.james.mailbox.jcr.mail.JCRUidProvider;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.FakeAuthenticator;
+import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.store.mail.DefaultMessageIdProvider;
+import org.apache.james.mailbox.store.mail.MessageIdProvider;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
@@ -87,7 +89,8 @@ public class JCRHostSystem extends JamesImapHostSystem{
             JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
             JCRUidProvider uidProvider = new JCRUidProvider(locker, sessionRepos);
             JCRModSeqProvider modSeqProvider = new JCRModSeqProvider(locker, sessionRepos);
-            JCRMailboxSessionMapperFactory mf = new JCRMailboxSessionMapperFactory(sessionRepos, uidProvider, modSeqProvider);
+            MessageIdProvider messageIdProvider = new DefaultMessageIdProvider();
+            JCRMailboxSessionMapperFactory mf = new JCRMailboxSessionMapperFactory(sessionRepos, uidProvider, modSeqProvider, messageIdProvider);
 
             MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();

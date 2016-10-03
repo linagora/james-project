@@ -16,16 +16,16 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.mail.model.impl;
 
-import java.util.Comparator;
+package org.apache.james.mailbox.cassandra.table;
 
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_UID;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 
-public class MessageUidComparator implements Comparator<MailboxMessage> {
+public interface CassandraMessageIdTable {
 
-    @Override
-    public int compare(MailboxMessage m1, MailboxMessage m2) {
-        return Long.valueOf(m1.getUid()).compareTo(m2.getUid());
-    }
+    String TABLE_NAME = "messageIdTable";
+
+    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID };
 }

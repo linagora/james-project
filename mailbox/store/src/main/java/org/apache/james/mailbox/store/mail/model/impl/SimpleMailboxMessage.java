@@ -28,13 +28,16 @@ import javax.mail.internet.SharedInputStream;
 import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
@@ -48,7 +51,9 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
         int bodyStartOctet = Ints.checkedCast(original.getFullContentOctets() - original.getBodyOctets());
         PropertyBuilder pBuilder = new PropertyBuilder(original.getProperties());
         pBuilder.setTextualLineCount(original.getTextualLineCount());
-        return new SimpleMailboxMessage(internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId, original.getAttachments());
+        SimpleMailboxMessage newMessage = new SimpleMailboxMessage(internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId, original.getAttachments());
+        newMessage.setMessageId(original.getMessageId());
+        return newMessage;
     }
 
     private static SharedByteArrayInputStream copyFullContent(MailboxMessage original) throws MailboxException {
@@ -59,8 +64,9 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
         }
     }
 
-    private long uid;
+    private MessageUid uid;
     private final MailboxId mailboxId;
+    private MessageId messageId;
     private boolean answered;
     private boolean deleted;
     private boolean draft;
@@ -104,8 +110,18 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
         return mailboxId;
     }
 
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
+    }
+
+    @Override
+    public MessageId getMessageId() {
+        return messageId;
+    }
+
+    @Override
+    public void setMessageId(MessageId messageId) {
+        this.messageId = messageId;
     }
 
     public boolean isAnswered() {
@@ -140,7 +156,7 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
         this.modSeq = modSeq;
     }
 
-    public void setUid(long uid) {
+    public void setUid(MessageUid uid) {
         this.uid = uid;
     }
 
@@ -156,24 +172,16 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
 
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + (int) (uid ^ (uid >>> 32));
-        return result;
+        return Objects.hashCode(uid);
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final SimpleMailboxMessage other = (SimpleMailboxMessage) obj;
-        if (uid != other.uid)
-            return false;
-        return true;
+        if (obj instanceof SimpleMailboxMessage) {
+            SimpleMailboxMessage other = (SimpleMailboxMessage) obj;
+            return Objects.equal(this.uid, other.uid);
+        }
+        return false;
     }
 
     public String toString() {

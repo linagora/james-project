@@ -47,8 +47,10 @@ import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMailboxMessage;
 import org.apache.james.mailbox.jpa.openjpa.OpenJPAMailboxManager;
 import org.apache.james.mailbox.jpa.user.model.JPASubscription;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.FakeAuthenticator;
+import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.store.mail.DefaultMessageIdProvider;
+import org.apache.james.mailbox.store.mail.MessageIdProvider;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
@@ -117,7 +119,8 @@ public class JPAHostSystem extends JamesImapHostSystem {
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
         JPAUidProvider uidProvider = new JPAUidProvider(locker, entityManagerFactory);
         JPAModSeqProvider modSeqProvider = new JPAModSeqProvider(locker, entityManagerFactory);
-        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, uidProvider, modSeqProvider);
+        MessageIdProvider messageIdProvider = new DefaultMessageIdProvider();
+        JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, uidProvider, modSeqProvider, messageIdProvider);
 
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();

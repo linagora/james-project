@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
 import static org.apache.james.mailbox.hbase.HBaseNames.*;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
@@ -31,6 +32,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Optional;
 
 /**
  * Unit tests for UidProvider and ModSeqProvider.
@@ -114,11 +117,11 @@ public class HBaseUidAndModSeqProviderTest {
         mailboxList.add(newBox);
         pathsList.add(path);
 
-        long result = uidProvider.lastUid(null, newBox);
-        assertEquals(0, result);
+        Optional<MessageUid> result = uidProvider.lastUid(null, newBox);
+        assertEquals(Optional.absent(), result);
         for (int i = 1; i < 10; i++) {
-            long uid = uidProvider.nextUid(null, newBox);
-            assertEquals(uid, uidProvider.lastUid(null, newBox));
+            MessageUid uid = uidProvider.nextUid(null, newBox);
+            assertEquals(uid, uidProvider.lastUid(null, newBox).get());
         }
     }
 
@@ -129,11 +132,15 @@ public class HBaseUidAndModSeqProviderTest {
     public void testNextUid() throws Exception {
         LOG.info("nextUid");
         HBaseMailbox mailbox = mailboxList.get(mailboxList.size() / 2);
-        long lastUid = uidProvider.lastUid(null, mailbox);
-        long result;
-        for (int i = (int) lastUid + 1; i < (lastUid + 10); i++) {
-            result = uidProvider.nextUid(null, mailbox);
-            assertEquals(i, result);
+        Optional<MessageUid> lastUid = uidProvider.lastUid(null, mailbox);
+        for (int i = 0; i < 10; i++) {
+            if (lastUid.isPresent()) {
+                lastUid = Optional.of(lastUid.get().next());
+            } else {
+                lastUid = Optional.of(MessageUid.MIN_VALUE);
+            }
+            MessageUid result = uidProvider.nextUid(null, mailbox);
+            assertEquals(lastUid.get(), result);
         }
     }
 

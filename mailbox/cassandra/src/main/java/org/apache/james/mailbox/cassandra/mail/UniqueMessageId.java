@@ -16,8 +16,38 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.mail.model;
 
-public interface MessageId {
-    String serialize();
+package org.apache.james.mailbox.cassandra.mail;
+
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.cassandra.CassandraId;
+import org.apache.james.mailbox.cassandra.CassandraMessageId;
+
+public class UniqueMessageId {
+
+    public static UniqueMessageId from(CassandraMessageId messageId, CassandraId mailboxId, MessageUid messageUid) {
+        return new UniqueMessageId(messageId, mailboxId, messageUid);
+    }
+
+    private final CassandraMessageId messageId;
+    private final CassandraId mailboxId;
+    private final MessageUid messageUid;
+
+    private UniqueMessageId(CassandraMessageId messageId, CassandraId mailboxId, MessageUid messageUid) {
+        this.messageId = messageId;
+        this.mailboxId = mailboxId;
+        this.messageUid = messageUid;
+    }
+
+    public CassandraMessageId getMessageId() {
+        return messageId;
+    }
+
+    public CassandraId getMailboxId() {
+        return mailboxId;
+    }
+
+    public MessageUid getMessageUid() {
+        return messageUid;
+    }
 }
