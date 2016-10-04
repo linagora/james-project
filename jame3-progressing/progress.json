@@ -2,18 +2,18 @@
  "name": "3.0 release",
  "children": [
    {
-     "name" : "Use only mailbox-api from jmap",
+     "name" : "Remove design violation by using only mailbox-api from jmap",
      "completion" : 100,
      "complexity" : 10
    },
    {
-     "name" : "Marketing James 3.0 website",
-     "completion" : 15,
+     "name" : "Make a marketing James 3.0 website",
+     "completion" : 15.12,
      "complexity" : 10
    },
    {
-     "name" : "Message unique Id",
-     "completion" : 20,
+     "name" : "Assign a unique Id to message entity (and handle move and move to trash)",
+     "completion" : 20.5,
      "complexity" : 10
    },
    {
@@ -22,67 +22,67 @@
      "complexity" : 10
    },
    {
-     "name" : "load and endurance testing",
+     "name" : "write Gatling load and endurance testing",
      "completion" : 10,
      "complexity" : 10
    },
    {
-     "name" : "hasAttachment in search",
+     "name" : "implement hasAttachment in search",
      "completion" : 12,
      "complexity" : 10
    },
    {
-     "name" : "jmap support report",
+     "name" : "publish a completion status documentation along James 3.0 release notes",
      "completion" : 13,
      "complexity" : 10
    },
    {
-     "name" : "Vacation partial update",
+     "name" : "Finish Vacation partial update (PR pending)",
      "completion" : 14,
      "complexity" : 10
    },
    {
-     "name" : "INBOX-298 : handle generated-bodyText",
+     "name" : "INBOX-298 : handle generated-bodyText property in jmap messages",
      "completion" : 15,
      "complexity" : 10
    },
    {
-     "name" : "Complete IMAP METADATA",
+     "name" : "Complete IMAP METADATA implementation",
      "completion" : 80,
-     "complexity" : 10
+     "complexity" : 5
    },
    {
-     "name" : "Docker 1.12 and swarm capabilities to speedup build",
+     "name" : "Make use of Docker 1.12 and swarm capabilities to speedup build",
      "completion" : 18,
      "complexity" : 10
    },
    {
-     "name" : "cleanup james public repositories",
+     "name" : "cleanup james public repositories and tag frequently",
      "completion" : 17,
      "complexity" : 10
    },
    {
-     "name" : "tag often",
+     "name" : "handle PR build on apache github repository",
      "completion" : 16,
      "complexity" : 10
    },
    {
-     "name" : "handle PR build on apache github",
+     "name" : "sanitize every supported mailets",
      "completion" : 19,
      "complexity" : 10
    },
    {
-     "name" : "James logo for contest",
+     "name" : "re-submit a new James logo for contest",
      "completion" : 50,
      "complexity" : 10
    },
    {
-     "name" : "Implement a Guice JPA + ES module",
+     "name" : "make sure default (JPA + ES) backends work well",
      "completion" : 21,
      "complexity" : 10
    },
    {
-     "name" : "make sure default (JPA + ES) backends work well",
+     "name" : "Implement a Guice JPA + ES module",
      "completion" : 22,
      "complexity" : 10
    },
@@ -97,22 +97,20 @@
      "complexity" : 10
    },
   {
-   "name": "Sub task 1",
+   "name": "Mailet refactor",
    "children": [
-      {"name": "mailet A", "completion": 100, "complexity" : 11},
-      {"name": "mailet B", "completion": 100, "complexity" : 11},
-      {"name": "mailet C", "completion": 50, "complexity" : 11},
-      {"name": "mailet D", "completion": 0, "complexity" : 11}
+      {"name": "RemoveMailAttributes", "completion": 80, "complexity" : 1},
+      {"name": "RecipientRewriteTable", "completion": 80, "complexity" : 5}
      ],
      "complexity" : 40
     },
   {
-   "name": "Sub task 2",
+   "name": "Matcher refactor",
    "children": [
-      {"name": "mailet A", "completion": 50, "complexity" : 11},
-      {"name": "mailet B", "completion": 30, "complexity" : 11},
-      {"name": "mailet C", "completion": 50, "complexity" : 11},
-      {"name": "mailet D", "completion": 0, "complexity" : 11}
+      {"name": "Matcher A", "completion": 50, "complexity" : 11},
+      {"name": "Matcher B", "completion": 30, "complexity" : 11},
+      {"name": "Matcher C", "completion": 50, "complexity" : 11},
+      {"name": "Matcher D", "completion": 0, "complexity" : 11}
      ],
      "complexity" : 50
     }
