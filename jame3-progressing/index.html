@@ -41,7 +41,8 @@
           xaxis: {
             title: 'Percent',
             showgrid: false,
-            zeroline: false
+            zeroline: false,
+						range: [0, 100]
           },
           margin: {
             l: 400
@@ -95,7 +96,7 @@
         });
 
         x.unshift(getTaskPercent(data));
-        y.unshift('summarize');
+        y.unshift('Summarize');
 				text.unshift('');
 
         if (x.length) {
