@@ -32,6 +32,7 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
@@ -59,6 +60,11 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
     @Override
     public MessageMapper createMessageMapper(MailboxSession session) throws MailboxException {
         return messageMapper;
+    }
+
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) {
+        return null;
     }
 
     @Override
