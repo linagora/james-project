@@ -18,8 +18,10 @@
  ****************************************************************/
 package org.apache.james.mailbox.cassandra.mail;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
@@ -37,6 +39,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
 
@@ -86,6 +89,20 @@ public class CassandraMapperProvider implements MapperProvider {
     }
 
     @Override
+    public MessageIdMapper createMessageIdMapper() throws MailboxException {
+        CassandraMessageIdToImapUidDAO imapUidDAO = new CassandraMessageIdToImapUidDAO(cassandra.getConf());
+        return new CassandraMailboxSessionMapperFactory(
+                new CassandraUidProvider(cassandra.getConf()),
+                new CassandraModSeqProvider(cassandra.getConf()),
+                cassandra.getConf(),
+                cassandra.getTypesProvider(),
+                new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider(), imapUidDAO),
+                new CassandraMessageIdDAO(cassandra.getConf()),
+                imapUidDAO
+            ).getMessageIdMapper(new MockMailboxSession("benwa"));
+    }
+
+    @Override
     public AttachmentMapper createAttachmentMapper() throws MailboxException {
         CassandraMessageIdToImapUidDAO imapUidDAO = new CassandraMessageIdToImapUidDAO(cassandra.getConf());
         return new CassandraMailboxSessionMapperFactory(
@@ -102,6 +119,11 @@ public class CassandraMapperProvider implements MapperProvider {
     @Override
     public CassandraId generateId() {
         return CassandraId.timeBased();
+    }
+
+    @Override
+    public MessageUid generateMessageUid() {
+        return MessageUid.of(RandomUtils.nextLong());
     }
 
     @Override
