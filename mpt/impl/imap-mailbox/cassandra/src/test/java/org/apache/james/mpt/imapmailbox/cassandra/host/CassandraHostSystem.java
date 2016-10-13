@@ -28,6 +28,10 @@ import org.apache.james.imap.processor.main.DefaultImapProcessorFactory;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
+import org.apache.james.mailbox.cassandra.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdToImapUidDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
@@ -47,7 +51,6 @@ import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.FakeAuthenticator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.ListeningCurrentQuotaUpdater;
@@ -86,11 +89,15 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         com.datastax.driver.core.Session session = cassandraClusterSingleton.getConf();
         CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(session);
         CassandraUidProvider uidProvider = new CassandraUidProvider(session);
+        CassandraTypesProvider typesProvider = new CassandraTypesProvider(mailboxModule, session);
+        CassandraMessageIdToImapUidDAO imapUidDAO = new CassandraMessageIdToImapUidDAO(session);
+        CassandraMessageDAO messageDAO = new CassandraMessageDAO(session, typesProvider, imapUidDAO);
+        CassandraMessageIdDAO messageIdDAO = new CassandraMessageIdDAO(session);
 
         CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(uidProvider, modSeqProvider, 
-                session, new CassandraTypesProvider(mailboxModule, session), new DefaultMessageId.Factory());
+                session, typesProvider, messageDAO, messageIdDAO, imapUidDAO);
         
-        mailboxManager = new CassandraMailboxManager(mapperFactory, userManager, new JVMMailboxPathLocker(), new MessageParser(), new DefaultMessageId.Factory()); 
+        mailboxManager = new CassandraMailboxManager(mapperFactory, userManager, new JVMMailboxPathLocker(), new MessageParser(), new CassandraMessageId.Factory()); 
         QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver(mapperFactory);
 
         CassandraPerUserMaxQuotaManager perUserMaxQuotaManager = new CassandraPerUserMaxQuotaManager(session);
