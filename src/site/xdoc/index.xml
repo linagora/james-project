@@ -31,9 +31,6 @@
       #james-logo-slideshow {height:200px; width:500px;}
     </style>
 
-<!-- 
-    <script type="text/javascript" src="js/galleria/galleria.js"></script>
--->
     <script type="text/javascript" src="js/james/index.js?v=2"></script>
     
     <script type="text/javascript" src="js/james/functions.js"></script>
@@ -50,7 +47,6 @@
         <li><a href="#tabs-1">Project</a></li>
         <li><a href="#tabs-2">Server Pack</a></li>
         <li><a href="#tabs-3">Components</a></li>
-        <li><a href="#tabs-4">Call for Logo</a></li>
         <!--  Video tab is temporary desactivated, seems to be not displayed -->
 <!--        <li><a href="#tabs-5">Video</a></li>-->
       </ul>
@@ -205,153 +201,6 @@
           
         </div>
 
-        <div id="tabs-4">
-        
-          <subsection name="Why a new Logo?">
-          
-            <p>We are happy with our current logo, but for the 
-               upcoming James Server 3.0 release, we would like to 
-               give our community the opportunity to create a new image for James.</p>
-               
-            <p>Don't be shy, take your inkscape and gimp, and send us on 
-               the <a href="mail.html">James Server User mailing list</a> 
-               your creations. We will publish them on this page.</p>
-            
-            <p>We need an horizontal logo (100p height) to be show displayed on the upper
-               left corner of this page, an avatar (48x48p) to be used on a Twitter stream for example.
-               The used fonts should be redistributable (or commonly available on Windows and Linux).
-               The chosen logo should be delivered in SVG format. 
-               We also like the <a href="http://www.apache.org/foundation/press/kit/">Apache feather</a>.</p>
-          
-          </subsection>
-        
-          <subsection name="How to Choose?">
-          
-            <p>Listen <a href="http://james.apache.org/mail.html">mailing list</a> 
-               and <a href="http://twitter.com/ApacheJames">Twitter</a> for the vote.</p>
-               
-            <p>We still don't have any date for this vote, so it's still time to submit your proposals.</p>
-            
-          </subsection>
-          
-          <subsection name="Preview a Logo on this Web Site">
-          
-            <div id="james-logo-0-preview">
-              <p><img src="images/james-logo-square.png"/></p>
-              <p>
-                <a href="#">Click to reset the upper left logo.</a>
-              </p>
-            </div>
-
-          </subsection>
-
-          <subsection name="Proposal 1">
-            <div id="james-logo-1-preview">
-              <p><img src="logo-call/james-logo-1.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-          <subsection name="Proposal 2">
-            <div id="james-logo-2-preview">
-              <p><img src="logo-call/james-logo-2.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-          <subsection name="Proposal 3">
-            <div id="james-logo-3-preview">
-              <p><img src="logo-call/james-logo-3.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-          <subsection name="Proposal 4">
-            <div id="james-logo-4-preview">
-              <p><img src="logo-call/james-logo-4.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-          <subsection name="Proposal 5">
-            <div id="james-logo-5-preview">
-              <p><img src="logo-call/james-logo-5.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-            <p><img src="logo-call/james-logo-5-avatar.png"/></p>
-          </subsection>
-
-          <subsection name="Proposal 6">
-            <div id="james-logo-6-preview">
-              <p><img src="logo-call/james-logo-6.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-            <p><img src="logo-call/james-logo-6-avatar.png"/></p>
-          </subsection>
-
-          <subsection name="Proposal 7">
-            <div id="james-logo-7-preview">
-              <p><img src="logo-call/james-logo-7.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-          <subsection name="Proposal 8">
-            <div id="james-logo-8-preview">
-              <p><img src="logo-call/james-logo-8.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-            <p><img src="logo-call/james-logo-8-avatar.png"/></p>
-          </subsection>
-
-          <subsection name="Proposal 9">
-            <div id="james-logo-9-preview">
-              <p><img src="logo-call/james-logo-9.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-          <subsection name="Proposal 10">
-            <div id="james-logo-10-preview">
-              <p><img src="logo-call/james-logo-10.png"/></p>
-              <p>
-                <a href="#">Click to change the upper left logo on this page and preview this proposal.</a>
-              </p>
-            </div>
-          </subsection>
-
-        </div>
-
-<!-- 
-        <div id="tabs-5">
-  
-              <object width="480" height="385">
-                <param name="movie" value="http://www.youtube.com/v/0Mx7qy7i3Hs?fs=1&amp;hl=en_US"></param>
-                <param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param>
-                <embed src="http://www.youtube.com/v/0Mx7qy7i3Hs?fs=1&amp;hl=en_US" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="480" height="385">
-                </embed>
-              </object>
-  
-        </div>
--->
       </div>
         
    </td>
@@ -398,6 +247,10 @@
 
       <subsection name="News">
         <ul>
+          <li>Oct/2016 - <ul>
+          <li><a href="newsarchive.html#20161001">We choosed a new logo! <img src='images/james-logo.png' alt='New James logo'/></a></li>
+          </ul>
+          </li>
           <li>Sep/2016 - <ul>
           <li><a href="newsarchive.html#20160901"><strong>Apache James Server 3.0</strong> We are currently working on the release.</a></li>
           </ul>
