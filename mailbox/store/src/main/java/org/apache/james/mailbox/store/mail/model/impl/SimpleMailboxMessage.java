@@ -38,12 +38,13 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 public class SimpleMailboxMessage extends DelegatingMailboxMessage {
 
-    public static SimpleMailboxMessage copy(MailboxId mailboxId, MailboxMessage original) throws MailboxException {
+    public static SimpleMailboxMessage copy(MailboxId mailboxId, MailboxMessage original, Optional<MessageId> newMessageId) throws MailboxException {
         Date internalDate = original.getInternalDate();
         long size = original.getFullContentOctets();
         Flags flags = original.createFlags();
@@ -51,7 +52,11 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
         int bodyStartOctet = Ints.checkedCast(original.getFullContentOctets() - original.getBodyOctets());
         PropertyBuilder pBuilder = new PropertyBuilder(original.getProperties());
         pBuilder.setTextualLineCount(original.getTextualLineCount());
-        return new SimpleMailboxMessage(original.getMessageId(), internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId, original.getAttachments());
+        return new SimpleMailboxMessage(getMessageId(newMessageId, original), internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId, original.getAttachments());
+    }
+
+    private static MessageId getMessageId(Optional<MessageId> newMessageId, MailboxMessage original) {
+        return newMessageId.or(original.getMessageId());
     }
 
     private static SharedByteArrayInputStream copyFullContent(MailboxMessage original) throws MailboxException {

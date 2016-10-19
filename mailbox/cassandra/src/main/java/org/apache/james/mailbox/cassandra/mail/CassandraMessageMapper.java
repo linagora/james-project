@@ -46,6 +46,7 @@ import org.apache.james.mailbox.cassandra.mail.utils.MessageDeletedDuringFlagsUp
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxCountersTable;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -57,6 +58,7 @@ import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -77,6 +79,7 @@ public class CassandraMessageMapper implements MessageMapper {
     private final CassandraMessageDAO messageDAO;
     private final CassandraMessageIdDAO messageIdDAO;
     private final CassandraMessageIdToImapUidDAO imapUidDAO;
+    private final MessageId.Factory messageIdFactory;
 
     public CassandraMessageMapper(Session session, UidProvider uidProvider, ModSeqProvider modSeqProvider, 
             MailboxSession mailboxSession, int maxRetries, AttachmentMapper attachmentMapper,
@@ -90,6 +93,7 @@ public class CassandraMessageMapper implements MessageMapper {
         this.messageDAO = messageDAO;
         this.messageIdDAO = messageIdDAO;
         this.imapUidDAO = imapUidDAO;
+        this.messageIdFactory = new CassandraMessageId.Factory();
     }
 
     @Override
@@ -205,6 +209,10 @@ public class CassandraMessageMapper implements MessageMapper {
     public MessageMetaData add(Mailbox mailbox, MailboxMessage message) throws MailboxException {
         message.setUid(uidProvider.nextUid(mailboxSession, mailbox));
         message.setModSeq(modSeqProvider.nextModSeq(mailboxSession, mailbox));
+        return addToMailbox(mailbox, message);
+    }
+
+    private MessageMetaData addToMailbox(Mailbox mailbox, MailboxMessage message) throws MailboxException {
         MessageMetaData messageMetaData = save(mailbox, message);
         CassandraId mailboxId = (CassandraId) mailbox.getMailboxId();
         if (!message.isSeen()) {
@@ -233,8 +241,11 @@ public class CassandraMessageMapper implements MessageMapper {
 
     @Override
     public MessageMetaData copy(Mailbox mailbox, MailboxMessage original) throws MailboxException {
-        original.setFlags(new FlagsBuilder().add(original.createFlags()).add(Flag.RECENT).build());
-        return add(mailbox, original);
+        SimpleMailboxMessage newMessage = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original, com.google.common.base.Optional.of(messageIdFactory.generate()));
+        newMessage.setUid(uidProvider.nextUid(mailboxSession, mailbox));
+        newMessage.setModSeq(modSeqProvider.nextModSeq(mailboxSession, mailbox));
+        newMessage.setFlags(new FlagsBuilder().add(original.createFlags()).add(Flag.RECENT).build());
+        return addToMailbox(mailbox, newMessage);
     }
 
     @Override

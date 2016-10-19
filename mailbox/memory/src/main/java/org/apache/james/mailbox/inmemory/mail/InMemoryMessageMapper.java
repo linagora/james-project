@@ -34,6 +34,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
@@ -43,6 +44,8 @@ import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+
+import com.google.common.base.Optional;
 
 public class InMemoryMessageMapper extends AbstractMessageMapper {
 
@@ -170,7 +173,7 @@ public class InMemoryMessageMapper extends AbstractMessageMapper {
     @Override
     protected MessageMetaData copy(Mailbox mailbox, MessageUid uid, long modSeq, MailboxMessage original)
             throws MailboxException {
-        SimpleMailboxMessage message = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original);
+        SimpleMailboxMessage message = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original, Optional.<MessageId> absent());
         message.setUid(uid);
         message.setModSeq(modSeq);
         Flags flags = original.createFlags();
@@ -183,7 +186,7 @@ public class InMemoryMessageMapper extends AbstractMessageMapper {
 
     @Override
     protected MessageMetaData save(Mailbox mailbox, MailboxMessage message) throws MailboxException {
-        SimpleMailboxMessage copy = SimpleMailboxMessage.copy(mailbox.getMailboxId(), message);
+        SimpleMailboxMessage copy = SimpleMailboxMessage.copy(mailbox.getMailboxId(), message, Optional.<MessageId> absent());
         copy.setUid(message.getUid());
         copy.setModSeq(message.getModSeq());
         getMembershipByUidForMailbox(mailbox).put(message.getUid(), copy);

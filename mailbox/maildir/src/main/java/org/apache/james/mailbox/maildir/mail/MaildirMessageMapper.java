@@ -42,6 +42,7 @@ import org.apache.james.mailbox.maildir.MaildirFolder;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
 import org.apache.james.mailbox.maildir.MaildirStore;
 import org.apache.james.mailbox.maildir.mail.model.MaildirMailboxMessage;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageRange.Type;
@@ -52,6 +53,8 @@ import org.apache.james.mailbox.store.mail.AbstractMessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+
+import com.google.common.base.Optional;
 
 public class MaildirMessageMapper extends AbstractMessageMapper {
 
@@ -254,7 +257,7 @@ public class MaildirMessageMapper extends AbstractMessageMapper {
     @Override
     protected MessageMetaData copy(Mailbox mailbox, MessageUid uid, long modSeq, MailboxMessage original)
             throws MailboxException {
-        SimpleMailboxMessage theCopy = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original);
+        SimpleMailboxMessage theCopy = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original, Optional.<MessageId> absent());
         Flags flags = theCopy.createFlags();
         flags.add(Flag.RECENT);
         theCopy.setFlags(flags);
