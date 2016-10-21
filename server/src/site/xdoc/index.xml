@@ -36,8 +36,9 @@
     <div id="tabs" style="min-width:550px;">
     
       <ul>
-        <li><a href="#tabs-1">Apache James Server 3</a></li>
+        <li><a href="#tabs-1">Apache James Server</a></li>
         <li><a href="#tabs-2">Advantages</a></li>
+        <li><a href="#tabs-3">Objectives</a></li>
       </ul>
 
      <div id="tabs-1">
@@ -54,10 +55,11 @@
 			</div>
 		</div>
       
-	    <p>The Apache Java Mail Server Version 3.0
-	      is a 100% pure Java SMTP, IMAP4 and POP3 Mail 
+	    <p>The Apache Java Mail Server
+	      is a 100% pure Java Mail
 	      server designed to be a complete and portable enterprise mail engine solution.  
-	      Apache James Server is based on currently available open protocols.</p>
+	      Apache James Server is based on currently available open protocols. IMAP, LMTP and SMTP is supported out of the box.
+          Support for JMAP, POP3 and ManageSieve is experimental.</p>
 	    
 	    <p>This documentation is intended to be an introduction to the concepts behind the Apache James Server usage, as well 
 	      as a guide to <a href="install.html">install</a>, <a href="config.html">configure</a> , 
@@ -78,24 +80,25 @@
             </a>
           </span>
         </p>
-        <p>We also have snapshot builds for the braves (no guarantee!).</p>
-        <p>
-          <span class="minibutton btn-download">
-            <a href="http://people.apache.org/builds/james/nightly/">
-              <span><span class="icon"></span>Snapshot Apache James Server 3.0</span>
-            </a>
-          </span>
-        </p>
+         <p>You can also have a look to the last stable version</p>
+         <span class="minibutton btn-download">
+             <a href="http://james.apache.org/download.cgi#Apache_James_2.3.2_is_the_stable_version">
+                 <span><span class="icon"></span>Download Stable James Server 2.3.2</span>
+             </a>
+         </span>
+
+         <p>The James team is working hard to release version 3.0. We currently do load testing, write more test, rework the website,
+             and started using James 3.0 in production.</p>
 	
-        <p>Apache James Server 3.0 represents the leading edge of development. This codestream has many more
-          features than the 2.3 code, but is not as well tested in production. Reasonable
+        <p>Apache James Server 3.0 represents the leading edge of development. This code stream has many more
+          features than the 2.3 code, but is not be as well tested in production. Reasonable
           configuration compatibility has been retained with 2.3.2.</p>
           
-        <p>Apache James Server 3.0 requires Java 1.5 but Java 1.6 is recommended. A migration guide for 
+        <p>Apache James Server 3.0 requires Java 1.6. A migration guide for
            users willing to upgrade from 2.3 to 3.0 is <a href="upgrade-2.3.html">available</a>.</p>
            
-         <p>The NNTP News server and the Mailing List Manager present in Apache James Server 2.3 have been 
-            temporary removed from the 3.0 release line.</p>
+         <p>The NNTP News server and the Mailing List Manager present in Apache James Server 2.3 have been
+             removed from the 3.0 release line.</p>
     
      </div>
      
@@ -110,10 +113,10 @@
 	        <p>100% pure Java Mail server designed to be a complete and portable enterprise 
 	           mail engine solution.</p>
 	           
-	        <p>Supports currently available IETF protocols, including SMTP, LMTP, POP3 and IMAP4.</p>
+	        <p>Supports currently available IETF protocols, including SMTP, LMTP, POP3, IMAP4, ManageSIEVE. We also plan to support JMAP.</p>
 	         
 	        <p>Apache James Server is able to store user and message data either in a file-system (Maildir), 
-	           any JPA-compatible database and even JCR, allowing fast, reliable, 
+	           any JPA-compatible database and even Cassandra, allowing fast, reliable,
 	           even real-time replicated storage.</p>
 	         
 	        <p>Provides a powerful, flexible mail application engine through support for the Apache Mailet 
@@ -168,7 +171,8 @@
         
  	      <subsection name="Developer-Friendly">
 	    
-	        <p>Apache James Server 3.0 is now built on top of Spring 3.0 in replacement of trunk version of the <a href="http://avalon.apache.org/">Avalon</a> Application Framework.
+	        <p>Apache James Server 3.0 is now built on top of Spring 3.0 or Guice in replacement of
+                the <a href="http://avalon.apache.org/">Avalon</a> Application Framework.
 	           With Spring, We keep the good development practices introduced by Avalon such as 
 	           Component Oriented Programming and  Inversion of Control. The stable and robust 
 	           Spring container provides a strong foundation for the Apache James Server.</p>
@@ -184,7 +188,7 @@
 	
           <subsection name="Performant">
            
-            <p>A special focuss has been brought to the performance: Apache James Server can process more than
+            <p>A special focus has been brought to the performance: Apache James Server can process more than
                100 mails per second. Deployed in production environments and has proven itself 
                to be a robust  and high performance mail solution. Tests indicate that 
                version 3.0 is able to maintain a constant mail throughput rate of thousands of 
@@ -211,6 +215,96 @@
    	    </table>
    	    
    	 </div>
+
+      <div id="tabs-3">
+          <h2>Design goals</h2>
+
+          <p>
+              <i>
+                  <b>Complete portability</b>
+              </i>  Apache James is be a 100% pure Java application
+              based on the Java 2 platform and the JavaMail 1.3 API.
+          </p>
+          <p>
+                <i>
+                    <b>Protocol abstraction</b>
+                </i>  Unlike other mail engines, protocols are seen only
+                like "communication languages" ruling communications between clients and
+                the server. Apache James is not be tied to any particular protocol but
+                follow an abstracted server design (like JavaMail did on the
+                client side)</p>
+            <p>
+                <i>
+                    <b>Complete solution</b>
+                </i>  The mail system is able to handle both mail
+                transport and storage in a single server application. Apache James
+                works alone without the need for any other server or solution.</p>
+            <p>
+                <i>
+                    <b>Mailet support</b>
+                </i>  Apache James supports the Apache Mailet API. A Mailet
+                is a discrete piece of mail-processing logic which is incorporated into
+                a Mailet-compliant mail-server's processing. This easy-to-write,
+                easy-to-use pattern allows developers to build powerful customized mail
+                systems. Examples of the services a Mailet might provide include: a
+                mail-to-fax or mail-to-phone transformer, a filter, a language translator, a mailing
+                list manager, etc. Several Mailets are included in the James
+                distribution (see <a href="/index.html">server documentation</a>).</p>
+            <p>
+                <i>
+                    <b>Resource abstraction</b>
+                </i>  Like protocols, resources are abstracted and,
+                accessed through defined interfaces (like JPA for
+                mailbox or user accounts in RDBMS's). The server is
+                highly modular and reuse solutions from other projects.</p>
+
+            <p>Anything else you may want if you help us write it :-)</p>
+
+            <h2>Standard compliance</h2>
+
+            <p>It is the existence of published "open" standards which
+                allows independent teams to develop interoperable software.
+                <br/>James attempts to support a number of these standards most of which are
+                IETF RFC's and in the areas covered by these standards the published standard
+                is our requirements document.
+                <br/>This sometimes leads to confusion where behaviour is not
+                the subject of a relevant standard, or conflict where common
+                (de-facto) behaviour is actually at odds with a supported standard.
+                <br/>We believe that it is our responsibility to adhere to the published standard.
+                If we allow our implementation to deviate it means that we are tacitly encouraging
+                the situation whereby interoperability is no longer guaranteed by standards
+                compliance alone, but also requires access to undocumented and possibly
+                even commercially licenced technology. There is no easy route for a
+                newcomer to acquire these secrets, and interoperability
+                becomes something only available to the elite.
+            </p>
+            <p>The James policy for issues of non-compliance tries to tread the fine line
+                between a pragmatic acceptance of other people's misinterpretation of the
+                RFC's and an evangelical defence of open standards as the key to freedom of inter-operation.
+            </p>
+            <p>
+                In practice this policy is that certain well argued of cases of
+                non-compliance which can be *safely* worked around, will be tolerated by
+                James.
+            </p>
+            <p>
+                In cases (like jira issue JAMES-344 ) where variance from a published standard is
+                required it is desirable that this functionality is disabled in James by default,
+                it must be prominently and clearly documented that this causes James
+                to violate the relevant standard, and should be enabled by explicit
+                configuration, making its use a conscious decision of the user rather
+                than an decision taken by the James team.
+            </p>
+            <p>
+                In cases where the required behaviour is not within the scope of any standard which
+                James claims to support (such as behaviour which is a de-facto standard or
+                an <i>internet draft</i> RFC but not yet subject of a <i>standards track</i> RFC) it is
+                acceptable to implement the behaviour so long as it is adequately
+                documented (for instance by reference to an <i>internet draft</i> or
+                other public document) and users can be clear about what to expect from James.
+            </p>
+
+        </div>
    	 
    </div>
 
