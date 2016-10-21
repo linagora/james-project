@@ -24,12 +24,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import javax.mail.Flags;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
 import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.ComposedMessageIdWithFlags;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,11 +70,15 @@ public class CassandraMessageIdToImapUidDAOTest {
         CassandraMessageId messageId = CassandraMessageId.of(UUIDs.timeBased());
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
-        testee.insert(messageId, mailboxId, messageUid).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                    .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                    .flags(new Flags())
+                    .build())
+                .join();
 
         testee.delete(messageId, mailboxId).join();
 
-        Stream<ComposedMessageId> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
+        Stream<ComposedMessageIdWithFlags> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
         assertThat(messages.collect(Guavate.toImmutableList())).isEmpty();
     }
 
@@ -82,13 +89,24 @@ public class CassandraMessageIdToImapUidDAOTest {
         CassandraId mailboxId2 = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
         MessageUid messageUid2 = MessageUid.of(2);
-        testee.insert(messageId, mailboxId, messageUid).join();
-        testee.insert(messageId, mailboxId2, messageUid2).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId2, messageId, messageUid2))
+                .flags(new Flags())
+                .build())
+            .join();
 
         testee.delete(messageId, mailboxId).join();
 
-        ComposedMessageId expectedComposedMessageId = new ComposedMessageId(mailboxId2, messageId, messageUid2);
-        Stream<ComposedMessageId> messages = testee.retrieve(messageId, Optional.empty()).join();
+        ComposedMessageIdWithFlags expectedComposedMessageId = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId2, messageId, messageUid2))
+                .flags(new Flags())
+                .build();
+        Stream<ComposedMessageIdWithFlags> messages = testee.retrieve(messageId, Optional.empty()).join();
         assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
@@ -98,10 +116,17 @@ public class CassandraMessageIdToImapUidDAOTest {
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
 
-        testee.insert(messageId, mailboxId, messageUid).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
 
-        ComposedMessageId expectedComposedMessageId = new ComposedMessageId(mailboxId, messageId, messageUid);
-        Stream<ComposedMessageId> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
+        ComposedMessageIdWithFlags expectedComposedMessageId = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build();
+        Stream<ComposedMessageIdWithFlags> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
         assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
@@ -110,10 +135,17 @@ public class CassandraMessageIdToImapUidDAOTest {
         CassandraMessageId messageId = CassandraMessageId.of(UUIDs.timeBased());
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
-        testee.insert(messageId, mailboxId, messageUid).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
 
-        ComposedMessageId expectedComposedMessageId = new ComposedMessageId(mailboxId, messageId, messageUid);
-        Stream<ComposedMessageId> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
+        ComposedMessageIdWithFlags expectedComposedMessageId = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build();
+        Stream<ComposedMessageIdWithFlags> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
 
         assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
@@ -125,12 +157,26 @@ public class CassandraMessageIdToImapUidDAOTest {
         CassandraId mailboxId2 = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
         MessageUid messageUid2 = MessageUid.of(2);
-        testee.insert(messageId, mailboxId, messageUid).join();
-        testee.insert(messageId, mailboxId2, messageUid2).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId2, messageId, messageUid2))
+                .flags(new Flags())
+                .build())
+            .join();
 
-        ComposedMessageId expectedComposedMessageId = new ComposedMessageId(mailboxId, messageId, messageUid);
-        ComposedMessageId expectedComposedMessageId2 = new ComposedMessageId(mailboxId2, messageId, messageUid2);
-        Stream<ComposedMessageId> messages = testee.retrieve(messageId, Optional.empty()).join();
+        ComposedMessageIdWithFlags expectedComposedMessageId = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build();
+        ComposedMessageIdWithFlags expectedComposedMessageId2 = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId2, messageId, messageUid2))
+                .flags(new Flags())
+                .build();
+        Stream<ComposedMessageIdWithFlags> messages = testee.retrieve(messageId, Optional.empty()).join();
 
         assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId, expectedComposedMessageId2);
     }

@@ -46,6 +46,7 @@ import org.apache.james.mailbox.cassandra.mail.utils.MessageDeletedDuringFlagsUp
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxCountersTable;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.ComposedMessageIdWithFlags;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
@@ -157,23 +158,25 @@ public class CassandraMessageMapper implements MessageMapper {
     public List<MessageUid> findRecentMessageUidsInMailbox(Mailbox mailbox) throws MailboxException {
         CassandraId mailboxId = (CassandraId) mailbox.getMailboxId();
         return messageDAO.retrieveMessages(messageIdDAO.retrieveMessageIds(mailboxId, MessageRange.all()), FetchType.Metadata, Optional.empty(), attachmentMapper::getAttachments).stream()
-            .filter(MailboxMessage::isRecent)
-            .flatMap(message -> imapUidDAO.retrieve((CassandraMessageId) message.getMessageId(), Optional.ofNullable(mailboxId)).join())
-            .map(ComposedMessageId::getUid)
-            .sorted()
-            .collect(Collectors.toList());
+                .filter(MailboxMessage::isRecent)
+                .flatMap(message -> imapUidDAO.retrieve((CassandraMessageId) message.getMessageId(), Optional.ofNullable(mailboxId)).join())
+                .map(ComposedMessageIdWithFlags::getComposedMessageId)
+                .map(ComposedMessageId::getUid)
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     @Override
     public MessageUid findFirstUnseenMessageUid(Mailbox mailbox) throws MailboxException {
         CassandraId mailboxId = (CassandraId) mailbox.getMailboxId();
         return messageDAO.retrieveMessages(messageIdDAO.retrieveMessageIds(mailboxId, MessageRange.all()), FetchType.Metadata, Optional.empty(), attachmentMapper::getAttachments).stream()
-            .filter(message -> !message.isSeen())
-            .flatMap(message -> imapUidDAO.retrieve((CassandraMessageId) message.getMessageId(), Optional.ofNullable(mailboxId)).join())
-            .map(ComposedMessageId::getUid)
-            .sorted()
-            .findFirst()
-            .orElse(null);
+                .filter(message -> !message.isSeen())
+                .flatMap(message -> imapUidDAO.retrieve((CassandraMessageId) message.getMessageId(), Optional.ofNullable(mailboxId)).join())
+                .map(ComposedMessageIdWithFlags::getComposedMessageId)
+                .map(ComposedMessageId::getUid)
+                .sorted()
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -287,7 +290,10 @@ public class CassandraMessageMapper implements MessageMapper {
     private CompletableFuture<Void> insertIds(MailboxMessage message, CassandraId mailboxId) {
         CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
         return CompletableFuture.allOf(messageIdDAO.insert(mailboxId, message.getUid(), messageId),
-                imapUidDAO.insert(messageId, mailboxId, message.getUid()));
+                imapUidDAO.insert(ComposedMessageIdWithFlags.builder()
+                        .composedMessageId(new ComposedMessageId(mailboxId, messageId, message.getUid()))
+                        .flags(message.createFlags())
+                        .build()));
     }
 
     private void manageUnseenMessageCounts(Mailbox mailbox, Flags oldFlags, Flags newFlags) {

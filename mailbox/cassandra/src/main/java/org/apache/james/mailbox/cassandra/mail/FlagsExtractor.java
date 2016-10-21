@@ -16,19 +16,33 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.cassandra.mail;
 
-package org.apache.james.mailbox.cassandra.table;
+import javax.mail.Flags;
 
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_UID;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
+import org.apache.james.mailbox.cassandra.table.CassandraMessageTable;
 
-import org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag;
+import com.datastax.driver.core.Row;
 
-public interface MessageIdToImapUid {
+public class FlagsExtractor {
 
-    String TABLE_NAME = "imapUidTable";
+    private final Row row;
 
-    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID, 
-            Flag.ANSWERED, Flag.DELETED, Flag.DRAFT, Flag.FLAGGED, Flag.RECENT, Flag.SEEN, Flag.USER, Flag.USER_FLAGS };
+    public FlagsExtractor(Row row) {
+        this.row = row;
+    }
+
+    public Flags getFlags() {
+        Flags flags = new Flags();
+        for (String flag : CassandraMessageTable.Flag.ALL) {
+            if (row.getBool(flag)) {
+                flags.add(CassandraMessageTable.Flag.JAVAX_MAIL_FLAG.get(flag));
+            }
+        }
+        row.getSet(CassandraMessageTable.Flag.USER_FLAGS, String.class)
+            .stream()
+            .forEach(flags::add);
+        return flags;
+    }
+
 }
