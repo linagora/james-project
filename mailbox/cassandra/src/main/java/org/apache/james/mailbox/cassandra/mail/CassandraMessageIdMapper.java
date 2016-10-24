@@ -22,7 +22,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
@@ -40,6 +41,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Message;
 
 import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraMessageIdMapper implements MessageIdMapper {
 
@@ -60,14 +62,25 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
 
     @Override
     public List<Message> find(List<MessageId> messageIds, FetchType fetchType) {
-        List<CassandraMessageId> cassandraMessageIds = messageIds.stream()
+        Function<ComposedMessageIdWithMetaData, Stream<MailboxMessage>> retrieveMessages = retrieveMessages(fetchType);
+        return messageIds.stream()
             .map(id -> (CassandraMessageId) id)
-            .collect(Collectors.toList());
-        return messageDAO.retrieveMessages(cassandraMessageIds, fetchType, Optional.empty(), attachmentMapper::getAttachments).stream()
-                .sorted(Comparator.comparing(MailboxMessage::getUid))
-                .collect(Guavate.toImmutableList());
+            .flatMap(messageId -> imapUidDAO.retrieve(messageId, Optional.empty()).join())
+            .flatMap(retrieveMessages)
+            .sorted(Comparator.comparing(MailboxMessage::getUid))
+            .collect(Guavate.toImmutableList());
     }
 
+    private Function<ComposedMessageIdWithMetaData, Stream<MailboxMessage>> retrieveMessages(FetchType fetchType) {
+        return (ComposedMessageIdWithMetaData composedMessageId) -> {
+            return messageDAO.retrieveMessages(ImmutableList.of(composedMessageId), 
+                    (CassandraId) composedMessageId.getComposedMessageId().getMailboxId()
+                    , fetchType, 
+                    Optional.empty(), 
+                    attachmentMapper::getAttachments)
+                .stream();
+        };
+    }
     @Override
     public List<MailboxId> findMailboxes(MessageId messageId) {
         return imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.empty()).join()

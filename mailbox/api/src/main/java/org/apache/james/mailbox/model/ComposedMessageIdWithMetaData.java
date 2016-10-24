@@ -86,6 +86,10 @@ public class ComposedMessageIdWithMetaData {
         return modSeq;
     }
 
+    public boolean isMatching(MessageId messageId) {
+        return getComposedMessageId().getMessageId().equals(messageId);
+    }
+
     @Override
     public final boolean equals(Object o) {
         if (o instanceof ComposedMessageIdWithMetaData) {

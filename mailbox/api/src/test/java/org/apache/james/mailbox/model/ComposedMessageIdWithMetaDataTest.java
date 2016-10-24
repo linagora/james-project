@@ -60,12 +60,35 @@ public class ComposedMessageIdWithMetaDataTest {
         ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
             .composedMessageId(composedMessageId)
             .flags(flags)
-            .modSeq(1)
+            .modSeq(modSeq)
             .build();
 
         assertThat(composedMessageIdWithMetaData.getComposedMessageId()).isEqualTo(composedMessageId);
         assertThat(composedMessageIdWithMetaData.getFlags()).isEqualTo(flags);
         assertThat(composedMessageIdWithMetaData.getModSeq()).isEqualTo(modSeq);
+    }
+
+    @Test
+    public void isMatchingShouldReturnTrueWhenSameMessageId() {
+        TestMessageId messageId = new TestMessageId("2");
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
+                .composedMessageId(new ComposedMessageId(new TestId("1"), messageId, MessageUid.of(3)))
+                .flags(new Flags(Flag.RECENT))
+                .modSeq((long) 1)
+                .build();
+
+        assertThat(composedMessageIdWithMetaData.isMatching(messageId)).isTrue();
+    }
+
+    @Test
+    public void isMatchingShouldReturnFalseWhenOtherMessageId() {
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
+                .composedMessageId(new ComposedMessageId(new TestId("1"), new TestMessageId("2"), MessageUid.of(3)))
+                .flags(new Flags(Flag.RECENT))
+                .modSeq((long) 1)
+                .build();
+
+        assertThat(composedMessageIdWithMetaData.isMatching(new TestMessageId("3"))).isFalse();
     }
 
     @Test
