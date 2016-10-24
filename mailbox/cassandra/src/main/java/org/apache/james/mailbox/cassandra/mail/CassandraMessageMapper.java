@@ -336,7 +336,7 @@ public class CassandraMessageMapper implements MessageMapper {
             Flags newFlags = flagUpdateCalculator.buildNewFlags(oldFlags);
             message.setFlags(newFlags);
             message.setModSeq(modSeqProvider.nextModSeq(mailboxSession, mailbox));
-            if (messageDAO.conditionalSave(message, oldModSeq).join()) {
+            if (updateFlags(message, oldModSeq)) {
                 return Optional.of(new UpdatedFlags(message.getUid(), message.getModSeq(), oldFlags, newFlags));
             } else {
                 return Optional.empty();
@@ -344,6 +344,16 @@ public class CassandraMessageMapper implements MessageMapper {
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    private boolean updateFlags(MailboxMessage message, long oldModSeq) {
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
+                .composedMessageId(new ComposedMessageId(message.getMailboxId(), message.getMessageId(), message.getUid()))
+                .modSeq(message.getModSeq())
+                .flags(message.createFlags())
+                .build();
+        return messageIdDAO.updateMetadata(composedMessageIdWithMetaData, oldModSeq).join() &&
+                imapUidDAO.updateMetadata(composedMessageIdWithMetaData, oldModSeq).join();
     }
 
     private Optional<UpdatedFlags> handleRetries(Mailbox mailbox, FlagsUpdateCalculator flagUpdateCalculator, CassandraMessageId messageId) {

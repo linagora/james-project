@@ -23,8 +23,6 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 
-import org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag;
-
 public interface CassandraMessageIdTable {
 
     String TABLE_NAME = "messageIdTable";

@@ -16,33 +16,31 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.cassandra.mail;
+package org.apache.james.mailbox.cassandra.table;
 
 import javax.mail.Flags;
 
-import org.apache.james.mailbox.cassandra.table.Flag;
+import com.google.common.collect.ImmutableMap;
 
-import com.datastax.driver.core.Row;
+public interface Flag {
 
-public class FlagsExtractor {
+    String ANSWERED = "flagAnswered";
+    String DELETED = "flagDeleted";
+    String DRAFT = "flagDraft";
+    String RECENT = "flagRecent";
+    String SEEN = "flagSeen";
+    String FLAGGED = "flagFlagged";
+    String USER = "flagUser";
+    String USER_FLAGS = "userFlags";
+    String[] ALL = { ANSWERED, DELETED, DRAFT, RECENT, SEEN, FLAGGED, USER };
 
-    private final Row row;
-
-    public FlagsExtractor(Row row) {
-        this.row = row;
-    }
-
-    public Flags getFlags() {
-        Flags flags = new Flags();
-        for (String flag : Flag.ALL) {
-            if (row.getBool(flag)) {
-                flags.add(Flag.JAVAX_MAIL_FLAG.get(flag));
-            }
-        }
-        row.getSet(Flag.USER_FLAGS, String.class)
-            .stream()
-            .forEach(flags::add);
-        return flags;
-    }
-
+    ImmutableMap<String, Flags.Flag> JAVAX_MAIL_FLAG = ImmutableMap.<String, Flags.Flag>builder()
+        .put(ANSWERED, Flags.Flag.ANSWERED)
+        .put(DELETED, Flags.Flag.DELETED)
+        .put(DRAFT, Flags.Flag.DRAFT)
+        .put(RECENT, Flags.Flag.RECENT)
+        .put(SEEN, Flags.Flag.SEEN)
+        .put(FLAGGED, Flags.Flag.FLAGGED)
+        .put(USER, Flags.Flag.USER)
+        .build();
 }

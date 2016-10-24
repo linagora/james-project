@@ -24,8 +24,6 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.update;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.ATTACHMENTS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.BODY;
@@ -38,39 +36,26 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.HEA
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.HEADER_CONTENT;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.INTERNAL_DATE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.METADATA;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.MOD_SEQ;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.PROPERTIES;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.TEXTUAL_LINE_COUNT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.ANSWERED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DELETED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.DRAFT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.FLAGGED;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.RECENT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.SEEN;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER_FLAGS;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
-import javax.mail.Flags.Flag;
 import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
-import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Attachments;
@@ -111,7 +96,6 @@ public class CassandraMessageDAO {
     private final CassandraTypesProvider typesProvider;
     private final CassandraMessageIdToImapUidDAO messageIdToImapUidDAO;
     private final PreparedStatement insert;
-    private final PreparedStatement update;
     private final PreparedStatement delete;
 
     @Inject
@@ -120,46 +104,21 @@ public class CassandraMessageDAO {
         this.typesProvider = typesProvider;
         this.messageIdToImapUidDAO = messageIdToImapUidDAO;
         this.insert = prepareInsert(session);
-        this.update = prepareUpdate(session);
         this.delete = prepareDelete(session);
     }
 
     private PreparedStatement prepareInsert(Session session) {
         return session.prepare(insertInto(TABLE_NAME)
                 .value(MESSAGE_ID, bindMarker(MESSAGE_ID))
-                .value(MOD_SEQ, bindMarker(MOD_SEQ))
                 .value(INTERNAL_DATE, bindMarker(INTERNAL_DATE))
                 .value(BODY_START_OCTET, bindMarker(BODY_START_OCTET))
                 .value(FULL_CONTENT_OCTETS, bindMarker(FULL_CONTENT_OCTETS))
                 .value(BODY_OCTECTS, bindMarker(BODY_OCTECTS))
-                .value(ANSWERED, bindMarker(ANSWERED))
-                .value(DELETED, bindMarker(DELETED))
-                .value(DRAFT, bindMarker(DRAFT))
-                .value(FLAGGED, bindMarker(FLAGGED))
-                .value(RECENT, bindMarker(RECENT))
-                .value(SEEN, bindMarker(SEEN))
-                .value(USER, bindMarker(USER))
-                .value(USER_FLAGS, bindMarker(USER_FLAGS))
                 .value(BODY_CONTENT, bindMarker(BODY_CONTENT))
                 .value(HEADER_CONTENT, bindMarker(HEADER_CONTENT))
                 .value(PROPERTIES, bindMarker(PROPERTIES))
                 .value(TEXTUAL_LINE_COUNT, bindMarker(TEXTUAL_LINE_COUNT))
                 .value(ATTACHMENTS, bindMarker(ATTACHMENTS)));
-    }
-
-    private PreparedStatement prepareUpdate(Session session) {
-        return session.prepare(update(TABLE_NAME)
-                .with(set(ANSWERED, bindMarker(ANSWERED)))
-                .and(set(DELETED, bindMarker(DELETED)))
-                .and(set(DRAFT, bindMarker(DRAFT)))
-                .and(set(FLAGGED, bindMarker(FLAGGED)))
-                .and(set(RECENT, bindMarker(RECENT)))
-                .and(set(SEEN, bindMarker(SEEN)))
-                .and(set(USER, bindMarker(USER)))
-                .and(set(USER_FLAGS, bindMarker(USER_FLAGS)))
-                .and(set(MOD_SEQ, bindMarker(MOD_SEQ)))
-                .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID)))
-                .onlyIf(eq(MOD_SEQ, bindMarker(MOD_SEQ))));
     }
 
     private PreparedStatement prepareDelete(Session session) {
@@ -173,19 +132,10 @@ public class CassandraMessageDAO {
             CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
             BoundStatement boundStatement = insert.bind()
                 .setUUID(MESSAGE_ID, messageId.get())
-                .setLong(MOD_SEQ, message.getModSeq())
                 .setDate(INTERNAL_DATE, message.getInternalDate())
                 .setInt(BODY_START_OCTET, (int) (message.getFullContentOctets() - message.getBodyOctets()))
                 .setLong(FULL_CONTENT_OCTETS, message.getFullContentOctets())
                 .setLong(BODY_OCTECTS, message.getBodyOctets())
-                .setBool(ANSWERED, message.isAnswered())
-                .setBool(DELETED, message.isDeleted())
-                .setBool(DRAFT, message.isDraft())
-                .setBool(FLAGGED, message.isFlagged())
-                .setBool(RECENT, message.isRecent())
-                .setBool(SEEN, message.isSeen())
-                .setBool(USER, message.createFlags().contains(Flag.USER))
-                .setSet(USER_FLAGS, userFlagsSet(message))
                 .setBytes(BODY_CONTENT, toByteBuffer(message.getBodyContent()))
                 .setBytes(HEADER_CONTENT, toByteBuffer(message.getHeaderContent()))
                 .setList(PROPERTIES, message.getProperties().stream()
@@ -225,31 +175,8 @@ public class CassandraMessageDAO {
             .setBool(Attachments.IS_INLINE, messageAttachment.isInline());
     }
 
-    private Set<String> userFlagsSet(MailboxMessage message) {
-        return Arrays.stream(message.createFlags().getUserFlags()).collect(Collectors.toSet());
-    }
-
     private ByteBuffer toByteBuffer(InputStream stream) throws IOException {
         return ByteBuffer.wrap(ByteStreams.toByteArray(stream));
-    }
-    
-    public CompletableFuture<Boolean> conditionalSave(MailboxMessage message, long oldModSeq) {
-        CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
-        return cassandraAsyncExecutor.executeSingleRow(update.bind()
-                .setBool(ANSWERED, message.isAnswered())
-                .setBool(DELETED, message.isDeleted())
-                .setBool(DRAFT, message.isDraft())
-                .setBool(FLAGGED, message.isFlagged())
-                .setBool(RECENT, message.isRecent())
-                .setBool(SEEN, message.isSeen())
-                .setBool(USER, message.createFlags().contains(Flag.USER))
-                .setSet(USER_FLAGS, userFlagsSet(message))
-                .setLong(MOD_SEQ, message.getModSeq())
-                .setUUID(MESSAGE_ID, messageId.get())
-                .setLong(MOD_SEQ, oldModSeq))
-            .thenApply(optional -> optional
-                    .map(row -> row.getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED))
-                    .orElse(false));
     }
     
     public List<MailboxMessage> retrieveMessages(List<CassandraMessageId> messageIds, FetchType fetchType, Optional<Integer> limit, Function<List<AttachmentId>, List<Attachment>> attachmentsFunction) {
@@ -278,12 +205,12 @@ public class CassandraMessageDAO {
                             row.getLong(FULL_CONTENT_OCTETS),
                             row.getInt(BODY_START_OCTET),
                             buildContent(row, fetchType),
-                            new FlagsExtractor(row).getFlags(),
+                            messageIdWithMetaData.getFlags(),
                             getPropertyBuilder(row),
                             messageId.getMailboxId(),
                             getAttachments(row, fetchType, attachmentsFunction));
             message.setUid(messageId.getUid());
-            message.setModSeq(row.getLong(MOD_SEQ));
+            message.setModSeq(messageIdWithMetaData.getModSeq());
             return message;
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
