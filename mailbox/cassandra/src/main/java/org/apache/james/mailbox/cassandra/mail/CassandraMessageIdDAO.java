@@ -25,6 +25,8 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.update;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIdTable.FIELDS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIdTable.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_UID;
@@ -38,6 +40,7 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Fla
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.SEEN;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag.USER_FLAGS;
+import static org.apache.james.mailbox.cassandra.table.MessageIdToImapUid.MOD_SEQ;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,12 +52,13 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
+import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.model.ComposedMessageId;
-import org.apache.james.mailbox.model.ComposedMessageIdWithFlags;
+import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 
 import com.datastax.driver.core.PreparedStatement;
@@ -66,6 +70,7 @@ import com.google.common.collect.ImmutableSet;
 
 public class CassandraMessageIdDAO {
 
+    private static final String MOD_SEQ_CONDITION = "modSeqCondition";
     private static final String IMAP_UID_GTE = IMAP_UID + "_GTE";
     private static final String IMAP_UID_LTE = IMAP_UID + "_LTE";
 
@@ -76,12 +81,14 @@ public class CassandraMessageIdDAO {
     private final PreparedStatement selectAllUids;
     private final PreparedStatement selectUidGte;
     private final PreparedStatement selectUidRange;
+    private final PreparedStatement update;
 
     @Inject
     public CassandraMessageIdDAO(Session session) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
         this.delete = prepareDelete(session);
         this.insert = prepareInsert(session);
+        this.update = prepareUpdate(session);
         this.select = prepareSelect(session);
         this.selectAllUids = prepareSelectAllUids(session);
         this.selectUidGte = prepareSelectUidGte(session);
@@ -99,6 +106,7 @@ public class CassandraMessageIdDAO {
         return session.prepare(insertInto(TABLE_NAME)
                 .value(MAILBOX_ID, bindMarker(MAILBOX_ID))
                 .value(IMAP_UID, bindMarker(IMAP_UID))
+                .value(MOD_SEQ, bindMarker(MOD_SEQ))
                 .value(MESSAGE_ID, bindMarker(MESSAGE_ID))
                 .value(ANSWERED, bindMarker(ANSWERED))
                 .value(DELETED, bindMarker(DELETED))
@@ -108,6 +116,22 @@ public class CassandraMessageIdDAO {
                 .value(SEEN, bindMarker(SEEN))
                 .value(USER, bindMarker(USER))
                 .value(USER_FLAGS, bindMarker(USER_FLAGS)));
+    }
+
+    private PreparedStatement prepareUpdate(Session session) {
+        return session.prepare(update(TABLE_NAME)
+                .with(set(MOD_SEQ, bindMarker(MOD_SEQ)))
+                .and(set(ANSWERED, bindMarker(ANSWERED)))
+                .and(set(DELETED, bindMarker(DELETED)))
+                .and(set(DRAFT, bindMarker(DRAFT)))
+                .and(set(FLAGGED, bindMarker(FLAGGED)))
+                .and(set(RECENT, bindMarker(RECENT)))
+                .and(set(SEEN, bindMarker(SEEN)))
+                .and(set(USER, bindMarker(USER)))
+                .and(set(USER_FLAGS, bindMarker(USER_FLAGS)))
+                .where(eq(MAILBOX_ID, bindMarker(MAILBOX_ID)))
+                .and(eq(IMAP_UID, bindMarker(IMAP_UID)))
+                .onlyIf(eq(MOD_SEQ, bindMarker(MOD_SEQ_CONDITION))));
     }
 
     private PreparedStatement prepareSelect(Session session) {
@@ -144,13 +168,14 @@ public class CassandraMessageIdDAO {
                 .setLong(IMAP_UID, uid.asLong()));
     }
 
-    public CompletableFuture<Void> insert(ComposedMessageIdWithFlags composedMessageIdWithFlags) {
-        ComposedMessageId composedMessageId = composedMessageIdWithFlags.getComposedMessageId();
-        Flags flags = composedMessageIdWithFlags.getFlags();
+    public CompletableFuture<Void> insert(ComposedMessageIdWithMetaData composedMessageIdWithMetaData) {
+        ComposedMessageId composedMessageId = composedMessageIdWithMetaData.getComposedMessageId();
+        Flags flags = composedMessageIdWithMetaData.getFlags();
         return cassandraAsyncExecutor.executeVoid(insert.bind()
                 .setUUID(MAILBOX_ID, ((CassandraId) composedMessageId.getMailboxId()).asUuid())
                 .setLong(IMAP_UID, composedMessageId.getUid().asLong())
                 .setUUID(MESSAGE_ID, ((CassandraMessageId) composedMessageId.getMessageId()).get())
+                .setLong(MOD_SEQ, composedMessageIdWithMetaData.getModSeq())
                 .setBool(ANSWERED, flags.contains(Flag.ANSWERED))
                 .setBool(DELETED, flags.contains(Flag.DELETED))
                 .setBool(DRAFT, flags.contains(Flag.DRAFT))
@@ -161,11 +186,33 @@ public class CassandraMessageIdDAO {
                 .setSet(USER_FLAGS, ImmutableSet.copyOf(flags.getUserFlags())));
     }
 
-    public CompletableFuture<Optional<ComposedMessageIdWithFlags>> retrieve(CassandraId mailboxId, MessageUid uid) {
+    public CompletableFuture<Boolean> updateMetadata(ComposedMessageIdWithMetaData composedMessageIdWithMetaData, long oldModSeq) {
+        ComposedMessageId composedMessageId = composedMessageIdWithMetaData.getComposedMessageId();
+        Flags flags = composedMessageIdWithMetaData.getFlags();
+        return cassandraAsyncExecutor.executeSingleRow(update.bind()
+                .setLong(MOD_SEQ, composedMessageIdWithMetaData.getModSeq())
+                .setBool(ANSWERED, flags.contains(Flag.ANSWERED))
+                .setBool(DELETED, flags.contains(Flag.DELETED))
+                .setBool(DRAFT, flags.contains(Flag.DRAFT))
+                .setBool(FLAGGED, flags.contains(Flag.FLAGGED))
+                .setBool(RECENT, flags.contains(Flag.RECENT))
+                .setBool(SEEN, flags.contains(Flag.SEEN))
+                .setBool(USER, flags.contains(Flag.USER))
+                .setSet(USER_FLAGS, ImmutableSet.copyOf(flags.getUserFlags()))
+                .setUUID(MAILBOX_ID, ((CassandraId) composedMessageId.getMailboxId()).asUuid())
+                .setLong(IMAP_UID, composedMessageId.getUid().asLong())
+                .setLong(MOD_SEQ_CONDITION, oldModSeq)
+                .enableTracing())
+            .thenApply(optional -> optional
+                        .map(row -> row.getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED))
+                        .orElse(false));
+    }
+
+    public CompletableFuture<Optional<ComposedMessageIdWithMetaData>> retrieve(CassandraId mailboxId, MessageUid uid) {
         return selectOneRow(mailboxId, uid).thenApply(this::asOptionalOfCassandraMessageId);
     }
 
-    private Optional<ComposedMessageIdWithFlags> asOptionalOfCassandraMessageId(ResultSet resultSet) {
+    private Optional<ComposedMessageIdWithMetaData> asOptionalOfCassandraMessageId(ResultSet resultSet) {
         if (resultSet.isExhausted()) {
             return Optional.empty();
         }
@@ -178,7 +225,7 @@ public class CassandraMessageIdDAO {
                 .setLong(IMAP_UID, uid.asLong()));
     }
 
-    public List<ComposedMessageIdWithFlags> retrieveMessages(CassandraId mailboxId, MessageRange set) {
+    public List<ComposedMessageIdWithMetaData> retrieveMessages(CassandraId mailboxId, MessageRange set) {
         switch (set.getType()) {
         case ALL:
             return toMessageIds(selectAll(mailboxId)).join();
@@ -210,7 +257,7 @@ public class CassandraMessageIdDAO {
                 .setLong(IMAP_UID_LTE, to.asLong()));
     }
 
-    private CompletableFuture<List<ComposedMessageIdWithFlags>> toMessageIds(CompletableFuture<ResultSet> completableFuture) {
+    private CompletableFuture<List<ComposedMessageIdWithMetaData>> toMessageIds(CompletableFuture<ResultSet> completableFuture) {
         return completableFuture
             .thenApply(resultSet ->  { 
                 return CassandraUtils.convertToStream(resultSet)
@@ -219,13 +266,14 @@ public class CassandraMessageIdDAO {
             });
     }
 
-    private ComposedMessageIdWithFlags fromRowToComposedMessageIdWithFlags(Row row) {
-        return ComposedMessageIdWithFlags.builder()
+    private ComposedMessageIdWithMetaData fromRowToComposedMessageIdWithFlags(Row row) {
+        return ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(new ComposedMessageId(
                         CassandraId.of(row.getUUID(MAILBOX_ID)),
                         CassandraMessageId.of(row.getUUID(MESSAGE_ID)),
                         MessageUid.of(row.getLong(IMAP_UID))))
                 .flags(new FlagsExtractor(row).getFlags())
+                .modSeq(row.getLong(MOD_SEQ))
                 .build();
     }
 }

@@ -29,7 +29,7 @@ import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.ComposedMessageId;
-import org.apache.james.mailbox.model.ComposedMessageIdWithFlags;
+import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
@@ -71,7 +71,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
     @Override
     public List<MailboxId> findMailboxes(MessageId messageId) {
         return imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.empty()).join()
-            .map(ComposedMessageIdWithFlags::getComposedMessageId)
+            .map(ComposedMessageIdWithMetaData::getComposedMessageId)
             .map(ComposedMessageId::getMailboxId)
             .collect(Guavate.toImmutableList());
     }
@@ -81,12 +81,13 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         CassandraId mailboxId = (CassandraId) mailboxMessage.getMailboxId();
         messageDAO.save(mailboxMapper.findMailboxById(mailboxId), mailboxMessage).join();
         CassandraMessageId messageId = (CassandraMessageId) mailboxMessage.getMessageId();
-        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
                     .composedMessageId(new ComposedMessageId(mailboxId, messageId, mailboxMessage.getUid()))
                     .flags(mailboxMessage.createFlags())
+                    .modSeq(mailboxMessage.getModSeq())
                     .build();
-        CompletableFuture.allOf(imapUidDAO.insert(composedMessageIdWithFlags),
-                messageIdDAO.insert(composedMessageIdWithFlags))
+        CompletableFuture.allOf(imapUidDAO.insert(composedMessageIdWithMetaData),
+                messageIdDAO.insert(composedMessageIdWithMetaData))
             .join();
     }
 
@@ -95,7 +96,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         CassandraMessageId cassandraMessageId = (CassandraMessageId) messageId;
         messageDAO.delete(cassandraMessageId).join();
         imapUidDAO.retrieve(cassandraMessageId, Optional.empty()).join()
-            .map(ComposedMessageIdWithFlags::getComposedMessageId)
+            .map(ComposedMessageIdWithMetaData::getComposedMessageId)
             .forEach(composedMessageId -> deleteIds(composedMessageId));
     }
 
