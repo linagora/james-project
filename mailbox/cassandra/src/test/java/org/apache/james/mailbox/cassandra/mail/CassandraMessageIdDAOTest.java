@@ -23,11 +23,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Optional;
 
+import javax.mail.Flags;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
+import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.ComposedMessageIdWithFlags;
 import org.apache.james.mailbox.model.MessageRange;
 import org.junit.After;
 import org.junit.Before;
@@ -66,11 +70,15 @@ public class CassandraMessageIdDAOTest {
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
         CassandraMessageId messageId = messageIdFactory.generate();
-        testee.insert(mailboxId, messageUid, messageId).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
 
         testee.delete(mailboxId, messageUid).join();
 
-        Optional<CassandraMessageId> message = testee.retrieve(mailboxId, messageUid).join();
+        Optional<ComposedMessageIdWithFlags> message = testee.retrieve(mailboxId, messageUid).join();
         assertThat(message.isPresent()).isFalse();
     }
 
@@ -81,14 +89,23 @@ public class CassandraMessageIdDAOTest {
         MessageUid messageUid2 = MessageUid.of(2);
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraMessageId messageId2 = messageIdFactory.generate();
-        testee.insert(mailboxId, messageUid, messageId).join();
-        testee.insert(mailboxId, messageUid2, messageId2).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
+
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId2, messageUid2))
+                .flags(new Flags())
+                .build())
+            .join();
 
         testee.delete(mailboxId, messageUid).join();
 
-        Optional<CassandraMessageId> message = testee.retrieve(mailboxId, messageUid).join();
+        Optional<ComposedMessageIdWithFlags> message = testee.retrieve(mailboxId, messageUid).join();
         assertThat(message.isPresent()).isFalse();
-        Optional<CassandraMessageId> messageNotDeleted = testee.retrieve(mailboxId, messageUid2).join();
+        Optional<ComposedMessageIdWithFlags> messageNotDeleted = testee.retrieve(mailboxId, messageUid2).join();
         assertThat(messageNotDeleted.isPresent()).isTrue();
     }
 
@@ -98,10 +115,14 @@ public class CassandraMessageIdDAOTest {
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
 
-        testee.insert(mailboxId, messageUid, messageId).join();
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags).join();
 
-        Optional<CassandraMessageId> message = testee.retrieve(mailboxId, messageUid).join();
-        assertThat(message.get()).isEqualTo(messageId);
+        Optional<ComposedMessageIdWithFlags> message = testee.retrieve(mailboxId, messageUid).join();
+        assertThat(message.get()).isEqualTo(composedMessageIdWithFlags);
     }
 
     @Test
@@ -109,30 +130,43 @@ public class CassandraMessageIdDAOTest {
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
-        testee.insert(mailboxId, messageUid, messageId).join();
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags).join();
 
-        Optional<CassandraMessageId> message = testee.retrieve(mailboxId, messageUid).join();
+        Optional<ComposedMessageIdWithFlags> message = testee.retrieve(mailboxId, messageUid).join();
 
-        assertThat(message.get()).isEqualTo(messageId);
+        assertThat(message.get()).isEqualTo(composedMessageIdWithFlags);
     }
 
     @Test
-    public void retrieveMessageIdsShouldRetrieveAllWhenRangeAll() {
+    public void retrieveMessagesShouldRetrieveAllWhenRangeAll() {
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraMessageId messageId2 = messageIdFactory.generate();
         CassandraId mailboxId = CassandraId.timeBased();
         MessageUid messageUid = MessageUid.of(1);
         MessageUid messageUid2 = MessageUid.of(2);
-        testee.insert(mailboxId, messageUid, messageId).join();
-        testee.insert(mailboxId, messageUid2, messageId2).join();
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags).join();
 
-        List<CassandraMessageId> messages = testee.retrieveMessageIds(mailboxId, MessageRange.all());
+        ComposedMessageIdWithFlags composedMessageIdWithFlags2 = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId2, messageUid2))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags2).join();
 
-        assertThat(messages).containsOnly(messageId, messageId2);
+        List<ComposedMessageIdWithFlags> messages = testee.retrieveMessages(mailboxId, MessageRange.all());
+
+        assertThat(messages).containsOnly(composedMessageIdWithFlags, composedMessageIdWithFlags2);
     }
 
     @Test
-    public void retrieveMessageIdsShouldRetrieveSomeWhenRangeFrom() {
+    public void retrieveMessagesShouldRetrieveSomeWhenRangeFrom() {
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraMessageId messageId2 = messageIdFactory.generate();
         CassandraMessageId messageId3 = messageIdFactory.generate();
@@ -140,17 +174,31 @@ public class CassandraMessageIdDAOTest {
         MessageUid messageUid = MessageUid.of(1);
         MessageUid messageUid2 = MessageUid.of(2);
         MessageUid messageUid3 = MessageUid.of(3);
-        testee.insert(mailboxId, messageUid, messageId).join();
-        testee.insert(mailboxId, messageUid2, messageId2).join();
-        testee.insert(mailboxId, messageUid3, messageId3).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
 
-        List<CassandraMessageId> messages = testee.retrieveMessageIds(mailboxId, MessageRange.from(messageUid2));
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId2, messageUid2))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags).join();
 
-        assertThat(messages).containsOnly(messageId2, messageId3);
+        ComposedMessageIdWithFlags composedMessageIdWithFlags2 = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId3, messageUid3))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags2).join();
+
+        List<ComposedMessageIdWithFlags> messages = testee.retrieveMessages(mailboxId, MessageRange.from(messageUid2));
+
+        assertThat(messages).containsOnly(composedMessageIdWithFlags, composedMessageIdWithFlags2);
     }
 
     @Test
-    public void retrieveMessageIdsShouldRetrieveSomeWhenRange() {
+    public void retrieveMessagesShouldRetrieveSomeWhenRange() {
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraMessageId messageId2 = messageIdFactory.generate();
         CassandraMessageId messageId3 = messageIdFactory.generate();
@@ -160,18 +208,37 @@ public class CassandraMessageIdDAOTest {
         MessageUid messageUid2 = MessageUid.of(2);
         MessageUid messageUid3 = MessageUid.of(3);
         MessageUid messageUid4 = MessageUid.of(4);
-        testee.insert(mailboxId, messageUid, messageId).join();
-        testee.insert(mailboxId, messageUid2, messageId2).join();
-        testee.insert(mailboxId, messageUid3, messageId3).join();
-        testee.insert(mailboxId, messageUid4, messageId4).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
 
-        List<CassandraMessageId> messages = testee.retrieveMessageIds(mailboxId, MessageRange.range(messageUid2, messageUid3));
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId2, messageUid2))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags).join();
 
-        assertThat(messages).containsOnly(messageId2, messageId3);
+        ComposedMessageIdWithFlags composedMessageIdWithFlags2 = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId3, messageUid3))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags2).join();
+
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId4, messageUid4))
+                .flags(new Flags())
+                .build())
+            .join();
+
+        List<ComposedMessageIdWithFlags> messages = testee.retrieveMessages(mailboxId, MessageRange.range(messageUid2, messageUid3));
+
+        assertThat(messages).containsOnly(composedMessageIdWithFlags, composedMessageIdWithFlags2);
     }
 
     @Test
-    public void retrieveMessageIdsShouldRetrieveOneWhenRangeOne() {
+    public void retrieveMessagesShouldRetrieveOneWhenRangeOne() {
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraMessageId messageId2 = messageIdFactory.generate();
         CassandraMessageId messageId3 = messageIdFactory.generate();
@@ -179,12 +246,26 @@ public class CassandraMessageIdDAOTest {
         MessageUid messageUid = MessageUid.of(1);
         MessageUid messageUid2 = MessageUid.of(2);
         MessageUid messageUid3 = MessageUid.of(3);
-        testee.insert(mailboxId, messageUid, messageId).join();
-        testee.insert(mailboxId, messageUid2, messageId2).join();
-        testee.insert(mailboxId, messageUid3, messageId3).join();
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+                .flags(new Flags())
+                .build())
+            .join();
 
-        List<CassandraMessageId> messages = testee.retrieveMessageIds(mailboxId, MessageRange.one(messageUid2));
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId2, messageUid2))
+                .flags(new Flags())
+                .build();
+        testee.insert(composedMessageIdWithFlags).join();
 
-        assertThat(messages).containsOnly(messageId2);
+        testee.insert(ComposedMessageIdWithFlags.builder()
+                .composedMessageId(new ComposedMessageId(mailboxId, messageId3, messageUid3))
+                .flags(new Flags())
+                .build())
+            .join();
+
+        List<ComposedMessageIdWithFlags> messages = testee.retrieveMessages(mailboxId, MessageRange.one(messageUid2));
+
+        assertThat(messages).containsOnly(composedMessageIdWithFlags);
     }
 }

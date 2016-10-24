@@ -71,7 +71,15 @@ public class CassandraMessageModule implements CassandraModule {
                     .ifNotExists()
                     .addPartitionKey(CassandraMessageIds.MAILBOX_ID, timeuuid())
                     .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
-                    .addColumn(CassandraMessageIds.MESSAGE_ID, timeuuid())),
+                    .addColumn(CassandraMessageIds.MESSAGE_ID, timeuuid())
+                    .addColumn(CassandraMessageTable.Flag.ANSWERED, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.DELETED, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.DRAFT, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.FLAGGED, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.RECENT, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.SEEN, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.USER, cboolean())
+                    .addColumn(CassandraMessageTable.Flag.USER_FLAGS, set(text()))),
 
             new CassandraTable(CassandraMessageTable.TABLE_NAME,
                 SchemaBuilder.createTable(CassandraMessageTable.TABLE_NAME)

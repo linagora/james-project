@@ -23,9 +23,12 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 
+import org.apache.james.mailbox.cassandra.table.CassandraMessageTable.Flag;
+
 public interface CassandraMessageIdTable {
 
     String TABLE_NAME = "messageIdTable";
 
-    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID };
+    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID,
+            Flag.ANSWERED, Flag.DELETED, Flag.DRAFT, Flag.FLAGGED, Flag.RECENT, Flag.SEEN, Flag.USER, Flag.USER_FLAGS};
 }

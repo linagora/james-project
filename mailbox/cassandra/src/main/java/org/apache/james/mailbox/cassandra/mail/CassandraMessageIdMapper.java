@@ -81,11 +81,12 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         CassandraId mailboxId = (CassandraId) mailboxMessage.getMailboxId();
         messageDAO.save(mailboxMapper.findMailboxById(mailboxId), mailboxMessage).join();
         CassandraMessageId messageId = (CassandraMessageId) mailboxMessage.getMessageId();
-        CompletableFuture.allOf(imapUidDAO.insert(ComposedMessageIdWithFlags.builder()
+        ComposedMessageIdWithFlags composedMessageIdWithFlags = ComposedMessageIdWithFlags.builder()
                     .composedMessageId(new ComposedMessageId(mailboxId, messageId, mailboxMessage.getUid()))
                     .flags(mailboxMessage.createFlags())
-                    .build()),
-                messageIdDAO.insert(mailboxId, mailboxMessage.getUid(), messageId))
+                    .build();
+        CompletableFuture.allOf(imapUidDAO.insert(composedMessageIdWithFlags),
+                messageIdDAO.insert(composedMessageIdWithFlags))
             .join();
     }
 
