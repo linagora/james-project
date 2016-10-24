@@ -18,10 +18,11 @@
  ****************************************************************/
 package org.apache.james.jmap.send;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.util.Date;
@@ -29,14 +30,15 @@ import java.util.Date;
 import javax.mail.Flags;
 
 import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
-import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.send.exception.MailShouldBeInOutboxException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
+import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.FetchGroupImpl;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -74,7 +76,8 @@ public class PostDequeueDecoratorTest {
         mockedMailQueueItem = mock(MailQueueItem.class);
         mail = FakeMail.defaultFakeMail();
         when(mockedMailQueueItem.getMail()).thenReturn(mail);
-        testee = new PostDequeueDecorator(mockedMailQueueItem, mailboxManager);
+        testee = new PostDequeueDecorator(mockedMailQueueItem, mailboxManager, new InMemoryMessageId.Factory(), 
+                inMemoryIntegrationResources.createMessageIdManager());
     }
     
     @Test
@@ -93,9 +96,8 @@ public class PostDequeueDecoratorTest {
         MailboxSession mailboxSession = mailboxManager.createSystemSession(USERNAME, LOGGER);
         mailboxManager.createMailbox(SENT_MAILBOX_PATH, mailboxSession);
         MessageManager messageManager = mailboxManager.getMailbox(SENT_MAILBOX_PATH, mailboxSession);
-        messageManager.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), mailboxSession, false, new Flags());
-        MessageId inSentMessageId = MessageId.of(USERNAME + "|" + SENT_MAILBOX_PATH.getName() + "|" + UID.asLong());
-        mail.setAttribute(MailMetadata.MAIL_METADATA_MESSAGE_ID_ATTRIBUTE, inSentMessageId.serialize());
+        ComposedMessageId sentMessageId = messageManager.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), mailboxSession, false, new Flags());
+        mail.setAttribute(MailMetadata.MAIL_METADATA_MESSAGE_ID_ATTRIBUTE, sentMessageId.getMessageId().serialize());
         mail.setAttribute(MailMetadata.MAIL_METADATA_USERNAME_ATTRIBUTE, USERNAME);
         
         testee.done(true);

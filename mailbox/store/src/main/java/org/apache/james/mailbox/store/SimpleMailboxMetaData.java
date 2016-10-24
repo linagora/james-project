@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.store;
 
 import org.apache.james.mailbox.StandardMailboxMetaDataComparator;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 
@@ -77,6 +78,11 @@ public class SimpleMailboxMetaData implements MailboxMetaData, Comparable<Mailbo
      */
     public MailboxPath getPath() {
         return path;
+    }
+
+    @Override
+    public MailboxId getId() {
+        return null;
     }
 
     /**

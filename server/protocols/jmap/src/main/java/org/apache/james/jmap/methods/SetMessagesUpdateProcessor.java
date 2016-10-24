@@ -20,30 +20,29 @@
 package org.apache.james.jmap.methods;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
 
-import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.MessageProperties;
 import org.apache.james.jmap.model.SetError;
 import org.apache.james.jmap.model.SetMessagesRequest;
 import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.jmap.model.UpdateMessagePatch;
-import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.model.MessageResultIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -53,14 +52,14 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesUpdateProcessor.class);
 
     private final UpdateMessagePatchConverter updatePatchConverter;
-    private final MailboxManager mailboxManager;
+    private final MessageIdManager messageIdManager;
 
     @Inject
     @VisibleForTesting SetMessagesUpdateProcessor(
             UpdateMessagePatchConverter updatePatchConverter,
-            MailboxManager mailboxManager) {
+            MessageIdManager messageIdManager) {
         this.updatePatchConverter = updatePatchConverter;
-        this.mailboxManager = mailboxManager;
+        this.messageIdManager = messageIdManager;
     }
 
     public SetMessagesResponse process(SetMessagesRequest request,  MailboxSession mailboxSession) {
@@ -76,21 +75,28 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
 
     private void update(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession,
                         SetMessagesResponse.Builder builder) {
-        try {
-            MessageManager messageManager = mailboxManager.getMailbox(messageId.getMailboxPath(), mailboxSession);
-            MessageResultIterator message = messageManager.getMessages(messageId.getUidAsRange(), FetchGroupImpl.MINIMAL, mailboxSession);
-            updateFlags(messageId, updateMessagePatch, mailboxSession, messageManager, message.next());
-            builder.updated(ImmutableList.of(messageId));
-        } catch (NoSuchElementException e) {
-            addMessageIdNotFoundToResponse(messageId, builder);
-        } catch (MailboxException e) {
-            handleMessageUpdateException(messageId, builder, e);
-        }
+//        try {
+            List<MessageResult> messages = messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, mailboxSession);
+            if (messages.isEmpty()) {
+                addMessageIdNotFoundToResponse(messageId, builder);
+            } else {
+                messages.stream()
+                    .forEach(message -> updateFlags(messageId, updateMessagePatch, mailboxSession, message));
+                builder.updated(ImmutableList.of(messageId));
+            }
+            // TODO
+//        } catch (MailboxException e) {
+//            handleMessageUpdateException(messageId, builder, e);
+//        }
     }
 
-    private void updateFlags(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, MessageManager messageManager, MessageResult messageResult) throws MailboxException {
-        Flags newState = updateMessagePatch.applyToState(messageResult.getFlags());
-        messageManager.setFlags(newState, MessageManager.FlagsUpdateMode.REPLACE, messageId.getUidAsRange(), mailboxSession);
+    private void updateFlags(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, MessageResult messageResult) {
+        try {
+            Flags newState = updateMessagePatch.applyToState(messageResult.getFlags());
+            messageIdManager.setFlags(newState, MessageManager.FlagsUpdateMode.REPLACE, messageId, messageResult.getMailboxId(), mailboxSession);
+        } catch (MailboxException e) {
+            Throwables.propagate(e);
+        }
     }
 
     private void addMessageIdNotFoundToResponse(MessageId messageId, SetMessagesResponse.Builder builder) {

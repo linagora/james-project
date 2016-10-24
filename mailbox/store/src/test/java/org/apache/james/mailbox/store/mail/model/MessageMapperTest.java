@@ -40,6 +40,7 @@ import org.apache.james.mailbox.model.Cid;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -74,6 +75,7 @@ public class MessageMapperTest<T extends MapperProvider> {
     private MapperProvider mapperProvider;
     private MessageMapper messageMapper;
     private AttachmentMapper attachmentMapper;
+    private MessageId.Factory messageIdFactory;
 
     private SimpleMailbox benwaInboxMailbox;
     private SimpleMailbox benwaWorkMailbox;
@@ -98,6 +100,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         this.mapperProvider.ensureMapperPrepared();
         this.messageMapper = mapperProvider.createMessageMapper();
         this.attachmentMapper = mapperProvider.createAttachmentMapper();
+        this.messageIdFactory = mapperProvider.getMessageIdFactory();
 
         benwaInboxMailbox = createMailbox(new MailboxPath("#private", "benwa", "INBOX"));
         benwaWorkMailbox = createMailbox( new MailboxPath("#private", "benwa", "INBOX"+DELIMITER+"work"));
@@ -553,12 +556,16 @@ public class MessageMapperTest<T extends MapperProvider> {
     @ContractTest
     public void copyOfSeenMessageShouldNotIncrementUnSeenMessageCount() throws MailboxException {
         message6.setFlags(new Flags(Flags.Flag.SEEN));
+        saveMessages();
+        long expectedUnseenMessages = messageMapper.countUnseenMessagesInMailbox(benwaInboxMailbox);
+
         messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
-        assertThat(messageMapper.countUnseenMessagesInMailbox(benwaInboxMailbox)).isEqualTo(0);
+        assertThat(messageMapper.countUnseenMessagesInMailbox(benwaInboxMailbox)).isEqualTo(expectedUnseenMessages);
     }
 
     @ContractTest
     public void copiedMessageShouldBeMarkedAsRecent() throws MailboxException {
+        saveMessages();
         MessageMetaData metaData = messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
         assertThat(
             messageMapper.findInMailbox(benwaInboxMailbox,
@@ -572,6 +579,7 @@ public class MessageMapperTest<T extends MapperProvider> {
 
     @ContractTest
     public void copiedRecentMessageShouldBeMarkedAsRecent() throws MailboxException {
+        saveMessages();
         message6.setFlags(new Flags(Flags.Flag.RECENT));
         MessageMetaData metaData = messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
         assertThat(
@@ -782,10 +790,10 @@ public class MessageMapperTest<T extends MapperProvider> {
     }
     
     private SimpleMailboxMessage createMessage(Mailbox mailbox, String content, int bodyStart, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) {
-        return new SimpleMailboxMessage(new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId(), attachments);
+        return new SimpleMailboxMessage(messageIdFactory.generate(), new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId(), attachments);
     }
     
     private SimpleMailboxMessage createMessage(Mailbox mailbox, String content, int bodyStart, PropertyBuilder propertyBuilder) {
-        return new SimpleMailboxMessage(new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId());
+        return new SimpleMailboxMessage(messageIdFactory.generate(), new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId());
     }
 }

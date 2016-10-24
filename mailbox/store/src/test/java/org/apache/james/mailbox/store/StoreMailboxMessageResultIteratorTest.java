@@ -38,6 +38,7 @@ import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -98,7 +99,7 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         private SimpleMailboxMessage createMessage(MessageUid uid) {
-            SimpleMailboxMessage message = new SimpleMailboxMessage(null, 0, 0, new SharedByteArrayInputStream(
+            SimpleMailboxMessage message = new SimpleMailboxMessage(new TestMessageId.Factory().generate(), null, 0, 0, new SharedByteArrayInputStream(
                     "".getBytes()), new Flags(), new PropertyBuilder(), TestId.of(1L));
             message.setUid(uid);
             return message;

@@ -16,8 +16,16 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.mail.model;
 
-public interface MessageId {
-    String serialize();
+package org.apache.james.mailbox.cassandra.table;
+
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_UID;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
+
+public interface CassandraMessageIdTable {
+
+    String TABLE_NAME = "messageIdTable";
+
+    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID };
 }

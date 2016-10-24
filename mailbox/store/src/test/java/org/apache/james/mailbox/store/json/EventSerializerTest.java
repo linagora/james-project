@@ -31,6 +31,7 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
 import org.apache.james.mailbox.store.TestId;
@@ -49,7 +50,7 @@ public abstract class EventSerializerTest {
     public static final UpdatedFlags UPDATED_FLAGS = new UpdatedFlags(UID, MOD_SEQ, new Flags(), new Flags(Flags.Flag.SEEN));
     public static final Flags FLAGS = new Flags();
     public static final long SIZE = 45L;
-    public static final SimpleMessageMetaData MESSAGE_META_DATA = new SimpleMessageMetaData(UID, MOD_SEQ, FLAGS, SIZE, null);
+    public static final SimpleMessageMetaData MESSAGE_META_DATA = new SimpleMessageMetaData(UID, MOD_SEQ, FLAGS, SIZE, null, TestMessageId.of(1));
     public static final MailboxPath FROM = new MailboxPath("namespace", "user", "name");
     private EventSerializer serializer;
     private EventFactory eventFactory;

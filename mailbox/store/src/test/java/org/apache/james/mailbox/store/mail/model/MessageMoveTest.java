@@ -29,6 +29,7 @@ import javax.mail.util.SharedByteArrayInputStream;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.store.mail.MessageMapper;
@@ -51,9 +52,10 @@ public class MessageMoveTest<T extends MapperProvider> {
     private static final int BODY_START = 16;
     public static final int UID_VALIDITY = 42;
 
+    private IProducer<T> producer;
     private MapperProvider mapperProvider;
     private MessageMapper messageMapper;
-    private IProducer<T> producer;
+    private MessageId.Factory messageIdFactory;
 
     private SimpleMailbox benwaInboxMailbox;
     private SimpleMailbox benwaWorkMailbox;
@@ -69,6 +71,7 @@ public class MessageMoveTest<T extends MapperProvider> {
         this.mapperProvider = producer.newInstance();
         this.mapperProvider.ensureMapperPrepared();
         this.messageMapper = mapperProvider.createMessageMapper();
+        this.messageIdFactory = mapperProvider.getMessageIdFactory();
 
         benwaInboxMailbox = createMailbox(new MailboxPath("#private", "benwa", "INBOX"));
         benwaWorkMailbox = createMailbox( new MailboxPath("#private", "benwa", "INBOX"+DELIMITER+"work"));
@@ -150,6 +153,6 @@ public class MessageMoveTest<T extends MapperProvider> {
     }
     
     private SimpleMailboxMessage createMessage(Mailbox mailbox, String content, int bodyStart, PropertyBuilder propertyBuilder) {
-        return new SimpleMailboxMessage(new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId());
+        return new SimpleMailboxMessage(messageIdFactory.generate(), new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId());
     }
 }

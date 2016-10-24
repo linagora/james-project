@@ -51,6 +51,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.ReadOnlyException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
 import org.apache.james.mailbox.model.Attachment;
+import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MailboxId;
@@ -258,7 +259,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     }
 
     @Override
-    public MessageUid appendMessage(InputStream msgIn, Date internalDate, final MailboxSession mailboxSession, boolean isRecent, Flags flagsToBeSet) throws MailboxException {
+    public ComposedMessageId appendMessage(InputStream msgIn, Date internalDate, final MailboxSession mailboxSession, boolean isRecent, Flags flagsToBeSet) throws MailboxException {
 
         File file = null;
         TeeInputStream tmpMsgIn = null;
@@ -385,16 +386,16 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
             new QuotaChecker(quotaManager, quotaRootResolver, mailbox).tryAddition(1, size);
 
-            return locker.executeWithLock(mailboxSession, getMailboxPath(), new MailboxPathLocker.LockAwareExecution<MessageUid>() {
+            return locker.executeWithLock(mailboxSession, new StoreMailboxPath(getMailboxEntity()), new MailboxPathLocker.LockAwareExecution<ComposedMessageId>() {
 
                 @Override
-                public MessageUid execute() throws MailboxException {
+                public ComposedMessageId execute() throws MailboxException {
                     MessageMetaData data = appendMessageToStore(message, attachments, mailboxSession);
 
                     SortedMap<MessageUid, MessageMetaData> uids = new TreeMap<MessageUid, MessageMetaData>();
                     uids.put(data.getUid(), data);
                     dispatcher.added(mailboxSession, uids, getMailboxEntity());
-                    return data.getUid();
+                    return new ComposedMessageId(getMailboxEntity().getMailboxId(), data.getMessageId(), data.getUid());
                 }
             }, true);
 
@@ -442,7 +443,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
      * @throws MailboxException
      */
     protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException {
-        return new SimpleMailboxMessage(internalDate, size, bodyStartOctet, content, flags, propertyBuilder, getMailboxEntity().getMailboxId(), attachments);
+        return new SimpleMailboxMessage(mapperFactory.getMessageIdFactory().generate(), internalDate, size, bodyStartOctet, content, flags, propertyBuilder, getMailboxEntity().getMailboxId(), attachments);
     }
 
     /**

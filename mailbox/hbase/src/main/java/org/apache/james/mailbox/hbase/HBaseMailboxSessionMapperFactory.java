@@ -43,14 +43,17 @@ import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.hbase.mail.HBaseMailboxMapper;
 import org.apache.james.mailbox.hbase.mail.HBaseMessageMapper;
 import org.apache.james.mailbox.hbase.user.HBaseSubscriptionMapper;
+import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.UidProvider;
+import org.apache.james.mailbox.store.mail.model.NoopMessageId;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
 /**
@@ -62,6 +65,7 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
     private final Configuration conf;
     private final UidProvider uidProvider;
     private final ModSeqProvider modSeqProvider;
+    private final NoopMessageId.Factory messageIdFactory;
 
     /**
      * Creates  the necessary tables in HBase if they do not exist.
@@ -77,6 +81,7 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
         this.conf = conf;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
+        this.messageIdFactory = new NoopMessageId.Factory();
 
         //TODO: add better exception handling for this
         HBaseAdmin hbaseAdmin = null;
@@ -135,6 +140,11 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
     }
 
     @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException {
+        throw new NotImplementedException();
+    }
+
+    @Override
     public MailboxMapper createMailboxMapper(MailboxSession session) throws MailboxException {
         return new HBaseMailboxMapper(this.conf);
     }
@@ -177,5 +187,10 @@ public class HBaseMailboxSessionMapperFactory extends MailboxSessionMapperFactor
     public AnnotationMapper createAnnotationMapper(MailboxSession session)
             throws MailboxException {
         throw new NotImplementedException();
+    }
+
+    @Override
+    public Factory getMessageIdFactory() {
+        return messageIdFactory;
     }
 }

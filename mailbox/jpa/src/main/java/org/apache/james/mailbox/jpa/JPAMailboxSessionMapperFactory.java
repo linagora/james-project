@@ -27,14 +27,17 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.JPAMailboxMapper;
 import org.apache.james.mailbox.jpa.mail.JPAMessageMapper;
 import org.apache.james.mailbox.jpa.user.JPASubscriptionMapper;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.UidProvider;
+import org.apache.james.mailbox.store.mail.model.NoopMessageId;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
 /**
@@ -46,11 +49,13 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
     private final EntityManagerFactory entityManagerFactory;
     private final UidProvider uidProvider;
     private final ModSeqProvider modSeqProvider;
+    private final NoopMessageId.Factory messageIdFactory;
 
     public JPAMailboxSessionMapperFactory(EntityManagerFactory entityManagerFactory, UidProvider uidProvider, ModSeqProvider modSeqProvider) {
         this.entityManagerFactory = entityManagerFactory;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
+        this.messageIdFactory = new NoopMessageId.Factory();
         createEntityManager().close();   
     }
     
@@ -62,6 +67,11 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
     @Override
     public MessageMapper createMessageMapper(MailboxSession session) {
         return new JPAMessageMapper(session, uidProvider, modSeqProvider, entityManagerFactory);
+    }
+
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException {
+        throw new NotImplementedException();
     }
 
     @Override
@@ -87,6 +97,11 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory 
     public AnnotationMapper createAnnotationMapper(MailboxSession session)
             throws MailboxException {
         throw new NotImplementedException();
+    }
+
+    @Override
+    public MessageId.Factory getMessageIdFactory() {
+        return messageIdFactory;
     }
 
 }

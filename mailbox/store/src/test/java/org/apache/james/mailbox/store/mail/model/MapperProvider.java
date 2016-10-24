@@ -19,11 +19,14 @@
 
 package org.apache.james.mailbox.store.mail.model;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 
 public interface MapperProvider {
@@ -31,11 +34,17 @@ public interface MapperProvider {
 
     MessageMapper createMessageMapper() throws MailboxException;
 
+    MessageIdMapper createMessageIdMapper() throws MailboxException;
+
     AttachmentMapper createAttachmentMapper() throws MailboxException;
 
     AnnotationMapper createAnnotationMapper() throws MailboxException;
 
     MailboxId generateId();
+
+    MessageId.Factory getMessageIdFactory();
+
+    MessageUid generateMessageUid();
 
     void clearMapper() throws MailboxException;
 

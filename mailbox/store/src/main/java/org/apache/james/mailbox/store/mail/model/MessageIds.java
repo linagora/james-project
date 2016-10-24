@@ -18,30 +18,27 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.List;
 
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.store.TestId;
-import org.junit.Test;
+import org.apache.james.mailbox.model.MessageId;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
-public class DefaultMailboxMessageIdTest {
+public class MessageIds {
 
-    @Test(expected=NullPointerException.class)
-    public void constructorShouldThrowWhenNullMailboxId() {
-        new DefaultMessageId(null, MessageUid.of(1));
+    public static MessageIds ids(MessageId... messageIds) {
+        Preconditions.checkNotNull(messageIds, "'messageId' is mandatory");
+        return new MessageIds(ImmutableList.copyOf(messageIds));
     }
 
-    @Test
-    public void serializeShouldFormatMailboxIdAndUid() {
-        DefaultMessageId id = new DefaultMessageId(TestId.of(12l), MessageUid.of(1));
-        assertThat(id.serialize()).isEqualTo("12-1");
+    private final List<MessageId> messageIds;
+
+    public MessageIds(List<MessageId> messageIds) {
+        this.messageIds = messageIds;
     }
-    
-    @Test
-    public void shouldRespectJavaBeanContract() {
-        EqualsVerifier.forClass(DefaultMessageId.class).verify();
+
+    public List<MessageId> getMessageIds() {
+        return messageIds;
     }
-    
 }

@@ -49,6 +49,7 @@ import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
@@ -142,7 +143,8 @@ public class HBaseMailboxMessageMapperTest {
         final Date today = new Date();
 
         for (int i = 0; i < COUNT * 2; i++) {
-            myMsg = new SimpleMailboxMessage(today, messageTemplate.length,
+            MessageId messageId = null;
+            myMsg = new SimpleMailboxMessage(messageId, today, messageTemplate.length,
                     messageTemplate.length - 20, content, flags, propBuilder,
                     MBOXES.get(1).getMailboxId());
             if (i == COUNT * 2 - 1) {

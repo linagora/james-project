@@ -25,14 +25,20 @@ import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.mail.CassandraAnnotationMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentMapper;
+import org.apache.james.mailbox.cassandra.mail.CassandraImapUidDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxMapper;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageMapper;
 import org.apache.james.mailbox.cassandra.user.CassandraSubscriptionMapper;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
@@ -50,15 +56,24 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
     private final UidProvider uidProvider;
     private final ModSeqProvider modSeqProvider;
     private final CassandraTypesProvider typesProvider;
+    private final CassandraMessageDAO messageDAO;
+    private final CassandraMessageIdDAO messageIdDAO;
+    private final CassandraImapUidDAO imapUidDAO;
     private int maxRetry;
+    private final CassandraMessageId.Factory messageIdFactory;
 
     @Inject
-    public CassandraMailboxSessionMapperFactory(UidProvider uidProvider, ModSeqProvider modSeqProvider, Session session, CassandraTypesProvider typesProvider) {
+    public CassandraMailboxSessionMapperFactory(UidProvider uidProvider, ModSeqProvider modSeqProvider, Session session, CassandraTypesProvider typesProvider,
+            CassandraMessageDAO messageDAO, CassandraMessageIdDAO messageIdDAO, CassandraImapUidDAO imapUidDAO) {
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
         this.session = session;
+        this.messageDAO = messageDAO;
+        this.messageIdDAO = messageIdDAO;
+        this.imapUidDAO = imapUidDAO;
         this.maxRetry = DEFAULT_MAX_RETRY;
         this.typesProvider = typesProvider;
+        this.messageIdFactory = new CassandraMessageId.Factory();
     }
 
     public void setMaxRetry(int maxRetry) {
@@ -67,7 +82,14 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
 
     @Override
     public CassandraMessageMapper createMessageMapper(MailboxSession mailboxSession) {
-        return new CassandraMessageMapper(session, uidProvider, modSeqProvider, null, maxRetry, typesProvider, createAttachmentMapper(mailboxSession));
+        return new CassandraMessageMapper(session, uidProvider, modSeqProvider, null, maxRetry, createAttachmentMapper(mailboxSession),
+                messageDAO, messageIdDAO, imapUidDAO);
+    }
+
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession mailboxSession) throws MailboxException {
+        return new CassandraMessageIdMapper(getAttachmentMapper(mailboxSession), getMailboxMapper(mailboxSession),
+                imapUidDAO, messageIdDAO, messageDAO);
     }
 
     @Override
@@ -101,5 +123,10 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
     public AnnotationMapper createAnnotationMapper(MailboxSession mailboxSession)
             throws MailboxException {
         return new CassandraAnnotationMapper(session);
+    }
+
+    @Override
+    public Factory getMessageIdFactory() {
+        return messageIdFactory;
     }
 }

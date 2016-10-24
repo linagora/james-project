@@ -2,13 +2,17 @@ package org.apache.james.mailbox.inmemory.mail;
 
 import java.util.Random;
 
+import org.apache.commons.lang.math.RandomUtils;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
 
@@ -31,6 +35,11 @@ public class InMemoryMapperProvider implements MapperProvider {
     }
 
     @Override
+    public MessageIdMapper createMessageIdMapper() throws MailboxException {
+        return new InMemoryMailboxSessionMapperFactory().createMessageIdMapper(new MockMailboxSession("user"));
+    }
+
+    @Override
     public AttachmentMapper createAttachmentMapper() throws MailboxException {
         return new InMemoryMailboxSessionMapperFactory().createAttachmentMapper(new MockMailboxSession("user"));
     }
@@ -38,6 +47,16 @@ public class InMemoryMapperProvider implements MapperProvider {
     @Override
     public InMemoryId generateId() {
         return InMemoryId.of(random.nextInt());
+    }
+
+    @Override
+    public MessageId.Factory getMessageIdFactory() {
+        return new InMemoryMailboxSessionMapperFactory().getMessageIdFactory();
+    }
+
+    @Override
+    public MessageUid generateMessageUid() {
+        return MessageUid.of(RandomUtils.nextLong());
     }
 
     @Override

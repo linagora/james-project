@@ -18,41 +18,28 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model;
 
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
+public class NoopMessageId implements MessageId {
 
-public class DefaultMessageId implements MessageId {
+    public static class Factory implements MessageId.Factory {
 
-    private final MailboxId mailboxId;
-    private final MessageUid messageUid;
+        @Override
+        public MessageId fromString(String serialized) {
+            return new NoopMessageId();
+        }
 
-    public DefaultMessageId(MailboxId mailboxId, MessageUid messageUid) {
-        Preconditions.checkNotNull(mailboxId);
-        this.mailboxId = mailboxId;
-        this.messageUid = messageUid;
+        @Override
+        public MessageId generate() {
+            return new NoopMessageId();
+        }
     }
-    
+
+    private NoopMessageId() {
+    }
+
     @Override
     public String serialize() {
-        return String.format("%s-%d", mailboxId.serialize(), messageUid.asLong());
-    }
-    
-    @Override
-    public final boolean equals(Object obj) {
-        if (obj instanceof DefaultMessageId) {
-            DefaultMessageId other = (DefaultMessageId) obj;
-            return Objects.equal(mailboxId, other.mailboxId) &&
-                    Objects.equal(messageUid, other.messageUid);
-            
-        }
-        return false;
-    }
-    
-    @Override
-    public final int hashCode() {
-        return Objects.hashCode(mailboxId, messageUid);
+        return "";
     }
 }

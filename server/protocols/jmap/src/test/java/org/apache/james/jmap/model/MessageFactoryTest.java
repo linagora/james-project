@@ -34,6 +34,7 @@ import org.apache.james.jmap.model.MessageFactory.MetaDataWithContent;
 import org.apache.james.jmap.utils.HtmlTextExtractor;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Cid;
 import org.apache.james.mailbox.model.MessageAttachment;
@@ -71,7 +72,7 @@ public class MessageFactoryTest {
                 .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
                 .attachments(ImmutableList.of())
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("test|test|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
 
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
@@ -94,7 +95,7 @@ public class MessageFactoryTest {
                 .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
                 .attachments(ImmutableList.of())
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("test|test|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         assertThat(testee)
@@ -120,7 +121,7 @@ public class MessageFactoryTest {
                 .content(new ByteArrayInputStream(headers.getBytes(Charsets.UTF_8)))
                 .attachments(ImmutableList.of())
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("user|box|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
 
         Emailer user = Emailer.builder().name("user").email("user@domain").build();
@@ -143,9 +144,9 @@ public class MessageFactoryTest {
                 .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         Message expected = Message.builder()
-                .id(MessageId.of("user|box|2"))
+                .id(InMemoryMessageId.of(2))
                 .blobId(BlobId.of("2"))
-                .threadId("user|box|2")
+                .threadId("2")
                 .mailboxIds(ImmutableList.of(MAILBOX_ID))
                 .inReplyToMessageId("<SNT124-W2664003139C1E520CF4F6787D30@phx.gbl>")
                 .headers(headersMap)
@@ -176,7 +177,7 @@ public class MessageFactoryTest {
                 .content(new ByteArrayInputStream(mail.getBytes(Charsets.UTF_8)))
                 .attachments(ImmutableList.of())
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("user|box|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         assertThat(testee.getTextBody()).hasValue("Mail body");
@@ -202,7 +203,7 @@ public class MessageFactoryTest {
                 .content(new ByteArrayInputStream(mail.getBytes(Charsets.UTF_8)))
                 .attachments(ImmutableList.of())
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("user|box|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         assertThat(testee.getPreview()).isEqualTo(expectedPreview);
@@ -218,7 +219,7 @@ public class MessageFactoryTest {
                 .content(new ByteArrayInputStream(IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream("spamMail.eml"))))
                 .attachments(ImmutableList.of())
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("user|box|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         assertThat(testee.getAttachments()).isEmpty();
@@ -252,7 +253,7 @@ public class MessageFactoryTest {
                         .isInline(true)
                         .build()))
                 .mailboxId(MAILBOX_ID)
-                .messageId(MessageId.of("user|box|2"))
+                .messageId(InMemoryMessageId.of(2))
                 .build();
 
         Message testee = messageFactory.fromMetaDataWithContent(testMail);

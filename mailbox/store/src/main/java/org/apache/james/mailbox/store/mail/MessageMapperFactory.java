@@ -20,6 +20,7 @@ package org.apache.james.mailbox.store.mail;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MessageId;
 
 public interface MessageMapperFactory {
 
@@ -30,5 +31,6 @@ public interface MessageMapperFactory {
      * @return mapper
      */
     MessageMapper getMessageMapper(MailboxSession session) throws MailboxException;
-        
+
+    MessageId.Factory getMessageIdFactory();
 }

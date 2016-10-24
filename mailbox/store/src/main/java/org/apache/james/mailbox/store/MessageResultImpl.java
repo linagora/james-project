@@ -33,7 +33,9 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.Headers;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MimeDescriptor;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -90,6 +92,16 @@ public class MessageResultImpl implements MessageResult {
         return message.getFullContentOctets();
     }
 
+    @Override
+    public MailboxId getMailboxId() {
+        return message.getMailboxId();
+    }
+    
+    @Override
+    public MessageId getMessageId() {
+        return message.getMessageId();
+    }
+    
     @Override
     public int compareTo(MessageResult that) {
         return this.getUid().compareTo(that.getUid());

@@ -28,10 +28,12 @@ import org.apache.james.mailbox.inmemory.mail.InMemoryMessageMapper;
 import org.apache.james.mailbox.inmemory.mail.InMemoryModSeqProvider;
 import org.apache.james.mailbox.inmemory.mail.InMemoryUidProvider;
 import org.apache.james.mailbox.inmemory.user.InMemorySubscriptionMapper;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
@@ -42,6 +44,7 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
     private final SubscriptionMapper subscriptionMapper;
     private final AttachmentMapper attachmentMapper;
     private final AnnotationMapper annotationMapper;
+    private final InMemoryMessageId.Factory messageIdFactory;
     
     public InMemoryMailboxSessionMapperFactory() {
         mailboxMapper = new InMemoryMailboxMapper();
@@ -49,6 +52,7 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
         subscriptionMapper = new InMemorySubscriptionMapper();
         attachmentMapper = new InMemoryAttachmentMapper();
         annotationMapper = new InMemoryAnnotationMapper();
+        messageIdFactory = new InMemoryMessageId.Factory();
     }
     
     @Override
@@ -59,6 +63,11 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
     @Override
     public MessageMapper createMessageMapper(MailboxSession session) throws MailboxException {
         return messageMapper;
+    }
+
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) {
+        return null;
     }
 
     @Override
@@ -81,6 +90,11 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
     public AnnotationMapper createAnnotationMapper(MailboxSession session)
             throws MailboxException {
         return annotationMapper;
+    }
+
+    @Override
+    public MessageId.Factory getMessageIdFactory() {
+        return messageIdFactory;
     }
 
 }

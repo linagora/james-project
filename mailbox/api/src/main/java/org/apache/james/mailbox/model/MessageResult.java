@@ -262,4 +262,8 @@ public interface MessageResult extends Comparable<MessageResult>, MessageMetaDat
          */
         int[] getPositions();
     }
+
+    MessageId getMessageId();
+
+    MailboxId getMailboxId();
 }
