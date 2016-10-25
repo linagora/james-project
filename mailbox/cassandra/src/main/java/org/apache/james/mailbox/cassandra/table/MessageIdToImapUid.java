@@ -17,38 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.mail.model;
+package org.apache.james.mailbox.cassandra.table;
 
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageIdMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_UID;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 
-public interface MapperProvider {
-    MailboxMapper createMailboxMapper() throws MailboxException;
+public interface MessageIdToImapUid {
 
-    MessageMapper createMessageMapper() throws MailboxException;
+    String TABLE_NAME = "imapUidTable";
 
-    MessageIdMapper createMessageIdMapper() throws MailboxException;
+    String MOD_SEQ = "modSeq";
 
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
-
-    AnnotationMapper createAnnotationMapper() throws MailboxException;
-
-    MailboxId generateId();
-
-    MessageUid generateMessageUid();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
-
-    boolean supportPartialAttachmentFetch();
-    
-    MessageId generateMessageId();
+    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID, MOD_SEQ,
+            Flag.ANSWERED, Flag.DELETED, Flag.DRAFT, Flag.FLAGGED, Flag.RECENT, Flag.SEEN, Flag.USER, Flag.USER_FLAGS };
 }

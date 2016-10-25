@@ -16,39 +16,25 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.store.mail;
 
-package org.apache.james.mailbox.store.mail.model;
+import java.util.List;
 
-import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageIdMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 
-public interface MapperProvider {
-    MailboxMapper createMailboxMapper() throws MailboxException;
+public interface MessageIdMapper {
 
-    MessageMapper createMessageMapper() throws MailboxException;
+    List<Message> find(List<MessageId> messageIds, FetchType fetchType);
 
-    MessageIdMapper createMessageIdMapper() throws MailboxException;
+    List<MailboxId> findMailboxes(MessageId messageId);
 
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
+    void save(MailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
 
-    AnnotationMapper createAnnotationMapper() throws MailboxException;
-
-    MailboxId generateId();
-
-    MessageUid generateMessageUid();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
-
-    boolean supportPartialAttachmentFetch();
-    
-    MessageId generateMessageId();
+    void delete(MessageId messageId);
 }

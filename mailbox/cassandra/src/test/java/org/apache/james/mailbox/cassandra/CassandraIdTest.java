@@ -16,39 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.cassandra;
 
-package org.apache.james.mailbox.store.mail.model;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageIdMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+import java.util.UUID;
 
-public interface MapperProvider {
-    MailboxMapper createMailboxMapper() throws MailboxException;
+import org.junit.Test;
 
-    MessageMapper createMessageMapper() throws MailboxException;
+import nl.jqno.equalsverifier.EqualsVerifier;
 
-    MessageIdMapper createMessageIdMapper() throws MailboxException;
+public class CassandraIdTest {
 
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
+    @Test
+    public void beanShouldRespectBeanContract() {
+        EqualsVerifier.forClass(CassandraId.class)
+            .verify();
+    }
 
-    AnnotationMapper createAnnotationMapper() throws MailboxException;
+    @Test
+    public void fromStringShouldWorkWhenParameterIsAnUUID() {
+        UUID id = UUID.randomUUID();
 
-    MailboxId generateId();
+        CassandraId cassandraId = new CassandraId.Factory().fromString(id.toString());
 
-    MessageUid generateMessageUid();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
-
-    boolean supportPartialAttachmentFetch();
-    
-    MessageId generateMessageId();
+        assertThat(cassandraId.asUuid()).isEqualTo(id);
+    }
 }

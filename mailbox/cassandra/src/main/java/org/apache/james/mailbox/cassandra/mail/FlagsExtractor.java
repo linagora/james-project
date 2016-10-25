@@ -16,39 +16,33 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.cassandra.mail;
 
-package org.apache.james.mailbox.store.mail.model;
+import javax.mail.Flags;
 
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageIdMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.cassandra.table.Flag;
 
-public interface MapperProvider {
-    MailboxMapper createMailboxMapper() throws MailboxException;
+import com.datastax.driver.core.Row;
 
-    MessageMapper createMessageMapper() throws MailboxException;
+public class FlagsExtractor {
 
-    MessageIdMapper createMessageIdMapper() throws MailboxException;
+    private final Row row;
 
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
+    public FlagsExtractor(Row row) {
+        this.row = row;
+    }
 
-    AnnotationMapper createAnnotationMapper() throws MailboxException;
+    public Flags getFlags() {
+        Flags flags = new Flags();
+        for (String flag : Flag.ALL) {
+            if (row.getBool(flag)) {
+                flags.add(Flag.JAVAX_MAIL_FLAG.get(flag));
+            }
+        }
+        row.getSet(Flag.USER_FLAGS, String.class)
+            .stream()
+            .forEach(flags::add);
+        return flags;
+    }
 
-    MailboxId generateId();
-
-    MessageUid generateMessageUid();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
-
-    boolean supportPartialAttachmentFetch();
-    
-    MessageId generateMessageId();
 }

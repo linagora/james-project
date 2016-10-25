@@ -27,6 +27,7 @@ import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
+import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraAttachmentModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxCounterModule;
@@ -38,7 +39,6 @@ import org.apache.james.mailbox.store.AbstractMailboxManagerAttachmentTest;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.NoMailboxPathLocker;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 
 public class CassandraMailboxManagerAttachmentTest extends AbstractMailboxManagerAttachmentTest {
@@ -61,14 +61,16 @@ public class CassandraMailboxManagerAttachmentTest extends AbstractMailboxManage
                 new CassandraModSeqProvider(cassandra.getConf()),
                 cassandra.getConf(),
                 cassandra.getTypesProvider(),
-                new DefaultMessageId.Factory());
+                new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider()),
+                new CassandraMessageIdDAO(cassandra.getConf()),
+                new CassandraMessageIdToImapUidDAO(cassandra.getConf()));
         Authenticator noAuthenticator = null;
-        mailboxManager = new CassandraMailboxManager(mailboxSessionMapperFactory, noAuthenticator, new NoMailboxPathLocker(), new MessageParser(), new DefaultMessageId.Factory()); 
+        mailboxManager = new CassandraMailboxManager(mailboxSessionMapperFactory, noAuthenticator, new NoMailboxPathLocker(), new MessageParser(), new CassandraMessageId.Factory()); 
         mailboxManager.init();
         MessageParser failingMessageParser = mock(MessageParser.class);
         when(failingMessageParser.retrieveAttachments(any()))
             .thenThrow(new RuntimeException("Message parser set to fail"));
-        parseFailingMailboxManager = new CassandraMailboxManager(mailboxSessionMapperFactory, noAuthenticator, new NoMailboxPathLocker(), failingMessageParser, new DefaultMessageId.Factory()); 
+        parseFailingMailboxManager = new CassandraMailboxManager(mailboxSessionMapperFactory, noAuthenticator, new NoMailboxPathLocker(), failingMessageParser, new CassandraMessageId.Factory()); 
         parseFailingMailboxManager.init();
     }
 

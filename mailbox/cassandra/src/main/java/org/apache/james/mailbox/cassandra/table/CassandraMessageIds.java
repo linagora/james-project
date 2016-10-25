@@ -17,38 +17,11 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.mail.model;
+package org.apache.james.mailbox.cassandra.table;
 
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageIdMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+public interface CassandraMessageIds {
 
-public interface MapperProvider {
-    MailboxMapper createMailboxMapper() throws MailboxException;
-
-    MessageMapper createMessageMapper() throws MailboxException;
-
-    MessageIdMapper createMessageIdMapper() throws MailboxException;
-
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
-
-    AnnotationMapper createAnnotationMapper() throws MailboxException;
-
-    MailboxId generateId();
-
-    MessageUid generateMessageUid();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
-
-    boolean supportPartialAttachmentFetch();
-    
-    MessageId generateMessageId();
+    String MESSAGE_ID = "messageId";
+    String MAILBOX_ID = "mailboxId";
+    String IMAP_UID = "uid";
 }

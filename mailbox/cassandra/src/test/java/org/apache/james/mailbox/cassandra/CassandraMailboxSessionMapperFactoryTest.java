@@ -33,7 +33,6 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,8 +62,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateMessageMapper() throws Exception {
         LOG.info("createMessageMapper");
         MailboxSession session = null;
-        DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, messageIdFactory);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, null, null, null);
         MessageMapper messageMapper = instance.createMessageMapper(session);
         assertNotNull(messageMapper);
         assertTrue(messageMapper instanceof MessageMapper);
@@ -78,8 +76,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateMailboxMapper() throws Exception {
         LOG.info("createMailboxMapper");
         MailboxSession session = null;
-        DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, messageIdFactory);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, null, null, null);
         MailboxMapper mailboxMapper = instance.createMailboxMapper(session);
         assertNotNull(mailboxMapper);
         assertTrue(mailboxMapper instanceof MailboxMapper);
@@ -93,8 +90,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testCreateSubscriptionMapper() throws Exception {
         LOG.info("createSubscriptionMapper");
         MailboxSession session = null;
-        DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, messageIdFactory);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, null, null, null, null, null, null);
         SubscriptionMapper subscriptionMapper = instance.createSubscriptionMapper(session);
         assertNotNull(subscriptionMapper);
         assertTrue(subscriptionMapper instanceof SubscriptionMapper);
@@ -108,8 +104,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testGetModSeqProvider() {
         LOG.info("getModSeqProvider");
         ModSeqProvider expResult = new CassandraModSeqProvider(CLUSTER.getConf());
-        DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, expResult, null, null, messageIdFactory);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory(null, expResult, null, null, null, null, null);
         ModSeqProvider result = instance.getModSeqProvider();
         assertEquals(expResult, result);
     }
@@ -122,8 +117,7 @@ public class CassandraMailboxSessionMapperFactoryTest {
     public void testGetUidProvider() {
         LOG.info("getUidProvider");
         UidProvider expResult = new CassandraUidProvider(CLUSTER.getConf());
-        DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
-        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory((CassandraUidProvider) expResult, null, null, null, messageIdFactory);
+        CassandraMailboxSessionMapperFactory instance = new CassandraMailboxSessionMapperFactory((CassandraUidProvider) expResult, null, null, null, null, null, null);
         UidProvider result = instance.getUidProvider();
         assertEquals(expResult, result);
     }
