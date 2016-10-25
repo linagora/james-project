@@ -20,14 +20,14 @@
 package org.apache.james.mailbox.store.event.distributed;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Sets;
+import java.util.Set;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -43,7 +43,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.Set;
+import com.google.common.collect.Sets;
 
 public class RegisteredDelegatingMailboxListenerTest {
 
@@ -274,5 +274,40 @@ public class RegisteredDelegatingMailboxListenerTest {
         verifyNoMoreInteractions(mockedEventSerializer);
         verifyNoMoreInteractions(mockedPublisher);
         verifyNoMoreInteractions(mockedMailboxPathRegister);
+    }
+
+    @Test
+    public void isListeningToShouldReturnTrueWhenListeningToGlobalListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+        when(mockedListener.getType()).thenAnswer(new Answer<MailboxListener.ListenerType>() {
+            @Override
+            public MailboxListener.ListenerType answer(InvocationOnMock invocation) throws Throwable {
+                return MailboxListener.ListenerType.ONCE;
+            }
+        });
+        testee.addGlobalListener(mockedListener, null);
+
+        assertThat(testee.isRegistered(mockedListener)).isTrue();
+    }
+
+    @Test
+    public void isListeningToShouldReturnTrueWhenListeningToListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+        when(mockedListener.getType()).thenAnswer(new Answer<MailboxListener.ListenerType>() {
+            @Override
+            public MailboxListener.ListenerType answer(InvocationOnMock invocation) throws Throwable {
+                return MailboxListener.ListenerType.MAILBOX;
+            }
+        });
+        testee.addListener(MAILBOX_PATH, mockedListener, null);
+
+        assertThat(testee.isRegistered(mockedListener)).isTrue();
+    }
+
+    @Test
+    public void isListeningToShouldReturnFalseWhenNotListeningToListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+
+        assertThat(testee.isRegistered(mockedListener)).isFalse();
     }
 }

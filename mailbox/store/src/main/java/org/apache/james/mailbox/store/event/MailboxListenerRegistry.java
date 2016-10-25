@@ -73,4 +73,10 @@ public class MailboxListenerRegistry {
         listeners.putAll(newName, listeners.removeAll(oldName));
     }
 
+    public boolean isListeningTo(MailboxListener mailboxListener) {
+        if (listeners.containsValue(mailboxListener)) {
+            return true;
+        }
+        return globalListeners.contains(mailboxListener);
+    }
 }

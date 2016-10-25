@@ -202,4 +202,38 @@ public class DefaultDelegatingMailboxListenerTest {
         defaultDelegatingMailboxListener.event(event);
     }
 
+    @Test
+    public void isListeningToShouldReturnTrueWhenListeningToGlobalListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+        when(mockedListener.getType()).thenAnswer(new Answer<MailboxListener.ListenerType>() {
+            @Override
+            public MailboxListener.ListenerType answer(InvocationOnMock invocation) throws Throwable {
+                return MailboxListener.ListenerType.EACH_NODE;
+            }
+        });
+        defaultDelegatingMailboxListener.addGlobalListener(mockedListener, null);
+
+        assertThat(defaultDelegatingMailboxListener.isRegistered(mockedListener)).isTrue();
+    }
+
+    @Test
+    public void isListeningToShouldReturnTrueWhenListeningToListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+        when(mockedListener.getType()).thenAnswer(new Answer<MailboxListener.ListenerType>() {
+            @Override
+            public MailboxListener.ListenerType answer(InvocationOnMock invocation) throws Throwable {
+                return MailboxListener.ListenerType.MAILBOX;
+            }
+        });
+        defaultDelegatingMailboxListener.addListener(MAILBOX_PATH, mockedListener, null);
+
+        assertThat(defaultDelegatingMailboxListener.isRegistered(mockedListener)).isTrue();
+    }
+
+    @Test
+    public void isListeningToShouldReturnFalseWhenNotListeningToListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+
+        assertThat(defaultDelegatingMailboxListener.isRegistered(mockedListener)).isFalse();
+    }
 }

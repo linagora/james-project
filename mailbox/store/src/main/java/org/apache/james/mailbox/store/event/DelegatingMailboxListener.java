@@ -24,4 +24,5 @@ import org.apache.james.mailbox.MailboxListenerSupport;
 
 public interface DelegatingMailboxListener extends MailboxListenerSupport, MailboxListener{
 
+    boolean isRegistered(MailboxListener mailboxListener);
 }

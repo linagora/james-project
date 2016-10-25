@@ -20,7 +20,6 @@
 package org.apache.james.mailbox.store.event.distributed;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -225,4 +224,38 @@ public class BroadcastDelegatingMailboxListenerTest {
         assertThat(mailboxEventCollector.getEvents()).containsOnly(event);
     }
 
+    @Test
+    public void isListeningToShouldReturnTrueWhenListeningToGlobalListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+        when(mockedListener.getType()).thenAnswer(new Answer<MailboxListener.ListenerType>() {
+            @Override
+            public MailboxListener.ListenerType answer(InvocationOnMock invocation) throws Throwable {
+                return MailboxListener.ListenerType.EACH_NODE;
+            }
+        });
+        broadcastDelegatingMailboxListener.addGlobalListener(mockedListener, null);
+
+        assertThat(broadcastDelegatingMailboxListener.isRegistered(mockedListener)).isTrue();
+    }
+
+    @Test
+    public void isListeningToShouldReturnTrueWhenListeningToListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+        when(mockedListener.getType()).thenAnswer(new Answer<MailboxListener.ListenerType>() {
+            @Override
+            public MailboxListener.ListenerType answer(InvocationOnMock invocation) throws Throwable {
+                return MailboxListener.ListenerType.MAILBOX;
+            }
+        });
+        broadcastDelegatingMailboxListener.addListener(MAILBOX_PATH, mockedListener, null);
+
+        assertThat(broadcastDelegatingMailboxListener.isRegistered(mockedListener)).isTrue();
+    }
+
+    @Test
+    public void isListeningToShouldReturnFalseWhenNotListeningToListener() throws Exception {
+        MailboxListener mockedListener = mock(MailboxListener.class);
+
+        assertThat(broadcastDelegatingMailboxListener.isRegistered(mockedListener)).isFalse();
+    }
 }

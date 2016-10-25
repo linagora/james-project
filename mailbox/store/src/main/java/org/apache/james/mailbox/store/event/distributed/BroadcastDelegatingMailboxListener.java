@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.store.event.distributed;
 
+import java.util.Collection;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -32,8 +34,6 @@ import org.apache.james.mailbox.store.publisher.Publisher;
 import org.apache.james.mailbox.store.publisher.Topic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
 
 public class BroadcastDelegatingMailboxListener implements DistributedDelegatingMailboxListener {
 
@@ -135,6 +135,11 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
                 eventDelivery.deliver(mailboxListener, event);
             }
         }
+    }
+
+    @Override
+    public boolean isRegistered(MailboxListener mailboxListener) {
+        return mailboxListenerRegistry.isListeningTo(mailboxListener);
     }
 
 }
