@@ -17,47 +17,35 @@
  * under the License.                                           *
  ****************************************************************/
 
+package org.apache.james.transport.mailets.redirect;
 
-package org.apache.james.transport.mailets;
+public enum SpecialAddressKind {
+    SENDER("sender"),
+    REVERSE_PATH("reverse.path"),
+    FROM("from"),
+    REPLY_TO("reply.to"),
+    TO("to"),
+    RECIPIENTS("recipients"),
+    DELETE("delete"),
+    UNALTERED("unaltered"),
+    NULL("null");
 
-import javax.mail.MessagingException;
+    private String value;
 
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
-import org.apache.mailet.Mail;
-import org.apache.mailet.base.GenericMailet;
+    private SpecialAddressKind(String value) {
+        this.value = value;
+    }
 
-import com.google.common.base.Strings;
-
-/**
- * Add an prefix (tag) to the subject of a message <br>
- * <br>
- * <p/>
- * Sample Configuration: <br>
- * <pre><code>
- * &lt;mailet match="RecipientIs=robot@james.apache.org" class="TagMessage"&gt;
- * &lt;subjectPrefix&gt;[robot]&lt;/subjectPrefix&gt; &lt;/mailet&gt; <br>
- * </code></pre>
- */
-public class AddSubjectPrefix extends GenericMailet {
-
-    private String subjectPrefix;
-
-    @Override
-    public void init() throws MessagingException {
-        subjectPrefix = getInitParameter("subjectPrefix");
-
-        if (Strings.isNullOrEmpty(subjectPrefix)) {
-            throw new MessagingException("Please configure a valid subjectPrefix");
+    public static SpecialAddressKind forValue(String value) {
+        for (SpecialAddressKind kind : values()) {
+            if (kind.value.equals(value)) {
+                return kind;
+            }
         }
+        return null;
     }
 
-    @Override
-    public void service(Mail mail) throws MessagingException {
-        new MimeMessageModifier(mail.getMessage()).addSubjectPrefix(subjectPrefix);
-    }
-
-    @Override
-    public String getMailetInfo() {
-        return "AddSubjectPrefix Mailet";
+    public String getValue() {
+        return value;
     }
 }

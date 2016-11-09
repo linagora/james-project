@@ -19,13 +19,22 @@
 
 package org.apache.james.transport.mailets;
 
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
+import java.util.Collection;
+import java.util.List;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
-import java.util.Collection;
-import java.util.HashSet;
+
+import org.apache.james.transport.mailets.redirect.AbstractRedirect;
+import org.apache.james.transport.mailets.redirect.InitParameters;
+import org.apache.james.transport.mailets.redirect.NotifyMailetInitParameters;
+import org.apache.james.transport.mailets.redirect.NotifyMailetsMessage;
+import org.apache.james.transport.mailets.redirect.SpecialAddress;
+import org.apache.james.transport.mailets.utils.MimeMessageModifier;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * <p>
@@ -44,7 +53,7 @@ import java.util.HashSet;
  * A notice text can be specified, and in such case will be inserted into the
  * notification inline text.<br>
  * If the notified message has an "error message" set, it will be inserted into
- * the notification inline text. If the <code>attachStackTrace</code> init
+ * the notification inline text. If the <code>attachError</code> init
  * parameter is set to true, such error message will be attached to the
  * notification message.<br>
  * <p>
@@ -101,79 +110,77 @@ import java.util.HashSet;
  *
  * @since 2.2.0
  */
-public class Bounce extends AbstractNotify {
+public class Bounce extends AbstractRedirect {
 
-    /**
-     * Return a string describing this mailet.
-     *
-     * @return a string describing this mailet
-     */
+    private static final String[] CONFIGURABLE_PARAMETERS = new String[] {
+            "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "notice", "sender", "sendingAddress", "prefix", "attachError" };
+    private static final List<MailAddress> RECIPIENTS = ImmutableList.of(SpecialAddress.REVERSE_PATH);
+    private static final InternetAddress[] TO = new InternetAddress[] { SpecialAddress.REVERSE_PATH.toInternetAddress() };
+
     @Override
     public String getMailetInfo() {
         return "Bounce Mailet";
     }
 
-    /**
-     * Gets the expected init parameters.
-     */
+    @Override
+    protected InitParameters getInitParameters() {
+        return NotifyMailetInitParameters.from(this);
+    }
+
     @Override
     protected String[] getAllowedInitParameters() {
-        return new String[]{
-                // "static",
-                "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "notice", "sender", "sendingAddress", "prefix", "attachError",};
+        return CONFIGURABLE_PARAMETERS;
     }
 
-    /**
-     * @return <code>SpecialAddress.REVERSE_PATH</code>
-     */
+    @Override
+    protected String getMessage(Mail originalMail) throws MessagingException {
+        return new NotifyMailetsMessage().generateMessage(getInitParameters().getMessage(), originalMail);
+    }
+
     @Override
     protected Collection<MailAddress> getRecipients() {
-        Collection<MailAddress> newRecipients = new HashSet<MailAddress>();
-        newRecipients.add(SpecialAddress.REVERSE_PATH);
-        return newRecipients;
+        return RECIPIENTS;
     }
 
-    /**
-     * @return <code>SpecialAddress.REVERSE_PATH</code>
-     */
     @Override
     protected InternetAddress[] getTo() {
-        InternetAddress[] apparentlyTo = new InternetAddress[1];
-        apparentlyTo[0] = SpecialAddress.REVERSE_PATH.toInternetAddress();
-        return apparentlyTo;
+        return TO;
     }
 
-    /**
-     * @return <code>SpecialAddress.NULL</code> (the meaning of bounce)
-     */
+    @Override
+    protected MailAddress getReplyTo() throws MessagingException {
+        return SpecialAddress.NULL;
+    }
+
     @Override
     protected MailAddress getReversePath(Mail originalMail) {
         return SpecialAddress.NULL;
     }
 
-    /**
-     * Service does the hard work,and redirects the originalMail in the form
-     * specified. Checks that the original return path is not empty, and then
-     * calls super.service(originalMail), otherwise just returns.
-     *
-     * @param originalMail the mail to process and redirect
-     * @throws MessagingException if a problem arises formulating the redirected mail
-     */
+    @Override
+    protected void setSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
+        new MimeMessageModifier(originalMail.getMessage()).addSubjectPrefix(subjectPrefix);
+    }
+
     @Override
     public void service(Mail originalMail) throws MessagingException {
         if (originalMail.getSender() == null) {
-            if (isDebug)
-                log("Processing a bounce request for a message with an empty reverse-path.  No bounce will be sent.");
-            if (!getPassThrough(originalMail)) {
-                originalMail.setState(Mail.GHOST);
+            passThrough(originalMail);
+        } else {
+            if (getInitParameters().isDebug()) {
+                log("Processing a bounce request for a message with a reverse path.  The bounce will be sent to " + originalMail.getSender().toString());
             }
-            return;
+            super.service(originalMail);
         }
+    }
 
-        if (isDebug)
-            log("Processing a bounce request for a message with a reverse path.  The bounce will be sent to " + originalMail.getSender().toString());
-
-        super.service(originalMail);
+    private void passThrough(Mail originalMail) throws MessagingException {
+        if (getInitParameters().isDebug()) {
+            log("Processing a bounce request for a message with an empty reverse-path.  No bounce will be sent.");
+        }
+        if (!getInitParameters().getPassThrough()) {
+            originalMail.setState(Mail.GHOST);
+        }
     }
 
 }

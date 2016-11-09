@@ -19,12 +19,24 @@
 
 package org.apache.james.transport.mailets;
 
-import org.apache.mailet.MailAddress;
+import java.util.Collection;
+import java.util.List;
 
 import javax.mail.MessagingException;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
-import java.util.Collection;
-import java.util.HashSet;
+
+import org.apache.james.transport.mailets.redirect.AbstractRedirect;
+import org.apache.james.transport.mailets.redirect.AddressExtractor;
+import org.apache.james.transport.mailets.redirect.InitParameters;
+import org.apache.james.transport.mailets.redirect.RedirectMailetInitParameters;
+import org.apache.james.transport.mailets.redirect.TypeCode;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 /**
  * <p>
@@ -72,130 +84,100 @@ import java.util.HashSet;
  */
 public class Forward extends AbstractRedirect {
 
-    /**
-     * Return a string describing this mailet.
-     * 
-     * @return a string describing this mailet
-     */
+    private static final String[] CONFIGURABLE_PARAMETERS = new String[] {
+            "debug", "passThrough", "fakeDomainCheck", "forwardto", "forwardTo" };
+    private static final List<String> ALLOWED_SPECIALS = ImmutableList.of(
+            "postmaster", "sender", "from", "replyTo", "reversePath", "unaltered", "recipients", "to", "null");
+
+    @Override
     public String getMailetInfo() {
         return "Forward Mailet";
     }
 
-    /** Gets the expected init parameters. */
+    @Override
+    protected InitParameters getInitParameters() {
+        return RedirectMailetInitParameters.from(this, Optional.of(TypeCode.NONE), Optional.<TypeCode> absent());
+    }
+
+    @Override
     protected String[] getAllowedInitParameters() {
-        return new String[]{
-                // "static",
-                "debug", "passThrough", "fakeDomainCheck", "forwardto", "forwardTo" };
+        return CONFIGURABLE_PARAMETERS;
     }
 
-    /**
-     * @return UNALTERED
-     */
-    protected int getInLineType() {
-        return UNALTERED;
+    @Override
+    protected String getMessage(Mail originalMail) throws MessagingException {
+        return getInitParameters().getMessage();
     }
 
-    /**
-     * @return NONE
-     */
-    protected int getAttachmentType() {
-        return NONE;
-    }
-
-    /**
-     * @return ""
-     */
-    protected String getMessage() {
-        return "";
-    }
-
-    /**
-     * @return the <code>recipients</code> init parameter or null if missing
-     */
+    @Override
     protected Collection<MailAddress> getRecipients() throws MessagingException {
-        Collection<MailAddress> newRecipients = new HashSet<MailAddress>();
-        String addressList = getInitParameter("forwardto", getInitParameter("forwardTo"));
-
-        // if nothing was specified, throw an exception
-        if (addressList == null) {
-            throw new MessagingException("Failed to initialize \"recipients\" list: no <forwardTo> or <forwardto> init parameter found");
+        ImmutableList.Builder<MailAddress> builder = ImmutableList.builder();
+        for (InternetAddress address : extractAddresses(getForwardTo())) {
+            builder.add(toMailAddress(address));
         }
+        return builder.build();
+    }
 
+    private InternetAddress[] extractAddresses(String addressList) throws MessagingException {
         try {
-            InternetAddress[] iaarray = InternetAddress.parse(addressList, false);
-            for (InternetAddress anIaarray : iaarray) {
-                String addressString = anIaarray.getAddress();
-                MailAddress specialAddress = getSpecialAddress(addressString, new String[]{"postmaster", "sender", "from", "replyTo", "reversePath", "unaltered", "recipients", "to", "null"});
-                if (specialAddress != null) {
-                    newRecipients.add(specialAddress);
-                } else {
-                    newRecipients.add(new MailAddress(anIaarray));
-                }
-            }
-        } catch (Exception e) {
+            return InternetAddress.parse(addressList, false);
+        } catch (AddressException e) {
             throw new MessagingException("Exception thrown in getRecipients() parsing: " + addressList, e);
         }
-        if (newRecipients.size() == 0) {
-            throw new MessagingException("Failed to initialize \"recipients\" list; empty <recipients> init parameter found.");
-        }
-
-        return newRecipients;
     }
 
-    /**
-     * @return null
-     */
+    private MailAddress toMailAddress(InternetAddress address) throws MessagingException {
+        try {
+            Optional<MailAddress> specialAddress = AddressExtractor.withContext(getMailetContext())
+                    .allowedSpecials(ALLOWED_SPECIALS)
+                    .getSpecialAddress(address.getAddress());
+            if (specialAddress.isPresent()) {
+                return specialAddress.get();
+            }
+            return new MailAddress(address);
+        } catch (Exception e) {
+            throw new MessagingException("Exception thrown in getRecipients() parsing: " + address.getAddress());
+        }
+    }
+
+    private String getForwardTo() throws MessagingException {
+        String forwardTo = getInitParameter("forwardto", getInitParameter("forwardTo"));
+        if (Strings.isNullOrEmpty(forwardTo)) {
+            throw new MessagingException("Failed to initialize \"recipients\" list: no or empty <forwardTo> or <forwardto> init parameter found");
+        }
+        return forwardTo;
+    }
+
+    @Override
     protected InternetAddress[] getTo() throws MessagingException {
         return null;
     }
 
-    /**
-     * @return null
-     */
+    @Override
     protected MailAddress getReplyTo() throws MessagingException {
         return null;
     }
 
-    /**
-     * @return null
-     */
+    @Override
     protected MailAddress getReversePath() throws MessagingException {
         return null;
     }
 
-    /**
-     * @return null
-     */
+    @Override
+    protected MailAddress getReversePath(Mail originalMail) throws MessagingException {
+        return null;
+    }
+
+    @Override
     protected MailAddress getSender() throws MessagingException {
         return null;
     }
 
-    /**
-     * @return null
-     */
-    protected String getSubject() {
-        return null;
+    @Override
+    protected void setSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
+        Optional<String> newSubject = getNewSubject(subjectPrefix, originalMail);
+        if (newSubject.isPresent()) {
+            changeSubject(newMail.getMessage(), newSubject.get());
+        }
     }
-
-    /**
-     * @return ""
-     */
-    protected String getSubjectPrefix() {
-        return null;
-    }
-
-    /**
-     * @return false
-     */
-    protected boolean attachError() {
-        return false;
-    }
-
-    /**
-     * @return false
-     */
-    protected boolean isReply() {
-        return false;
-    }
-
 }
