@@ -21,7 +21,7 @@ package org.apache.james.jmap.memory.cucumber;
 
 import javax.inject.Inject;
 
-import org.apache.james.GuiceJamesServer;
+import org.apache.james.MemoryJamesServer;
 import org.apache.james.MemoryJamesServerMain;
 import org.apache.james.jmap.methods.integration.cucumber.MainStepdefs;
 import org.apache.james.jmap.servers.MemoryJmapServerModule;
@@ -34,11 +34,11 @@ import cucumber.runtime.java.guice.ScenarioScoped;
 @ScenarioScoped
 public class MemoryStepdefs {
 
-    private final MainStepdefs mainStepdefs;
+    private final MainStepdefs<MemoryJamesServer> mainStepdefs;
     private final TemporaryFolder temporaryFolder;
 
     @Inject
-    private MemoryStepdefs(MainStepdefs mainStepdefs) {
+    private MemoryStepdefs(MainStepdefs<MemoryJamesServer> mainStepdefs) {
         this.mainStepdefs = mainStepdefs;
         this.temporaryFolder = new TemporaryFolder();
     }
@@ -46,7 +46,7 @@ public class MemoryStepdefs {
     @Before
     public void init() throws Exception {
         temporaryFolder.create();
-        mainStepdefs.jmapServer = new GuiceJamesServer()
+        mainStepdefs.jmapServer = new MemoryJamesServer()
                 .combineWith(MemoryJamesServerMain.inMemoryServerModule)
                 .overrideWith(new MemoryJmapServerModule(temporaryFolder));
         mainStepdefs.init();

@@ -23,8 +23,8 @@ import java.util.Arrays;
 
 import javax.inject.Inject;
 
+import org.apache.james.CassandraJamesServer;
 import org.apache.james.CassandraJamesServerMain;
-import org.apache.james.GuiceJamesServer;
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.methods.integration.cucumber.MainStepdefs;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
@@ -40,13 +40,13 @@ import cucumber.runtime.java.guice.ScenarioScoped;
 @ScenarioScoped
 public class CassandraStepdefs {
 
-    private final MainStepdefs mainStepdefs;
+    private final MainStepdefs<CassandraJamesServer> mainStepdefs;
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
 
     @Inject
-    private CassandraStepdefs(MainStepdefs mainStepdefs) {
+    private CassandraStepdefs(MainStepdefs<CassandraJamesServer> mainStepdefs) {
         this.mainStepdefs = mainStepdefs;
     }
 
@@ -54,7 +54,7 @@ public class CassandraStepdefs {
     public void init() throws Exception {
         temporaryFolder.create();
         embeddedElasticSearch.before();
-        mainStepdefs.jmapServer = new GuiceJamesServer()
+        mainStepdefs.jmapServer = new CassandraJamesServer()
                 .combineWith(CassandraJamesServerMain.cassandraServerModule)
                 .overrideWith(new CassandraJmapServerModule(temporaryFolder, embeddedElasticSearch, cassandra));
         mainStepdefs.awaitMethod = () -> embeddedElasticSearch.awaitForElasticSearch();

@@ -28,10 +28,11 @@ import java.nio.file.Paths;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.GuiceJamesServer;
+import org.apache.james.MemoryJamesServer;
 import org.apache.james.MemoryJamesServerMain;
 import org.apache.james.mailets.configuration.MailetContainer;
 import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.utils.ExtendedServerProbe;
+import org.apache.james.utils.GuiceServerProbe;
 import org.junit.rules.TemporaryFolder;
 
 public class TemporaryJamesServer {
@@ -40,13 +41,13 @@ public class TemporaryJamesServer {
 
     private static final int LIMIT_TO_3_MESSAGES = 3;
 
-    private final GuiceJamesServer jamesServer;
+    private final MemoryJamesServer jamesServer;
 
 
     public TemporaryJamesServer(TemporaryFolder temporaryFolder, MailetContainer mailetContainer) throws Exception {
         appendMailetConfigurations(temporaryFolder, mailetContainer);
 
-        jamesServer = new GuiceJamesServer()
+        jamesServer = new MemoryJamesServer()
             .combineWith(MemoryJamesServerMain.inMemoryServerModule)
             .overrideWith(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES),
                     new TemporaryFilesystemModule(temporaryFolder));
@@ -69,7 +70,7 @@ public class TemporaryJamesServer {
         jamesServer.stop();
     }
 
-    public ExtendedServerProbe getServerProbe() {
+    public GuiceServerProbe getServerProbe() {
         return jamesServer.serverProbe();
     }
 }

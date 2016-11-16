@@ -21,15 +21,17 @@ package org.apache.james.jmap.methods.integration.cucumber;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.james.GuiceJamesServer;
+import org.apache.james.JmapServer;
+import org.apache.james.WebAdminServer;
 
 import com.google.common.base.Charsets;
 
 import cucumber.runtime.java.guice.ScenarioScoped;
 
 @ScenarioScoped
-public class MainStepdefs {
+public class MainStepdefs<T extends GuiceJamesServer & JmapServer & WebAdminServer> {
 
-    public GuiceJamesServer jmapServer;
+    public T jmapServer;
     public Runnable awaitMethod = () -> {};
 
     public void init() throws Exception {
@@ -41,7 +43,8 @@ public class MainStepdefs {
         return new URIBuilder()
                 .setScheme("http")
                 .setHost("localhost")
-                .setPort(jmapServer.getJmapPort())
+                .setPort(jmapServer.getJmapProbe()
+                    .getJmapPort())
                 .setCharset(Charsets.UTF_8);
     }
     
