@@ -51,7 +51,6 @@ import org.apache.james.user.api.UsersRepository;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMailetConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,14 +66,11 @@ public class ToRecipientFolderTest {
     private UsersRepository usersRepository;
     private MailboxManager mailboxManager;
     private ToRecipientFolder recipientFolder;
-    private FakeMailetConfig mailetConfig;
 
     @Before
     public void setUp() throws Exception {
         usersRepository = mock(UsersRepository.class);
         mailboxManager = mock(MailboxManager.class);
-
-        mailetConfig = new FakeMailetConfig("RecipientFolderTest", FakeMailContext.defaultContext());
 
         recipientFolder = new ToRecipientFolder();
         recipientFolder.setMailboxManager(mailboxManager);
@@ -84,7 +80,10 @@ public class ToRecipientFolderTest {
 
     @Test
     public void initParameterTesting() throws Exception {
-        mailetConfig.setProperty(ToRecipientFolder.FOLDER_PARAMETER, "Junk");
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("RecipientFolderTest")
+                .setProperty(ToRecipientFolder.FOLDER_PARAMETER, "Junk")
+                .build();
         recipientFolder.init(mailetConfig);
 
         Assert.assertEquals("Junk", recipientFolder.getInitParameter(ToRecipientFolder.FOLDER_PARAMETER));
@@ -92,7 +91,10 @@ public class ToRecipientFolderTest {
 
     @Test
     public void consumeOptionShouldGhostTheMail() throws Exception {
-        mailetConfig.setProperty(ToRecipientFolder.CONSUME_PARAMETER, "true");
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("RecipientFolderTest")
+                .setProperty(ToRecipientFolder.CONSUME_PARAMETER, "true")
+                .build();
         recipientFolder.init(mailetConfig);
 
         Mail mail = createMail();
@@ -103,6 +105,9 @@ public class ToRecipientFolderTest {
 
     @Test
     public void consumeOptionShouldNotGhostTheMailByDefault() throws Exception {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("RecipientFolderTest")
+                .build();
         recipientFolder.init(mailetConfig);
 
         Mail mail = createMail();
@@ -121,7 +126,10 @@ public class ToRecipientFolderTest {
         when(session.getPathDelimiter()).thenReturn('.');
         when(mailboxManager.createSystemSession(any(String.class), any(Logger.class))).thenReturn(session);
 
-        mailetConfig.setProperty(ToRecipientFolder.FOLDER_PARAMETER, "Junk");
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("RecipientFolderTest")
+                .setProperty(ToRecipientFolder.FOLDER_PARAMETER, "Junk")
+                .build();
         recipientFolder.init(mailetConfig);
         recipientFolder.service(createMail());
 
@@ -138,6 +146,9 @@ public class ToRecipientFolderTest {
         when(session.getPathDelimiter()).thenReturn('.');
         when(mailboxManager.createSystemSession(any(String.class), any(Logger.class))).thenReturn(session);
 
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("RecipientFolderTest")
+                .build();
         recipientFolder.init(mailetConfig);
         recipientFolder.service(createMail());
 
@@ -154,7 +165,10 @@ public class ToRecipientFolderTest {
         when(session.getPathDelimiter()).thenReturn('.');
         when(mailboxManager.createSystemSession(any(String.class), any(Logger.class))).thenReturn(session);
 
-        mailetConfig.setProperty(ToRecipientFolder.FOLDER_PARAMETER, "Junk");
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("RecipientFolderTest")
+                .setProperty(ToRecipientFolder.FOLDER_PARAMETER, "Junk")
+                .build();
         recipientFolder.init(mailetConfig);
         recipientFolder.service(createMail());
 

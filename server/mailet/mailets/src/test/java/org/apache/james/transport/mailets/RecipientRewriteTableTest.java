@@ -23,7 +23,6 @@ import static org.apache.james.transport.mailets.RecipientRewriteTableMock.rewri
 import static org.junit.Assert.assertEquals;
 
 import java.util.Iterator;
-import java.util.Properties;
 
 import javax.mail.Address;
 import javax.mail.Message;
@@ -67,10 +66,13 @@ public class RecipientRewriteTableTest {
             MailetContext mailContext) throws MessagingException {
         RecipientRewriteTable rrt = new org.apache.james.transport.mailets.RecipientRewriteTable();
 
-        FakeMailetConfig mockMailetConfig = new FakeMailetConfig("vut", mailContext, new Properties());
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("vut")
+                .mailetContext(mailContext)
+                .build();
         // mockMailetConfig.put("recipientrewritetable", "vut");
         rrt.setRecipientRewriteTable(vut);
-        rrt.init(mockMailetConfig);
+        rrt.init(mailetConfig);
         return rrt;
     }
 

@@ -116,7 +116,7 @@ public class LocalDeliveryTest {
 
         Mail mail = createMail();
 
-        localDelivery.init(new FakeMailetConfig());
+        localDelivery.init(FakeMailetConfig.builder().build());
         localDelivery.service(mail);
 
         verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
@@ -153,7 +153,7 @@ public class LocalDeliveryTest {
 
         Mail mail = createMail();
 
-        localDelivery.init(new FakeMailetConfig());
+        localDelivery.init(FakeMailetConfig.builder().build());
         localDelivery.service(mail);
 
         verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));

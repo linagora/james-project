@@ -20,6 +20,12 @@
 
 package org.apache.mailet.base;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+
 import javax.mail.MessagingException;
 
 import org.apache.mailet.Mail;
@@ -27,8 +33,6 @@ import org.apache.mailet.Mailet;
 import org.apache.mailet.MailetConfig;
 import org.apache.mailet.MailetContext;
 import org.apache.mailet.MailetContext.LogLevel;
-
-import java.util.*;
 
 /**
  * GenericMailet makes writing mailets easier. It provides simple
@@ -255,27 +259,8 @@ public abstract class GenericMailet implements Mailet, MailetConfig {
         
         if (bad.size() > 0) {
             throw new MessagingException("Unexpected init parameters found: "
-                    + arrayToString(bad.toArray()));
+                    + StringUtils.arrayToString(bad.toArray()));
         }
-    }
-    
-    /**
-     * Utility method for obtaining a string representation of an array of Objects.
-     */
-    protected final String arrayToString(Object[] array) {
-        if (array == null) {
-            return "null";
-        }
-        StringBuilder sb = new StringBuilder(1024);
-        sb.append("[");
-        for (int i = 0; i < array.length; i++) {
-            if (i > 0) {
-                sb.append(",");
-            }
-            sb.append(array[i]);
-        }
-        sb.append("]");
-        return sb.toString();
     }
 
 }
