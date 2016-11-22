@@ -17,47 +17,33 @@
  * under the License.                                           *
  ****************************************************************/
 
+package org.apache.james.transport.mailets.redirect;
+import java.util.Locale;
 
-package org.apache.james.transport.mailets;
+public enum TypeCode {
 
-import javax.mail.MessagingException;
+    UNALTERED, HEADS, BODY, ALL, NONE, MESSAGE;
 
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
-import org.apache.mailet.Mail;
-import org.apache.mailet.base.GenericMailet;
-
-import com.google.common.base.Strings;
-
-/**
- * Add an prefix (tag) to the subject of a message <br>
- * <br>
- * <p/>
- * Sample Configuration: <br>
- * <pre><code>
- * &lt;mailet match="RecipientIs=robot@james.apache.org" class="TagMessage"&gt;
- * &lt;subjectPrefix&gt;[robot]&lt;/subjectPrefix&gt; &lt;/mailet&gt; <br>
- * </code></pre>
- */
-public class AddSubjectPrefix extends GenericMailet {
-
-    private String subjectPrefix;
-
-    @Override
-    public void init() throws MessagingException {
-        subjectPrefix = getInitParameter("subjectPrefix");
-
-        if (Strings.isNullOrEmpty(subjectPrefix)) {
-            throw new MessagingException("Please configure a valid subjectPrefix");
+    public static TypeCode from(String parameter) {
+        String lowerCase = parameter.toLowerCase(Locale.US);
+        if (lowerCase.equals("unaltered")) {
+            return UNALTERED;
         }
-    }
-
-    @Override
-    public void service(Mail mail) throws MessagingException {
-        new MimeMessageModifier(mail.getMessage()).addSubjectPrefix(subjectPrefix);
-    }
-
-    @Override
-    public String getMailetInfo() {
-        return "AddSubjectPrefix Mailet";
+        if (lowerCase.equals("heads")) {
+            return HEADS;
+        }
+        if (lowerCase.equals("body")) {
+            return BODY;
+        }
+        if (lowerCase.equals("all")) {
+            return ALL;
+        }
+        if (lowerCase.equals("none")) {
+            return NONE;
+        }
+        if (lowerCase.equals("message")) {
+            return MESSAGE;
+        }
+        return NONE;
     }
 }

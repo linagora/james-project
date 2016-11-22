@@ -19,6 +19,22 @@
 
 package org.apache.james.transport.mailets;
 
+import java.util.List;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.InternetAddress;
+
+import org.apache.james.transport.mailets.redirect.AbstractRedirect;
+import org.apache.james.transport.mailets.redirect.AddressExtractor;
+import org.apache.james.transport.mailets.redirect.InitParameters;
+import org.apache.james.transport.mailets.redirect.RedirectMailetInitParameters;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+
 /**
  * <p>
  * A mailet providing configurable redirection services.
@@ -268,20 +284,75 @@ package org.apache.james.transport.mailets;
 
 public class Resend extends AbstractRedirect {
 
-    /**
-     * Returns a string describing this mailet.
-     * 
-     * @return a string describing this mailet
-     */
+    private static final String[] CONFIGURABLE_PARAMETERS = new String[] {
+            "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "recipients", "to", "replyTo", "replyto", "reversePath", "sender", "subject", "prefix", "attachError", "isReply" };
+
+    @Override
     public String getMailetInfo() {
         return "Redirect Mailet";
     }
 
-    /** Gets the expected init parameters. */
+    @Override
+    protected InitParameters getInitParameters() {
+        return RedirectMailetInitParameters.from(this);
+    }
+
+    @Override
     protected String[] getAllowedInitParameters() {
-        return new String[]{
-                // "static",
-                "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "recipients", "to", "replyTo", "replyto", "reversePath", "sender", "subject", "prefix", "attachError", "isReply" };
+        return CONFIGURABLE_PARAMETERS;
+    }
+
+    @Override
+    protected String getMessage(Mail originalMail) throws MessagingException {
+        return getInitParameters().getMessage();
+    }
+
+    @Override
+    protected InternetAddress[] getTo() throws MessagingException {
+      ImmutableList.Builder<InternetAddress> builder = ImmutableList.builder();
+      List<MailAddress> mailAddresses = AddressExtractor.withContext(getMailetContext())
+              .allowedSpecials(ImmutableList.of("postmaster", "sender", "from", "replyTo", "reversePath", "unaltered", "recipients", "to", "null"))
+              .extract(getInitParameters().getTo());
+      for (MailAddress address : mailAddresses) {
+          builder.add(address.toInternetAddress());
+      }
+      ImmutableList<InternetAddress> addresses = builder.build();
+      return addresses.toArray(new InternetAddress[addresses.size()]);
+    }
+
+    @Override
+    protected MailAddress getReplyTo() throws MessagingException {
+        String replyTo = getInitParameters().getReplyTo();
+        if (Strings.isNullOrEmpty(replyTo)) {
+            return null;
+        }
+
+        List<MailAddress> extractAddresses = AddressExtractor.withContext(getMailetContext())
+                .allowedSpecials(ImmutableList.of("postmaster", "sender", "null", "unaltered"))
+                .extract(replyTo);
+        if (extractAddresses.isEmpty()) {
+            return null;
+        }
+        return extractAddresses.get(0);
+    }
+
+    @Override
+    protected MailAddress getReversePath(Mail originalMail) throws MessagingException {
+        MailAddress reversePath = getReversePath();
+        if (reversePath != null) {
+            if (isUnalteredOrReversePathOrSender(reversePath)) {
+                return null;
+            }
+        }
+        return reversePath;
+    }
+
+    @Override
+    protected void setSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
+        Optional<String> newSubject = getNewSubject(subjectPrefix, originalMail);
+        if (newSubject.isPresent()) {
+            changeSubject(newMail.getMessage(), newSubject.get());
+        }
     }
 
 }
