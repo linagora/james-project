@@ -20,7 +20,10 @@ package org.apache.james.mailbox.store.mail.model;
 
 import javax.mail.Flags;
 
-public class FlagsBuilder {
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+
+public class FlagsOperations {
 
     public static Flags createFlags(MailboxMessage mailboxMessage, String[] userFlags) {
         final Flags flags = new Flags();
@@ -49,6 +52,48 @@ public class FlagsBuilder {
             }
         }
         return flags;
+    }
+
+    /**
+     * Check if the given {@link Flags} contains {@link Flags} which are not
+     * included in the returned {@link Flags} of the permanentFlags.
+     * If any are found, these are
+     * removed from the given {@link Flags} instance. The only exception is the
+     * {@link Flags.Flag#RECENT} flag.
+     *
+     * This flag is never removed!
+     *
+     * @param flags
+     * @param session
+     */
+    public static Flags trim(Flags flags, Flags permanentFlags) {
+        Preconditions.checkNotNull(permanentFlags);
+        Flags result = new Flags(Optional.fromNullable(flags).or(new Flags()));
+        Flags.Flag[] systemFlags = result.getSystemFlags();
+        for (Flags.Flag f : systemFlags) {
+            if (f != Flags.Flag.RECENT && !permanentFlags.contains(f)) {
+                result.remove(f);
+            }
+        }
+        // if the permFlags contains the special USER flag we can skip this as
+        // all user flags are allowed
+        if (!permanentFlags.contains(Flags.Flag.USER)) {
+            String[] uFlags = result.getUserFlags();
+            for (String uFlag : uFlags) {
+                if (!permanentFlags.contains(uFlag)) {
+                    result.remove(uFlag);
+                }
+            }
+        }
+        return result;
+    }
+
+    public static Flags prepareForAppend(Flags flags, boolean isRecent, Flags permanentFlags) {
+        final Flags result = Optional.fromNullable(flags).or(new Flags());
+        if (isRecent) {
+            result.add(Flags.Flag.RECENT);
+        }
+        return FlagsOperations.trim(result, permanentFlags);
     }
 
 

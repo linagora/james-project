@@ -66,6 +66,14 @@ public class PropertyBuilder {
             properties.add(new SimpleProperty(property));
         }
     }
+
+    public PropertyBuilder(List<Property> props, long textualLineCount) {
+        this.textualLineCount = textualLineCount;
+        this.properties = new ArrayList<SimpleProperty>(props.size());
+        for (Property property:props) {
+            this.properties.add(new SimpleProperty(property));
+        }
+    }
     
     public PropertyBuilder() {
         textualLineCount = null;

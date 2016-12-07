@@ -20,7 +20,6 @@ package org.apache.james.mailbox.jpa.mail.model.openjpa;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Date;
 
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
@@ -35,6 +34,7 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.openjpa.persistence.Persistent;
 
@@ -62,17 +62,22 @@ public class JPAStreamingMailboxMessage extends AbstractJPAMailboxMessage {
 
     private final SharedInputStream content;
 
-    public JPAStreamingMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, PropertyBuilder propertyBuilder) throws MailboxException {
-        super(mailbox, internalDate, flags, size ,bodyStartOctet, propertyBuilder);
-        this.content = content;
+    public JPAStreamingMailboxMessage(JPAMailbox mailbox, Message message, Flags flags) throws MailboxException {
+        super(mailbox, message.getInternalDate(), flags, message.getFullContentOctets(),(int) (message.getFullContentOctets() - message.getBodyOctets()),
+            new PropertyBuilder(message.getProperties(), message.getTextualLineCount()));
 
         try {
+            this.content = copyInputStream(message);
             this.header = getHeaderContent();
             this.body = getBodyContent();
 
         } catch (IOException e) {
             throw new MailboxException("Unable to parse message",e);
         }
+    }
+
+    private static SharedByteArrayInputStream copyInputStream(Message message) throws IOException {
+        return new SharedByteArrayInputStream(IOUtils.toByteArray(message.getFullContent()));
     }
 
     /**

@@ -21,10 +21,9 @@ package org.apache.james.mailbox.jpa.mail.model.openjpa;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Date;
 
 import javax.mail.Flags;
-import javax.mail.internet.SharedInputStream;
+import javax.mail.util.SharedByteArrayInputStream;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -37,6 +36,7 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 
 @Entity(name="MailboxMessage")
@@ -56,13 +56,14 @@ public class JPAMailboxMessage extends AbstractJPAMailboxMessage {
     @Column(name = "HEADER_BYTES", length = 10485760, nullable = false)
     @Lob private byte[] header;
     
-    public JPAMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, PropertyBuilder propertyBuilder) throws MailboxException {
-        super(mailbox, internalDate, flags, size ,bodyStartOctet, propertyBuilder);
+    public JPAMailboxMessage(JPAMailbox mailbox, Message message, Flags flags) throws MailboxException {
+        super(mailbox, message.getInternalDate(), flags, message.getFullContentOctets(), (int) (message.getFullContentOctets() - message.getBodyOctets()), new PropertyBuilder(message.getProperties(), message.getTextualLineCount()));
         try {
-            int headerEnd = bodyStartOctet;
+            int headerEnd = (int) (message.getFullContentOctets() - message.getBodyOctets());
             if (headerEnd < 0) {
                 headerEnd = 0;
             }
+            SharedByteArrayInputStream content = new SharedByteArrayInputStream(IOUtils.toByteArray(message.getFullContent()));
             this.header = IOUtils.toByteArray(content.newStream(0, headerEnd));
             this.body = IOUtils.toByteArray(content.newStream(getBodyStartOctet(), -1));
 

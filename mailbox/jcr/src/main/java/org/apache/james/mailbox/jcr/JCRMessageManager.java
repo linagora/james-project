@@ -18,11 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.jcr;
 
-import java.util.Date;
-import java.util.List;
-
 import javax.mail.Flags;
-import javax.mail.internet.SharedInputStream;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
@@ -31,7 +27,6 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailbox;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailboxMessage;
-import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
@@ -39,8 +34,8 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMessageManager;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
-import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.slf4j.Logger;
 
@@ -64,10 +59,9 @@ public class JCRMessageManager extends StoreMessageManager {
 
 
     @Override
-    protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException{
+    protected MailboxMessage createMailboxMessage(Message message, Flags flags) throws MailboxException{
         JCRId mailboxId = (JCRId) getMailboxEntity().getMailboxId();
-        return new JCRMailboxMessage(mailboxId, getMessageIdFactory().generate(), internalDate,
-                size, flags, content, bodyStartOctet, propertyBuilder, log);
+        return new JCRMailboxMessage(mailboxId, message, flags, log);
     }
 
     /**

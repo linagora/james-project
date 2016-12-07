@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.store.mail.model.impl;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Date;
 import java.util.List;
 
@@ -35,6 +36,7 @@ import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
@@ -42,6 +44,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 public class SimpleMailboxMessage extends DelegatingMailboxMessage {
+
+    public static SimpleMailboxMessage copy(Message message, Flags flags, MailboxId mailboxId) throws MailboxException {
+        Date internalDate = message.getInternalDate();
+        long size = message.getFullContentOctets();
+        SharedByteArrayInputStream content = copyFullContent(message);
+        int bodyStartOctet = Ints.checkedCast(message.getFullContentOctets() - message.getBodyOctets());
+        PropertyBuilder pBuilder = new PropertyBuilder(message.getProperties());
+        pBuilder.setTextualLineCount(message.getTextualLineCount());
+        return new SimpleMailboxMessage(message.getMessageId(), internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId, message.getAttachments());
+    }
 
     public static SimpleMailboxMessage copy(MailboxId mailboxId, MailboxMessage original) throws MailboxException {
         Date internalDate = original.getInternalDate();
@@ -56,7 +68,23 @@ public class SimpleMailboxMessage extends DelegatingMailboxMessage {
 
     private static SharedByteArrayInputStream copyFullContent(MailboxMessage original) throws MailboxException {
         try {
-            return new SharedByteArrayInputStream(IOUtils.toByteArray(original.getFullContent()));
+            return copyContent(original.getFullContent());
+        } catch (IOException e) {
+            throw new MailboxException("Unable to retrieve message", e);
+        }
+    }
+
+    private static SharedByteArrayInputStream copyFullContent(Message original) throws MailboxException {
+        try {
+            return copyContent(original.getFullContent());
+        } catch (IOException e) {
+            throw new MailboxException("Unable to retrieve message", e);
+        }
+    }
+
+    private static SharedByteArrayInputStream copyContent(InputStream fullContent) throws MailboxException {
+        try {
+            return new SharedByteArrayInputStream(IOUtils.toByteArray(fullContent));
         } catch (IOException e) {
             throw new MailboxException("Unable to parse message", e);
         }

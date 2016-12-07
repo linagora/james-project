@@ -46,8 +46,9 @@ import org.apache.james.mailbox.jcr.JCRImapConstants;
 import org.apache.james.mailbox.jcr.Persistent;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
+import org.apache.james.mailbox.store.mail.model.FlagsOperations;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.comparator.UidComparator;
@@ -56,6 +57,14 @@ import org.slf4j.Logger;
 public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Persistent {
 
     private static final Comparator<MailboxMessage> MESSAGE_UID_COMPARATOR = new UidComparator();
+
+    private static SharedByteArrayInputStream readContent(Message message) throws MailboxException {
+        try {
+            return new SharedByteArrayInputStream(IOUtils.toByteArray(message.getFullContent()));
+        } catch (IOException e) {
+            throw new MailboxException("Can not read content of message " + message.getMessageId(), e);
+        }
+    }
     
     private Node node;
     private final Logger logger;
@@ -107,7 +116,12 @@ public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Pers
         this.logger= logger;
         this.node = node;
     }
-    
+
+    public JCRMailboxMessage(JCRId jcrId, Message message, Flags flags, Logger logger) throws MailboxException {
+        this(jcrId, message.getMessageId(), message.getInternalDate(), (int) message.getFullContentOctets(), flags, readContent(message),
+            (int) (message.getFullContentOctets() - message.getBodyOctets()), new PropertyBuilder(message.getProperties(), message.getTextualLineCount()), logger);
+    }
+
     public JCRMailboxMessage(JCRId mailboxUUID, MessageId messageId, Date internalDate, int size, Flags flags, SharedInputStream content,
                              int bodyStartOctet, PropertyBuilder propertyBuilder, Logger logger) {
         super();
@@ -553,7 +567,7 @@ public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Pers
 
     @Override
     public Flags createFlags() {
-        return FlagsBuilder.createFlags(this, userFlags);
+        return FlagsOperations.createFlags(this, userFlags);
     }
 
     public void unsetRecent() {

@@ -19,8 +19,6 @@
 
 package org.apache.james.mailbox.store;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -33,11 +31,7 @@ import java.util.TreeMap;
 
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
-import javax.mail.internet.SharedInputStream;
-import javax.mail.util.SharedFileInputStream;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.TeeInputStream;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
@@ -72,46 +66,37 @@ import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
+import org.apache.james.mailbox.store.mail.model.FlagsOperations;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
-import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.quota.QuotaChecker;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
-import org.apache.james.mailbox.store.streaming.BodyOffsetInputStream;
-import org.apache.james.mailbox.store.streaming.CountingInputStream;
 import org.apache.james.mailbox.store.transaction.Mapper;
 import org.apache.james.mime4j.MimeException;
-import org.apache.james.mime4j.message.DefaultBodyDescriptorBuilder;
-import org.apache.james.mime4j.message.HeaderImpl;
-import org.apache.james.mime4j.message.MaximalBodyDescriptor;
-import org.apache.james.mime4j.stream.EntityState;
-import org.apache.james.mime4j.stream.MimeConfig;
-import org.apache.james.mime4j.stream.MimeTokenStream;
-import org.apache.james.mime4j.stream.RecursionMode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
 /**
  * Base class for {@link org.apache.james.mailbox.MessageManager}
  * implementations.
- * 
+ *
  * This base class take care of dispatching events to the registered
  * {@link MailboxListener} and so help with handling concurrent
  * {@link MailboxSession}'s.
- * 
- * 
- * 
+ *
+ *
+ *
  */
 public class StoreMessageManager implements org.apache.james.mailbox.MessageManager {
 
     /**
      * The minimal Permanent flags the {@link MessageManager} must support. <br>
-     * 
+     *
      * <strong>Be sure this static instance will never get modifed
      * later!</strong>
      */
@@ -124,9 +109,6 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         MINIMAL_PERMANET_FLAGS.add(Flags.Flag.FLAGGED);
         MINIMAL_PERMANET_FLAGS.add(Flags.Flag.SEEN);
     }
-
-    private static final Logger LOG = LoggerFactory.getLogger(StoreMessageManager.class);
-
 
     private final Mailbox mailbox;
 
@@ -149,12 +131,12 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     private final MessageParser messageParser;
 
     private final Factory messageIdFactory;
-    
+
     private int fetchBatchSize;
 
-    public StoreMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, MailboxEventDispatcher dispatcher, 
-            MailboxPathLocker locker, Mailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver,
-            QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory) throws MailboxException {
+    public StoreMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, MailboxEventDispatcher dispatcher,
+                               MailboxPathLocker locker, Mailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver,
+                               QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory) throws MailboxException {
         this.mailbox = mailbox;
         this.dispatcher = dispatcher;
         this.mapperFactory = mapperFactory;
@@ -175,10 +157,10 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     protected Factory getMessageIdFactory() {
         return messageIdFactory;
     }
-    
+
     /**
      * Return the {@link MailboxPathLocker}
-     * 
+     *
      * @return locker
      */
     protected MailboxPathLocker getLocker() {
@@ -187,7 +169,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     /**
      * Return the {@link MailboxEventDispatcher} for this Mailbox
-     * 
+     *
      * @return dispatcher
      */
     protected MailboxEventDispatcher getDispatcher() {
@@ -196,7 +178,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     /**
      * Return the underlying {@link Mailbox}
-     * 
+     *
      * @return mailbox
      * @throws MailboxException
      */
@@ -210,14 +192,14 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
      * default this are the following flags: <br>
      * {@link Flag#ANSWERED}, {@link Flag#DELETED}, {@link Flag#DRAFT},
      * {@link Flag#FLAGGED}, {@link Flag#RECENT}, {@link Flag#SEEN} <br>
-     * 
+     *
      * Which in fact does not allow to permanent store user flags / keywords.
-     * 
+     *
      * If the sub-class does allow to store "any" user flag / keyword it MUST
      * override this method and add {@link Flag#USER} to the list of returned
      * {@link Flags}. If only a special set of user flags / keywords should be
      * allowed just add them directly.
-     * 
+     *
      * @param session
      * @return flags
      */
@@ -234,12 +216,12 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
      * Returns the flags which are shared for the current mailbox, i.e. the
      * flags set up so that changes to those flags are visible to another user.
      * See RFC 4314 section 5.2.
-     * 
+     *
      * In this implementation, all permanent flags are shared, ergo we simply
      * return {@link #getPermanentFlags(MailboxSession)}
-     * 
+     *
      * @see UnionMailboxACLResolver#isReadWrite(MailboxACLRights, Flags)
-     * 
+     *
      * @param session
      * @return
      */
@@ -250,7 +232,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     /**
      * Return true. If an subclass don't want to store mod-sequences in a
      * permanent way just override this and return false
-     * 
+     *
      * @return true
      */
     public boolean isModSeqPermanent(MailboxSession session) {
@@ -270,137 +252,23 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     @Override
     public ComposedMessageId appendMessage(InputStream msgIn, Date internalDate, final MailboxSession mailboxSession, boolean isRecent, Flags flagsToBeSet) throws MailboxException {
-
-        File file = null;
-        TeeInputStream tmpMsgIn = null;
-        BodyOffsetInputStream bIn = null;
-        FileOutputStream out = null;
-        SharedFileInputStream contentIn = null;
-
         if (!isWriteable(mailboxSession)) {
             throw new ReadOnlyException(getMailboxPath(), mailboxSession.getPathDelimiter());
         }
 
+        MimeMessageReader mimeMessageReader = new MimeMessageReader(messageParser, msgIn);
         try {
-            // Create a temporary file and copy the message to it. We will work
-            // with the file as
-            // source for the InputStream
-            file = File.createTempFile("imap", ".msg");
-            out = new FileOutputStream(file);
+            Message message = mimeMessageReader.read(messageIdFactory.generate(), Optional.fromNullable(internalDate).or(new Date()));
 
-            tmpMsgIn = new TeeInputStream(msgIn, out);
+            final MailboxMessage mailboxMessage = createMailboxMessage(message, FlagsOperations.prepareForAppend(flagsToBeSet, isRecent, getPermanentFlags(mailboxSession)));
 
-            bIn = new BodyOffsetInputStream(tmpMsgIn);
-            // Disable line length... This should be handled by the smtp server
-            // component and not the parser itself
-            // https://issues.apache.org/jira/browse/IMAP-122
-            MimeConfig config = MimeConfig.custom().setMaxLineLen(-1).setMaxHeaderLen(-1).build();
-
-            final MimeTokenStream parser = new MimeTokenStream(config, new DefaultBodyDescriptorBuilder());
-
-            parser.setRecursionMode(RecursionMode.M_NO_RECURSE);
-            parser.parse(bIn);
-            final HeaderImpl header = new HeaderImpl();
-
-            EntityState next = parser.next();
-            while (next != EntityState.T_BODY && next != EntityState.T_END_OF_STREAM && next != EntityState.T_START_MULTIPART) {
-                if (next == EntityState.T_FIELD) {
-                    header.addField(parser.getField());
-                }
-                next = parser.next();
-            }
-            final MaximalBodyDescriptor descriptor = (MaximalBodyDescriptor) parser.getBodyDescriptor();
-            final PropertyBuilder propertyBuilder = new PropertyBuilder();
-            final String mediaType;
-            final String mediaTypeFromHeader = descriptor.getMediaType();
-            final String subType;
-            if (mediaTypeFromHeader == null) {
-                mediaType = "text";
-                subType = "plain";
-            } else {
-                mediaType = mediaTypeFromHeader;
-                subType = descriptor.getSubType();
-            }
-            propertyBuilder.setMediaType(mediaType);
-            propertyBuilder.setSubType(subType);
-            propertyBuilder.setContentID(descriptor.getContentId());
-            propertyBuilder.setContentDescription(descriptor.getContentDescription());
-            propertyBuilder.setContentLocation(descriptor.getContentLocation());
-            propertyBuilder.setContentMD5(descriptor.getContentMD5Raw());
-            propertyBuilder.setContentTransferEncoding(descriptor.getTransferEncoding());
-            propertyBuilder.setContentLanguage(descriptor.getContentLanguage());
-            propertyBuilder.setContentDispositionType(descriptor.getContentDispositionType());
-            propertyBuilder.setContentDispositionParameters(descriptor.getContentDispositionParameters());
-            propertyBuilder.setContentTypeParameters(descriptor.getContentTypeParameters());
-            // Add missing types
-            final String codeset = descriptor.getCharset();
-            if (codeset == null) {
-                if ("TEXT".equalsIgnoreCase(mediaType)) {
-                    propertyBuilder.setCharset("us-ascii");
-                }
-            } else {
-                propertyBuilder.setCharset(codeset);
-            }
-
-            final String boundary = descriptor.getBoundary();
-            if (boundary != null) {
-                propertyBuilder.setBoundary(boundary);
-            }
-            if ("text".equalsIgnoreCase(mediaType)) {
-                final CountingInputStream bodyStream = new CountingInputStream(parser.getInputStream());
-                bodyStream.readAll();
-                long lines = bodyStream.getLineCount();
-                bodyStream.close();
-                next = parser.next();
-                if (next == EntityState.T_EPILOGUE) {
-                    final CountingInputStream epilogueStream = new CountingInputStream(parser.getInputStream());
-                    epilogueStream.readAll();
-                    lines += epilogueStream.getLineCount();
-                    epilogueStream.close();
-
-                }
-                propertyBuilder.setTextualLineCount(lines);
-            }
-
-            final Flags flags;
-            if (flagsToBeSet == null) {
-                flags = new Flags();
-            } else {
-                flags = flagsToBeSet;
-
-                // Check if we need to trim the flags
-                trimFlags(flags, mailboxSession);
-
-            }
-            if (isRecent) {
-                flags.add(Flags.Flag.RECENT);
-            }
-            if (internalDate == null) {
-                internalDate = new Date();
-            }
-            byte[] discard = new byte[4096];
-            while (tmpMsgIn.read(discard) != -1) {
-                // consume the rest of the stream so everything get copied to
-                // the file now
-                // via the TeeInputStream
-            }
-            int bodyStartOctet = (int) bIn.getBodyStartOffset();
-            if (bodyStartOctet == -1) {
-                bodyStartOctet = 0;
-            }
-            contentIn = new SharedFileInputStream(file);
-            final int size = (int) file.length();
-
-            final List<MessageAttachment> attachments = extractAttachments(contentIn);
-            final MailboxMessage message = createMessage(internalDate, size, bodyStartOctet, contentIn, flags, propertyBuilder, attachments);
-
-            new QuotaChecker(quotaManager, quotaRootResolver, mailbox).tryAddition(1, size);
+            new QuotaChecker(quotaManager, quotaRootResolver, mailbox).tryAddition(1, mailboxMessage.getFullContentOctets());
 
             return locker.executeWithLock(mailboxSession, getMailboxPath(), new MailboxPathLocker.LockAwareExecution<ComposedMessageId>() {
 
                 @Override
                 public ComposedMessageId execute() throws MailboxException {
-                    MessageMetaData data = appendMessageToStore(message, attachments, mailboxSession);
+                    MessageMetaData data = appendMessageToStore(mailboxMessage, mailboxMessage.getAttachments(), mailboxSession);
 
                     SortedMap<MessageUid, MessageMetaData> uids = new TreeMap<MessageUid, MessageMetaData>();
                     MessageUid messageUid = data.getUid();
@@ -410,48 +278,25 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
                     return new ComposedMessageId(mailboxId, data.getMessageId(), messageUid);
                 }
             }, true);
-
         } catch (IOException e) {
             throw new MailboxException("Unable to parse message", e);
         } catch (MimeException e) {
             throw new MailboxException("Unable to parse message", e);
         } finally {
-            IOUtils.closeQuietly(bIn);
-            IOUtils.closeQuietly(tmpMsgIn);
-            IOUtils.closeQuietly(out);
-            IOUtils.closeQuietly(contentIn);
-
-            // delete the temporary file if one was specified
-            if (file != null) {
-                if (!file.delete()) {
-                    // Don't throw an IOException. The message could be appended
-                    // and the temporary file
-                    // will be deleted hopefully some day
-                }
-            }
-        }
-
-    }
-
-    private List<MessageAttachment> extractAttachments(SharedFileInputStream contentIn) {
-        try {
-            return messageParser.retrieveAttachments(contentIn);
-        } catch (Exception e) {
-            LOG.warn("Error while parsing mail's attachments: " + e.getMessage(), e);
-            return ImmutableList.of();
+            mimeMessageReader.close();
         }
     }
 
     /**
      * Create a new {@link MailboxMessage} for the given data
      */
-    protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException {
-        return new SimpleMailboxMessage(messageIdFactory.generate(), internalDate, size, bodyStartOctet, content, flags, propertyBuilder, getMailboxEntity().getMailboxId(), attachments);
+    protected MailboxMessage createMailboxMessage(Message message, Flags flags) throws MailboxException {
+        return SimpleMailboxMessage.copy(message, flags, getMailboxEntity().getMailboxId());
     }
 
     /**
      * This mailbox is writable
-     * 
+     *
      * @throws MailboxException
      */
     public boolean isWriteable(MailboxSession session) throws MailboxException {
@@ -468,85 +313,50 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         final Flags permanentFlags = getPermanentFlags(mailboxSession);
         final long uidValidity = getMailboxEntity().getUidValidity();
         MessageUid uidNext = mapperFactory.getMessageMapper(mailboxSession).getLastUid(mailbox)
-                .transform(new Function<MessageUid, MessageUid>() {
-                    public MessageUid apply(MessageUid input) {
-                        return input.next();
-                    }})
-                .or(MessageUid.MIN_VALUE);
+            .transform(new Function<MessageUid, MessageUid>() {
+                public MessageUid apply(MessageUid input) {
+                    return input.next();
+                }})
+            .or(MessageUid.MIN_VALUE);
         final long highestModSeq = mapperFactory.getMessageMapper(mailboxSession).getHighestModSeq(mailbox);
         final long messageCount;
         final long unseenCount;
         final MessageUid firstUnseen;
         switch (fetchGroup) {
-        case UNSEEN_COUNT:
-            unseenCount = countUnseenMessagesInMailbox(mailboxSession);
-            messageCount = getMessageCount(mailboxSession);
-            firstUnseen = null;
-            recent = recent(resetRecent, mailboxSession);
+            case UNSEEN_COUNT:
+                unseenCount = countUnseenMessagesInMailbox(mailboxSession);
+                messageCount = getMessageCount(mailboxSession);
+                firstUnseen = null;
+                recent = recent(resetRecent, mailboxSession);
 
-            break;
-        case FIRST_UNSEEN:
-            firstUnseen = findFirstUnseenMessageUid(mailboxSession);
-            messageCount = getMessageCount(mailboxSession);
-            unseenCount = 0;
-            recent = recent(resetRecent, mailboxSession);
+                break;
+            case FIRST_UNSEEN:
+                firstUnseen = findFirstUnseenMessageUid(mailboxSession);
+                messageCount = getMessageCount(mailboxSession);
+                unseenCount = 0;
+                recent = recent(resetRecent, mailboxSession);
 
-            break;
-        case NO_UNSEEN:
-            firstUnseen = null;
-            unseenCount = 0;
-            messageCount = getMessageCount(mailboxSession);
-            recent = recent(resetRecent, mailboxSession);
+                break;
+            case NO_UNSEEN:
+                firstUnseen = null;
+                unseenCount = 0;
+                messageCount = getMessageCount(mailboxSession);
+                recent = recent(resetRecent, mailboxSession);
 
-            break;
-        default:
-            firstUnseen = null;
-            unseenCount = 0;
-            messageCount = -1;
-            // just reset the recent but not include them in the metadata
-            if (resetRecent) {
-                recent(resetRecent, mailboxSession);
-            }
-            recent = new ArrayList<MessageUid>();
-            break;
+                break;
+            default:
+                firstUnseen = null;
+                unseenCount = 0;
+                messageCount = -1;
+                // just reset the recent but not include them in the metadata
+                if (resetRecent) {
+                    recent(resetRecent, mailboxSession);
+                }
+                recent = new ArrayList<MessageUid>();
+                break;
         }
         MailboxACL resolvedAcl = getResolvedMailboxACL(mailboxSession);
         return new MailboxMetaData(recent, permanentFlags, uidValidity, uidNext, highestModSeq, messageCount, unseenCount, firstUnseen, isWriteable(mailboxSession), isModSeqPermanent(mailboxSession), resolvedAcl);
-    }
-
-    /**
-     * Check if the given {@link Flags} contains {@link Flags} which are not
-     * included in the returned {@link Flags} of
-     * {@link #getPermanentFlags(MailboxSession)}. If any are found, these are
-     * removed from the given {@link Flags} instance. The only exception is the
-     * {@link Flag#RECENT} flag.
-     * 
-     * This flag is never removed!
-     * 
-     * @param flags
-     * @param session
-     */
-    private void trimFlags(Flags flags, MailboxSession session) {
-
-        Flags permFlags = getPermanentFlags(session);
-
-        Flag[] systemFlags = flags.getSystemFlags();
-        for (Flag f : systemFlags) {
-            if (f != Flag.RECENT && permFlags.contains(f) == false) {
-                flags.remove(f);
-            }
-        }
-        // if the permFlags contains the special USER flag we can skip this as
-        // all user flags are allowed
-        if (permFlags.contains(Flags.Flag.USER) == false) {
-            String[] uFlags = flags.getUserFlags();
-            for (String uFlag : uFlags) {
-                if (permFlags.contains(uFlag) == false) {
-                    flags.remove(uFlag);
-                }
-            }
-        }
-
     }
 
     /**
@@ -554,21 +364,21 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
      *      boolean, boolean, org.apache.james.mailbox.model.MessageRange,
      *      org.apache.james.mailbox.MailboxSession)
      */
-    public Map<MessageUid, Flags> setFlags(final Flags flags, final FlagsUpdateMode flagsUpdateMode, final MessageRange set, MailboxSession mailboxSession) throws MailboxException {
+    public Map<MessageUid, Flags> setFlags(Flags flags, final FlagsUpdateMode flagsUpdateMode, final MessageRange set, MailboxSession mailboxSession) throws MailboxException {
 
         if (!isWriteable(mailboxSession)) {
             throw new ReadOnlyException(getMailboxPath(), mailboxSession.getPathDelimiter());
         }
         final SortedMap<MessageUid, Flags> newFlagsByUid = new TreeMap<MessageUid, Flags>();
 
-        trimFlags(flags, mailboxSession);
+        final Flags trimedFlags = FlagsOperations.trim(flags, getPermanentFlags(mailboxSession));
 
         final MessageMapper messageMapper = mapperFactory.getMessageMapper(mailboxSession);
 
         Iterator<UpdatedFlags> it = messageMapper.execute(new Mapper.Transaction<Iterator<UpdatedFlags>>() {
 
             public Iterator<UpdatedFlags> run() throws MailboxException {
-                return messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdateCalculator(flags, flagsUpdateMode), set);
+                return messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdateCalculator(trimedFlags, flagsUpdateMode), set);
             }
         });
 
@@ -587,7 +397,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     /**
      * Copy the {@link MessageRange} to the {@link StoreMessageManager}
-     * 
+     *
      * @param set
      * @param toMailbox
      * @param session
@@ -611,7 +421,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     /**
      * Move the {@link MessageRange} to the {@link StoreMessageManager}
-     * 
+     *
      * @param set
      * @param toMailbox
      * @param session
@@ -759,7 +569,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
             movedRows.add(data);
         }
         return new MoveResult(movedRows.iterator(), originalRowsCopy.iterator());
-	}
+    }
 
 
     private SortedMap<MessageUid, MessageMetaData> copy(MessageRange set, StoreMessageManager to, MailboxSession session) throws MailboxException {
@@ -789,7 +599,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     }
     /**
      * Return the count of unseen messages
-     * 
+     *
      * @param session
      * @return count of unseen messages
      * @throws MailboxException
@@ -818,7 +628,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     /**
      * Applies the global ACL (if there are any) to the mailbox ACL.
-     * 
+     *
      * @param mailboxSession
      * @return the ACL of the present mailbox merged with the global ACL (if
      *         there are any).
@@ -827,12 +637,12 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     protected MailboxACL getResolvedMailboxACL(MailboxSession mailboxSession) throws UnsupportedRightException {
         return aclResolver.applyGlobalACL(mailbox.getACL(), new GroupFolderResolver(mailboxSession).isGroupFolder(mailbox));
     }
-    
+
     @Override
     public MailboxId getId() {
         return mailbox.getMailboxId();
     }
-    
+
     @Override
     public MailboxPath getMailboxPath() throws MailboxException {
         return new StoreMailboxPath(getMailboxEntity());

@@ -19,11 +19,7 @@
 
 package org.apache.james.mailbox.jpa.openjpa;
 
-import java.util.Date;
-import java.util.List;
-
 import javax.mail.Flags;
-import javax.mail.internet.SharedInputStream;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
@@ -33,7 +29,6 @@ import org.apache.james.mailbox.jpa.JPAMessageManager;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAEncryptedMailboxMessage;
 import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAStreamingMailboxMessage;
-import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
@@ -41,8 +36,8 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
-import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
 /**
@@ -80,18 +75,14 @@ public class OpenJPAMessageManager extends JPAMessageManager {
     }
 
     @Override
-    protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException {
-        int headerEnd = bodyStartOctet -2;
-        if (headerEnd < 0) {
-            headerEnd = 0;
-        }
+    protected MailboxMessage createMailboxMessage(Message message, Flags flags) throws MailboxException {
         switch (feature) {
-        case Streaming:
-            return new JPAStreamingMailboxMessage((JPAMailbox) getMailboxEntity(), internalDate, size, flags, content, bodyStartOctet, propertyBuilder);
-        case Encryption:
-            return new JPAEncryptedMailboxMessage((JPAMailbox) getMailboxEntity(), internalDate, size, flags, content, bodyStartOctet, propertyBuilder);
-        default:
-            return super.createMessage(internalDate, size, bodyStartOctet, content, flags,  propertyBuilder, attachments);
+            case Streaming:
+                return new JPAStreamingMailboxMessage((JPAMailbox) getMailboxEntity(), message, flags);
+            case Encryption:
+                return new JPAEncryptedMailboxMessage((JPAMailbox) getMailboxEntity(), message, flags);
+            default:
+                return super.createMailboxMessage(message, flags);
         }
        
     }
