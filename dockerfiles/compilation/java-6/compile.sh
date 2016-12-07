@@ -43,14 +43,26 @@ git checkout $SHA1
 
 # Compilation
 
+## Compile and install maven mailetdocs plugin
+mvn clean package install:install -pl mailet/mailetdocs-maven-plugin
+
+## Compile James
 if [ "$SKIPTESTS" = "skipTests" ]; then
    mvn package -DskipTests -Pjpa,lucene,jpa-lucene,with-assembly
 else
    mvn package -Pjpa,lucene,jpa-lucene,with-assembly
 fi
 
-# Retrieve result
-
 if [ $? -eq 0 ]; then
    cp server/app/target/james-server-app-*-app.zip $DESTINATION
+fi
+
+## Generate the mailetdocs
+mvn org.apache.james:mailetdocs-maven-plugin:aggregate
+
+if [ $? -eq 0 ]; then
+   if [ ! -d "$DESTINATION/mailetdocs" ]; then
+      mkdir $DESTINATION/mailetdocs
+   fi
+   cp target/site/mailet-report.html $DESTINATION/mailetdocs
 fi
