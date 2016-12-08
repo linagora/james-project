@@ -16,15 +16,32 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.model;
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+class TestId implements MailboxId {
+    private final String id;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
-
-public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
-
-    public MessageDeletedDuringFlagsUpdateException(CassandraId id, CassandraMessageId messageId) {
-        super("Can not perform flag update as message was deleted for mailbox " + id.serialize() + " and message " + messageId.serialize());
+    public TestId(String id) {
+        this.id = id;
     }
+
+    public static TestId of(String id) {
+        return new TestId(id);
+    }
+    
+    @Override
+    public String serialize() {
+        return id;
+    }
+    
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof TestId
+                && id.equals(((TestId)other).id);
+    }
+    
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    };
 }
