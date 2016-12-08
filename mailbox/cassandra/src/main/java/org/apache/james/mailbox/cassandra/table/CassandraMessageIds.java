@@ -17,14 +17,11 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+package org.apache.james.mailbox.cassandra.table;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+public interface CassandraMessageIds {
 
-public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
-
-    public MessageDeletedDuringFlagsUpdateException(CassandraId id, CassandraMessageId messageId) {
-        super("Can not perform flag update as message was deleted for mailbox " + id.serialize() + " and message " + messageId.serialize());
-    }
+    String MESSAGE_ID = "messageId";
+    String MAILBOX_ID = "mailboxId";
+    String IMAP_UID = "uid";
 }

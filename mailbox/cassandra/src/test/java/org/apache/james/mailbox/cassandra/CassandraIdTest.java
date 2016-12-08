@@ -16,15 +16,41 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.cassandra;
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+import java.util.UUID;
 
-public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-    public MessageDeletedDuringFlagsUpdateException(CassandraId id, CassandraMessageId messageId) {
-        super("Can not perform flag update as message was deleted for mailbox " + id.serialize() + " and message " + messageId.serialize());
+import nl.jqno.equalsverifier.EqualsVerifier;
+
+public class CassandraIdTest {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void beanShouldRespectBeanContract() {
+        EqualsVerifier.forClass(CassandraId.class)
+            .verify();
+    }
+
+    @Test
+    public void fromStringShouldWorkWhenParameterIsAnUUID() {
+        UUID id = UUID.randomUUID();
+
+        CassandraId cassandraId = new CassandraId.Factory().fromString(id.toString());
+
+        assertThat(cassandraId.asUuid()).isEqualTo(id);
+    }
+
+    @Test
+    public void fromStringShouldThrowWhenParameterIsNotAnUUID() {
+        expectedException.expect(IllegalArgumentException.class);
+        new CassandraId.Factory().fromString("not an UUID");
     }
 }
