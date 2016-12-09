@@ -73,6 +73,7 @@ import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.MimeDescriptor;
 import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -226,7 +227,11 @@ public class MailboxEventAnalyserTest {
                             done = true;
                             return new MessageResult() {
 
-                                
+                                @Override
+                                public MailboxId getMailboxId() {
+                                    return TestId.of(36);
+                                }
+
                                 public int compareTo(MessageResult o) {
                                     return 0;
                                 }
