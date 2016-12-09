@@ -17,14 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+package org.apache.james.mailbox;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+import org.apache.james.mailbox.model.ComposedMessageId;
+import org.junit.Test;
 
-public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
+import nl.jqno.equalsverifier.EqualsVerifier;
 
-    public MessageDeletedDuringFlagsUpdateException(CassandraId id, CassandraMessageId messageId) {
-        super("Can not perform flag update as message was deleted for mailbox " + id.serialize() + " and message " + messageId.serialize());
+public class BeansTest {
+
+    @Test
+    public void beanShouldRespectBeanContract() {
+        EqualsVerifier.forClass(ComposedMessageId.class)
+            .verify();
     }
 }

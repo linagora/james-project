@@ -16,15 +16,17 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.util;
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+import java.util.Optional;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+public class OptionalConverter {
 
-public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
+    public static <T> Optional<T> fromGuava(com.google.common.base.Optional<T> guava) {
+        return Optional.ofNullable(guava.orNull());
+    }
 
-    public MessageDeletedDuringFlagsUpdateException(CassandraId id, CassandraMessageId messageId) {
-        super("Can not perform flag update as message was deleted for mailbox " + id.serialize() + " and message " + messageId.serialize());
+    public static <T> com.google.common.base.Optional<T> toGuava(Optional<T> java) {
+        return com.google.common.base.Optional.fromNullable(java.orElse(null));
     }
 }

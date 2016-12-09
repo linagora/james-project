@@ -16,15 +16,33 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.cassandra.mail;
 
-package org.apache.james.mailbox.cassandra.mail.utils;
+import javax.mail.Flags;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.table.Flag;
 
-public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
+import com.datastax.driver.core.Row;
 
-    public MessageDeletedDuringFlagsUpdateException(CassandraId id, CassandraMessageId messageId) {
-        super("Can not perform flag update as message was deleted for mailbox " + id.serialize() + " and message " + messageId.serialize());
+public class FlagsExtractor {
+
+    private final Row row;
+
+    public FlagsExtractor(Row row) {
+        this.row = row;
     }
+
+    public Flags getFlags() {
+        Flags flags = new Flags();
+        for (String flag : Flag.ALL) {
+            if (row.getBool(flag)) {
+                flags.add(Flag.JAVAX_MAIL_FLAG.get(flag));
+            }
+        }
+        row.getSet(Flag.USER_FLAGS, String.class)
+            .stream()
+            .forEach(flags::add);
+        return flags;
+    }
+
 }

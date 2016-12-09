@@ -16,51 +16,33 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
-package org.apache.james.mailbox.store.mail.model;
+package org.apache.james.mailbox.store.mail;
 
 import java.util.List;
+import java.util.Map;
 
-import org.apache.james.mailbox.MessageUid;
+import javax.mail.Flags;
+
+import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageIdMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
-public interface MapperProvider {
-    enum Capabilities {
-        MESSAGE,
-        MAILBOX,
-        ATTACHMENT,
-        ANNOTATION,
-        MOVE
-    }
+public interface MessageIdMapper {
 
-    List<Capabilities> getNotImplemented();
+    List<MailboxMessage> find(List<MessageId> messageIds, FetchType fetchType);
 
-    MailboxMapper createMailboxMapper() throws MailboxException;
+    List<MailboxId> findMailboxes(MessageId messageId);
 
-    MessageMapper createMessageMapper() throws MailboxException;
+    void save(MailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
 
-    MessageIdMapper createMessageIdMapper() throws MailboxException;
+    void delete(MessageId messageId);
 
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
+    void delete(MessageId messageId, List<MailboxId> mailboxIds);
 
-    AnnotationMapper createAnnotationMapper() throws MailboxException;
-
-    MailboxId generateId();
-
-    MessageUid generateMessageUid();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
-
-    boolean supportPartialAttachmentFetch();
-    
-    MessageId generateMessageId();
+    Map<MailboxId, UpdatedFlags> setFlags(Flags newState, MessageManager.FlagsUpdateMode updateMode, MessageId messageId) throws MailboxException;
 }
