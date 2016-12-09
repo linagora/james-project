@@ -24,9 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.BadCredentialsException;
@@ -95,6 +97,11 @@ public class FirstUserConnectionFilterThreadTest {
 
         public FakeMailboxManager(MailboxSession mailboxSession) {
             this.mailboxSession = mailboxSession;
+        }
+
+        @Override
+        public MessageIdManager getMessageIdManager() {
+            throw new NotImplementedException();
         }
 
         @Override

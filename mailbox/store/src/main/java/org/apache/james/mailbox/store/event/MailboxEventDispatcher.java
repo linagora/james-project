@@ -22,6 +22,7 @@ package org.apache.james.mailbox.store.event;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
@@ -30,6 +31,9 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Helper class to dispatch {@link org.apache.james.mailbox.MailboxListener.Event}'s to registerend MailboxListener
@@ -56,6 +60,12 @@ public class MailboxEventDispatcher {
         listener.event(eventFactory.added(session, uids, mailbox));
     }
 
+    public void added(MailboxSession session, MessageMetaData messageMetaData, Mailbox mailbox) {
+        SortedMap<MessageUid, MessageMetaData> metaDataMap = new TreeMap<MessageUid, MessageMetaData>();
+        metaDataMap.put(messageMetaData.getUid(), messageMetaData);
+        added(session, metaDataMap, mailbox);
+    }
+
     /**
      * Should get called when a message was expunged from a Mailbox. All
      * registered MailboxListener will get triggered then
@@ -68,12 +78,23 @@ public class MailboxEventDispatcher {
         listener.event(eventFactory.expunged(session, uids, mailbox));
     }
 
+    public void expunged(MailboxSession session,  MessageMetaData messageMetaData, Mailbox mailbox) {
+        Map<MessageUid, MessageMetaData> metaDataMap = ImmutableMap.<MessageUid, MessageMetaData>builder()
+            .put(messageMetaData.getUid(), messageMetaData)
+            .build();
+        expunged(session, metaDataMap, mailbox);
+    }
+
     /**
      * Should get called when the message flags were update in a Mailbox. All
      * registered MailboxListener will get triggered then
      */
     public void flagsUpdated(MailboxSession session, List<MessageUid> uids, Mailbox mailbox, List<UpdatedFlags> uflags) {
         listener.event(eventFactory.flagsUpdated(session, uids, mailbox, uflags));
+    }
+
+    public void flagsUpdated(MailboxSession session, MessageUid uid, Mailbox mailbox, UpdatedFlags uflags) {
+        flagsUpdated(session, ImmutableList.of(uid), mailbox, ImmutableList.of(uflags));
     }
 
     /**

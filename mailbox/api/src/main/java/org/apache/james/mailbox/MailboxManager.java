@@ -130,6 +130,11 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
     MessageManager getMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
 
     /**
+     * Retrieves instance of the MessageIdManager
+     */
+    MessageIdManager getMessageIdManager();
+
+    /**
      * Gets an object managing the given mailbox.
      * 
      * @param mailboxId

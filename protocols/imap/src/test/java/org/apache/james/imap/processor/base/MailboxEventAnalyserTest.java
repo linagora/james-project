@@ -46,6 +46,7 @@ import org.apache.james.imap.api.process.SelectedMailbox;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.BadCredentialsException;
@@ -84,6 +85,11 @@ public class MailboxEventAnalyserTest {
     
     private MailboxPath mailboxPath = new MailboxPath("namespace", "user", "name");
     private final MailboxManager mockManager = new MailboxManager() {
+
+        @Override
+        public MessageIdManager getMessageIdManager() {
+            throw new NotImplementedException();
+        }
 
         @Override
         public EnumSet<MailboxCapabilities> getSupportedMailboxCapabilities() {

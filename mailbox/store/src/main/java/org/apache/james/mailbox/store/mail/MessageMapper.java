@@ -26,6 +26,7 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -211,7 +212,48 @@ public interface MessageMapper extends Mapper {
          * Fetch the complete {@link MailboxMessage}
          * 
          */
-        Full
+        Full;
+
+        public static FetchType getFetchType(MessageResult.FetchGroup group) {
+            int content = group.content();
+            boolean headers = false;
+            boolean body = false;
+            boolean full = false;
+
+            if ((content & MessageResult.FetchGroup.HEADERS) > 0) {
+                headers = true;
+                content -= MessageResult.FetchGroup.HEADERS;
+            }
+            if (group.getPartContentDescriptors().size() > 0) {
+                full = true;
+            }
+            if ((content & MessageResult.FetchGroup.BODY_CONTENT ) > 0 ) {
+                body = true;
+                content -= MessageResult.FetchGroup.BODY_CONTENT;
+            }
+
+            if ((content & MessageResult.FetchGroup.FULL_CONTENT) > 0) {
+                full = true;
+                content -= MessageResult.FetchGroup.FULL_CONTENT;
+            }
+
+            if ((content & MessageResult.FetchGroup.MIME_DESCRIPTOR) > 0) {
+                // If we need the mimedescriptor we MAY need the full content later
+                // too.
+                // This gives us no other choice then request it
+                full = true;
+                content -= MessageResult.FetchGroup.MIME_DESCRIPTOR;
+            }
+            if (full || (body && headers)) {
+                return FetchType.Full;
+            } else if (body) {
+                return FetchType.Body;
+            } else if (headers) {
+                return FetchType.Headers;
+            } else {
+                return FetchType.Metadata;
+            }
+        }
     }
 
 }

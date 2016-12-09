@@ -8,8 +8,11 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
+import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
 /**
@@ -19,7 +22,7 @@ import org.apache.james.mailbox.store.user.SubscriptionMapper;
  * 
  */
 public class CachingMailboxSessionMapperFactory extends
-		MailboxSessionMapperFactory {
+        MailboxSessionMapperFactory {
 
 	private final MailboxSessionMapperFactory underlying;
 	private final MailboxByPathCache mailboxByPathCache;
@@ -37,17 +40,22 @@ public class CachingMailboxSessionMapperFactory extends
 		return new CachingMessageMapper(underlying.createMessageMapper(session), mailboxMetadataCache);
 	}
 
-	@Override
-	public MailboxMapper createMailboxMapper(MailboxSession session)
-			throws MailboxException {
-		return new CachingMailboxMapper(underlying.createMailboxMapper(session), mailboxByPathCache);
-	}
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException {
+        throw new NotImplementedException();
+    }
 
-	@Override
-	public SubscriptionMapper createSubscriptionMapper(MailboxSession session)
-			throws SubscriptionException {
-		return underlying.createSubscriptionMapper(session);
-	}
+    @Override
+    public MailboxMapper createMailboxMapper(MailboxSession session)
+            throws MailboxException {
+        return new CachingMailboxMapper(underlying.createMailboxMapper(session), mailboxByPathCache);
+    }
+
+    @Override
+    public SubscriptionMapper createSubscriptionMapper(MailboxSession session)
+            throws SubscriptionException {
+        return underlying.createSubscriptionMapper(session);
+    }
 
     @Override
     public AttachmentMapper createAttachmentMapper(MailboxSession session) throws MailboxException {
@@ -60,4 +68,13 @@ public class CachingMailboxSessionMapperFactory extends
         throw new NotImplementedException();
     }
 
+    @Override
+    public UidProvider getUidProvider() {
+        return underlying.getUidProvider();
+    }
+
+    @Override
+    public ModSeqProvider getModSeqProvider() {
+        return underlying.getModSeqProvider();
+    }
 }
