@@ -147,7 +147,7 @@ public class StoreMailboxManager implements MailboxManager {
             MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, MessageParser messageParser,
             MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize) {
         this(mailboxSessionMapperFactory, authenticator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory,
-                MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX, MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE);
+                limitOfAnnotations, limitAnnotationSize);
     }
 
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, 
@@ -672,7 +672,7 @@ public class StoreMailboxManager implements MailboxManager {
                             inferiors = MailboxMetaData.Children.HAS_NO_CHILDREN;
                         }
                         MailboxPath mailboxPath = new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), name);
-                        results.add(new SimpleMailboxMetaData(mailboxPath, getDelimiter(), inferiors, Selectability.NONE));
+                        results.add(new SimpleMailboxMetaData(mailboxPath, mailbox.getMailboxId(), getDelimiter(), inferiors, Selectability.NONE));
                     }
                 }
             }

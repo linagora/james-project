@@ -19,35 +19,26 @@
 
 package org.apache.james.mailbox.inmemory.manager;
 
-import java.util.List;
-
-import javax.mail.Flags;
-
 import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
-import org.apache.james.mailbox.MessageManager.FlagsUpdateMode;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
+import org.apache.james.mailbox.inmemory.InMemoryMessageId;
+import org.apache.james.mailbox.inmemory.InMemoryMessageIdManager;
 import org.apache.james.mailbox.inmemory.quota.InMemoryCurrentQuotaManager;
 import org.apache.james.mailbox.inmemory.quota.InMemoryPerUserMaxQuotaManager;
 import org.apache.james.mailbox.manager.IntegrationResources;
 import org.apache.james.mailbox.manager.ManagerTestResources;
-import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.model.MessageResult.FetchGroup;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.FakeAuthenticator;
 import org.apache.james.mailbox.store.NoMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.CurrentQuotaCalculator;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
@@ -64,7 +55,6 @@ public class InMemoryIntegrationResources implements IntegrationResources {
         FakeAuthenticator mockAuthenticator = new FakeAuthenticator();
         mockAuthenticator.addUser(ManagerTestResources.USER, ManagerTestResources.USER_PASS);
         InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
-        MessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
         final StoreMailboxManager manager = new InMemoryMailboxManager(
             mailboxSessionMapperFactory,
             mockAuthenticator,
@@ -72,35 +62,14 @@ public class InMemoryIntegrationResources implements IntegrationResources {
             new UnionMailboxACLResolver(),
             groupMembershipResolver,
             new MessageParser(),
-            messageIdFactory);
+            new InMemoryMessageId.Factory());
         manager.init();
         return manager;
     }
 
     @Override
     public MessageIdManager createMessageIdManager(MailboxManager mailboxManager) {
-        return new MessageIdManager() {
-            @Override
-            public void delete(MessageId messageId, List<MailboxId> mailboxIds, MailboxSession mailboxSession)
-                    throws MailboxException {
-            }
-
-            @Override
-            public List<MessageResult> getMessages(List<MessageId> messageId, FetchGroup minimal,
-                    MailboxSession mailboxSession) throws MailboxException {
-                return null;
-            }
-            
-            @Override
-            public void setInMailboxes(MessageId messageId, List<MailboxId> mailboxIds, MailboxSession mailboxSession)
-                    throws MailboxException {
-            }
-
-            @Override
-            public void setFlags(Flags newState, FlagsUpdateMode replace, MessageId messageId, List<MailboxId> mailboxIds,
-                    MailboxSession mailboxSession) throws MailboxException {
-            }
-        };
+        return new InMemoryMessageIdManager(mailboxManager);
     }
     
     @Override
