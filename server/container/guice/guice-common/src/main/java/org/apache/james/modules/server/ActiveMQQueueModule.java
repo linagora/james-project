@@ -21,6 +21,8 @@ package org.apache.james.modules.server;
 
 import javax.jms.ConnectionFactory;
 
+import org.apache.activemq.store.PersistenceAdapter;
+import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
 import org.apache.james.jmap.send.PostDequeueDecoratorFactory;
 import org.apache.james.queue.activemq.ActiveMQMailQueueFactory;
 import org.apache.james.queue.api.MailQueueFactory;
@@ -39,6 +41,8 @@ public class ActiveMQQueueModule extends AbstractModule {
     
     @Override
     protected void configure() {
+        bind(PersistenceAdapter.class).to(KahaDBPersistenceAdapter.class);
+        bind(KahaDBPersistenceAdapter.class).in(Scopes.SINGLETON);
         bind(EmbeddedActiveMQ.class).in(Scopes.SINGLETON);
         bind(MailQueueItemDecoratorFactory.class).to(PostDequeueDecoratorFactory.class).in(Scopes.SINGLETON);
     }
