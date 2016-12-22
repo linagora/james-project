@@ -21,6 +21,8 @@ package org.apache.james.jmap;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.fluent.Request;
@@ -28,23 +30,43 @@ import org.apache.http.client.fluent.Response;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
 
+import com.jayway.awaitility.Awaitility;
+import com.jayway.awaitility.Duration;
+import com.jayway.awaitility.core.ConditionFactory;
 import com.jayway.jsonpath.JsonPath;
 
 public class HttpJmapAuthentication {
 
+    private static final ConditionFactory CALMLY_AWAIT = Awaitility.with()
+            .pollInterval(Duration.FIVE_HUNDRED_MILLISECONDS)
+            .and().with()
+            .pollDelay(Duration.FIVE_HUNDRED_MILLISECONDS)
+            .await();
+
     public static AccessToken authenticateJamesUser(URIBuilder uriBuilder, String username, String password) throws ClientProtocolException, IOException, URISyntaxException {
         String continuationToken = getContinuationToken(uriBuilder, username);
 
-        Response response = Request.Post(uriBuilder.setPath("/authentication").build())
-                .bodyString("{\"token\": \"" + continuationToken + "\", \"method\": \"password\", \"password\": \"" + password + "\"}", 
-                        ContentType.APPLICATION_JSON)
-                .setHeader("Accept", ContentType.APPLICATION_JSON.getMimeType())
-                .execute();
-        
+        Optional<Response> response = CALMLY_AWAIT.atMost(30, TimeUnit.SECONDS)
+        .until(() -> postAuthenticate(uriBuilder, password, continuationToken), new OptionalMatcher());
+
         return AccessToken.fromString(
-                    JsonPath.parse(response.returnContent().asString())
+                    JsonPath.parse(response.get().returnContent().asString())
                     .read("accessToken"));
+    }
+
+    private static Optional<Response> postAuthenticate(URIBuilder uriBuilder, String password, String continuationToken) {
+        try {
+            return Optional.of(Request.Post(uriBuilder.setPath("/authentication").build())
+                    .bodyString("{\"token\": \"" + continuationToken + "\", \"method\": \"password\", \"password\": \"" + password + "\"}", 
+                            ContentType.APPLICATION_JSON)
+                    .setHeader("Accept", ContentType.APPLICATION_JSON.getMimeType())
+                    .execute());
+        } catch (IOException | URISyntaxException e) {
+            return Optional.empty();
+        }
     }
 
     private static String getContinuationToken(URIBuilder uriBuilder, String username) throws ClientProtocolException, IOException, URISyntaxException {
@@ -56,4 +78,22 @@ public class HttpJmapAuthentication {
         return JsonPath.parse(response.returnContent().asString())
             .read("continuationToken");
     }
+
+    private static class OptionalMatcher extends TypeSafeMatcher<Optional<?>> {
+        
+        public void describeTo(Description description) {
+            description.appendText("is <Present>");
+        }
+
+        @Override
+        protected boolean matchesSafely(Optional<?> item) {
+            return item.isPresent();
+        }
+        
+        @Override
+        protected void describeMismatchSafely(Optional<?> item, Description mismatchDescription) {
+            mismatchDescription.appendText("was <Empty>");
+        }
+    }
+
 }
