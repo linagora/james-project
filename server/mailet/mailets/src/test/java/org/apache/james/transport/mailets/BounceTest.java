@@ -24,9 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.UnknownHostException;
-import java.util.Properties;
 
-import javax.mail.Session;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.dnsservice.api.DNSService;
@@ -34,6 +32,7 @@ import org.apache.mailet.MailAddress;
 import org.apache.mailet.base.test.FakeMail;
 import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMailetConfig;
+import org.apache.mailet.base.test.MimeMessageBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,7 +69,7 @@ public class BounceTest {
                 .name(MAILET_NAME)
                 .recipient(recipientMailAddress)
                 .build();
-        MimeMessage mimeMessage = new MimeMessage(Session.getDefaultInstance(new Properties()));
+        MimeMessage mimeMessage = MimeMessageBuilder.defaultMimeMessage();
         mimeMessage.setText("My content");
         mail.setMessage(mimeMessage);
 

@@ -27,9 +27,13 @@ import org.apache.mailet.MailAddress;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This is a generic matcher that uses regular expressions.  If any of
@@ -77,6 +81,8 @@ abstract public class GenericRegexMatcher extends GenericMatcher {
             //Loop through the header values
             if (headers != null) for (String header : headers) {
                 if (pattern.matcher(header).matches()) {
+                    System.out.println(headerName);
+                    System.out.println(ImmutableList.copyOf(Arrays.asList(headers)));
                     // log("Match: " + headerName + "[" + j + "]: " + headers[j]);
                     return mail.getRecipients();
                 }
