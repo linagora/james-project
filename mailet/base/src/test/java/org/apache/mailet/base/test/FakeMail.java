@@ -55,7 +55,13 @@ public class FakeMail implements Mail {
                     new ByteArrayInputStream(text.getBytes(javaEncodingCharset))))
                 .build();
     }
-    
+
+    public static FakeMail from(MimeMessage message) throws MessagingException {
+        return builder()
+                .mimeMessage(message)
+                .build();
+    }
+
     public static Builder builder() {
         return new Builder();
     }

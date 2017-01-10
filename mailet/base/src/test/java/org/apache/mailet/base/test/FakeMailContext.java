@@ -63,14 +63,24 @@ public class FakeMailContext implements MailetContext {
     public static class Builder {
 
         private Logger logger;
+        private Optional<MailAddress> postmaster;
+
+        private Builder() {
+            postmaster = Optional.absent();
+        }
 
         public Builder logger(Logger logger) {
             this.logger = logger;
             return this;
         }
 
+        public Builder postmaster(MailAddress postmaster) {
+            this.postmaster = Optional.of(postmaster);
+            return this;
+        }
+
         public FakeMailContext build() {
-            return new FakeMailContext(Optional.fromNullable(logger));
+            return new FakeMailContext(Optional.fromNullable(logger), postmaster.orNull());
         }
     }
 
@@ -122,6 +132,7 @@ public class FakeMailContext implements MailetContext {
         private final MailAddress sender;
         private final Collection<MailAddress> recipients;
         private final MimeMessage msg;
+        private final Optional<String> subject;
         private final Map<String, Serializable> attributes;
         private final String state;
 
@@ -129,8 +140,17 @@ public class FakeMailContext implements MailetContext {
             this.sender = sender;
             this.recipients = ImmutableList.copyOf(recipients);
             this.msg = msg;
+            this.subject = getSubject(msg);
             this.attributes = ImmutableMap.copyOf(attributes);
             this.state = state;
+        }
+
+        private Optional<String> getSubject(MimeMessage msg) {
+            try {
+                return Optional.fromNullable(msg.getSubject());
+            } catch (Exception e) {
+                return Optional.absent();
+            }
         }
 
         public MailAddress getSender() {
@@ -147,6 +167,10 @@ public class FakeMailContext implements MailetContext {
 
         public String getState() {
             return state;
+        }
+
+        public Optional<String> getSubject() {
+            return subject;
         }
 
         @Override
@@ -182,11 +206,13 @@ public class FakeMailContext implements MailetContext {
     private final HashMap<String, Object> attributes;
     private final List<SentMail> sentMails;
     private final Optional<Logger> logger;
+    private final MailAddress postmaster;
 
-    private FakeMailContext(Optional<Logger> logger) {
+    private FakeMailContext(Optional<Logger> logger, MailAddress postmaster) {
         attributes = new HashMap<String, Object>();
         sentMails = new ArrayList<SentMail>();
         this.logger = logger;
+        this.postmaster = postmaster;
     }
 
     public void bounce(Mail mail, String message) throws MessagingException {
@@ -205,7 +231,7 @@ public class FakeMailContext implements MailetContext {
     }
 
     public MailAddress getPostmaster() {
-        return null;  // trivial implementation
+        return postmaster;
     }
 
     public Object getAttribute(String name) {
