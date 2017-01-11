@@ -53,7 +53,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
-public class MailboxMessageToElasticSearchJsonTest {
+public class MessageToElasticSearchJsonTest {
 
     public static final int SIZE = 25;
     public static final int BODY_START_OCTET = 100;
@@ -162,7 +162,7 @@ public class MailboxMessageToElasticSearchJsonTest {
             new DefaultTextExtractor(),
             ZoneId.of("Europe/Paris"), IndexAttachments.YES);
         MailboxMessage mail = new SimpleMailboxMessage(MESSAGE_ID,
-                date,
+                date, 
                 SIZE,
                 BODY_START_OCTET,
                 new SharedByteArrayInputStream(IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream("eml/mail.eml"))),
@@ -171,7 +171,7 @@ public class MailboxMessageToElasticSearchJsonTest {
                 MAILBOX_ID);
         mail.setModSeq(MOD_SEQ);
         mail.setUid(UID);
-        assertThatJson(messageToElasticSearchJson.convertToJson(mail, 
+        assertThatJson(messageToElasticSearchJson.convertToJson(mail,
                 ImmutableList.of(new MockMailboxSession("user1").getUser(), new MockMailboxSession("user2").getUser())))
             .when(IGNORING_ARRAY_ORDER).when(IGNORING_VALUES)
             .isEqualTo(IOUtils.toString(ClassLoader.getSystemResource("eml/mail.json")));
@@ -182,7 +182,7 @@ public class MailboxMessageToElasticSearchJsonTest {
         MessageToElasticSearchJson messageToElasticSearchJson = new MessageToElasticSearchJson(
             new DefaultTextExtractor(),
             ZoneId.of("Europe/Paris"), IndexAttachments.YES);
-        MailboxMessage recursiveMail = new SimpleMailboxMessage(MESSAGE_ID, 
+        MailboxMessage recursiveMail = new SimpleMailboxMessage(MESSAGE_ID,
                 date,
                 SIZE,
                 BODY_START_OCTET,
@@ -258,7 +258,7 @@ public class MailboxMessageToElasticSearchJsonTest {
                 MAILBOX_ID);
         mailWithNoInternalDate.setModSeq(MOD_SEQ);
         mailWithNoInternalDate.setUid(UID);
-        
+
         // When
         MessageToElasticSearchJson messageToElasticSearchJson = new MessageToElasticSearchJson(
             new DefaultTextExtractor(),
@@ -288,7 +288,7 @@ public class MailboxMessageToElasticSearchJsonTest {
                 null);
             mailWithNoMailboxId.setModSeq(MOD_SEQ);
             mailWithNoMailboxId.setUid(UID);
-        } catch(Exception exception) {
+        } catch (Exception exception) {
             throw Throwables.propagate(exception);
         }
         messageToElasticSearchJson.convertToJson(mailWithNoMailboxId, ImmutableList.of(new MockMailboxSession("username").getUser()));
@@ -339,4 +339,30 @@ public class MailboxMessageToElasticSearchJsonTest {
             .isEqualTo(IOUtils.toString(ClassLoader.getSystemResource("eml/nonTextual.json"), CHARSET));
     }
 
+    @Test
+    public void convertToJsonWithoutAttachmentShouldConvertEmailBoby() throws IOException {
+        // Given
+        MailboxMessage message = new SimpleMailboxMessage(MESSAGE_ID,
+            null,
+            SIZE,
+            BODY_START_OCTET,
+            new SharedByteArrayInputStream(IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream("eml/emailWithNonIndexableAttachment.eml"))),
+            new FlagsBuilder().add(Flags.Flag.DELETED, Flags.Flag.SEEN).add("debian", "security").build(),
+            propertyBuilder,
+            MAILBOX_ID);
+        message.setModSeq(MOD_SEQ);
+        message.setUid(UID);
+
+        // When
+        MessageToElasticSearchJson messageToElasticSearchJson = new MessageToElasticSearchJson(
+            new DefaultTextExtractor(),
+            ZoneId.of("Europe/Paris"), IndexAttachments.YES);
+        String convertToJsonWithoutAttachment = messageToElasticSearchJson.convertToJsonWithoutAttachment(message, ImmutableList.of(new MockMailboxSession("username").getUser()));
+
+        // Then
+        assertThatJson(convertToJsonWithoutAttachment)
+            .when(IGNORING_ARRAY_ORDER)
+            .when(IGNORING_VALUES)
+            .isEqualTo(IOUtils.toString(ClassLoader.getSystemResource("eml/emailWithNonIndexableAttachmentWithoutAttachment.json")));
+    }
 }

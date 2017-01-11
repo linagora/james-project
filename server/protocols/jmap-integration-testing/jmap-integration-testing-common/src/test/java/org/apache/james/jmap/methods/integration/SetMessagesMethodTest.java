@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
@@ -2519,4 +2520,190 @@ public abstract class SetMessagesMethodTest {
                 .collect(Collectors.toList()));
     }
 
+    @Test
+    public void setMessagesShouldCreateMessageWhenSendingMessageWithNonIndexableAttachment() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+
+        Attachment nonIndexableAttachment = Attachment.builder()
+                .bytes(IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream("attachment/nonIndexableAttachment.html")))
+                .type("text/html")
+                .build();
+        uploadTextAttachment(nonIndexableAttachment);
+
+        String messageCreationId = "creationId";
+        String fromAddress = username;
+        String outboxId = getOutboxId(accessToken);
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}]," +
+                "        \"subject\": \"Message with non indexable attachment\"," +
+                "        \"textBody\": \"Test body\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"], " +
+                "        \"attachments\": [" +
+                "               {\"blobId\" : \"" + nonIndexableAttachment.getAttachmentId().getId() + "\", " +
+                "               \"type\" : \"" + nonIndexableAttachment.getType() + "\", " +
+                "               \"name\" : \"nonIndexableAttachment.html\", " +
+                "               \"size\" : " + nonIndexableAttachment.getSize() + "}" +
+                "           ]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        String createdPath = ARGUMENTS + ".created[\""+messageCreationId+"\"]";
+        String singleAttachment = createdPath + ".attachments[0]";
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messagesSet"))
+            .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
+            .body(ARGUMENTS + ".created", aMapWithSize(1))
+            .body(createdPath + ".attachments", hasSize(1))
+            .body(singleAttachment + ".blobId", equalTo(nonIndexableAttachment.getAttachmentId().getId()))
+            .body(singleAttachment + ".type", equalTo("text/html; charset=UTF-8"))
+            .body(singleAttachment + ".size", equalTo((int) nonIndexableAttachment.getSize()));
+    }
+
+    @Test
+    public void messageWithNonIndexableAttachmentShouldBeRetrievedWhenChainingSetMessagesAndGetMessages() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+
+        Attachment nonIndexableAttachment = Attachment.builder()
+                .bytes(IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream("attachment/nonIndexableAttachment.html")))
+                .type("text/html")
+                .build();
+        uploadTextAttachment(nonIndexableAttachment);
+
+        String messageCreationId = "creationId";
+        String fromAddress = username;
+        String outboxId = getOutboxId(accessToken);
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}]," +
+                "        \"subject\": \"Message with non indexable attachment\"," +
+                "        \"textBody\": \"Test body\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"], " +
+                "        \"attachments\": [" +
+                "               {\"blobId\" : \"" + nonIndexableAttachment.getAttachmentId().getId() + "\", " +
+                "               \"type\" : \"" + nonIndexableAttachment.getType() + "\", " +
+                "               \"name\" : \"nonIndexableAttachment.html\", " +
+                "               \"size\" : " + nonIndexableAttachment.getSize() + "}" +
+                "           ]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+            .when()
+            .post("/jmap").then().log().all();
+
+        calmlyAwait.atMost(30, TimeUnit.SECONDS).until( () -> isAnyMessageFoundInInbox(accessToken));
+
+        String message = ARGUMENTS + ".list[0]";
+
+        String inboxId = getMailboxId(accessToken, Role.INBOX);
+        String receivedMessageId = 
+            with()
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMessageList\", {\"filter\":{\"inMailboxes\":[\"" + inboxId + "\"]}}, \"#0\"]]")
+            .post("/jmap")
+            .then()
+                .extract()
+                .path(ARGUMENTS + ".messageIds[0]");
+        
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + receivedMessageId + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .log().ifValidationFails()
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(message + ".attachments", hasSize(1));
+    }
+
+    @Test
+    public void messageWithNonIndexableAttachmentShouldHaveItsEmailBodyIndexed() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
+
+        Attachment nonIndexableAttachment = Attachment.builder()
+                .bytes(IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream("attachment/nonIndexableAttachment.html")))
+                .type("text/html")
+                .build();
+        uploadTextAttachment(nonIndexableAttachment);
+
+        String messageCreationId = "creationId";
+        String fromAddress = username;
+        String outboxId = getOutboxId(accessToken);
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}]," +
+                "        \"subject\": \"Message with non indexable attachment\"," +
+                "        \"textBody\": \"Test body\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"], " +
+                "        \"attachments\": [" +
+                "               {\"blobId\" : \"" + nonIndexableAttachment.getAttachmentId().getId() + "\", " +
+                "               \"type\" : \"" + nonIndexableAttachment.getType() + "\", " +
+                "               \"name\" : \"nonIndexableAttachment.html\", " +
+                "               \"size\" : " + nonIndexableAttachment.getSize() + "}" +
+                "           ]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+            .when()
+            .post("/jmap").then().log().all();
+
+        calmlyAwait.atMost(30, TimeUnit.SECONDS).until( () -> isAnyMessageFoundInInbox(accessToken));
+
+        String inboxId = getMailboxId(accessToken, Role.INBOX);
+        String receivedMessageId = 
+            with()
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMessageList\", {\"filter\":{\"inMailboxes\":[\"" + inboxId + "\"]}}, \"#0\"]]")
+            .post("/jmap")
+            .then()
+                .extract()
+                .path(ARGUMENTS + ".messageIds[0]");
+        
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessageList\", {\"filter\":{\"body\": \"Test\"}}, \"#0\"]]")
+            .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .log().ifValidationFails()
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", hasItem(receivedMessageId));
+    }
 }
