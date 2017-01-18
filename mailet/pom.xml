@@ -46,6 +46,7 @@
         <commons-collections.version>3.2.1</commons-collections.version>
         <commons-io.version>2.4</commons-io.version>
         <commons-lang.version>2.6</commons-lang.version>
+        <commons-lang3.version>3.3.2</commons-lang3.version>
         <httpclient-osgi.version>4.5.1</httpclient-osgi.version>
         <!-- maven-mailetdocs-plugin artifacts -->
         <maven-artifact.version>3.0-alpha-1</maven-artifact.version>
@@ -59,6 +60,8 @@
         <assertj-3.version>3.3.0</assertj-3.version>
         <assertj-1-guava.version>1.3.1</assertj-1-guava.version>
         <slf4j.version>1.7.7</slf4j.version>
+        <ical4j.version>1.0.2</ical4j.version>
+        <guavate.version>1.0.0</guavate.version>
     </properties>
 
 
@@ -146,6 +149,11 @@
                 <version>${maven-reporting-api.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.mnode.ical4j</groupId>
+                <artifactId>ical4j</artifactId>
+                <version>${ical4j.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>commons-collections</groupId>
                 <artifactId>commons-collections</artifactId>
                 <version>${commons-collections.version}</version>
@@ -154,6 +162,11 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>${commons-io.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
@@ -186,6 +199,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>18.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.steveash.guavate</groupId>
+                <artifactId>guavate</artifactId>
+                <version>${guavate.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
