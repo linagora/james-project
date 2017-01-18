@@ -21,6 +21,7 @@ package org.apache.james.mailets.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailets.TemporaryJamesServer;
 import org.apache.james.mailets.configuration.CommonProcessors;
@@ -39,14 +40,15 @@ import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
 import com.jayway.awaitility.core.ConditionFactory;
 
-public class SMIMESignIntegrationTest {
+public class SMIMEDecryptIntegrationTest {
 
 
-    private static final String DEFAULT_DOMAIN = "domain";
     private static final String LOCALHOST_IP = "127.0.0.1";
     private static final int IMAP_PORT = 1143;
-    private static final int SMTP_PORT = 1025;
     private static final int SMTP_SECURE_PORT = 10465;
+
+    private static final String DEFAULT_DOMAIN = "localdomain";
+    private static final String FROM = "sender@" + DEFAULT_DOMAIN;
     private static final String PASSWORD = "secret";
 
     @Rule
@@ -54,8 +56,6 @@ public class SMIMESignIntegrationTest {
 
     private TemporaryJamesServer jamesServer;
     private ConditionFactory calmlyAwait;
-    public static final String FROM = "user@" + DEFAULT_DOMAIN;
-    public static final String RECIPIENT = "user2@" + DEFAULT_DOMAIN;
 
     @Before
     public void setup() throws Exception {
@@ -68,33 +68,13 @@ public class SMIMESignIntegrationTest {
                 .state("transport")
                 .enableJmx(true)
                 .addMailet(MailetConfiguration.builder()
-                    .match("SMTPAuthSuccessful")
-                    .clazz("SetMimeHeader")
-                    .addProperty("name", "X-UserIsAuth")
-                    .addProperty("value", "true")
-                    .build())
-                .addMailet(MailetConfiguration.builder()
-                    .match("HasMailAttribute=org.apache.james.SMIMECheckSignature")
-                    .clazz("SetMimeHeader")
-                    .addProperty("name", "X-WasSigned")
-                    .addProperty("value", "true")
-                    .build())
-                .addMailet(MailetConfiguration.builder()
                     .match("All")
                     .clazz("RemoveMimeHeader")
                     .addProperty("name", "bcc")
                     .build())
                 .addMailet(MailetConfiguration.builder()
+                    .clazz("SMIMEDecrypt")
                     .match("All")
-                    .clazz("RecipientRewriteTable")
-                    .build())
-                .addMailet(MailetConfiguration.builder()
-                    .match("RecipientIsLocal")
-                    .clazz("org.apache.james.jmap.mailet.VacationMailet")
-                    .build())
-                .addMailet(MailetConfiguration.builder()
-                    .clazz("SMIMESign")
-                    .match("SenderIsLocal")
                     .addProperty("keyStoreFileName", temporaryFolder.getRoot().getAbsoluteFile().getAbsolutePath() + "/conf/smime.p12")
                     .addProperty("keyStorePassword", "secret")
                     .addProperty("keyStoreType", "PKCS12")
@@ -102,30 +82,13 @@ public class SMIMESignIntegrationTest {
                     .build())
                 .addMailet(MailetConfiguration.builder()
                     .match("RecipientIsLocal")
+                    .clazz("org.apache.james.jmap.mailet.VacationMailet")
+                    .build())
+                .addMailet(MailetConfiguration.builder()
+                    .match("RecipientIsLocal")
                     .clazz("LocalDelivery")
                     .build())
-                .addMailet(MailetConfiguration.builder()
-                    .match("SMTPAuthSuccessful")
-                    .clazz("RemoteDelivery")
-                    .addProperty("outgoingQueue", "outgoing")
-                    .addProperty("delayTime", "5000, 100000, 500000")
-                    .addProperty("maxRetries", "25")
-                    .addProperty("maxDnsProblemRetries", "0")
-                    .addProperty("deliveryThreads", "10")
-                    .addProperty("sendpartial", "true")
-                    .addProperty("bounceProcessor", "bounces")
-                    .build())
-                .addMailet(MailetConfiguration.builder()
-                    .match("All")
-                    .clazz("ToProcessor")
-                    .addProperty("processor", "relay-denied")
-                    .build())
                 .build())
-            .addProcessor(CommonProcessors.spam())
-            .addProcessor(CommonProcessors.localAddressError())
-            .addProcessor(CommonProcessors.relayDenied())
-            .addProcessor(CommonProcessors.bounces())
-            .addProcessor(CommonProcessors.sieveManagerCheck())
             .build();
 
         jamesServer = new TemporaryJamesServer(temporaryFolder, mailetContainer);
@@ -134,8 +97,7 @@ public class SMIMESignIntegrationTest {
 
         jamesServer.getServerProbe().addDomain(DEFAULT_DOMAIN);
         jamesServer.getServerProbe().addUser(FROM, PASSWORD);
-        jamesServer.getServerProbe().addUser(RECIPIENT, PASSWORD);
-        jamesServer.getServerProbe().createMailbox(MailboxConstants.USER_NAMESPACE, RECIPIENT, "INBOX");
+        jamesServer.getServerProbe().createMailbox(MailboxConstants.USER_NAMESPACE, FROM, "INBOX");
     }
 
     @After
@@ -144,29 +106,44 @@ public class SMIMESignIntegrationTest {
     }
 
     @Test
-    public void authenticatedMessagesShouldBeSigned() throws Exception {
+    public void cryptedMessageShouldBeDecryptedWhenCertificateMatches() throws Exception {
 
         try (SMTPMessageSender messageSender = SMTPMessageSender.authentication(LOCALHOST_IP, SMTP_SECURE_PORT, DEFAULT_DOMAIN, FROM, PASSWORD);
              IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST_IP, IMAP_PORT)) {
-            messageSender.sendMessage(FROM, RECIPIENT);
+            messageSender.sendMessageWithHeaders(FROM, FROM, IOUtils.toString(ClassLoader.getSystemResourceAsStream("eml/crypted.eml"))); 
             calmlyAwait.atMost(Duration.ONE_MINUTE).until(messageSender::messageHasBeenSent);
-            calmlyAwait.atMost(Duration.ONE_MINUTE).until(() -> imapMessageReader.userReceivedMessage(RECIPIENT, PASSWORD));
+            calmlyAwait.atMost(Duration.ONE_MINUTE).until(() -> imapMessageReader.userReceivedMessage(FROM, PASSWORD));
 
-            assertThat(imapMessageReader.readFirstMessageInInbox(RECIPIENT, PASSWORD))
-                .containsSequence("Content-Description: S/MIME Cryptographic Signature");
+            assertThat(imapMessageReader.readFirstMessageInInbox(FROM, PASSWORD))
+                .containsSequence("Crypted content");
         }
     }
 
     @Test
-    public void NonAuthenticatedMessagesShouldNotBeSigned() throws Exception {
-        try (SMTPMessageSender messageSender = SMTPMessageSender.noAuthentication(LOCALHOST_IP, SMTP_PORT, DEFAULT_DOMAIN);
-             IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST_IP, IMAP_PORT)) {
-            messageSender.sendMessage(FROM, RECIPIENT);
-            calmlyAwait.atMost(Duration.ONE_MINUTE).until(messageSender::messageHasBeenSent);
-            calmlyAwait.atMost(Duration.ONE_MINUTE).until(() -> imapMessageReader.userReceivedMessage(RECIPIENT, PASSWORD));
+    public void cryptedMessageWithAttachmentShouldBeDecryptedWhenCertificateMatches() throws Exception {
 
-            assertThat(imapMessageReader.readFirstMessageInInbox(RECIPIENT, PASSWORD))
-                .doesNotContain("Content-Description: S/MIME Cryptographic Signature");
+        try (SMTPMessageSender messageSender = SMTPMessageSender.authentication(LOCALHOST_IP, SMTP_SECURE_PORT, DEFAULT_DOMAIN, FROM, PASSWORD);
+             IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST_IP, IMAP_PORT)) {
+            messageSender.sendMessageWithHeaders(FROM, FROM, IOUtils.toString(ClassLoader.getSystemResourceAsStream("eml/crypted_with_attachment.eml"))); 
+            calmlyAwait.atMost(Duration.ONE_MINUTE).until(messageSender::messageHasBeenSent);
+            calmlyAwait.atMost(Duration.ONE_MINUTE).until(() -> imapMessageReader.userReceivedMessage(FROM, PASSWORD));
+
+            assertThat(imapMessageReader.readFirstMessageInInbox(FROM, PASSWORD))
+                .containsSequence("Crypted Content with attachment");
+        }
+    }
+
+    @Test
+    public void cryptedMessageShouldNotBeDecryptedWhenCertificateDoesntMatch() throws Exception {
+
+        try (SMTPMessageSender messageSender = SMTPMessageSender.authentication(LOCALHOST_IP, SMTP_SECURE_PORT, DEFAULT_DOMAIN, FROM, PASSWORD);
+             IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST_IP, IMAP_PORT)) {
+            messageSender.sendMessageWithHeaders(FROM, FROM, IOUtils.toString(ClassLoader.getSystemResourceAsStream("eml/bad_crypted.eml"))); 
+            calmlyAwait.atMost(Duration.ONE_MINUTE).until(messageSender::messageHasBeenSent);
+            calmlyAwait.atMost(Duration.ONE_MINUTE).until(() -> imapMessageReader.userReceivedMessage(FROM, PASSWORD));
+
+            assertThat(imapMessageReader.readFirstMessageInInbox(FROM, PASSWORD))
+                .containsSequence("MIAGCSqGSIb3DQEHA6CAMIACAQAxggKpMIICpQIBADCBjDCBhjELMAkGA1UE");
         }
     }
 
