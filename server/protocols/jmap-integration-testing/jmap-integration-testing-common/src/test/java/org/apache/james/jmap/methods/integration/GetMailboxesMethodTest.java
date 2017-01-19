@@ -35,12 +35,13 @@ import java.util.Date;
 
 import javax.mail.Flags;
 
-import org.apache.james.JmapJamesServer;
+import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.utils.JmapGuiceProbe;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,11 +55,11 @@ public abstract class GetMailboxesMethodTest {
     private static final String NAME = "[0][0]";
     private static final String ARGUMENTS = "[0][1]";
 
-    protected abstract JmapJamesServer createJmapServer();
+    protected abstract GuiceJamesServer createJmapServer();
 
     private AccessToken accessToken;
     private String username;
-    private JmapJamesServer jmapServer;
+    private GuiceJamesServer jmapServer;
 
     @Before
     public void setup() throws Throwable {
@@ -69,8 +70,7 @@ public abstract class GetMailboxesMethodTest {
                 .setContentType(ContentType.JSON)
                 .setAccept(ContentType.JSON)
                 .setConfig(newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8)))
-                .setPort(jmapServer.getJmapProbe()
-                    .getJmapPort())
+                .setPort(jmapServer.getProbe(JmapGuiceProbe.class).getJmapPort())
                 .build();
 
         String domain = "domain.tld";

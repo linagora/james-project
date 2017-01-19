@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 
+import org.apache.james.utils.JmapGuiceProbe;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +48,7 @@ public abstract class AbstractJmapJamesServerTest {
     private static final int SMTP_PORT = 1025;
     private static final int LMTP_PORT = 1024;
 
-    private JmapJamesServer server;
+    private GuiceJamesServer server;
     private SocketChannel socketChannel;
 
     @Before
@@ -60,12 +61,11 @@ public abstract class AbstractJmapJamesServerTest {
         		.setContentType(ContentType.JSON)
         		.setAccept(ContentType.JSON)
         		.setConfig(newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8)))
-        		.setPort(server.getJmapProbe()
-                    .getJmapPort())
+        		.setPort(server.getProbe(JmapGuiceProbe.class).getJmapPort())
         		.build();
     }
 
-    protected abstract JmapJamesServer createJamesServer();
+    protected abstract GuiceJamesServer createJamesServer();
 
     protected abstract void clean();
 

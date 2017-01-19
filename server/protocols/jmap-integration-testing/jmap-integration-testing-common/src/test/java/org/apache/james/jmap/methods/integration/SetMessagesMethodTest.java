@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 import javax.mail.Flags;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.james.JmapJamesServer;
+import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.model.mailbox.Role;
@@ -61,6 +61,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.util.ZeroedInputStream;
+import org.apache.james.utils.JmapGuiceProbe;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -92,7 +93,7 @@ public abstract class SetMessagesMethodTest {
 
     private ConditionFactory calmlyAwait;
 
-    protected abstract JmapJamesServer createJmapServer();
+    protected abstract GuiceJamesServer createJmapServer();
 
     protected abstract MessageId randomMessageId();
     
@@ -100,7 +101,7 @@ public abstract class SetMessagesMethodTest {
 
     private AccessToken accessToken;
     private String username;
-    private JmapJamesServer jmapServer;
+    private GuiceJamesServer jmapServer;
 
     @Before
     public void setup() throws Throwable {
@@ -110,8 +111,7 @@ public abstract class SetMessagesMethodTest {
                 .setContentType(ContentType.JSON)
                 .setAccept(ContentType.JSON)
                 .setConfig(newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8)))
-                .setPort(jmapServer.getJmapProbe()
-                    .getJmapPort())
+                .setPort(jmapServer.getProbe(JmapGuiceProbe.class).getJmapPort())
                 .build();
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 

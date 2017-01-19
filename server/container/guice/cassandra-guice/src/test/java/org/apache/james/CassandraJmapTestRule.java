@@ -40,14 +40,14 @@ public class CassandraJmapTestRule implements TestRule {
         .outerRule(temporaryFolder)
         .around(embeddedElasticSearch);
 
-    public JmapJamesServer jmapServer() {
-        return new JmapJamesServer()
+    public GuiceJamesServer jmapServer() {
+        return new GuiceJamesServer()
                     .combineWith(CassandraJamesServerMain.cassandraServerModule)
                     .overrideWith(new CassandraJmapServerModule(temporaryFolder, embeddedElasticSearch, cassandra));
     }
 
-    public JmapJamesServer jmapServer(Module additional) {
-        return new JmapJamesServer()
+    public GuiceJamesServer jmapServer(Module additional) {
+        return new GuiceJamesServer()
             .combineWith(CassandraJamesServerMain.cassandraServerModule, additional)
             .overrideWith(new CassandraJmapServerModule(temporaryFolder, embeddedElasticSearch, cassandra));
     }

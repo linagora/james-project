@@ -22,14 +22,13 @@ package org.apache.james.jmap.methods.integration;
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
-import static org.hamcrest.Matchers.equalTo;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
-import org.apache.james.JmapJamesServer;
+import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.JmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.vacation.AccountId;
@@ -56,18 +55,18 @@ public abstract class SetVacationResponseTest {
     public static final String SUBJECT = "subject";
     private JmapGuiceProbe jmapGuiceProbe;
 
-    protected abstract JmapJamesServer createJmapServer();
+    protected abstract GuiceJamesServer createJmapServer();
 
     protected abstract void await();
 
     private AccessToken accessToken;
-    private JmapJamesServer jmapServer;
+    private GuiceJamesServer jmapServer;
 
     @Before
     public void setup() throws Throwable {
         jmapServer = createJmapServer();
         jmapServer.start();
-        jmapGuiceProbe = jmapServer.getJmapProbe();
+        jmapGuiceProbe = jmapServer.getProbe(JmapGuiceProbe.class);
         RestAssured.requestSpecification = new RequestSpecBuilder()
                 .setContentType(ContentType.JSON)
                 .setAccept(ContentType.JSON)

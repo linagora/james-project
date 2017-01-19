@@ -22,6 +22,7 @@ import javax.inject.Singleton;
 
 import org.apache.james.adapter.mailbox.store.UserRepositoryAuthenticator;
 import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.mailbox.AttachmentManager;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MessageIdManager;
@@ -42,6 +43,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.NoMailboxPathLocker;
+import org.apache.james.mailbox.store.StoreAttachmentManager;
 import org.apache.james.mailbox.store.StoreMessageIdManager;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
@@ -79,6 +81,7 @@ public class CassandraMailboxModule extends AbstractModule {
         bind(CassandraMessageIdToImapUidDAO.class).in(Scopes.SINGLETON);
         bind(MailboxEventDispatcher.class).in(Scopes.SINGLETON);
         bind(StoreMessageIdManager.class).in(Scopes.SINGLETON);
+        bind(StoreAttachmentManager.class).in(Scopes.SINGLETON);
 
         bind(MessageMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
         bind(MailboxMapperFactory.class).to(CassandraMailboxSessionMapperFactory.class);
@@ -94,6 +97,7 @@ public class CassandraMailboxModule extends AbstractModule {
         bind(MailboxId.Factory.class).to(CassandraId.Factory.class);
         bind(MessageId.Factory.class).to(CassandraMessageId.Factory.class);
         bind(MessageIdManager.class).to(StoreMessageIdManager.class);
+        bind(AttachmentManager.class).to(StoreAttachmentManager.class);
 
         Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
         cassandraDataDefinitions.addBinding().to(org.apache.james.mailbox.cassandra.modules.CassandraAclModule.class);

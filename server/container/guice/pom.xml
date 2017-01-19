@@ -32,12 +32,77 @@
     <name>Apache James :: Server :: Guice</name>
     <packaging>pom</packaging>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-configuration</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-imap</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-jmap</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-lmtp</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-mailbox</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-mailet</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-managedsieve</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-pop</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-smtp</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-webadmin</artifactId>
+                <version>3.0.0-beta6-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <modules>
+        <module>configuration</module>
         <module>guice-common</module>
         <module>cassandra-guice</module>
+        <module>mailbox</module>
+        <module>mailet</module>
         <module>memory-guice</module>
         <module>jpa-guice</module>
         <module>onami</module>
+        <module>protocols/imap</module>
+        <module>protocols/jmap</module>
+        <module>protocols/lmtp</module>
+        <module>protocols/managedsieve</module>
+        <module>protocols/pop</module>
+        <module>protocols/smtp</module>
+        <module>protocols/webadmin</module>
     </modules>
 </project>
 
