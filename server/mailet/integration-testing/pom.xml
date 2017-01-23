@@ -161,6 +161,11 @@
               </dependency>
               <dependency>
                   <groupId>org.apache.james</groupId>
+                  <artifactId>apache-mailet-icalendar</artifactId>
+                  <version>${project.version}</version>
+              </dependency>
+              <dependency>
+                  <groupId>org.apache.james</groupId>
                   <artifactId>james-server-data-memory</artifactId>
               </dependency>
               <dependency>
@@ -194,6 +199,11 @@
                   <scope>test</scope>
               </dependency>
               <dependency>
+                  <groupId>com.jayway.jsonpath</groupId>
+                  <artifactId>json-path</artifactId>
+                  <scope>test</scope>
+              </dependency>
+              <dependency>
                   <groupId>com.rabbitmq</groupId>
                   <artifactId>amqp-client</artifactId>
                   <scope>test</scope>
@@ -210,7 +220,7 @@
               <dependency>
                   <groupId>org.assertj</groupId>
                   <artifactId>assertj-core</artifactId>
-                  <version>${assertj-1.version}</version>
+                  <version>${assertj-3.version}</version>
                   <scope>test</scope>
               </dependency>
               <dependency>
