@@ -43,12 +43,15 @@ import javax.mail.internet.MimeUtility;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mime4j.codec.DecodeMonitor;
+import org.apache.james.mime4j.codec.DecoderUtil;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailetException;
 import org.apache.mailet.base.GenericMailet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
@@ -66,7 +69,7 @@ import com.google.common.collect.ImmutableList;
  *   &lt;mailet match=&quot;All&quot; class=&quot;StripAttachment&quot; &gt;
  *     &lt;pattern &gt;.*\.xls &lt;/pattern&gt;  &lt;!-- The regular expression that must be matched -- &gt;
  *     &lt;!-- notpattern &gt;.*\.xls &lt;/notpattern--&gt;  &lt;!-- The regular expression that must be matched -- &gt;
- *     &lt;mimeType&gt;text/calendar&lt;/mimeType&gt;  &lt;!-- The matching mimeType -- &gt;
+ *     &lt;mimeType&gt;text/calendar&lt;/mimeType&gt;  &lt;!-- Coma separated list of matching mime types. Empty by default. Result is trimmed. -- &gt;
  *     &lt;directory &gt;c:\temp\james_attach &lt;/directory&gt;   &lt;!-- The directory to save to -- &gt;
  *     &lt;remove &gt;all &lt;/remove&gt;   &lt;!-- either &quot;no&quot;, &quot;matched&quot;, &quot;all&quot; -- &gt;
  *     &lt;!-- attribute&gt;my.attribute.name&lt;/attribute --&gt;
@@ -103,7 +106,7 @@ public class StripAttachment extends GenericMailet {
     private String attributeName;
     private Pattern regExPattern;
     private Pattern notRegExPattern;
-    private String mimeType;
+    private List<String> mimeTypes;
     private boolean decodeFilename;
 
     private List<ReplacingPattern> filenameReplacingPatterns;
@@ -118,8 +121,11 @@ public class StripAttachment extends GenericMailet {
     public void init() throws MailetException {
         regExPattern = regExFromParameter(PATTERN_PARAMETER_NAME);
         notRegExPattern = regExFromParameter(NOTPATTERN_PARAMETER_NAME);
-        mimeType = getInitParameter(MIMETYPE_PARAMETER_NAME);
-        if (regExPattern == null && notRegExPattern == null && Strings.isNullOrEmpty(mimeType)) {
+        mimeTypes = Splitter.on(',')
+            .omitEmptyStrings()
+            .trimResults()
+            .splitToList(getInitParameter(MIMETYPE_PARAMETER_NAME, ""));
+        if (regExPattern == null && notRegExPattern == null && mimeTypes.isEmpty()) {
             throw new MailetException("At least one of '" + PATTERN_PARAMETER_NAME + "', '" + NOTPATTERN_PARAMETER_NAME + "' or '" + MIMETYPE_PARAMETER_NAME + 
                     "' parameter should be provided.");
         }
@@ -313,9 +319,10 @@ public class StripAttachment extends GenericMailet {
         }
 
         boolean shouldRemove = removeAttachments.equals(REMOVE_ALL);
-        if (isMatching(bodyPart, fileName)) {
-            storeBodyPartAsFile(bodyPart, mail, fileName);
-            storeBodyPartAsMailAttribute(bodyPart, mail, fileName);
+        String decodedName = DecoderUtil.decodeEncodedWords(fileName, DecodeMonitor.SILENT);
+        if (isMatching(bodyPart, decodedName)) {
+            storeBodyPartAsFile(bodyPart, mail, decodedName);
+            storeBodyPartAsMailAttribute(bodyPart, mail, decodedName);
             if (removeAttachments.equals(REMOVE_MATCHED)) {
                 shouldRemove = true;
             }
@@ -324,8 +331,17 @@ public class StripAttachment extends GenericMailet {
         return shouldRemove;
     }
 
-    private boolean isMatching(BodyPart bodyPart, String fileName) throws MessagingException {
-        return fileNameMatches(fileName) || bodyPart.isMimeType(mimeType);
+    private boolean isMatching(BodyPart bodyPart, String decodedName) throws MessagingException {
+        return fileNameMatches(decodedName) || mimeTypeMatch(bodyPart);
+    }
+
+    private boolean mimeTypeMatch(BodyPart bodyPart) throws MessagingException {
+        for (String type : mimeTypes) {
+            if (bodyPart.isMimeType(type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void storeBodyPartAsFile(BodyPart bodyPart, Mail mail, String fileName) throws Exception {

@@ -21,6 +21,7 @@ package org.apache.mailet.base.test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -91,7 +92,8 @@ public class MimeMessageBuilder {
         private Optional<String> filename = Optional.absent();
         private ImmutableList.Builder<Header> headers = ImmutableList.builder();
         private Optional<String> disposition = Optional.absent();
-        private Optional<String> data = Optional.absent();
+        private Optional<String> dataAsString = Optional.absent();
+        private Optional<byte[]> dataAsBytes = Optional.absent();
         private Optional<String> type = Optional.absent();
 
         public BodyPartBuilder cid(String cid) {
@@ -110,7 +112,12 @@ public class MimeMessageBuilder {
         }
 
         public BodyPartBuilder data(String data) {
-            this.data = Optional.of(data);
+            this.dataAsString = Optional.of(data);
+            return this;
+        }
+
+        public BodyPartBuilder data(byte[] data) {
+            this.dataAsBytes = Optional.of(data);
             return this;
         }
 
@@ -130,14 +137,23 @@ public class MimeMessageBuilder {
         }
 
         public BodyPart build() throws IOException, MessagingException {
-            Preconditions.checkNotNull(data);
+            Preconditions.checkState(!(dataAsString.isPresent() && dataAsBytes.isPresent()), "Can not specify data as bytes and data as string at the same time");
             MimeBodyPart bodyPart = new MimeBodyPart();
-            bodyPart.setDataHandler(
-                new DataHandler(
-                    new ByteArrayDataSource(
-                        data.or(DEFAULT_VALUE),
-                        type.or(DEFAULT_TEXT_PLAIN_UTF8_TYPE))
-                ));
+            if (dataAsBytes.isPresent()) {
+                bodyPart.setDataHandler(
+                    new DataHandler(
+                        new ByteArrayDataSource(
+                            dataAsBytes.get(),
+                            type.or(DEFAULT_TEXT_PLAIN_UTF8_TYPE))
+                    ));
+            } else {
+                bodyPart.setDataHandler(
+                    new DataHandler(
+                        new ByteArrayDataSource(
+                            dataAsString.or(DEFAULT_VALUE),
+                            type.or(DEFAULT_TEXT_PLAIN_UTF8_TYPE))
+                    ));
+            }
             if (filename.isPresent()) {
                 bodyPart.setFileName(filename.get());
             }
@@ -170,6 +186,10 @@ public class MimeMessageBuilder {
         return new MimeMessage(Session.getDefaultInstance(new Properties()));
     }
 
+    public static MimeMessage mimeMessageFromStream(InputStream stream) throws MessagingException {
+        return new MimeMessage(Session.getInstance(new Properties()), stream);
+    }
+
     public static MimeMessageBuilder mimeMessageBuilder() {
         return new MimeMessageBuilder();
     }
@@ -180,6 +200,10 @@ public class MimeMessageBuilder {
 
     public static BodyPartBuilder bodyPartBuilder() {
         return new BodyPartBuilder();
+    }
+
+    public static BodyPart bodyPartFromBytes(byte[] bytes) throws MessagingException {
+        return new MimeBodyPart(new ByteArrayInputStream(bytes));
     }
 
     private Optional<String> text = Optional.absent();

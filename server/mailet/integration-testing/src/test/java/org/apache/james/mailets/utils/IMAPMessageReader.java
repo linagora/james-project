@@ -60,6 +60,13 @@ public class IMAPMessageReader implements Closeable {
         return imapClient.getReplyString();
     }
 
+    public String readFirstMessageHeadersInInbox(String user, String password) throws IOException {
+        imapClient.login(user, password);
+        imapClient.select("INBOX");
+        imapClient.fetch("1:1", "(RFC822.HEADER)");
+        return imapClient.getReplyString();
+    }
+
     @Override
     public void close() throws IOException {
         imapClient.close();
