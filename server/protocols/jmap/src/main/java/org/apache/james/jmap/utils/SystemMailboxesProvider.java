@@ -28,4 +28,6 @@ import org.apache.james.mailbox.exception.MailboxException;
 
 public interface SystemMailboxesProvider {
     Stream<MessageManager> listMailboxes(Role aRole, MailboxSession session) throws MailboxException;
+
+    MessageManager findMailbox(Role role, MailboxSession session) throws MailboxException;
 }

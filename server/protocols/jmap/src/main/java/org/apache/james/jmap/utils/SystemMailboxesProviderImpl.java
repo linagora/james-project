@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
+import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
 import org.apache.james.jmap.model.mailbox.Role;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
@@ -41,7 +42,7 @@ public class SystemMailboxesProviderImpl implements SystemMailboxesProvider {
     private final MailboxManager mailboxManager;
 
     @Inject
-    @VisibleForTesting SystemMailboxesProviderImpl(MailboxManager mailboxManager) {
+    public SystemMailboxesProviderImpl(MailboxManager mailboxManager) {
         this.mailboxManager = mailboxManager;
     }
 
@@ -58,5 +59,10 @@ public class SystemMailboxesProviderImpl implements SystemMailboxesProvider {
             .map(MailboxMetaData::getPath)
             .filter(path -> hasRole(aRole, path))
             .map(Throwing.function(loadMailbox).sneakyThrow());
+    }
+
+    public MessageManager findMailbox(Role role, MailboxSession session) throws MailboxException {
+        return listMailboxes(role, session).findAny()
+            .orElseThrow(() -> new MailboxRoleNotFoundException(role));
     }
 }

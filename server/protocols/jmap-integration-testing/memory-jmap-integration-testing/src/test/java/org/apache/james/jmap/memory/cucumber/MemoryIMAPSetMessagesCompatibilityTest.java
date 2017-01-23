@@ -17,44 +17,16 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.exception;
+package org.apache.james.jmap.memory.cucumber;
 
-import org.apache.james.mailbox.model.MailboxPath;
+import org.junit.runner.RunWith;
 
-/**
- * Indicates that the failure is caused by a reference to a mailbox which does
- * not exist.
- */
-public class MailboxNotFoundException extends MailboxException {
+import cucumber.api.CucumberOptions;
+import cucumber.api.junit.Cucumber;
 
-    private static final long serialVersionUID = -8493370806722264915L;
-
-    private final String mailboxName;
-
-    /**
-     * @param mailboxName
-     *            name of the mailbox, not null
-     */
-    public MailboxNotFoundException(String mailboxName) {
-        this.mailboxName = mailboxName;
-    }
-
-    /**
-     * @param mailboxPath
-     *            name of the mailbox, not null
-     */
-    public MailboxNotFoundException(MailboxPath mailboxPath) {
-        super(mailboxPath + " can not be found");
-        this.mailboxName = mailboxPath.toString();
-    }
-
-    /**
-     * Gets the name of the mailbox which cannot be found.
-     * 
-     * @return name or null when only mailbox ID is known
-     */
-    public final String getMailboxName() {
-        return mailboxName;
-    }
-
+@RunWith(Cucumber.class)
+@CucumberOptions(features="classpath:cucumber/ImapSetMessagesMailboxesUpdatesCompatibility.feature",
+    glue={"org.apache.james.jmap.methods.integration", "org.apache.james.jmap.memory.cucumber"},
+    strict = true)
+public class MemoryIMAPSetMessagesCompatibilityTest {
 }

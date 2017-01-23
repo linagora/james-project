@@ -20,6 +20,8 @@
 package org.apache.james.jmap.model;
 
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +33,7 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 
 import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
@@ -97,11 +100,17 @@ public class Message {
             return this;
         }
 
+        @JsonIgnore
         public Builder mailboxId(MailboxId mailboxId) {
-            return this.mailboxIds(ImmutableList.of(mailboxId));
+            return this.fluentMailboxIds(mailboxId);
         }
 
-        public Builder mailboxIds(List<MailboxId> mailboxIds) {
+        @JsonIgnore
+        public Builder fluentMailboxIds(MailboxId... mailboxIds) {
+            return this.mailboxIds(Arrays.asList((mailboxIds)));
+        }
+
+        public Builder mailboxIds(Collection<MailboxId> mailboxIds) {
             this.mailboxIds = ImmutableList.copyOf(mailboxIds);
             return this;
         }

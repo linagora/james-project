@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import javax.mail.Flags;
 
 import org.apache.james.jmap.exceptions.AttachmentsNotFoundException;
+import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
 import org.apache.james.jmap.methods.ValueWithId.CreationMessageEntry;
 import org.apache.james.jmap.model.Attachment;
 import org.apache.james.jmap.model.BlobId;
@@ -305,6 +306,11 @@ public class SetMessagesCreationProcessorTest {
                 return draftsSupplier.get().map(d -> Stream.of(d)).orElse(Stream.empty());
             }
             return Stream.empty();
+        }
+
+        public MessageManager findMailbox(Role role, MailboxSession session) throws MailboxException {
+            return listMailboxes(role, session).findAny()
+                .orElseThrow(() -> new MailboxRoleNotFoundException(role));
         }
     }
 
