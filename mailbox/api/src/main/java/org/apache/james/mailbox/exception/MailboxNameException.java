@@ -17,35 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.memory;
+package org.apache.james.mailbox.exception;
 
-import org.apache.james.JmapJamesServer;
-import org.apache.james.MemoryJmapTestRule;
-import org.apache.james.jmap.methods.integration.SetMailboxesMethodTest;
-import org.junit.Ignore;
-import org.junit.Rule;
-
-public class MemorySetMailboxesMethodTest extends SetMailboxesMethodTest {
-
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
-
-    @Override
-    protected JmapJamesServer createJmapServer() {
-        return memoryJmap.jmapServer();
-    }
-    
-    @Override
-    protected void await() {
+public class MailboxNameException extends MailboxException {
+    public MailboxNameException() {
+        super();
     }
 
-    @Ignore
-    @Override
-    public void setMailboxesShouldNotCreateWhenOverLimitName() {
+    public MailboxNameException(String message) {
+        super(message);
     }
 
-    @Ignore
-    @Override
-    public void setMailboxesShouldNotUpdateMailboxWhenOverLimitName() {
+    public MailboxNameException(String message, Throwable cause) {
+        super(message, cause);
     }
+
 }

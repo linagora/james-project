@@ -17,35 +17,27 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.memory;
+package org.apache.james.mpt.imapmailbox.suite;
 
-import org.apache.james.JmapJamesServer;
-import org.apache.james.MemoryJmapTestRule;
-import org.apache.james.jmap.methods.integration.SetMailboxesMethodTest;
-import org.junit.Ignore;
-import org.junit.Rule;
+import java.util.Locale;
 
-public class MemorySetMailboxesMethodTest extends SetMailboxesMethodTest {
+import javax.inject.Inject;
 
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
+import org.apache.james.mpt.api.HostSystem;
+import org.apache.james.mpt.imapmailbox.suite.base.BaseSelectedInbox;
+import org.junit.Test;
 
-    @Override
-    protected JmapJamesServer createJmapServer() {
-        return memoryJmap.jmapServer();
-    }
-    
-    @Override
-    protected void await() {
+public class MailboxWithLongNameSuccess extends BaseSelectedInbox {
+    @Inject
+    private static HostSystem system;
+
+    public MailboxWithLongNameSuccess() throws Exception {
+        super(system);
     }
 
-    @Ignore
-    @Override
-    public void setMailboxesShouldNotCreateWhenOverLimitName() {
+    @Test
+    public void testWithLongMailboxNameUS() throws Exception {
+        scriptTest("CreateSuccessWithLongName", Locale.US);
     }
 
-    @Ignore
-    @Override
-    public void setMailboxesShouldNotUpdateMailboxWhenOverLimitName() {
-    }
 }
