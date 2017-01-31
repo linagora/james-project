@@ -24,6 +24,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
+import javax.mail.Flags.Flag;
 
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
@@ -112,8 +113,11 @@ public class InMemoryMessageIdManager implements MessageIdManager {
             for (MailboxId mailboxId: mailboxesToAdd) {
                 MessageRange messageRange = referenceMessage.getUid().toRange();
                 mailboxManager.copyMessages(messageRange, referenceMessage.getMailboxId(), mailboxId, mailboxSession);
+                Flags flags = new Flags(referenceMessage.getFlags());
+                System.out.println("###########" + flags.contains(Flag.RECENT)); //weirdly it print false here but in the in memory integration test still work
+
                 mailboxManager.getMailbox(mailboxId, mailboxSession)
-                    .setFlags(referenceMessage.getFlags(), FlagsUpdateMode.REPLACE, messageRange, mailboxSession);
+                    .setFlags(flags, FlagsUpdateMode.REPLACE, messageRange, mailboxSession);
             }
 
             for (MessageResult message: messages) {

@@ -28,6 +28,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
+import javax.mail.Flags.Flag;
 import javax.mail.internet.SharedInputStream;
 
 import org.apache.james.mailbox.MailboxSession;
@@ -222,6 +223,9 @@ public class StoreMessageIdManager implements MessageIdManager {
         MailboxMapper mailboxMapper = mailboxSessionMapperFactory.getMailboxMapper(mailboxSession);
         for (MailboxId mailboxId : mailboxIds) {
             SimpleMailboxMessage copy = SimpleMailboxMessage.copy(mailboxId, mailboxMessage);
+            Flags flags = copy.createFlags();
+            flags.add(Flag.RECENT);
+            copy.setFlags(flags);
             MessageMetaData metaData = save(mailboxSession, messageIdMapper, copy);
             dispatcher.added(mailboxSession, metaData, mailboxMapper.findMailboxById(mailboxId));
         }
