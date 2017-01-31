@@ -31,6 +31,7 @@ import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
 import org.apache.james.jmap.exceptions.UnauthorizedException;
 import org.apache.james.jmap.model.AttachmentAccessToken;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,9 +77,9 @@ public class QueryParameterAccessTokenAuthenticationStrategyTest {
     }
 
     @Test
-    public void createMailboxSessionShouldThrowWhenMailboxExceptionHasOccurred() throws Exception {
-        when(mockedMailboxManager.createSystemSession(eq(USERNAME), any(Logger.class)))
-                .thenThrow(new MailboxException());
+    public void createMailboxSessionShouldThrowWhenBadCredentialsExceptionHasOccurred() throws Exception {
+        when(mockedMailboxManager.createUserSession(eq(USERNAME), any(Logger.class)))
+                .thenThrow(new BadCredentialsException());
 
         when(request.getParameter("access_token"))
             .thenReturn(VALID_ATTACHMENT_TOKEN);

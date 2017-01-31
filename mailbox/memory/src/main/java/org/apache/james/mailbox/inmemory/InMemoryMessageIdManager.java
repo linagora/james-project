@@ -27,6 +27,7 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MailboxSession.SessionType;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.FlagsUpdateMode;
@@ -123,6 +124,11 @@ public class InMemoryMessageIdManager implements MessageIdManager {
     }
 
     private List<MailboxId> getUsersMailboxIds(final MailboxSession mailboxSession) throws MailboxException {
+        if (mailboxSession.getType() == SessionType.System) {
+            return FluentIterable.from(mailboxManager.list(mailboxSession))
+                .transform(getMailboxIdFromMailboxPath(mailboxSession))
+                .toList();
+        }
         return FluentIterable.from(mailboxManager.search(userMailboxes(mailboxSession), mailboxSession))
             .transform(getMailboxIdFromMetadata()).toList();
     }
@@ -155,12 +161,14 @@ public class InMemoryMessageIdManager implements MessageIdManager {
     }
 
     private void filterOnMailboxSession(List<MailboxId> mailboxIds, MailboxSession mailboxSession) throws MailboxNotFoundException {
-        boolean isForbidden = FluentIterable.from(mailboxIds)
-            .firstMatch(findMailboxBelongsToAnotherSession(mailboxSession))
-            .isPresent();
+        if (mailboxSession.getType() != SessionType.System) {
+            boolean isForbidden = FluentIterable.from(mailboxIds)
+                .firstMatch(findMailboxBelongsToAnotherSession(mailboxSession))
+                .isPresent();
 
-        if (isForbidden) {
-            throw new MailboxNotFoundException("Mailbox does not belong to session");
+            if (isForbidden) {
+                throw new MailboxNotFoundException("Mailbox does not belong to session");
+            }
         }
     }
 

@@ -38,6 +38,7 @@ import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.jmap.utils.HeadersAuthenticationExtractor;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.junit.Before;
 import org.junit.Test;
@@ -82,10 +83,6 @@ public class AccessTokenAuthenticationStrategyTest {
     @Test
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsInvalid() throws Exception {
         String username = "123456789";
-        MailboxSession fakeMailboxSession = mock(MailboxSession.class);
-
-        when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
-                .thenReturn(fakeMailboxSession);
 
         UUID authHeader = UUID.randomUUID();
         when(mockedAccessTokenManager.getUsernameFromToken(AccessToken.fromString(authHeader.toString())))
@@ -99,10 +96,10 @@ public class AccessTokenAuthenticationStrategyTest {
     }
 
     @Test
-    public void createMailboxSessionShouldThrowWhenMailboxExceptionHasOccurred() throws Exception {
+    public void createMailboxSessionShouldThrowWhenBadCredentialsExceptionHasOccurred() throws Exception {
         String username = "username";
-        when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
-                .thenThrow(new MailboxException());
+        when(mockedMailboxManager.createUserSession(eq(username), any(Logger.class)))
+                .thenThrow(new BadCredentialsException());
 
         UUID authHeader = UUID.randomUUID();
         AccessToken accessToken = AccessToken.fromString(authHeader.toString());
@@ -122,7 +119,7 @@ public class AccessTokenAuthenticationStrategyTest {
         String username = "123456789";
         MailboxSession fakeMailboxSession = mock(MailboxSession.class);
 
-        when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
+        when(mockedMailboxManager.createUserSession(eq(username), any(Logger.class)))
                 .thenReturn(fakeMailboxSession);
 
         UUID authHeader = UUID.randomUUID();

@@ -369,6 +369,11 @@ public class StoreMailboxManager implements MailboxManager {
         return createSession(userName, null, log, SessionType.System);
     }
 
+    @Override
+    public MailboxSession createUserSession(String userName, Logger log) throws BadCredentialsException {
+        return createSession(userName, null, log, SessionType.User);
+    }
+
     /**
      * Create Session
      *
@@ -493,6 +498,9 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     private boolean belongsToCurrentUser(Mailbox mailbox, MailboxSession session) {
+        if (session.getType() == SessionType.System) {
+            return true;
+        }
         return session.getUser().isSameUser(mailbox.getUser());
     }
 

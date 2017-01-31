@@ -30,7 +30,7 @@ import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.jmap.utils.HeadersAuthenticationExtractor;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,8 +63,8 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
 
         if (username.isPresent()) {
             try {
-                return mailboxManager.createSystemSession(username.get(), LOG);
-            } catch (MailboxException e) {
+                return mailboxManager.createUserSession(username.get(), LOG);
+            } catch (BadCredentialsException e) {
                 throw new MailboxSessionCreationException(e);
             }
         }

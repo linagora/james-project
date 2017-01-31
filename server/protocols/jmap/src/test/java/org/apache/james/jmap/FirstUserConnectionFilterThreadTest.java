@@ -183,6 +183,11 @@ public class FirstUserConnectionFilterThreadTest {
         }
 
         @Override
+        public MailboxSession createUserSession(String userName, Logger log) throws BadCredentialsException {
+            return mailboxSession;
+        }
+
+        @Override
         public MailboxSession login(String userid, String passwd, Logger log) throws BadCredentialsException, MailboxException {
             return null;
         }

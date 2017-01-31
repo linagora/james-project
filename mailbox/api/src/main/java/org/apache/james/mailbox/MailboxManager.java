@@ -272,6 +272,22 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
     MailboxSession createSystemSession(String userName, Logger log) throws BadCredentialsException, MailboxException;
 
     /**
+     * Creates a new user session.<br>
+     * A user session is intended to be used for programmatic access.<br>
+     * Use {@link #login(String, String, Logger)} when accessing this API from a
+     * protocol.
+     *
+     * @param userName
+     *            the name of the user whose session is being created
+     * @param log
+     *            context sensitive log
+     * @return <code>MailboxSession</code>, not null
+     * @throws BadCredentialsException
+     *             when system access is not allowed for the given user
+     */
+    MailboxSession createUserSession(String userName, Logger log) throws BadCredentialsException;
+
+    /**
      * Autenticates the given user against the given password.<br>
      * When authentic and authorized, a session will be supplied
      * 

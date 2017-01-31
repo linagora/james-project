@@ -371,8 +371,12 @@ public class MailboxEventAnalyserTest {
         public MailboxSession createSystemSession(String userName, Logger log) throws BadCredentialsException, MailboxException {
             throw new UnsupportedOperationException("Not implemented");
         }
-        
-        
+
+        @Override
+        public MailboxSession createUserSession(String userName, Logger log) throws BadCredentialsException {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
         public void createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
             

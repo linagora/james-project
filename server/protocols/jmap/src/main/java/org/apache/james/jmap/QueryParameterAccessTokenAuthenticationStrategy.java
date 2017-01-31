@@ -31,6 +31,7 @@ import org.apache.james.jmap.model.AttachmentAccessToken;
 import org.apache.james.jmap.utils.DownloadPath;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,14 +59,14 @@ public class QueryParameterAccessTokenAuthenticationStrategy implements Authenti
         return getAccessToken(httpRequest)
             .filter(tokenManager::isValid)
             .map(AttachmentAccessToken::getUsername)
-            .map(this::createSystemSession)
+            .map(this::createUserSession)
             .orElseThrow(() -> new UnauthorizedException());
     }
 
-    private MailboxSession createSystemSession(String username) {
+    private MailboxSession createUserSession(String username) {
         try {
-            return mailboxManager.createSystemSession(username, LOG);
-        } catch (MailboxException e) {
+            return mailboxManager.createUserSession(username, LOG);
+        } catch (BadCredentialsException e) {
             throw new MailboxSessionCreationException(e);
         }
     }

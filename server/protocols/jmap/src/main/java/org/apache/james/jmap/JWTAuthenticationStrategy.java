@@ -29,6 +29,7 @@ import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.jmap.utils.HeadersAuthenticationExtractor;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,8 +62,8 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy {
         Stream<MailboxSession> mailboxSessionStream = userLoginStream
                 .map(l -> {
                     try {
-                        return mailboxManager.createSystemSession(l, LOG);
-                    } catch (MailboxException e) {
+                        return mailboxManager.createUserSession(l, LOG);
+                    } catch (BadCredentialsException e) {
                         throw new MailboxSessionCreationException(e);
                     }
                 });

@@ -42,6 +42,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xenei.junit.contract.Contract;
 import org.xenei.junit.contract.ContractTest;
@@ -64,6 +65,8 @@ public class MailboxManagerTest<T extends MailboxManager> {
     
     public final static String USER_1 = "USER_1";
     public final static String USER_2 = "USER_2";
+
+    public static final Logger LOGGER = LoggerFactory.getLogger("Mock");
 
     private static final MailboxAnnotationKey PRIVATE_KEY = new MailboxAnnotationKey("/private/comment");
     private static final MailboxAnnotationKey PRIVATE_CHILD_KEY = new MailboxAnnotationKey("/private/comment/user");
@@ -101,14 +104,19 @@ public class MailboxManagerTest<T extends MailboxManager> {
     
     @ContractTest
     public void createUser1SystemSessionShouldReturnValidSession() throws UnsupportedEncodingException, MailboxException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         
         assertThat(session.getUser().getUserName()).isEqualTo(USER_1);
     }
 
     @ContractTest
+    public void createUser1UserSessionShouldReturnValidSession() throws Exception {
+        session = mailboxManager.createUserSession(USER_1, LOGGER);
+    }
+
+    @ContractTest
     public void user1ShouldNotHaveAnInbox() throws UnsupportedEncodingException, MailboxException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
         
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -117,7 +125,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
     
     @ContractTest
     public void user1ShouldBeAbleToCreateInbox() throws MailboxException, UnsupportedEncodingException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
      
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -129,7 +137,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
     @ContractTest
     public void user1ShouldNotBeAbleToCreateInboxTwice() throws MailboxException, UnsupportedEncodingException {
         expected.expect(MailboxException.class);
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
         MailboxPath inbox = MailboxPath.inbox(session);
         mailboxManager.createMailbox(inbox, session);
@@ -138,7 +146,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
 
     @ContractTest
     public void user1ShouldNotHaveTestSubmailbox() throws MailboxException, UnsupportedEncodingException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
 
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -149,7 +157,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
     
     @ContractTest
     public void user1ShouldBeAbleToCreateTestSubmailbox() throws MailboxException, UnsupportedEncodingException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
         MailboxPath inbox = MailboxPath.inbox(session);
         mailboxManager.createMailbox(inbox, session);
@@ -162,7 +170,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
     
     @ContractTest
     public void user1ShouldBeAbleToDeleteInbox() throws MailboxException, UnsupportedEncodingException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
      
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -178,7 +186,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
     
     @ContractTest
     public void user1ShouldBeAbleToDeleteSubmailbox() throws MailboxException, UnsupportedEncodingException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
      
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -194,7 +202,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
 
     @ContractTest
     public void closingSessionShouldWork() throws BadCredentialsException, MailboxException, UnsupportedEncodingException {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.startProcessingRequest(session);
 
         mailboxManager.logout(session, false);
@@ -233,7 +241,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
     @ContractTest
     public void searchShouldNotReturnResultsFromOtherNamespaces() throws Exception {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Namespace));
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.createMailbox(new MailboxPath("#namespace", USER_1, "Other"), session);
         mailboxManager.createMailbox(MailboxPath.inbox(session), session);
         List<MailboxMetaData> metaDatas = mailboxManager.search(new MailboxQuery(new MailboxPath("#private", USER_1, ""), "*", '.'), session);
@@ -243,7 +251,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
 
     @ContractTest
     public void searchShouldNotReturnResultsFromOtherUsers() throws Exception {
-        session = mailboxManager.createSystemSession(USER_1, LoggerFactory.getLogger("Mock"));
+        session = mailboxManager.createSystemSession(USER_1, LOGGER);
         mailboxManager.createMailbox(new MailboxPath("#namespace", USER_2, "Other"), session);
         mailboxManager.createMailbox(MailboxPath.inbox(session), session);
         List<MailboxMetaData> metaDatas = mailboxManager.search(new MailboxQuery(new MailboxPath("#private", USER_1, ""), "*", '.'), session);
