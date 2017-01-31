@@ -19,42 +19,48 @@
 
 package org.apache.james.metrics.dropwizard;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 import javax.annotation.PreDestroy;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.james.metrics.api.Metric;
-import org.apache.james.metrics.api.MetricFactory;
+import org.elasticsearch.metrics.ElasticsearchReporter;
 
-import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 
-public class DropWizardMetricFactory implements MetricFactory {
+public class ESMetricReporter {
 
-    private final MetricRegistry metricRegistry;
-    private final JmxReporter jmxReporter;
+    private final Optional<ElasticsearchReporter> reporter;
+    private final ESReporterConfiguration esReporterConfiguration;
 
-    public DropWizardMetricFactory() {
-        this.metricRegistry = new MetricRegistry();
-        this.jmxReporter = JmxReporter.forRegistry(metricRegistry)
-            .build();
+    public ESMetricReporter(ESReporterConfiguration esReporterConfiguration, MetricRegistry registry) {
+        if (esReporterConfiguration.isEnabled()) {
+            try {
+                this.reporter = Optional.of(ElasticsearchReporter.forRegistry(registry)
+                    .hosts(esReporterConfiguration.getHostWithPort())
+                    .index(esReporterConfiguration.getIndex())
+                    .build());
+            } catch (IOException e) {
+                throw Throwables.propagate(e);
+            }
+        } else {
+            this.reporter = Optional.absent();
+        }
+        this.esReporterConfiguration = esReporterConfiguration;
     }
 
-    public ESMetricReporter provideEsReporter(ESReporterConfiguration esReporterConfiguration) {
-        return new ESMetricReporter(esReporterConfiguration, metricRegistry);
-    }
-
-    @Override
-    public Metric generate(String name) {
-        return new DropWizardMetric(metricRegistry.counter(name));
-    }
-
-    public void start() throws ConfigurationException {
-        jmxReporter.start();
+    public void start() {
+        if (reporter.isPresent()) {
+            reporter.get().start(esReporterConfiguration.getPeriodInSecond(), TimeUnit.SECONDS);
+        }
     }
 
     @PreDestroy
     public void stop() {
-        jmxReporter.stop();
+        if (reporter.isPresent()) {
+            reporter.get().stop();
+        }
     }
-
 }
