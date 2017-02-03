@@ -20,11 +20,12 @@ package org.apache.james.modules.data;
 
 import java.util.List;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.user.api.UsersRepository;
+import org.apache.james.user.cassandra.CassandraOrLdapUsersRepository;
 import org.apache.james.user.cassandra.CassandraUsersRepository;
+import org.apache.james.user.ldap.ReadOnlyUsersLDAPRepository;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
 import org.slf4j.Logger;
@@ -45,7 +46,10 @@ public class CassandraUsersRepositoryModule extends AbstractModule {
     @Override
     public void configure() {
         bind(CassandraUsersRepository.class).in(Scopes.SINGLETON);
-        bind(UsersRepository.class).to(CassandraUsersRepository.class);
+        bind(ReadOnlyUsersLDAPRepository.class).in(Scopes.SINGLETON);
+        bind(CassandraOrLdapUsersRepository.class).in(Scopes.SINGLETON);
+        bind(UsersRepository.class).to(CassandraOrLdapUsersRepository.class);
+
         Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
         cassandraDataDefinitions.addBinding().to(org.apache.james.user.cassandra.CassandraUsersRepositoryModule.class);
 
@@ -69,7 +73,8 @@ public class CassandraUsersRepositoryModule extends AbstractModule {
             try {
                 usersRepository.setLog(LOGGER);
                 usersRepository.configure(configurationProvider.getConfiguration("usersrepository"));
-            } catch (ConfigurationException e) {
+                usersRepository.init();
+            } catch (Exception e) {
                 Throwables.propagate(e);
             }
         }

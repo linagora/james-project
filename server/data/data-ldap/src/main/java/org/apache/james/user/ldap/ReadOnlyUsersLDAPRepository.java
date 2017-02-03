@@ -42,8 +42,6 @@ import javax.naming.ldap.LdapContext;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.lang.StringUtils;
-import org.apache.james.lifecycle.api.Configurable;
-import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.api.model.User;
@@ -219,7 +217,7 @@ import org.slf4j.Logger;
  * @see ReadOnlyLDAPGroupRestriction
  *
  */
-public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurable, LogEnabled {
+public class ReadOnlyUsersLDAPRepository implements UsersRepository {
 
     // The name of the factory class which creates the initial context
     // for the LDAP service provider
@@ -373,6 +371,7 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
      *             If an error occurs authenticating or connecting to the
      *             specified LDAP host.
      */
+    @Override
     @PostConstruct
     public void init() throws Exception {
         if (log.isDebugEnabled()) {

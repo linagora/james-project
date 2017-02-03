@@ -25,15 +25,13 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.domainlist.api.DomainListException;
-import org.apache.james.lifecycle.api.Configurable;
-import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.user.api.AlreadyExistInUsersRepositoryException;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.mailet.MailAddress;
 import org.slf4j.Logger;
 
-public abstract class AbstractUsersRepository implements UsersRepository, LogEnabled, Configurable {
+public abstract class AbstractUsersRepository implements UsersRepository {
 
     private DomainList domainList;
     private boolean virtualHosting;
@@ -70,6 +68,10 @@ public abstract class AbstractUsersRepository implements UsersRepository, LogEna
 
     public void setEnableVirtualHosting(boolean virtualHosting) {
         this.virtualHosting = virtualHosting;
+    }
+
+    @Override
+    public void init() throws Exception {
     }
 
     @Inject

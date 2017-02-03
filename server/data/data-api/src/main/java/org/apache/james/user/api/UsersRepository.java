@@ -21,6 +21,8 @@ package org.apache.james.user.api;
 
 import java.util.Iterator;
 
+import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.user.api.model.User;
 import org.apache.mailet.MailAddress;
 
@@ -29,7 +31,9 @@ import org.apache.mailet.MailAddress;
  * grouping of users, typically by common purpose. E.g. the users served by an
  * email server or the members of a mailing list.
  */
-public interface UsersRepository {
+public interface UsersRepository extends Configurable, LogEnabled {
+
+    void init() throws Exception;
 
     /**
      * Adds a user to the repository with the specified password
