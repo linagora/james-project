@@ -81,6 +81,11 @@ public class MessageToElasticSearchJson {
         }
     }
 
+    public String convertToJsonWithoutAttachment(MailboxMessage message, List<User> users) throws JsonProcessingException {
+        Preconditions.checkNotNull(message);
+        return mapper.writeValueAsString(IndexableMessage.from(message, users, textExtractor, zoneId, IndexAttachments.NO));
+    }
+
     public String getUpdatedJsonMessagePart(Flags flags, long modSeq) throws JsonProcessingException {
         Preconditions.checkNotNull(flags);
         return mapper.writeValueAsString(new MessageUpdateJson(flags, modSeq));
