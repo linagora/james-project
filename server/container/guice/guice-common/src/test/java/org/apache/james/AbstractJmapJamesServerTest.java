@@ -73,7 +73,9 @@ public abstract class AbstractJmapJamesServerTest {
 
     @After
     public void tearDown() throws Exception {
-        server.stop();
+        if (server != null) {
+            server.stop();
+        }
         clean();
     }
 
