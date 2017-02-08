@@ -43,11 +43,7 @@ git checkout $SHA1
 
 # Compilation
 
-if [ "$SKIPTESTS" = "skipTests" ]; then
    mvn package -DskipTests -Pjpa,lucene,jpa-lucene,with-assembly
-else
-   mvn package -Pjpa,lucene,jpa-lucene,with-assembly
-fi
 
 # Retrieve result
 
