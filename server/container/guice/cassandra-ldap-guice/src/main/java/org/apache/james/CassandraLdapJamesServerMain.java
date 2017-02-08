@@ -27,13 +27,11 @@ import com.google.inject.util.Modules;
 
 public class CassandraLdapJamesServerMain {
 
-    public static final Module cassandraServerModule = Modules.override(CassandraJamesServerMain.cassandraServerModule)
-            .with(new LdapUsersRepositoryModule());
-
-
     public static void main(String[] args) throws Exception {
         GuiceJamesServerImpl server = new GuiceJamesServerImpl()
-                    .combineWith(cassandraServerModule, new JMXServerModule());
+            .combineWith(CassandraJamesServerMain.cassandraServerModule, new JMXServerModule())
+            .overrideWith(new LdapUsersRepositoryModule());
+
         server.start();
     }
 

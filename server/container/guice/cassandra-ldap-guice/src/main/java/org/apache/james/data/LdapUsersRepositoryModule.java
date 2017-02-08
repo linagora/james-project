@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.user.api.UsersRepository;
-import org.apache.james.user.cassandra.CassandraUsersRepository;
 import org.apache.james.user.ldap.ReadOnlyUsersLDAPRepository;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
@@ -74,7 +73,7 @@ public class LdapUsersRepositoryModule extends AbstractModule {
 
         @Override
         public List<Class<? extends Configurable>> forClasses() {
-            return ImmutableList.of(CassandraUsersRepository.class);
+            return ImmutableList.of(ReadOnlyUsersLDAPRepository.class);
         }
     }
 
