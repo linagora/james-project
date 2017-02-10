@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model.impl;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -160,4 +161,10 @@ public class SimpleMailbox implements Mailbox {
         this.acl = acl;
     }
 
+    @Override
+    public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
+        return namespace.equals(potentialParent.getNamespace())
+            && user.equals(potentialParent.getUser())
+            && name.startsWith(potentialParent.getName() + mailboxSession.getPathDelimiter());
+    }
 }

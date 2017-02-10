@@ -27,6 +27,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.jpa.JPAId;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
@@ -238,4 +239,10 @@ public class JPAMailbox implements Mailbox {
     public void setACL(MailboxACL acl) {
     }
 
+    @Override
+    public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
+        return namespace.equals(potentialParent.getNamespace())
+            && user.equals(potentialParent.getUser())
+            && name.startsWith(potentialParent.getName() + mailboxSession.getPathDelimiter());
+    }
 }

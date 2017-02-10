@@ -20,6 +20,7 @@ package org.apache.james.mailbox.hbase.mail.model;
 
 import java.util.UUID;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
@@ -214,6 +215,13 @@ public class HBaseMailbox implements Mailbox {
     @Override
     public void setACL(MailboxACL acl) {
         // TODO ACL support
+    }
+
+    @Override
+    public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
+        return namespace.equals(potentialParent.getNamespace())
+            && user.equals(potentialParent.getUser())
+            && name.startsWith(potentialParent.getName() + mailboxSession.getPathDelimiter());
     }
     
 }
