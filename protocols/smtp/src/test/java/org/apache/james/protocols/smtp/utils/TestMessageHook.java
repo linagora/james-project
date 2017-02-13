@@ -18,8 +18,9 @@
  ****************************************************************/
 package org.apache.james.protocols.smtp.utils;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -29,9 +30,11 @@ import org.apache.james.protocols.smtp.hook.HookResult;
 import org.apache.james.protocols.smtp.hook.HookReturnCode;
 import org.apache.james.protocols.smtp.hook.MessageHook;
 
+import com.google.common.collect.ImmutableList;
+
 public class TestMessageHook implements MessageHook {
 
-    private final List<MailEnvelope> queued = new ArrayList<MailEnvelope>();
+    private final Collection<MailEnvelope> queued = new ConcurrentLinkedQueue<MailEnvelope>();
     
     public HookResult onMessage(SMTPSession session, MailEnvelope mail) {
         queued.add(mail);
@@ -39,7 +42,7 @@ public class TestMessageHook implements MessageHook {
     }
  
     public List<MailEnvelope> getQueued() {
-        return queued;
+        return ImmutableList.copyOf(queued);
     }
 
     @Override
