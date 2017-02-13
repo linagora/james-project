@@ -30,7 +30,9 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMailboxTable.PAT
 import static org.apache.james.mailbox.cassandra.table.CassandraMailboxTable.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraMailboxTable.UIDVALIDITY;
 
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
@@ -52,13 +54,18 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.github.fge.lambdas.Throwing;
+import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Data access management for mailbox.
@@ -66,8 +73,9 @@ import com.google.common.base.Preconditions;
 public class CassandraMailboxMapper implements MailboxMapper {
 
     public static final String WILDCARD = "%";
-
     public static final String VALUES_MAY_NOT_BE_LARGER_THAN_64_K = "Index expression values may not be larger than 64K";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraMailboxMapper.class);
 
     private final Session session;
     private final int maxRetry;
@@ -95,7 +103,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
             if (resultSet.isExhausted()) {
                 throw new MailboxNotFoundException(path);
             } else {
-                return mailbox(resultSet.one());
+                return keepOnlyOneMailbox(resultSet);
             }
         } catch (InvalidQueryException e) {
             if (StringUtils.containsIgnoreCase(e.getMessage(), VALUES_MAY_NOT_BE_LARGER_THAN_64_K)) {
@@ -103,6 +111,25 @@ public class CassandraMailboxMapper implements MailboxMapper {
             }
             throw new MailboxException("It has error with cassandra storage", e);
         }
+    }
+
+    private Mailbox keepOnlyOneMailbox(ResultSet resultSet) {
+        return keepOnlyOneMailbox(CassandraUtils.convertToStream(resultSet)
+            .map(this::mailbox));
+    }
+
+    private Mailbox keepOnlyOneMailbox(Stream<SimpleMailbox> mailboxStream) {
+        ImmutableList<SimpleMailbox> mailboxes = mailboxStream
+            .sorted(Comparator.comparing(mailbox -> mailbox.getMailboxId().serialize()))
+            .collect(Guavate.toImmutableList());
+        Mailbox mailbox = mailboxes.get(0);
+        if (mailboxes.size() > 1) {
+            mailboxes.subList(1, mailboxes.size()).stream()
+                .peek(duplicated -> LOGGER.warn("Mailbox {} was duplicated for {}", duplicated.getName(), duplicated.getUser()))
+                .forEach(Throwing.consumer(this::delete)
+                .fallbackTo(failed -> LOGGER.warn("Mailbox deduplication failed for {} for user {} duplicated", failed.getName(), failed.getUser())));
+        }
+        return mailbox;
     }
 
     @Override
@@ -122,6 +149,12 @@ public class CassandraMailboxMapper implements MailboxMapper {
         return getMailboxFilteredByNamespaceAndUserStream(path.getNamespace(), path.getUser())
             .filter((row) -> regex.matcher(row.getString(NAME)).matches())
             .map(this::mailbox)
+            .collect(Guavate.toImmutableListMultimap(this::path))
+            .asMap()
+            .values()
+            .stream()
+            .map(Collection::stream)
+            .map(this::keepOnlyOneMailbox)
             .collect(Collectors.toList());
     }
 

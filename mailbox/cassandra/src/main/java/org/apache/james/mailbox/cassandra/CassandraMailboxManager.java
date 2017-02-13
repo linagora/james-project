@@ -123,4 +123,10 @@ public class CassandraMailboxManager extends StoreMailboxManager {
             getMessageIdFactory());
     }
 
+    @Override
+    public void createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
+        super.createMailbox(mailboxPath, mailboxSession);
+        // Heal potential mailbox duplication
+        getMailbox(mailboxPath, mailboxSession);
+    }
 }
