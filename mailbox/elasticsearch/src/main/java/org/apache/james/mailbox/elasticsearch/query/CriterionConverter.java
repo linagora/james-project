@@ -54,7 +54,7 @@ public class CriterionConverter {
     public CriterionConverter() {
         criterionConverterMap = new HashMap<>();
         headerOperatorConverterMap = new HashMap<>();
-        
+
         registerCriterionConverters();
         registerHeaderOperatorConverters();
     }
@@ -66,40 +66,42 @@ public class CriterionConverter {
         registerCriterionConverter(SearchQuery.HeaderCriterion.class, this::convertHeader);
         registerCriterionConverter(SearchQuery.TextCriterion.class, this::convertTextCriterion);
         registerCriterionConverter(SearchQuery.CustomFlagCriterion.class, this::convertCustomFlagCriterion);
-        
+
         registerCriterionConverter(SearchQuery.AllCriterion.class,
             criterion -> matchAllQuery());
-        
+
         registerCriterionConverter(SearchQuery.ModSeqCriterion.class,
             criterion -> createNumericFilter(JsonMessageConstants.MODSEQ, criterion.getOperator()));
-        
+
         registerCriterionConverter(SearchQuery.SizeCriterion.class,
             criterion -> createNumericFilter(JsonMessageConstants.SIZE, criterion.getOperator()));
 
         registerCriterionConverter(SearchQuery.InternalDateCriterion.class,
             criterion -> dateRangeFilter(JsonMessageConstants.DATE, criterion.getOperator()));
+
+        registerCriterionConverter(SearchQuery.AttachmentCriterion.class, this::convertAttachmentCriterion);
     }
-    
+
     @SuppressWarnings("unchecked")
     private <T extends Criterion> void registerCriterionConverter(Class<T> type, Function<T, QueryBuilder> f) {
         criterionConverterMap.put(type, (Function<Criterion, QueryBuilder>) f);
     }
-    
+
     private void registerHeaderOperatorConverters() {
 
         registerHeaderOperatorConverter(
             SearchQuery.ExistsOperator.class,
             (headerName, operator) ->
                 existsQuery(JsonMessageConstants.HEADERS + "." + headerName));
-        
+
         registerHeaderOperatorConverter(
             SearchQuery.AddressOperator.class,
             (headerName, operator) -> manageAddressFields(headerName, operator.getAddress()));
-        
+
         registerHeaderOperatorConverter(
             SearchQuery.DateOperator.class,
             (headerName, operator) -> dateRangeFilter(JsonMessageConstants.SENT_DATE, operator));
-        
+
         registerHeaderOperatorConverter(
             SearchQuery.ContainsOperator.class,
             (headerName, operator) -> matchQuery(JsonMessageConstants.HEADERS + "." + headerName,
@@ -113,6 +115,10 @@ public class CriterionConverter {
 
     public QueryBuilder convertCriterion(SearchQuery.Criterion criterion) {
         return criterionConverterMap.get(criterion.getClass()).apply(criterion);
+    }
+
+    private QueryBuilder convertAttachmentCriterion(SearchQuery.AttachmentCriterion criterion) {
+        return termQuery(JsonMessageConstants.HAS_ATTACHMENT, criterion.getOperator().isSet());
     }
 
     private QueryBuilder convertCustomFlagCriterion(SearchQuery.CustomFlagCriterion criterion) {

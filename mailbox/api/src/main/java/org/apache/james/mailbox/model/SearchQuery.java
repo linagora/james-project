@@ -32,6 +32,7 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.SearchQuery.Sort;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
@@ -80,28 +81,28 @@ public class SearchQuery implements Serializable {
 
             /**
              * addr-mailbox of the first "cc" address.
-             * 
+             *
              * This MUST BE converted to uppercase before doing the sort
              */
             MailboxCc,
 
             /**
              * addr-mailbox of the first "from" address.
-             * 
+             *
              * This MUST BE converted to uppercase before doing the sort
              */
             MailboxFrom,
 
             /**
              * addr-mailbox of the first "To" address
-             * 
+             *
              * This MUST BE converted to uppercase before doing the sort
              */
             MailboxTo,
 
             /**
              * Base subject text.
-             * 
+             *
              * This MUST BE converted to uppercase before doing the sort
              */
             BaseSubject,
@@ -122,7 +123,7 @@ public class SearchQuery implements Serializable {
              * invalid, the time SHOULD be treated as 00:00:00. If there is no
              * valid date or time, the date and time SHOULD be treated as
              * 00:00:00 on the earliest possible date.
-             * 
+             *
              * If the sent date cannot be determined (a Date: header is missing
              * or cannot be parsed), the INTERNALDATE for that message is used
              * as the sent date.
@@ -132,14 +133,14 @@ public class SearchQuery implements Serializable {
 
             /**
              * addr-name of the first "From" address
-             * 
+             *
              * This MUST BE converted to uppercase before doing the sort
              */
             DisplayFrom,
 
             /**
              * addr-name of the first "To" address
-             * 
+             *
              * This MUST BE converted to uppercase before doing the sort
              */
             DisplayTo,
@@ -165,7 +166,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Create a new {@link Sort} which is NOT {@link #reverse}
-         * 
+         *
          * @param sortClause
          */
         public Sort(SortClause sortClause) {
@@ -174,7 +175,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Return true if the sort should be in reverse order
-         * 
+         *
          * @return reverse
          */
         public boolean isReverse() {
@@ -183,7 +184,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Return the {@link SortClause}
-         * 
+         *
          * @return clause
          */
         public SortClause getSortClause() {
@@ -208,7 +209,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter for message size less than the given value
-     * 
+     *
      * @param value
      *            messages with size less than this value will be selected by
      *            the returned criterion
@@ -220,7 +221,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter for message size greater than the given value
-     * 
+     *
      * @param value
      *            messages with size greater than this value will be selected by
      *            the returned criterion
@@ -232,7 +233,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter for message size equal to the given value
-     * 
+     *
      * @param value
      *            messages with size equal to this value will be selected by the
      *            returned criterion
@@ -244,7 +245,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter for message mod-sequence less than the given value
-     * 
+     *
      * @param value
      *            messages with mod-sequence less than this value will be
      *            selected by the returned criterion
@@ -256,7 +257,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter for message mod-sequence greater than the given value
-     * 
+     *
      * @param value
      *            messages with mod-sequence greater than this value will be
      *            selected by the returned criterion
@@ -268,7 +269,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter for message mod-sequence equal to the given value
-     * 
+     *
      * @param value
      *            messages with mod-sequence equal to this value will be
      *            selected by the returned criterion
@@ -281,7 +282,7 @@ public class SearchQuery implements Serializable {
     /**
      * Creates a filter matching messages with internal date after the given
      * date.
-     * 
+     *
      * @param date
      *            given date
      * @param res
@@ -297,7 +298,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter matching messages with internal date on the given date.
-     * 
+     *
      * @param date
      *            given date
      * @param res
@@ -314,7 +315,7 @@ public class SearchQuery implements Serializable {
     /**
      * Creates a filter matching messages with internal date before the given
      * date.
-     * 
+     *
      * @param date
      *            given date
      * @param res
@@ -332,7 +333,7 @@ public class SearchQuery implements Serializable {
      * Creates a filter matching messages with the date of the given header
      * after the given date. If the header's value is not a date then it will
      * not be included.
-     * 
+     *
      * @param headerName
      *            name of the header whose value will be compared, not null
      * @param date
@@ -352,7 +353,7 @@ public class SearchQuery implements Serializable {
      * Creates a filter matching messages with the date of the given header on
      * the given date. If the header's value is not a date then it will not be
      * included.
-     * 
+     *
      * @param headerName
      *            name of the header whose value will be compared, not null
      * @param date
@@ -372,7 +373,7 @@ public class SearchQuery implements Serializable {
      * Creates a filter matching messages with the date of the given header
      * before the given date. If the header's value is not a date then it will
      * not be included.
-     * 
+     *
      * @param headerName
      *            name of the header whose value will be compared, not null
      * @param date
@@ -392,7 +393,7 @@ public class SearchQuery implements Serializable {
      * Creates a filter matching messages whose Address header contains the
      * given address. The address header of the message MUST get canonicalized
      * before try to match it.
-     * 
+     *
      * @param type
      * @param address
      * @return <code>Criterion</code>
@@ -404,10 +405,10 @@ public class SearchQuery implements Serializable {
     /**
      * Creates a filter matching messages whose header value contains the given
      * value.
-     * 
+     *
      * All to-compared Strings MUST BE converted to uppercase before doing so
      * (this also include the search value)
-     * 
+     *
      * @param headerName
      *            name of the header whose value will be compared, not null
      * @param value
@@ -425,10 +426,10 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter matching messages with a header matching the given name.
-     * 
+     *
      * All to-compared Strings MUST BE converted to uppercase before doing so
      * (this also include the search value)
-     * 
+     *
      * @param headerName
      *            name of the header whose value will be compared, not null
      * @return <code>Criterion</code>, not null
@@ -441,10 +442,10 @@ public class SearchQuery implements Serializable {
      * Creates a filter matching messages which contains the given text either
      * within the body or in the headers. Implementations may choose to ignore
      * mime parts which cannot be decoded to text.
-     * 
+     *
      * All to-compared Strings MUST BE converted to uppercase before doing so
      * (this also include the search value)
-     * 
+     *
      * @param value
      *            search value
      * @return <code>Criterion</code>, not null
@@ -455,12 +456,12 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter matching messages which contains the given text either
-     * within the headers (From, To, Cc, Bcc & Subject) and text / html bodies. 
+     * within the headers (From, To, Cc, Bcc & Subject) and text / html bodies.
      * Implementations may choose to ignore mime parts which cannot be decoded to text.
-     * 
+     *
      * All to-compared Strings MUST BE converted to uppercase before doing so
      * (this also include the search value)
-     * 
+     *
      * @param value
      *            search value
      * @return <code>Criterion</code>, not null
@@ -473,10 +474,10 @@ public class SearchQuery implements Serializable {
      * Creates a filter matching messages which contains the given text within
      * the body. Implementations may choose to ignore mime parts which cannot be
      * decoded to text.
-     * 
+     *
      * All to-compared Strings MUST BE converted to uppercase before doing so
      * (this also include the search value)
-     * 
+     *
      * @param value
      *            search value
      * @return <code>Criterion</code>, not null
@@ -487,7 +488,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter matching messages within any of the given ranges.
-     * 
+     *
      * @param range
      *            <code>NumericRange</code>'s, not null
      * @return <code>Criterion</code>, not null
@@ -498,7 +499,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter composing the two different criteria.
-     * 
+     *
      * @param one
      *            <code>Criterion</code>, not null
      * @param two
@@ -514,7 +515,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter composing the listed criteria.
-     * 
+     *
      * @param criteria
      *            <code>List</code> of {@link Criterion}
      * @return <code>Criterion</code>, not null
@@ -525,7 +526,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter composing the two different criteria.
-     * 
+     *
      * @param one
      *            <code>Criterion</code>, not null
      * @param two
@@ -541,7 +542,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter composing the listed criteria.
-     * 
+     *
      * @param criteria
      *            <code>List</code> of {@link Criterion}
      * @return <code>Criterion</code>, not null
@@ -552,7 +553,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter inverting the given criteria.
-     * 
+     *
      * @param criterion
      *            <code>Criterion</code>, not null
      * @return <code>Criterion</code>, not null
@@ -565,7 +566,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter composing the listed criteria.
-     * 
+     *
      * @param criteria
      *            <code>List</code> of {@link Criterion}
      * @return <code>Criterion</code>, not null
@@ -576,7 +577,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter on the given flag.
-     * 
+     *
      * @param flag
      *            <code>Flag</code>, not null
      * @param isSet
@@ -594,10 +595,26 @@ public class SearchQuery implements Serializable {
         return result;
     }
 
+    public static Criterion hasAttachment(boolean value) {
+        if (value) {
+            return new AttachmentCriterion(BooleanOperator.set());
+        } else {
+            return new AttachmentCriterion(BooleanOperator.unset());
+        }
+    }
+
+    public static Criterion hasAttachment() {
+        return hasAttachment(true);
+    }
+
+    public static Criterion hasNoAttachment() {
+        return hasAttachment(false);
+    }
+
     /**
      * Creates a filter on the given flag selecting messages where the given
      * flag is selected.
-     * 
+     *
      * @param flag
      *            <code>Flag</code>, not null
      * @return <code>Criterion</code>, not null
@@ -609,7 +626,7 @@ public class SearchQuery implements Serializable {
     /**
      * Creates a filter on the given flag selecting messages where the given
      * flag is not selected.
-     * 
+     *
      * @param flag
      *            <code>Flag</code>, not null
      * @return <code>Criterion</code>, not null
@@ -620,7 +637,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter on the given flag.
-     * 
+     *
      * @param flag
      *            <code>Flag</code>, not null
      * @param isSet
@@ -641,7 +658,7 @@ public class SearchQuery implements Serializable {
     /**
      * Creates a filter on the given flag selecting messages where the given
      * flag is selected.
-     * 
+     *
      * @param flag
      *            <code>Flag</code>, not null
      * @return <code>Criterion</code>, not null
@@ -653,7 +670,7 @@ public class SearchQuery implements Serializable {
     /**
      * Creates a filter on the given flag selecting messages where the given
      * flag is not selected.
-     * 
+     *
      * @param flag
      *            <code>Flag</code>, not null
      * @return <code>Criterion</code>, not null
@@ -664,7 +681,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Creates a filter matching all messages.
-     * 
+     *
      * @return <code>Criterion</code>, not null
      */
     public static Criterion all() {
@@ -687,7 +704,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Set the {@link Sort}'s to use
-     * 
+     *
      * @param sorts
      */
     public void setSorts(List<Sort> sorts) {
@@ -700,10 +717,10 @@ public class SearchQuery implements Serializable {
      * Return the {@link Sort}'s which should get used for sorting the result.
      * They get "executed" in a chain, if the first does not give an result the
      * second will get executed etc.
-     * 
+     *
      * If not set via {@link #setSorts(List)} it will sort via
      * {@link Sort.SortClause#Uid}
-     * 
+     *
      * @return sorts
      */
     public List<Sort> getSorts() {
@@ -714,7 +731,7 @@ public class SearchQuery implements Serializable {
      * Gets the UIDS of messages which are recent for this client session. The
      * list of recent mail is maintained in the protocol layer since the
      * mechanics are protocol specific.
-     * 
+     *
      * @return mutable <code>Set</code> of <code>MessageUid</code> UIDS
      */
     public Set<MessageUid> getRecentMessageUids() {
@@ -723,7 +740,7 @@ public class SearchQuery implements Serializable {
 
     /**
      * Adds all the uids to the collection of recents.
-     * 
+     *
      * @param uids
      *            not null
      */
@@ -785,7 +802,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Is the given value in this range?
-         * 
+         *
          * @param value
          *            value to be tested
          * @return true if the value is in range, false otherwise
@@ -812,6 +829,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("lowValue", lowValue)
@@ -853,7 +871,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Is the given value in this range?
-         * 
+         *
          * @param value
          *            value to be tested
          * @return true if the value is in range, false otherwise
@@ -877,6 +895,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("lowValue", lowValue)
@@ -885,7 +904,7 @@ public class SearchQuery implements Serializable {
         }
 
     }
-    
+
     /**
      * Marker superclass for criteria.
      */
@@ -917,7 +936,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the criteria related through this conjunction.
-         * 
+         *
          * @return <code>List</code> of {@link Criterion}
          */
         public List<Criterion> getCriteria() {
@@ -926,7 +945,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the type of conjunction.
-         * 
+         *
          * @return not null
          */
         public Conjunction getType() {
@@ -948,6 +967,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("criteria", criteria)
@@ -985,6 +1005,7 @@ public class SearchQuery implements Serializable {
             return 1729;
         }
 
+        @Override
         public String toString() {
             return "AllCriterion";
         }
@@ -1021,7 +1042,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the type of text to be searched.
-         * 
+         *
          * @return not null
          */
         public Scope getType() {
@@ -1030,7 +1051,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the search operation and value to be evaluated.
-         * 
+         *
          * @return the <code>Operator</code>, not null
          */
         public ContainsOperator getOperator() {
@@ -1052,6 +1073,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1077,7 +1099,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the name of the header whose value is to be searched.
-         * 
+         *
          * @return the headerName
          */
         public String getHeaderName() {
@@ -1086,7 +1108,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the search operation and value to be evaluated.
-         * 
+         *
          * @return the <code>Operator</code>, not null
          */
         public HeaderOperator getOperator() {
@@ -1109,6 +1131,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1133,7 +1156,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the search operation and value to be evaluated.
-         * 
+         *
          * @return the <code>Operator</code>, not null
          */
         public DateOperator getOperator() {
@@ -1155,6 +1178,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1177,7 +1201,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the search operation and value to be evaluated.
-         * 
+         *
          * @return the <code>NumericOperator</code>, not null
          */
         public NumericOperator getOperator() {
@@ -1200,6 +1224,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1219,7 +1244,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the search operation and value to be evaluated.
-         * 
+         *
          * @return the <code>NumericOperator</code>, not null
          */
         public NumericOperator getOperator() {
@@ -1242,6 +1267,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1267,7 +1293,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the custom flag to be search.
-         * 
+         *
          * @return the flag name, not null
          */
         public String getFlag() {
@@ -1276,7 +1302,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the value to be tested.
-         * 
+         *
          * @return the <code>BooleanOperator</code>, not null
          */
         public BooleanOperator getOperator() {
@@ -1300,6 +1326,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1308,6 +1335,51 @@ public class SearchQuery implements Serializable {
         }
     }
 
+    /***
+     * Filter on attachment presence
+     */
+    public static class AttachmentCriterion extends Criterion {
+        private final BooleanOperator operator;
+
+        private AttachmentCriterion(BooleanOperator operator) {
+            super();
+            this.operator = operator;
+        }
+
+        /**
+         * Gets the test to be preformed.
+         *
+         * @return the <code>BooleanOperator</code>, not null
+         */
+        public BooleanOperator getOperator() {
+            return operator;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(operator);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof AttachmentCriterion) {
+                AttachmentCriterion that = (AttachmentCriterion) obj;
+
+                return Objects.equal(this.operator, that.operator);
+            }
+
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("operator", operator)
+                .toString();
+        }
+    }
+
+
     /**
      * Filters on a standard flag.
      */
@@ -1315,7 +1387,7 @@ public class SearchQuery implements Serializable {
         private static final long serialVersionUID = 1L;
 
         // Flags not Flag because Flags are serializable and Flag is not
-        private final Flags flag;        
+        private final Flags flag;
         private final BooleanOperator operator;
 
         private FlagCriterion(Flag flag, BooleanOperator operator) {
@@ -1326,18 +1398,18 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the flag filtered on.
-         * 
+         *
          * @return the flag, not null
          */
         public Flag getFlag() {
-           // safe because the Flags(Flag) does system flags, 
+           // safe because the Flags(Flag) does system flags,
            // and James code also constructs FlagCriterion only with system flags
            return flag.getSystemFlags()[0];
         }
 
         /**
          * Gets the test to be preformed.
-         * 
+         *
          * @return the <code>BooleanOperator</code>, not null
          */
         public BooleanOperator getOperator() {
@@ -1361,6 +1433,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1405,6 +1478,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1436,7 +1510,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the value to be searched for.
-         * 
+         *
          * @return the value
          */
         public String getAddress() {
@@ -1459,6 +1533,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("address", address)
@@ -1481,7 +1556,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the value to be searched for.
-         * 
+         *
          * @return the value
          */
         public String getValue() {
@@ -1504,6 +1579,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("value", value)
@@ -1567,7 +1643,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Is the search for set?
-         * 
+         *
          * @return true indicates that set values should be selected, false
          *         indicates that unset values should be selected
          */
@@ -1591,6 +1667,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("set", set)
@@ -1621,7 +1698,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the operation type
-         * 
+         *
          * @return not null
          */
         public NumericComparator getType() {
@@ -1630,7 +1707,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the value to be compared.
-         * 
+         *
          * @return the value
          */
         public long getValue() {
@@ -1654,6 +1731,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("value", value)
@@ -1701,7 +1779,7 @@ public class SearchQuery implements Serializable {
 
         /**
          * Gets the operator type.
-         * 
+         *
          * @return the type, either {@link DateComparator#BEFORE},
          *         {@link DateComparator#AFTER} or {@link DateComparator#ON}
          */
@@ -1726,6 +1804,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("date", date)
@@ -1752,7 +1831,7 @@ public class SearchQuery implements Serializable {
         /**
          * Gets the filtering ranges. Values falling within these ranges will be
          * selected.
-         * 
+         *
          * @return the <code>NumericRange</code>'s search on, not null
          */
         public NumericRange[] getRange() {
@@ -1779,6 +1858,7 @@ public class SearchQuery implements Serializable {
             return true;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("range", Arrays.toString(range))
@@ -1786,7 +1866,7 @@ public class SearchQuery implements Serializable {
         }
 
     }
-    
+
     /**
      * Search for uids within set of ranges.
      */
@@ -1803,14 +1883,14 @@ public class SearchQuery implements Serializable {
         /**
          * Gets the filtering ranges. Values falling within these ranges will be
          * selected.
-         * 
+         *
          * @return the <code>UidRange</code>'s search on, not null
          */
         public UidRange[] getRange() {
             return ranges;
         }
 
-        
+
         @Override
         public int hashCode() {
             return Arrays.hashCode(ranges);
@@ -1825,6 +1905,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("ranges", Arrays.toString(ranges))
