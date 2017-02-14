@@ -16,35 +16,40 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.store;
 
-package org.apache.james.adapter.mailbox.store;
+import com.google.common.base.Optional;
 
-import javax.inject.Inject;
+public class FakeAuthorizator implements Authorizator {
 
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.store.Authenticator;
-import org.apache.james.user.api.UsersRepository;
-import org.apache.james.user.api.UsersRepositoryException;
-
-/**
- * Authenticator which use an UsersRepository to check if the user and password
- * match
- */
-public class UserRepositoryAuthenticator implements Authenticator {
-
-    private final UsersRepository repos;
-
-    @Inject
-    public UserRepositoryAuthenticator(UsersRepository repos) {
-        this.repos = repos;
+    public static FakeAuthorizator defaultReject() {
+        return new FakeAuthorizator(Optional.<String>absent(), Optional.<String>absent());
     }
 
-    public boolean isAuthentic(String userid, CharSequence passwd) throws MailboxException {
-        try {
-            return repos.test(userid, passwd.toString());
-        } catch (UsersRepositoryException e) {
-            throw new MailboxException("Unable to access UsersRepository", e);
+    public static FakeAuthorizator forUserAndAdmin(String admin, String user) {
+        return new FakeAuthorizator(Optional.of(admin), Optional.of(user));
+    }
+
+    private final Optional<String> adminId;
+    private final Optional<String> delegatedUserId;
+
+    private FakeAuthorizator(Optional<String> adminId, Optional<String> userId) {
+        this.adminId = adminId;
+        this.delegatedUserId = userId;
+    }
+
+    @Override
+    public AuthorizationState canLoginAsOtherUser(String userId, String otherUserId) {
+        if (!adminId.isPresent() || !this.delegatedUserId.isPresent()) {
+            return AuthorizationState.NOT_ADMIN;
         }
+        if (!adminId.get().equals(userId)) {
+            return AuthorizationState.NOT_ADMIN;
+        }
+        if (!otherUserId.equals(this.delegatedUserId.get())) {
+            return AuthorizationState.UNKNOWN_USER;
+        }
+        return AuthorizationState.ALLOWED;
     }
-
 }
+

@@ -40,7 +40,6 @@ import org.apache.james.mailbox.hbase.HBaseMailboxSessionMapperFactory;
 import org.apache.james.mailbox.hbase.mail.HBaseModSeqProvider;
 import org.apache.james.mailbox.hbase.mail.HBaseUidProvider;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.FakeAuthenticator;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
@@ -65,7 +64,6 @@ public class HBaseHostSystem extends JamesImapHostSystem {
     public static Boolean useMiniCluster = true;
     
     private final HBaseMailboxManager mailboxManager;
-    private final FakeAuthenticator userManager;
     private MiniHBaseCluster hbaseCluster;
     private final Configuration conf;
 
@@ -90,8 +88,6 @@ public class HBaseHostSystem extends JamesImapHostSystem {
             conf = HBaseConfiguration.create();
         }
 
-        userManager = new FakeAuthenticator();
-
         final HBaseModSeqProvider modSeqProvider = new HBaseModSeqProvider(conf);
         final HBaseUidProvider uidProvider = new HBaseUidProvider(conf);
         DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
@@ -101,7 +97,7 @@ public class HBaseHostSystem extends JamesImapHostSystem {
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
         MessageParser messageParser = new MessageParser();
         
-        mailboxManager = new HBaseMailboxManager(mapperFactory, userManager, aclResolver, groupMembershipResolver, 
+        mailboxManager = new HBaseMailboxManager(mapperFactory, authenticator, authorizator, aclResolver, groupMembershipResolver,
                 messageParser, messageIdFactory);
         mailboxManager.init();
 
@@ -129,11 +125,6 @@ public class HBaseHostSystem extends JamesImapHostSystem {
         mailboxManager.deleteEverything(session);
         mailboxManager.endProcessingRequest(session);
         mailboxManager.logout(session, false);
-    }
-
-    public boolean addUser(String user, String password) {
-        userManager.addUser(user, password);
-        return true;
     }
 
     public final void resetUserMetaData() throws Exception {

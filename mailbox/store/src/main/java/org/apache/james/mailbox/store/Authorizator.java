@@ -17,46 +17,21 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.api;
+package org.apache.james.mailbox.store;
+
+import org.apache.james.mailbox.exception.MailboxException;
 
 /**
- * A connection to the host.
+ * Authenticates user credentials.
  */
-public interface Session {
-    
-    /**
-     * Reads a line from the session input,
-     * blocking until a new line is available.
-     * @return not null
-     * @throws Exception
-     */
-    String readLine() throws Exception;
+public interface Authorizator {
 
-    /**
-     * Writes a line to the session output.
-     * @param line not null
-     * @throws Exception
-     */
-    void writeLine(String line) throws Exception;
+    enum AuthorizationState {
+        ALLOWED,
+        NOT_ADMIN,
+        UNKNOWN_USER
+    }
 
-    /**
-     * Opens the session.
-     * 
-     * @throws Exception
-     */
-    void start() throws Exception;
-
-    /**
-     * Reopens the session to reinitialize the server state
-     * 
-     * @throws Exception
-     */
-    void restart() throws Exception;
-
-    /**
-     * Closes the session.
-     * 
-     * @throws Exception
-     */
-    void stop() throws Exception;
+    AuthorizationState canLoginAsOtherUser(String userId, String otherUserId) throws MailboxException;
 }
+

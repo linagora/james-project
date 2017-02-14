@@ -17,46 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.api;
+package org.apache.james.mailbox.exception;
 
-/**
- * A connection to the host.
- */
-public interface Session {
-    
-    /**
-     * Reads a line from the session input,
-     * blocking until a new line is available.
-     * @return not null
-     * @throws Exception
-     */
-    String readLine() throws Exception;
+public class UserDoesNotExistException extends MailboxException {
 
-    /**
-     * Writes a line to the session output.
-     * @param line not null
-     * @throws Exception
-     */
-    void writeLine(String line) throws Exception;
+    private final String name;
 
-    /**
-     * Opens the session.
-     * 
-     * @throws Exception
-     */
-    void start() throws Exception;
+    public UserDoesNotExistException(String name) {
+        super("User " + name + "does not exist");
+        this.name = name;
+    }
 
-    /**
-     * Reopens the session to reinitialize the server state
-     * 
-     * @throws Exception
-     */
-    void restart() throws Exception;
-
-    /**
-     * Closes the session.
-     * 
-     * @throws Exception
-     */
-    void stop() throws Exception;
+    public String getName() {
+        return name;
+    }
 }

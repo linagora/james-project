@@ -17,46 +17,40 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.api;
+package org.apache.james.adapter.mailbox.store;
+
+import javax.inject.Inject;
+
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.store.Authorizator;
+import org.apache.james.user.api.UsersRepository;
+import org.apache.james.user.api.UsersRepositoryException;
 
 /**
- * A connection to the host.
+ * Authorizator which use an UsersRepository to check if the delegation is allowed
  */
-public interface Session {
-    
-    /**
-     * Reads a line from the session input,
-     * blocking until a new line is available.
-     * @return not null
-     * @throws Exception
-     */
-    String readLine() throws Exception;
+public class UserRepositoryAuthorizator implements Authorizator {
 
-    /**
-     * Writes a line to the session output.
-     * @param line not null
-     * @throws Exception
-     */
-    void writeLine(String line) throws Exception;
+    private final UsersRepository repos;
 
-    /**
-     * Opens the session.
-     * 
-     * @throws Exception
-     */
-    void start() throws Exception;
+    @Inject
+    public UserRepositoryAuthorizator(UsersRepository repos) {
+        this.repos = repos;
+    }
 
-    /**
-     * Reopens the session to reinitialize the server state
-     * 
-     * @throws Exception
-     */
-    void restart() throws Exception;
+    @Override
+    public AuthorizationState canLoginAsOtherUser(String userId, String otherUserId) throws MailboxException {
+        try {
+            if (!repos.isAdministrator(userId)) {
+                return AuthorizationState.NOT_ADMIN;
+            }
+            if (!repos.contains(otherUserId)) {
+                return AuthorizationState.UNKNOWN_USER;
+            }
+            return AuthorizationState.ALLOWED;
+        } catch (UsersRepositoryException e) {
+            throw new MailboxException("Unable to access usersRepository", e);
+        }
+    }
 
-    /**
-     * Closes the session.
-     * 
-     * @throws Exception
-     */
-    void stop() throws Exception;
 }
