@@ -47,6 +47,7 @@ import org.apache.james.mailbox.model.SearchQuery.DateResolution;
 import org.apache.james.mailbox.model.SearchQuery.UidRange;
 import org.apache.james.mailbox.store.ResultUtils;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.comparator.CombinedComparator;
 import org.apache.james.mime4j.MimeException;
 import org.apache.james.mime4j.MimeIOException;
@@ -94,6 +95,7 @@ public class MessageSearches implements Iterable<SimpleMessageSearchIndex.Search
     public MessageSearches() {
     }
 
+    @Override
     public Iterator<SimpleMessageSearchIndex.SearchResult> iterator() {
         ImmutableList.Builder<MailboxMessage> builder = ImmutableList.builder();
         while (messages.hasNext()) {
@@ -187,6 +189,8 @@ public class MessageSearches implements Iterable<SimpleMessageSearchIndex.Search
             result = true;
         } else if (criterion instanceof SearchQuery.ConjunctionCriterion) {
             result = matches((SearchQuery.ConjunctionCriterion) criterion, message, recentMessageUids);
+        } else if (criterion instanceof SearchQuery.AttachmentCriterion) {
+            result = matches((SearchQuery.AttachmentCriterion) criterion, message);
         } else if (criterion instanceof SearchQuery.ModSeqCriterion) {
             result = matches((SearchQuery.ModSeqCriterion) criterion, message);
         } else {
@@ -521,6 +525,13 @@ public class MessageSearches implements Iterable<SimpleMessageSearchIndex.Search
         cal.set(dateTime.getYear(), dateTime.getMonth() - 1, dateTime.getDay(), dateTime.getHour(),
                 dateTime.getMinute(), dateTime.getSecond());
         return cal.getTime();
+    }
+
+
+    private boolean matches(SearchQuery.AttachmentCriterion criterion, MailboxMessage message) throws UnsupportedSearchException {
+        boolean mailHasAttachments = FluentIterable.from(message.getProperties())
+            .anyMatch(PropertyBuilder.isHasAttachmentProperty());
+        return mailHasAttachments == criterion.getOperator().isSet();
     }
 
     private boolean matches(SearchQuery.SizeCriterion criterion, MailboxMessage message) throws UnsupportedSearchException {

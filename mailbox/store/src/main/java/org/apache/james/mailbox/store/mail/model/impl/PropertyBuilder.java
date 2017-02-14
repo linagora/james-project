@@ -49,12 +49,27 @@ import java.util.TreeMap;
 
 import org.apache.james.mailbox.store.mail.model.Property;
 
+import com.google.common.base.Predicate;
+
 /**
  * Builds properties
  */
 public class PropertyBuilder {
-    
+
     private static final int INITIAL_CAPACITY = 32;
+    public static final String JAMES_INTERNALS = "JAMES_INTERNALS";
+    public static final String HAS_ATTACHMENT = "HAS_ATTACHMENT";
+
+    public static Predicate<Property> isHasAttachmentProperty() {
+        return new Predicate<Property>() {
+            @Override
+            public boolean apply(Property input) {
+                return input.getNamespace().equals(PropertyBuilder.JAMES_INTERNALS)
+                    && input.getLocalName().equals(PropertyBuilder.HAS_ATTACHMENT)
+                    && input.getValue().equals("true");
+            }
+        };
+    }
 
     private Long textualLineCount;
     private final List<SimpleProperty> properties;
@@ -218,7 +233,11 @@ public class PropertyBuilder {
     public void setMediaType(String value) {
         setProperty(MIME_MIME_TYPE_SPACE, MIME_MEDIA_TYPE_NAME, value);
     }
-    
+
+    public void setHasAttachment(boolean value) {
+        setProperty(JAMES_INTERNALS, HAS_ATTACHMENT, Boolean.toString(value));
+    }
+
     /**
      * Gets the MIME content subtype.
      * 

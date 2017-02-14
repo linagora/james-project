@@ -32,7 +32,6 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
 import org.apache.james.mailbox.MessageUid;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -594,6 +593,14 @@ public class SearchQuery implements Serializable {
         return result;
     }
 
+    public static Criterion hasAttachment() {
+        return new AttachmentCriterion(BooleanOperator.set());
+    }
+
+    public static Criterion hasNoAttachment() {
+        return new AttachmentCriterion(BooleanOperator.unset());
+    }
+
     /**
      * Creates a filter on the given flag selecting messages where the given
      * flag is selected.
@@ -812,6 +819,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("lowValue", lowValue)
@@ -877,6 +885,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("lowValue", lowValue)
@@ -948,6 +957,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("criteria", criteria)
@@ -985,6 +995,7 @@ public class SearchQuery implements Serializable {
             return 1729;
         }
 
+        @Override
         public String toString() {
             return "AllCriterion";
         }
@@ -1052,6 +1063,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1109,6 +1121,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1155,6 +1168,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1200,6 +1214,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1242,6 +1257,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1300,6 +1316,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1307,6 +1324,50 @@ public class SearchQuery implements Serializable {
                 .toString();
         }
     }
+
+    /***
+     * Filter on attachment presence
+     */
+    public static class AttachmentCriterion extends Criterion {
+        private final BooleanOperator operator;
+
+        private AttachmentCriterion(BooleanOperator operator) {
+            this.operator = operator;
+        }
+
+        /**
+         * Gets the test to be preformed.
+         *
+         * @return the <code>BooleanOperator</code>, not null
+         */
+        public BooleanOperator getOperator() {
+            return operator;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(operator);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof AttachmentCriterion) {
+                AttachmentCriterion that = (AttachmentCriterion) obj;
+
+                return Objects.equal(this.operator, that.operator);
+            }
+
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("operator", operator)
+                .toString();
+        }
+    }
+
 
     /**
      * Filters on a standard flag.
@@ -1361,6 +1422,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1405,6 +1467,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
@@ -1459,6 +1522,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("address", address)
@@ -1504,6 +1568,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("value", value)
@@ -1591,6 +1656,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("set", set)
@@ -1654,6 +1720,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("value", value)
@@ -1726,6 +1793,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("date", date)
@@ -1779,6 +1847,7 @@ public class SearchQuery implements Serializable {
             return true;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("range", Arrays.toString(range))
@@ -1825,6 +1894,7 @@ public class SearchQuery implements Serializable {
             return false;
         }
 
+        @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("ranges", Arrays.toString(ranges))

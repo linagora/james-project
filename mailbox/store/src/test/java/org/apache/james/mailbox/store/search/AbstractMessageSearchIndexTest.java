@@ -67,6 +67,8 @@ public abstract class AbstractMessageSearchIndexTest {
     private ComposedMessageId m7;
     private ComposedMessageId m8;
     private ComposedMessageId m9;
+    private ComposedMessageId mailWithAttachment;
+    private ComposedMessageId mailWithInlinedAttachment;
     private ComposedMessageId mOther;
 
     @Before
@@ -154,14 +156,27 @@ public abstract class AbstractMessageSearchIndexTest {
             session,
             true,
             new Flags(Flags.Flag.SEEN));
-        // sentDate: Tue, 2 Jun 2015 12:00:55 +0200
-        // Internal date : 2014/09/02 00:00:00.000
         m9 = inboxMessageManager.appendMessage(
             ClassLoader.getSystemResourceAsStream("eml/frnog.eml"),
             new Date(1409608800000L),
             session,
             true,
             new Flags("Hello you"));
+
+        mailWithAttachment = myFolderMessageManager.appendMessage(
+            ClassLoader.getSystemResourceAsStream("eml/oneAttachmentAndSomeTextInlined.eml"),
+            new Date(1409608900000L),
+            session,
+            true,
+            new Flags("Hello you"));
+
+        mailWithInlinedAttachment = myFolderMessageManager.appendMessage(
+            ClassLoader.getSystemResourceAsStream("eml/oneInlinedAttachment.eml"),
+            new Date(1409608900000L),
+            session,
+            true,
+            new Flags("Hello you"));
+
         await();
     }
 
@@ -221,6 +236,22 @@ public abstract class AbstractMessageSearchIndexTest {
         searchQuery.andCriteria(SearchQuery.bodyContains("created summary"));
         assertThat(messageSearchIndex.search(session, mailbox, searchQuery))
             .containsOnly(m2.getUid(), m8.getUid());
+    }
+
+    @Test
+    public void hasAttachment() throws MailboxException {
+        SearchQuery searchQuery = new SearchQuery();
+        searchQuery.andCriteria(SearchQuery.hasAttachment());
+        assertThat(messageSearchIndex.search(session, mailbox2, searchQuery))
+            .containsOnly(mailWithAttachment.getUid());
+    }
+
+    @Test
+    public void hasNoAttachment() throws MailboxException {
+        SearchQuery searchQuery = new SearchQuery();
+        searchQuery.andCriteria(SearchQuery.hasNoAttachment());
+        assertThat(messageSearchIndex.search(session, mailbox2, searchQuery))
+            .containsOnly(mOther.getUid(), mailWithInlinedAttachment.getUid());
     }
 
     @Test
@@ -910,6 +941,6 @@ public abstract class AbstractMessageSearchIndexTest {
         List<MessageId> actual = messageSearchIndex.search(session, MultimailboxesSearchQuery.from(searchQuery).build(), LIMIT);
 
         assertThat(actual).containsOnly(m1.getMessageId(), m2.getMessageId(), m3.getMessageId(), m4.getMessageId(), m5.getMessageId(),
-            m6.getMessageId(), m7.getMessageId(), m8.getMessageId(), m9.getMessageId(), mOther.getMessageId());
+            m6.getMessageId(), m7.getMessageId(), m8.getMessageId(), m9.getMessageId(), mOther.getMessageId(), mailWithAttachment.getMessageId(), mailWithInlinedAttachment.getMessageId());
     }
 }
