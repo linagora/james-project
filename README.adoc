@@ -1,6 +1,8 @@
 Apache James Project
 ====================
 
+zugefgzjeygf
+
 This is the parent module for all Apache James artifacts. It contains useful values to be inherited by other Maven projects.
 
 * the list of Apache James contributors, committers and PMC Members
