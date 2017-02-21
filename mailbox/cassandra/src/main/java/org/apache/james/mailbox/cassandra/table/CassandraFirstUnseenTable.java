@@ -17,25 +17,11 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.backends.cassandra.components;
+package org.apache.james.mailbox.cassandra.table;
 
-import com.datastax.driver.core.Statement;
+public interface CassandraFirstUnseenTable {
+    String TABLE_NAME = "firstUnseen";
 
-public class CassandraTable {
-
-    private final Statement createStatement;
-    private final String name;
-
-    public CassandraTable(String name, Statement createStatement) {
-        this.createStatement = createStatement;
-        this.name = name;
-    }
-
-    public Statement getCreateStatement() {
-        return createStatement;
-    }
-
-    public String getName() {
-        return name;
-    }
+    String MAILBOX_ID = "mailboxId";
+    String UID = "uid";
 }
