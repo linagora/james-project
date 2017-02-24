@@ -29,11 +29,14 @@ import org.apache.james.imap.message.request.LogoutRequest;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class LogoutProcessor extends AbstractMailboxProcessor<LogoutRequest> {
 
-    public LogoutProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(LogoutRequest.class, next, mailboxManager, factory);
+    public LogoutProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(LogoutRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
     }
 
     protected void doProcess(LogoutRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {

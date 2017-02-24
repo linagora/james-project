@@ -46,6 +46,8 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> implements CapabilityImplementingProcessor {
 
@@ -59,13 +61,15 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
     private final TimeUnit heartbeatIntervalUnit;
     private final long heartbeatInterval;
 
-    public IdleProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        this(next, mailboxManager, factory, DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS, DEFAULT_HEARTBEAT_INTERVAL_UNIT, Executors.newScheduledThreadPool(DEFAULT_SCHEDULED_POOL_CORE_SIZE));
+    public IdleProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        this(next, mailboxManager, factory, DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS, DEFAULT_HEARTBEAT_INTERVAL_UNIT, Executors.newScheduledThreadPool(DEFAULT_SCHEDULED_POOL_CORE_SIZE), timeMetricFactory, timeLogger);
 
     }
 
-    public IdleProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory, long heartbeatInterval, TimeUnit heartbeatIntervalUnit, ScheduledExecutorService heartbeatExecutor) {
-        super(IdleRequest.class, next, mailboxManager, factory);
+    public IdleProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory, long heartbeatInterval, TimeUnit heartbeatIntervalUnit, ScheduledExecutorService heartbeatExecutor,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(IdleRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
         this.heartbeatInterval = heartbeatInterval;
         this.heartbeatIntervalUnit = heartbeatIntervalUnit;
         this.heartbeatExecutor = heartbeatExecutor;

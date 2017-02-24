@@ -41,6 +41,8 @@ import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 import org.slf4j.Logger;
 
 /**
@@ -52,8 +54,9 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
 
     private static final List<String> CAPABILITIES = Collections.singletonList(ImapConstants.SUPPORTS_ACL);
 
-    public ListRightsProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(ListRightsRequest.class, next, mailboxManager, factory);
+    public ListRightsProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(ListRightsRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
     }
 
     @Override

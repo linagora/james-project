@@ -40,11 +40,14 @@ import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
 
-    public LSubProcessor(ImapProcessor next, MailboxManager mailboxManager, SubscriptionManager subscriptionManager, StatusResponseFactory factory) {
-        super(LsubRequest.class, next, mailboxManager, subscriptionManager, factory);
+    public LSubProcessor(ImapProcessor next, MailboxManager mailboxManager, SubscriptionManager subscriptionManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(LsubRequest.class, next, mailboxManager, subscriptionManager, factory, timeMetricFactory, timeLogger);
     }
 
     private void listSubscriptions(ImapSession session, Responder responder, String referenceName, String mailboxName) throws SubscriptionException, MailboxException {

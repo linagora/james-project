@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mpt.protocol.ProtocolSession.TimerCommand;
 
 /**
  * A builder which generates a ProtocolSession from a test file.
@@ -176,6 +177,11 @@ public class FileProtocolSessionBuilder extends ProtocolSessionBuilder {
                         throw new Exception("No session number specified");
                     }
                     sessionNumber = Integer.parseInt(number);
+                }
+                else if (next.startsWith(TIMER)) {
+                    TimerCommand timerCommand = TimerCommand.from(next.substring(6, 11));
+                    String timerName = next.substring(12);
+                    session.TIMER(timerCommand, timerName);
                 }
                 else {
                     String prefix = next;

@@ -71,7 +71,7 @@ public class NamespaceProcessorTest {
         sharedSpaces = new ArrayList<String>();
         statusResponseStub = mockery.mock(StatusResponseFactory.class);
         mailboxManagerStub = mockery.mock(MailboxManager.class);
-        subject = new NamespaceProcessor(mockery.mock(ImapProcessor.class), mailboxManagerStub, statusResponseStub);
+        subject = new NamespaceProcessor(mockery.mock(ImapProcessor.class), mailboxManagerStub, statusResponseStub, new NoopTimeMetricFactory(), new NoopTimeLogger());
         imapSessionStub = mockery.mock(ImapSession.class);
         mailboxSessionStub = mockery.mock(MailboxSession.class);
      

@@ -40,11 +40,14 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public abstract class AbstractMessageRangeProcessor<M extends AbstractMessageRangeRequest> extends AbstractMailboxProcessor<M> {
 
-    public AbstractMessageRangeProcessor(Class<M> acceptableClass, ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(acceptableClass, next, mailboxManager, factory);
+    public AbstractMessageRangeProcessor(Class<M> acceptableClass, ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(acceptableClass, next, mailboxManager, factory, timeMetricFactory, timeLogger);
     }
 
     abstract protected List<MessageRange> process(final MailboxPath targetMailbox,

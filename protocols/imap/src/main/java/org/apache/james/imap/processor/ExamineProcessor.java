@@ -23,11 +23,14 @@ import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.message.request.ExamineRequest;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class ExamineProcessor extends AbstractSelectionProcessor<ExamineRequest> {
 
-    public ExamineProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory) {
-        super(ExamineRequest.class, next, mailboxManager, statusResponseFactory, true);
+    public ExamineProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(ExamineRequest.class, next, mailboxManager, statusResponseFactory, true, timeMetricFactory, timeLogger);
     }
 
 }
