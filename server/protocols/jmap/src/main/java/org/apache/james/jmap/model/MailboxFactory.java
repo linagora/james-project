@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
+import static org.apache.james.jmap.utils.MailboxNameEscaper.unescape;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -109,9 +111,9 @@ public class MailboxFactory {
         String name = mailboxPath.getName();
         if (name.contains(String.valueOf(mailboxSession.getPathDelimiter()))) {
             List<String> levels = Splitter.on(mailboxSession.getPathDelimiter()).splitToList(name);
-            return levels.get(levels.size() - 1);
+            return unescape(levels.get(levels.size() - 1));
         }
-        return name;
+        return unescape(name);
     }
 
     @VisibleForTesting Optional<MailboxId> getParentIdFromMailboxPath(MailboxPath mailboxPath, Optional<List<MailboxMetaData>> userMailboxesMetadata,

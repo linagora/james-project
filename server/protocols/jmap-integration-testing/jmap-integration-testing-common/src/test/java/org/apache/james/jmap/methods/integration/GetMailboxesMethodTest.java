@@ -101,7 +101,7 @@ public abstract class GetMailboxesMethodTest {
     public void teardown() {
         jmapServer.stop();
     }
-    
+
     @Test
     public void getMailboxesShouldErrorNotSupportedWhenRequestContainsNonNullAccountId() throws Exception {
         given()
@@ -168,6 +168,51 @@ public abstract class GetMailboxesMethodTest {
             .body(ARGUMENTS + ".list", hasSize(2))
             .body(ARGUMENTS + ".list[0].id", equalTo(mailboxId))
             .body(ARGUMENTS + ".list[1].id", equalTo(mailboxId2));
+    }
+
+    @Test
+    public void getMailboxesShouldRetrieveEscapedMailboxes() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "linagora\\/com");
+        Mailbox mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "linagora\\/com");
+
+        String mailboxId = mailbox.getMailboxId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].id", equalTo(mailboxId))
+            .body(ARGUMENTS + ".list[0].name", equalTo("linagora.com"));
+    }
+
+    @Test
+    public void getMailboxesShouldRetrieveEscapedMailboxesWithEscapedParent() throws Exception {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "parent\\/com");
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "parent\\/com.linagora\\/com");
+
+        Mailbox mailbox1 = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "parent\\/com");
+        Mailbox mailbox2 = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "parent\\/com.linagora\\/com");
+
+        String mailboxId1 = mailbox1.getMailboxId().serialize();
+        String mailboxId2 = mailbox2.getMailboxId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId2 + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].id", equalTo(mailboxId2))
+            .body(ARGUMENTS + ".list[0].name", equalTo("linagora.com"))
+            .body(ARGUMENTS + ".list[0].parentId", equalTo(mailboxId1));
     }
 
     @Test

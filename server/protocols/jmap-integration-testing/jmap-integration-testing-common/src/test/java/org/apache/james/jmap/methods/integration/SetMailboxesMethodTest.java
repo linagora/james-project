@@ -129,9 +129,9 @@ public abstract class SetMailboxesMethodTest {
         given()
             .header("Authorization", this.accessToken.serialize())
             .body(requestBody)
-            .when()
+        .when()
             .post("/jmap")
-            .then()
+        .then()
             .statusCode(200)
             .body(NAME, equalTo("mailboxesSet"))
             .body(ARGUMENTS + ".notCreated", aMapWithSize(1))
@@ -163,9 +163,9 @@ public abstract class SetMailboxesMethodTest {
         given()
             .header("Authorization", this.accessToken.serialize())
             .body(requestBody)
-            .when()
+        .when()
             .post("/jmap")
-            .then()
+        .then()
             .statusCode(200)
             .body(NAME, equalTo("mailboxesSet"))
             .body(ARGUMENTS + ".notUpdated", aMapWithSize(1))
@@ -195,9 +195,9 @@ public abstract class SetMailboxesMethodTest {
         given()
             .header("Authorization", this.accessToken.serialize())
             .body(requestBody)
-            .when()
+        .when()
             .post("/jmap")
-            .then()
+        .then()
             .statusCode(200)
             .body(NAME, equalTo("mailboxesSet"))
             .body(ARGUMENTS + ".created", hasKey("create-id01"));
@@ -225,9 +225,9 @@ public abstract class SetMailboxesMethodTest {
         given()
             .header("Authorization", this.accessToken.serialize())
             .body(requestBody)
-            .when()
+        .when()
             .post("/jmap")
-            .then()
+        .then()
             .statusCode(200)
             .body(NAME, equalTo("mailboxesSet"))
             .body(ARGUMENTS + ".updated", contains(mailboxId));
@@ -817,7 +817,7 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
-    public void setMailboxesShouldReturnNotCreatedWhenMailboxNameContainsPathDelimiter() {
+    public void setMailboxesShouldReturnCreatedWhenMailboxNameContainsPathDelimiter() {
         String requestBody =
                 "[" +
                     "  [ \"setMailboxes\"," +
@@ -840,11 +840,13 @@ public abstract class SetMailboxesMethodTest {
             .then()
                 .statusCode(200)
                 .body(NAME, equalTo("mailboxesSet"))
-                .body(ARGUMENTS + ".notCreated", aMapWithSize(1))
-                .body(ARGUMENTS + ".notCreated", hasEntry(equalTo("create-id01"), Matchers.allOf(
-                            hasEntry(equalTo("type"), equalTo("invalidArguments")),
-                            hasEntry(equalTo("description"), equalTo("The mailbox 'A.B.C.D' contains an illegal character: '.'")))
-                        ));
+                .body(ARGUMENTS + ".created", aMapWithSize(1))
+                .body(ARGUMENTS + ".created", hasEntry(equalTo("create-id01"), Matchers.allOf(
+                    hasEntry(equalTo("parentId"), isEmptyOrNullString()),
+                    hasEntry(equalTo("name"), equalTo("A.B.C.D")))));
+
+        assertThat(jmapServer.serverProbe().listUserMailboxes(username))
+            .contains("A\\/B\\/C\\/D");
     }
 
     @Test
@@ -1493,7 +1495,7 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
-    public void setMailboxesShouldReturnNotUpdatedWhenNameContainsPathDelimiter() {
+    public void setMailboxesShouldEscapeWhenNameContainsPathDelimiter() {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox");
         Mailbox mailbox = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox");
         String mailboxId = mailbox.getMailboxId().serialize();
@@ -1519,9 +1521,9 @@ public abstract class SetMailboxesMethodTest {
         .then()
             .statusCode(200)
             .body(NAME, equalTo("mailboxesSet"))
-            .body(ARGUMENTS + ".notUpdated", hasEntry(equalTo(mailboxId), Matchers.allOf(
-                    hasEntry(equalTo("type"), equalTo("invalidArguments")),
-                    hasEntry(equalTo("description"), equalTo("The mailbox 'my.Box' contains an illegal character: '.'"))))); 
+            .body(ARGUMENTS + ".updated", contains(mailboxId));
+
+        assertThat(jmapServer.serverProbe().listUserMailboxes(username)).contains("my\\/Box");
     }
 
     @Test
@@ -1775,7 +1777,6 @@ public abstract class SetMailboxesMethodTest {
 
     @Test
     public void setMailboxesShouldReturnNotUpdatedErrorWhenMovingMailboxTriggersNameConflict() {
-
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "A");
         Mailbox mailboxRootA = jmapServer.serverProbe().getMailbox(MailboxConstants.USER_NAMESPACE, username, "A");
         String mailboxRootAId = mailboxRootA.getMailboxId().serialize();
