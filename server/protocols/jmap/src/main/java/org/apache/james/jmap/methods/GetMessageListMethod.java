@@ -43,6 +43,9 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxId.Factory;
 import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
@@ -61,15 +64,20 @@ public class GetMessageListMethod implements Method {
     private final int maximumLimit;
     private final GetMessagesMethod getMessagesMethod;
     private final Factory mailboxIdFactory;
+    private final TimeMetricFactory timeMetricFactory;
+    private final TimeLogger timeLogger;
 
     @Inject
     @VisibleForTesting public GetMessageListMethod(MailboxManager mailboxManager,
-            @Named(MAXIMUM_LIMIT) int maximumLimit, GetMessagesMethod getMessagesMethod, MailboxId.Factory mailboxIdFactory) {
+            @Named(MAXIMUM_LIMIT) int maximumLimit, GetMessagesMethod getMessagesMethod, MailboxId.Factory mailboxIdFactory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
 
         this.mailboxManager = mailboxManager;
         this.maximumLimit = maximumLimit;
         this.getMessagesMethod = getMessagesMethod;
         this.mailboxIdFactory = mailboxIdFactory;
+        this.timeMetricFactory = timeMetricFactory;
+        this.timeLogger = timeLogger;
     }
 
     @Override
@@ -88,10 +96,12 @@ public class GetMessageListMethod implements Method {
         GetMessageListRequest messageListRequest = (GetMessageListRequest) request;
         GetMessageListResponse messageListResponse = getMessageListResponse(messageListRequest, mailboxSession);
  
+        TimeMetric timeMetric = timeMetricFactory.generate(METHOD_NAME.getName());
         Stream<JmapResponse> jmapResponse = Stream.of(JmapResponse.builder().clientId(clientId)
                 .response(messageListResponse)
                 .responseName(RESPONSE_NAME)
                 .build());
+        timeLogger.log(timeMetric);
         return Stream.concat(jmapResponse,
                 processGetMessages(messageListRequest, messageListResponse, clientId, mailboxSession));
     }

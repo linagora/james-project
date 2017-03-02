@@ -39,6 +39,9 @@ import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
 import org.apache.james.mailbox.model.MessageResult;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 import com.fasterxml.jackson.databind.ser.PropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
@@ -57,13 +60,18 @@ public class GetMessagesMethod implements Method {
     private static final Method.Response.Name RESPONSE_NAME = Method.Response.name("messages");
     private final MessageFactory messageFactory;
     private final MessageIdManager messageIdManager;
+    private final TimeMetricFactory timeMetricFactory;
+    private final TimeLogger timeLogger;
 
     @Inject
     @VisibleForTesting GetMessagesMethod(
             MessageFactory messageFactory,
-            MessageIdManager messageIdManager) {
+            MessageIdManager messageIdManager,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
         this.messageFactory = messageFactory;
         this.messageIdManager = messageIdManager;
+        this.timeMetricFactory = timeMetricFactory;
+        this.timeLogger = timeLogger;
     }
     
     @Override
@@ -81,14 +89,18 @@ public class GetMessagesMethod implements Method {
         Preconditions.checkNotNull(request);
         Preconditions.checkNotNull(mailboxSession);
         Preconditions.checkArgument(request instanceof GetMessagesRequest);
+
         GetMessagesRequest getMessagesRequest = (GetMessagesRequest) request;
         MessageProperties outputProperties = getMessagesRequest.getProperties().toOutputProperties();
-        return Stream.of(JmapResponse.builder().clientId(clientId)
+        TimeMetric timeMetric = timeMetricFactory.generate(METHOD_NAME.getName());
+        Stream<JmapResponse> responses = Stream.of(JmapResponse.builder().clientId(clientId)
                             .response(getMessagesResponse(mailboxSession, getMessagesRequest))
                             .responseName(RESPONSE_NAME)
                             .properties(outputProperties.getOptionalMessageProperties())
                             .filterProvider(buildOptionalHeadersFilteringFilterProvider(outputProperties))
                             .build());
+        timeLogger.log(timeMetric);
+        return responses;
     }
 
     private Optional<SimpleFilterProvider> buildOptionalHeadersFilteringFilterProvider(MessageProperties properties) {

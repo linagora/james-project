@@ -35,11 +35,14 @@ import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.TooLongMailboxNameException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class RenameProcessor extends AbstractMailboxProcessor<RenameRequest> {
 
-    public RenameProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(RenameRequest.class, next, mailboxManager, factory);
+    public RenameProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(RenameRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
     }
 
     /**

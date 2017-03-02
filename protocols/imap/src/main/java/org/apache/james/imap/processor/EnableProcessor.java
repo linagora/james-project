@@ -39,6 +39,8 @@ import org.apache.james.imap.message.request.EnableRequest;
 import org.apache.james.imap.message.response.EnableResponse;
 import org.apache.james.imap.processor.PermitEnableCapabilityProcessor.EnableException;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class EnableProcessor extends AbstractMailboxProcessor<EnableRequest> implements CapabilityImplementingProcessor {
 
@@ -46,14 +48,16 @@ public class EnableProcessor extends AbstractMailboxProcessor<EnableRequest> imp
     public final static String ENABLED_CAPABILITIES = "ENABLED_CAPABILITIES";
     private final static List<String> CAPS = Collections.unmodifiableList(Arrays.asList(SUPPORTS_ENABLE));
 
-    public EnableProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory, List<PermitEnableCapabilityProcessor> capabilities) {
-        this(next, mailboxManager, factory);
+    public EnableProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory, List<PermitEnableCapabilityProcessor> capabilities,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        this(next, mailboxManager, factory, timeMetricFactory, timeLogger);
         EnableProcessor.capabilities.addAll(capabilities);
 
     }
 
-    public EnableProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(EnableRequest.class, next, mailboxManager, factory);
+    public EnableProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(EnableRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
     }
 
 

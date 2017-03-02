@@ -33,11 +33,14 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.TooLongMailboxNameException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 public class DeleteProcessor extends AbstractMailboxProcessor<DeleteRequest> {
 
-    public DeleteProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(DeleteRequest.class, next, mailboxManager, factory);
+    public DeleteProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(DeleteRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
     }
 
     /**

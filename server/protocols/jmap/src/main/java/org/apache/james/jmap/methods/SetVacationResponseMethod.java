@@ -33,6 +33,9 @@ import org.apache.james.jmap.model.SetVacationRequest;
 import org.apache.james.jmap.model.SetVacationResponse;
 import org.apache.james.jmap.model.VacationResponse;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 import com.google.common.base.Preconditions;
 
@@ -47,11 +50,15 @@ public class SetVacationResponseMethod implements Method {
 
     private final VacationRepository vacationRepository;
     private final NotificationRegistry notificationRegistry;
+    private final TimeMetricFactory timeMetricFactory;
+    private final TimeLogger timeLogger;
 
     @Inject
-    public SetVacationResponseMethod(VacationRepository vacationRepository, NotificationRegistry notificationRegistry) {
+    public SetVacationResponseMethod(VacationRepository vacationRepository, NotificationRegistry notificationRegistry, TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
         this.vacationRepository = vacationRepository;
         this.notificationRegistry = notificationRegistry;
+        this.timeMetricFactory = timeMetricFactory;
+        this.timeLogger = timeLogger;
     }
 
     @Override
@@ -72,8 +79,9 @@ public class SetVacationResponseMethod implements Method {
         Preconditions.checkArgument(request instanceof SetVacationRequest);
         SetVacationRequest setVacationRequest = (SetVacationRequest) request;
 
+        TimeMetric timeMetric = timeMetricFactory.generate(METHOD_NAME.getName());
         if (!setVacationRequest.isValid()) {
-            return Stream.of(JmapResponse
+            Stream<JmapResponse> responses = Stream.of(JmapResponse
                 .builder()
                 .clientId(clientId)
                 .error(ErrorResponse.builder()
@@ -81,11 +89,15 @@ public class SetVacationResponseMethod implements Method {
                     .description(INVALID_ARGUMENT_DESCRIPTION)
                     .build())
                 .build());
+            timeLogger.log(timeMetric);
+            return responses;
         }
 
-        return process(clientId,
+        Stream<JmapResponse> responses = process(clientId,
             AccountId.fromString(mailboxSession.getUser().getUserName()),
             setVacationRequest.getUpdate().get(Vacation.ID));
+        timeLogger.log(timeMetric);
+        return responses;
     }
 
 

@@ -31,6 +31,9 @@ import org.apache.james.jmap.model.GetVacationRequest;
 import org.apache.james.jmap.model.GetVacationResponse;
 import org.apache.james.jmap.model.VacationResponse;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.metrics.api.TimeMetricFactory;
 import org.apache.james.util.date.ZonedDateTimeProvider;
 
 import com.google.common.base.Preconditions;
@@ -42,11 +45,15 @@ public class GetVacationResponseMethod implements Method {
 
     private final VacationRepository vacationRepository;
     private final ZonedDateTimeProvider zonedDateTimeProvider;
+    private final TimeMetricFactory timeMetricFactory;
+    private final TimeLogger timeLogger;
 
     @Inject
-    public GetVacationResponseMethod(VacationRepository vacationRepository, ZonedDateTimeProvider zonedDateTimeProvider) {
+    public GetVacationResponseMethod(VacationRepository vacationRepository, ZonedDateTimeProvider zonedDateTimeProvider, TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
         this.vacationRepository = vacationRepository;
         this.zonedDateTimeProvider = zonedDateTimeProvider;
+        this.timeMetricFactory = timeMetricFactory;
+        this.timeLogger = timeLogger;
     }
 
     @Override
@@ -66,11 +73,14 @@ public class GetVacationResponseMethod implements Method {
         Preconditions.checkNotNull(mailboxSession);
         Preconditions.checkArgument(request instanceof GetVacationRequest);
 
-        return Stream.of(JmapResponse.builder()
+        TimeMetric timeMetric = timeMetricFactory.generate(METHOD_NAME.getName());
+        Stream<JmapResponse> responses = Stream.of(JmapResponse.builder()
             .clientId(clientId)
             .responseName(RESPONSE_NAME)
             .response(process(mailboxSession))
             .build());
+        timeLogger.log(timeMetric);
+        return responses;
     }
 
     private GetVacationResponse process(MailboxSession mailboxSession) {

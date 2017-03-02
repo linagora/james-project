@@ -55,6 +55,8 @@ import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.logger.DefaultTimeLogger;
+import org.apache.james.metrics.logger.DefaultTimeMetricFactory;
 import org.assertj.core.api.Condition;
 import org.assertj.core.data.MapEntry;
 import org.assertj.core.groups.Tuple;
@@ -128,7 +130,7 @@ public class GetMessagesMethodTest {
         customMailboxPath = new MailboxPath(inboxPath, "custom");
         mailboxManager.createMailbox(inboxPath, session);
         mailboxManager.createMailbox(customMailboxPath, session);
-        testee = new GetMessagesMethod(messageFactory, inMemoryIntegrationResources.createMessageIdManager(mailboxManager));
+        testee = new GetMessagesMethod(messageFactory, inMemoryIntegrationResources.createMessageIdManager(mailboxManager), new DefaultTimeMetricFactory(), new DefaultTimeLogger());
     }
     
     @Test

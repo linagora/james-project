@@ -39,6 +39,9 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.metrics.api.TimeMetricFactory;
 import org.apache.james.util.OptionalConverter;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -55,11 +58,15 @@ public class GetMailboxesMethod implements Method {
 
     private final MailboxManager mailboxManager; 
     private final MailboxFactory mailboxFactory;
+    private final TimeMetricFactory timeMetricFactory;
+    private final TimeLogger timeLogger;
 
     @Inject
-    @VisibleForTesting public GetMailboxesMethod(MailboxManager mailboxManager, MailboxFactory mailboxFactory) {
+    @VisibleForTesting public GetMailboxesMethod(MailboxManager mailboxManager, MailboxFactory mailboxFactory, TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
         this.mailboxManager = mailboxManager;
         this.mailboxFactory = mailboxFactory;
+        this.timeMetricFactory = timeMetricFactory;
+        this.timeLogger = timeLogger;
     }
 
     @Override
@@ -75,12 +82,15 @@ public class GetMailboxesMethod implements Method {
     public Stream<JmapResponse> process(JmapRequest request, ClientId clientId, MailboxSession mailboxSession) {
         Preconditions.checkArgument(request instanceof GetMailboxesRequest);
         GetMailboxesRequest mailboxesRequest = (GetMailboxesRequest) request;
-        return Stream.of(
+        TimeMetric timeMetric = timeMetricFactory.generate(METHOD_NAME.getName());
+        Stream<JmapResponse> responses = Stream.of(
                 JmapResponse.builder().clientId(clientId)
                 .response(getMailboxesResponse(mailboxesRequest, mailboxSession))
                 .properties(mailboxesRequest.getProperties().map(this::ensureContainsId))
                 .responseName(RESPONSE_NAME)
                 .build());
+        timeLogger.log(timeMetric);
+        return responses;
     }
 
     private Set<MailboxProperty> ensureContainsId(Set<MailboxProperty> input) {

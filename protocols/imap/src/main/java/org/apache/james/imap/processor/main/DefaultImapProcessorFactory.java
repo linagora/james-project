@@ -35,28 +35,34 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 /**
  * 
  */
 public class DefaultImapProcessorFactory {
 
-    public static ImapProcessor createDefaultProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver) {
-        return createXListSupportingProcessor(mailboxManager, subscriptionManager, null, quotaManager, quotaRootResolver, IdleProcessor.DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS, new HashSet<String>());
+    public static ImapProcessor createDefaultProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        return createXListSupportingProcessor(mailboxManager, subscriptionManager, null, quotaManager, quotaRootResolver, IdleProcessor.DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS, new HashSet<String>(), timeMetricFactory, timeLogger);
     }
 
-    public static ImapProcessor createDefaultProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, long idleKeepAlive) {
-        return createXListSupportingProcessor(mailboxManager, subscriptionManager, null, quotaManager, quotaRootResolver, idleKeepAlive, new HashSet<String>());
+    public static ImapProcessor createDefaultProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, long idleKeepAlive,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        return createXListSupportingProcessor(mailboxManager, subscriptionManager, null, quotaManager, quotaRootResolver, idleKeepAlive, new HashSet<String>(), timeMetricFactory, timeLogger);
     }
 
-    public static ImapProcessor createXListSupportingProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, MailboxTyper mailboxTyper, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver) {
-        return createXListSupportingProcessor(mailboxManager, subscriptionManager, mailboxTyper, quotaManager, quotaRootResolver, IdleProcessor.DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS, new HashSet<String>());
+    public static ImapProcessor createXListSupportingProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, MailboxTyper mailboxTyper, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        return createXListSupportingProcessor(mailboxManager, subscriptionManager, mailboxTyper, quotaManager, quotaRootResolver, IdleProcessor.DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS, new HashSet<String>(), timeMetricFactory, timeLogger);
     }
 
-    public static ImapProcessor createXListSupportingProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, MailboxTyper mailboxTyper, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver,  long idleKeepAlive, Set<String> disabledCaps) {
+    public static ImapProcessor createXListSupportingProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, MailboxTyper mailboxTyper, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver,  long idleKeepAlive, Set<String> disabledCaps,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
         final StatusResponseFactory statusResponseFactory = new UnpooledStatusResponseFactory();
         final UnknownRequestProcessor unknownRequestImapProcessor = new UnknownRequestProcessor(statusResponseFactory);
-        final ImapProcessor imap4rev1Chain = DefaultProcessorChain.createDefaultChain(unknownRequestImapProcessor, mailboxManager, subscriptionManager, statusResponseFactory, mailboxTyper, quotaManager, quotaRootResolver, idleKeepAlive, TimeUnit.SECONDS, disabledCaps);
+        final ImapProcessor imap4rev1Chain = DefaultProcessorChain.createDefaultChain(unknownRequestImapProcessor, mailboxManager, subscriptionManager, statusResponseFactory, mailboxTyper, quotaManager, quotaRootResolver, idleKeepAlive, TimeUnit.SECONDS, disabledCaps, timeMetricFactory, timeLogger);
         return new ImapResponseMessageProcessor(imap4rev1Chain);
     }
 
@@ -65,6 +71,8 @@ public class DefaultImapProcessorFactory {
     private MailboxTyper mailboxTyper;
     private QuotaManager quotaManager;
     private QuotaRootResolver quotaRootResolver;
+    private TimeMetricFactory timeMetricFactory;
+    private TimeLogger timeLogger;
 
     public final void setMailboxManager(MailboxManager mailboxManager) {
         this.mailboxManager = mailboxManager;
@@ -106,11 +114,27 @@ public class DefaultImapProcessorFactory {
         return quotaRootResolver;
     }
 
+    public TimeMetricFactory getTimeMetricFactory() {
+        return timeMetricFactory;
+    }
+
+    public void setTimeMetricFactory(TimeMetricFactory timeMetricFactory) {
+        this.timeMetricFactory = timeMetricFactory;
+    }
+
+    public TimeLogger getTimeLogger() {
+        return timeLogger;
+    }
+
+    public void setTimeLogger(TimeLogger timeLogger) {
+        this.timeLogger = timeLogger;
+    }
+
     /**
      * Create the {@link ImapProcessor}
      */
     public ImapProcessor buildImapProcessor() {
-        return createDefaultProcessor(mailboxManager, subscriptionManager, quotaManager, quotaRootResolver);
+        return createDefaultProcessor(mailboxManager, subscriptionManager, quotaManager, quotaRootResolver, timeMetricFactory, timeLogger);
     }
 
 }

@@ -28,6 +28,9 @@ import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.SetMailboxesRequest;
 import org.apache.james.jmap.model.SetMailboxesResponse;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -38,10 +41,14 @@ public class SetMailboxesMethod implements Method {
     @VisibleForTesting static final Response.Name RESPONSE_NAME = Response.name("mailboxesSet");
 
     private final Set<SetMailboxesProcessor> processors;
+    private final TimeMetricFactory timeMetricFactory;
+    private final TimeLogger timeLogger;
 
     @Inject
-    public SetMailboxesMethod(Set<SetMailboxesProcessor> processors) {
+    public SetMailboxesMethod(Set<SetMailboxesProcessor> processors, TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
         this.processors = processors;
+        this.timeMetricFactory = timeMetricFactory;
+        this.timeLogger = timeLogger;
     }
 
     @Override
@@ -60,12 +67,16 @@ public class SetMailboxesMethod implements Method {
         Preconditions.checkNotNull(clientId);
         Preconditions.checkNotNull(mailboxSession);
         Preconditions.checkArgument(request instanceof SetMailboxesRequest);
+        
+        TimeMetric timeMetric = timeMetricFactory.generate(METHOD_NAME.getName());
         SetMailboxesRequest setMailboxesRequest = (SetMailboxesRequest) request;
-        return Stream.of(
+        Stream<JmapResponse> responses = Stream.of(
                 JmapResponse.builder().clientId(clientId)
                 .response(setMailboxesResponse(setMailboxesRequest, mailboxSession))
                 .responseName(RESPONSE_NAME)
                 .build());
+        timeLogger.log(timeMetric);
+        return responses;
     }
 
     private SetMailboxesResponse setMailboxesResponse(SetMailboxesRequest request, MailboxSession mailboxSession) {

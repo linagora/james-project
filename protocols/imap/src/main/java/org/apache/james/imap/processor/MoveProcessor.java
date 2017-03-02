@@ -32,6 +32,8 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.metrics.api.TimeLogger;
+import org.apache.james.metrics.api.TimeMetricFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -39,8 +41,9 @@ public class MoveProcessor extends AbstractMessageRangeProcessor<MoveRequest> im
 
     private final boolean moveCapabilitySupported;
 
-    public MoveProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(MoveRequest.class, next, mailboxManager, factory);
+    public MoveProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            TimeMetricFactory timeMetricFactory, TimeLogger timeLogger) {
+        super(MoveRequest.class, next, mailboxManager, factory, timeMetricFactory, timeLogger);
         moveCapabilitySupported = mailboxManager.hasCapability(MailboxManager.MailboxCapabilities.Move);
     }
 
