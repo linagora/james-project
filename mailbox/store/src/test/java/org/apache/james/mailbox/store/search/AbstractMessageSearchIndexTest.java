@@ -69,6 +69,8 @@ public abstract class AbstractMessageSearchIndexTest {
     private ComposedMessageId m7;
     private ComposedMessageId m8;
     private ComposedMessageId m9;
+    private ComposedMessageId mailWithAttachment;
+    private ComposedMessageId mailWithInlinedAttachment;
     private ComposedMessageId mOther;
     private ComposedMessageId mailWithAttachment;
     private ComposedMessageId mailWithInlinedAttachment;
