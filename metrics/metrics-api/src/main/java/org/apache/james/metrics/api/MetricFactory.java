@@ -17,42 +17,11 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.metrics.dropwizard;
+package org.apache.james.metrics.api;
 
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
+public interface MetricFactory {
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.james.metrics.api.Metric;
-import org.apache.james.metrics.api.MetricFactory;
+    Metric generate(String name);
 
-import com.codahale.metrics.JmxReporter;
-import com.codahale.metrics.MetricRegistry;
-
-public class DropWizardMetricFactory implements MetricFactory {
-
-    private final MetricRegistry metricRegistry;
-    private final JmxReporter jmxReporter;
-
-    @Inject
-    public DropWizardMetricFactory(MetricRegistry metricRegistry) {
-        this.metricRegistry = metricRegistry;
-        this.jmxReporter = JmxReporter.forRegistry(metricRegistry)
-            .build();
-    }
-
-    @Override
-    public Metric generate(String name) {
-        return new DropWizardMetric(metricRegistry.counter(name));
-    }
-
-    public void start() throws ConfigurationException {
-        jmxReporter.start();
-    }
-
-    @PreDestroy
-    public void stop() {
-        jmxReporter.stop();
-    }
-
+    TimeMetric timer(String name);
 }

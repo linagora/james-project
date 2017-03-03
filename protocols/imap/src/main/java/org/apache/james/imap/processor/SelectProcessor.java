@@ -23,11 +23,13 @@ import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.message.request.SelectRequest;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.metrics.api.MetricFactory;
 
 public class SelectProcessor extends AbstractSelectionProcessor<SelectRequest> {
 
-    public SelectProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory) {
-        super(SelectRequest.class, next, mailboxManager, statusResponseFactory, false);
+    public SelectProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory,
+            MetricFactory metricFactory) {
+        super(SelectRequest.class, next, mailboxManager, statusResponseFactory, false, metricFactory);
     }
 
 }

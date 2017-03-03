@@ -50,6 +50,7 @@ import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -107,7 +108,7 @@ public class SetAnnotationProcessorTest {
     public void setUp() {
         MockitoAnnotations.initMocks(this);
         initAndMockData();
-        processor = new SetAnnotationProcessor(mockNextProcessor, mockMailboxManager, mockStatusResponseFactory);
+        processor = new SetAnnotationProcessor(mockNextProcessor, mockMailboxManager, mockStatusResponseFactory, new NoopMetricFactory());
     }
     @After
     public void tearDown() {

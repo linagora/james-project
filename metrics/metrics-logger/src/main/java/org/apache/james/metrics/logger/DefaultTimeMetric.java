@@ -16,11 +16,34 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.metrics.logger;
 
-package org.apache.james.metrics.api;
+import java.util.concurrent.TimeUnit;
 
-public interface MetricFactory {
+import org.apache.james.metrics.api.TimeMetric;
 
-    Metric generate(String name);
+import com.google.common.base.Stopwatch;
+
+public class DefaultTimeMetric implements TimeMetric {
+
+    private final String name;
+    private final Stopwatch stopwatch;
+
+    public DefaultTimeMetric(String name) {
+        this.name = name;
+        this.stopwatch = Stopwatch.createStarted();
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public long stopAndPublish() {
+        long elapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        DefaultMetricFactory.LOGGER.info("Time spent in " + name + ": " + elapsed + " ms.");
+        return elapsed;
+    }
 
 }

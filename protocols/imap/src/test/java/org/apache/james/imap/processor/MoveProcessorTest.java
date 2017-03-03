@@ -49,6 +49,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.store.MailboxMetaData;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -80,7 +81,7 @@ public class MoveProcessorTest {
         mockMailboxSession = mock(MailboxSession.class);
 
         when(mockMailboxManager.hasCapability(eq(MailboxCapabilities.Move))).thenReturn(true);
-        testee = new MoveProcessor(mockNextProcessor, mockMailboxManager, mockStatusResponseFactory);
+        testee = new MoveProcessor(mockNextProcessor, mockMailboxManager, mockStatusResponseFactory, new NoopMetricFactory());
         verify(mockMailboxManager).hasCapability(MailboxCapabilities.Move);
     }
 
@@ -92,7 +93,8 @@ public class MoveProcessorTest {
     @Test
     public void getImplementedCapabilitiesShouldNotContainMoveWhenUnSupportedByMailboxManager() {
         when(mockMailboxManager.hasCapability(eq(MailboxCapabilities.Move))).thenReturn(false);
-        assertThat(new MoveProcessor(mockNextProcessor, mockMailboxManager, mockStatusResponseFactory).getImplementedCapabilities(null)).isEmpty();
+        assertThat(new MoveProcessor(mockNextProcessor, mockMailboxManager, mockStatusResponseFactory, new NoopMetricFactory())
+                .getImplementedCapabilities(null)).isEmpty();
     }
 
     @Test
