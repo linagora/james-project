@@ -31,7 +31,7 @@ import org.apache.james.protocols.lib.handler.HandlersPackage;
 import org.apache.james.protocols.lib.netty.AbstractProtocolAsyncServer;
 import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
 import org.apache.james.protocols.netty.ChannelHandlerFactory;
-import org.apache.james.protocols.smtp.AllButStartTlsLineDelimiterChannelHandlerFactory;
+import org.apache.james.protocols.netty.LineDelimiterBasedChannelHandlerFactory;
 import org.apache.james.protocols.smtp.SMTPConfiguration;
 import org.apache.james.protocols.smtp.SMTPProtocol;
 import org.apache.james.smtpserver.CoreCmdHandlerLoader;
@@ -364,7 +364,7 @@ public class SMTPServer extends AbstractProtocolAsyncServer implements SMTPServe
 
     @Override
     protected ChannelHandlerFactory createFrameHandlerFactory() {
-        return new AllButStartTlsLineDelimiterChannelHandlerFactory(AbstractChannelPipelineFactory.MAX_LINE_LENGTH);
+        return new LineDelimiterBasedChannelHandlerFactory(AbstractChannelPipelineFactory.MAX_LINE_LENGTH);
     }
 
 }

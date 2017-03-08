@@ -46,6 +46,9 @@ import org.apache.james.protocols.api.future.FutureResponseImpl;
  *
  */
 public class CommandDispatcher<Session extends ProtocolSession> implements ExtensibleHandler, LineHandler<Session> {
+
+    private static final String STARTTLS = "starttls";
+
     /**
      * The list of available command handlers
      */
@@ -251,6 +254,9 @@ public class CommandDispatcher<Session extends ProtocolSession> implements Exten
         }
         // This should be changed once we move to java6
         String cmdString = new String(line, session.getCharset().name()).trim();
+        if (hasCommandInjection(cmdString.toLowerCase())) {
+            throw new CommandInjectionDetectedException();
+        }
         int spaceIndex = cmdString.indexOf(" ");
         if (spaceIndex > 0) {
             curCommandName = cmdString.substring(0, spaceIndex);
@@ -262,6 +268,11 @@ public class CommandDispatcher<Session extends ProtocolSession> implements Exten
 
         return new BaseRequest(curCommandName, curCommandArgument);
 
+    }
+
+    private boolean hasCommandInjection(String trimedLowerCasedInput) {
+        return trimedLowerCasedInput.startsWith(STARTTLS)
+            && !trimedLowerCasedInput.endsWith(STARTTLS);
     }
    
     /**
