@@ -31,6 +31,8 @@ import org.apache.james.jmap.api.vacation.RecipientId;
 import org.apache.james.jmap.api.vacation.Vacation;
 import org.apache.james.jmap.api.vacation.VacationRepository;
 import org.apache.james.jmap.utils.MimeMessageBodyGenerator;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.util.date.ZonedDateTimeProvider;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
@@ -42,26 +44,30 @@ import org.slf4j.LoggerFactory;
 public class VacationMailet extends GenericMailet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VacationMailet.class);
+    public static final String VACATION_MAILET_EXECUTION = "vacationMailetExecution";
 
     private final VacationRepository vacationRepository;
     private final ZonedDateTimeProvider zonedDateTimeProvider;
     private final AutomaticallySentMailDetector automaticallySentMailDetector;
     private final NotificationRegistry notificationRegistry;
     private final MimeMessageBodyGenerator mimeMessageBodyGenerator;
+    private final MetricFactory metricFactory;
 
     @Inject
     public VacationMailet(VacationRepository vacationRepository, ZonedDateTimeProvider zonedDateTimeProvider,
                           AutomaticallySentMailDetector automaticallySentMailDetector, NotificationRegistry notificationRegistry,
-                          MimeMessageBodyGenerator mimeMessageBodyGenerator) {
+                          MimeMessageBodyGenerator mimeMessageBodyGenerator, MetricFactory metricFactory) {
         this.vacationRepository = vacationRepository;
         this.zonedDateTimeProvider = zonedDateTimeProvider;
         this.automaticallySentMailDetector = automaticallySentMailDetector;
         this.notificationRegistry = notificationRegistry;
         this.mimeMessageBodyGenerator = mimeMessageBodyGenerator;
+        this.metricFactory = metricFactory;
     }
 
     @Override
     public void service(Mail mail) {
+        TimeMetric timeMetric = metricFactory.timer(VACATION_MAILET_EXECUTION);
         try {
             if (! automaticallySentMailDetector.isAutomaticallySent(mail)) {
                 ZonedDateTime processingDate = zonedDateTimeProvider.get();
@@ -72,6 +78,8 @@ public class VacationMailet extends GenericMailet {
             }
         } catch (Throwable e) {
             LOGGER.warn("Can not process vacation for one or more recipients in {}", mail.getRecipients(), e);
+        } finally {
+            timeMetric.stopAndPublish();
         }
     }
 

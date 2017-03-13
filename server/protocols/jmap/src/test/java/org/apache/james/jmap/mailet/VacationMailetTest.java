@@ -39,6 +39,7 @@ import org.apache.james.jmap.api.vacation.RecipientId;
 import org.apache.james.jmap.api.vacation.Vacation;
 import org.apache.james.jmap.api.vacation.VacationRepository;
 import org.apache.james.jmap.utils.MimeMessageBodyGenerator;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.util.date.ZonedDateTimeProvider;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.MailetContext;
@@ -92,7 +93,7 @@ public class VacationMailetTest {
         zonedDateTimeProvider = mock(ZonedDateTimeProvider.class);
         automaticallySentMailDetector = mock(AutomaticallySentMailDetector.class);
         notificationRegistry = mock(NotificationRegistry.class);
-        testee = new VacationMailet(vacationRepository, zonedDateTimeProvider, automaticallySentMailDetector, notificationRegistry, mimeMessageBodyGenerator);
+        testee = new VacationMailet(vacationRepository, zonedDateTimeProvider, automaticallySentMailDetector, notificationRegistry, mimeMessageBodyGenerator, new NoopMetricFactory());
         mailetContext = mock(MailetContext.class);
         testee.init(FakeMailetConfig.builder()
                 .mailetName("vacation")
