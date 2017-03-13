@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.metrics.api.Metric;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.test.FakeMail;
@@ -77,7 +78,8 @@ public class DeliveryRunnableTest {
         bouncer = mock(Bouncer.class);
         mailDelivrer = mock(MailDelivrer.class);
         mailQueue = mock(MailQueue.class);
-        testee = new DeliveryRunnable(mailQueue, configuration, outgoingMailsMetric, LOGGER, bouncer, mailDelivrer, DeliveryRunnable.DEFAULT_NOT_STARTED, FIXED_DATE_SUPPLIER);
+        testee = new DeliveryRunnable(mailQueue, configuration, outgoingMailsMetric, LOGGER, bouncer, mailDelivrer,
+            DeliveryRunnable.DEFAULT_NOT_STARTED, FIXED_DATE_SUPPLIER, new NoopMetricFactory());
     }
 
     @Test
