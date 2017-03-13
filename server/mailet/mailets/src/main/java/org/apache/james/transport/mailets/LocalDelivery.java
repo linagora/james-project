@@ -29,6 +29,7 @@ import org.apache.james.mailbox.MailboxManager;
 
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.transport.mailets.delivery.MailDispatcher;
 import org.apache.james.transport.mailets.delivery.MailboxAppender;
 import org.apache.james.transport.mailets.delivery.SimpleMailStore;
@@ -48,6 +49,7 @@ import org.apache.mailet.base.GenericMailet;
 public class LocalDelivery extends GenericMailet {
 
     public static final String LOCAL_DELIVERED_MAILS_METRIC_NAME = "localDeliveredMails";
+    public static final String LOCAL_DELIVERY_TIME_METRIC = "localDeliveryTimeMetric";
     private final UsersRepository usersRepository;
     private final MailboxManager mailboxManager;
     private final RecipientRewriteTable recipientRewriteTable;
@@ -64,8 +66,13 @@ public class LocalDelivery extends GenericMailet {
     }
 
     public void service(Mail mail) throws MessagingException {
-        recipientRewriteTable.service(mail);
-        mailDispatcher.dispatch(mail);
+        TimeMetric timeMetric = metricFactory.timer(LOCAL_DELIVERY_TIME_METRIC);
+        try {
+            recipientRewriteTable.service(mail);
+            mailDispatcher.dispatch(mail);
+        } finally {
+            timeMetric.stopAndPublish();
+        }
     }
 
     public String getMailetInfo() {
