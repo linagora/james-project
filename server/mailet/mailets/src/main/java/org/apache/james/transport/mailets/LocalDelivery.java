@@ -62,7 +62,7 @@ public class LocalDelivery extends GenericMailet {
         this.metricFactory = metricFactory;
         this.usersRepository = usersRepository;
         this.mailboxManager = mailboxManager;
-        this.recipientRewriteTable = new RecipientRewriteTable(rrt, domainList);
+        this.recipientRewriteTable = new RecipientRewriteTable(rrt, domainList, metricFactory);
     }
 
     public void service(Mail mail) throws MessagingException {

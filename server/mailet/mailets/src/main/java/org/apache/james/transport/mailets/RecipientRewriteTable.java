@@ -24,6 +24,8 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.domainlist.api.DomainList;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.GenericMailet;
 
@@ -34,20 +36,24 @@ import com.google.common.base.Preconditions;
  * implementations for mappings of forwards and aliases.
  */
 public class RecipientRewriteTable extends GenericMailet {
+    public static final String RRT_EXECUTION = "rrtExecution";
     private final org.apache.james.rrt.api.RecipientRewriteTable virtualTableStore;
     private final DomainList domainList;
+    private final MetricFactory metricFactory;
     private RecipientRewriteTableProcessor processor;
 
     /**
      * Sets the virtual table store.
-     * 
+     *
      * @param vut
      *            the vutStore to set, possibly null
+     * @param metricFactory
      */
     @Inject
-    public RecipientRewriteTable(org.apache.james.rrt.api.RecipientRewriteTable virtualTableStore, DomainList domainList) {
+    public RecipientRewriteTable(org.apache.james.rrt.api.RecipientRewriteTable virtualTableStore, DomainList domainList, MetricFactory metricFactory) {
         this.virtualTableStore = virtualTableStore;
         this.domainList = domainList;
+        this.metricFactory = metricFactory;
     }
 
     @Override
@@ -67,12 +73,15 @@ public class RecipientRewriteTable extends GenericMailet {
     @Override
     public void service(Mail mail) throws MessagingException {
         Preconditions.checkNotNull(mail);
-        MimeMessage message = mail.getMessage();
-
-        if (message != null) {
-            processor.processMail(mail);
+        TimeMetric timeMetric = metricFactory.timer(RRT_EXECUTION);
+        try {
+            MimeMessage message = mail.getMessage();
+            if (message != null) {
+                processor.processMail(mail);
+            }
+        } finally {
+            timeMetric.stopAndPublish();
         }
-
     }
 
     @Override
