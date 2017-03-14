@@ -16,7 +16,44 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-public class MissingOrInvalidKeyException extends RuntimeException {
+package org.apache.james.webadmin.dto;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+public class QuotaRequestTest {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void parseShouldThrowWhenNotANumber() {
+        expectedException.expect(NumberFormatException.class);
+
+        QuotaRequest.parse("invalid");
+    }
+
+    @Test
+    public void parseShouldThrowOnNegativeNumber() {
+        expectedException.expect(IllegalArgumentException.class);
+
+        QuotaRequest.parse("-1");
+    }
+
+    @Test
+    public void parseShouldParseZero() {
+        assertThat(QuotaRequest.parse("0").getValue())
+            .isEqualTo(0);
+    }
+
+    @Test
+    public void parseShouldParsePositiveValue() {
+        assertThat(QuotaRequest.parse("42").getValue())
+            .isEqualTo(42);
+    }
+
 }

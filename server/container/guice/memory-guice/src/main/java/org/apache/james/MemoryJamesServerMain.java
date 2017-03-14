@@ -25,7 +25,7 @@ import org.apache.james.modules.mailbox.MemoryMailboxModule;
 import org.apache.james.modules.protocols.JMAPServerModule;
 import org.apache.james.modules.server.JMXServerModule;
 import org.apache.james.modules.server.MemoryMailQueueModule;
-import org.apache.james.modules.server.QuotaModule;
+import org.apache.james.modules.server.DefaultQuotaModule;
 
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
@@ -37,7 +37,7 @@ public class MemoryJamesServerMain {
         new MemoryDataModule(),
         new MemoryDataJmapModule(),
         new MemoryMailboxModule(),
-        new QuotaModule(),
+        new DefaultQuotaModule(),
         new MemoryMailQueueModule());
 
     public static void main(String[] args) throws Exception {

@@ -17,41 +17,29 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin;
+package org.apache.james.modules.server;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.apache.james.mailbox.quota.MaxQuotaManager;
+import org.apache.james.mailbox.quota.QuotaManager;
+import org.apache.james.mailbox.quota.QuotaRootResolver;
+import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
+import org.apache.james.mailbox.store.quota.NoMaxQuotaManager;
+import org.apache.james.mailbox.store.quota.NoQuotaManager;
 
-import org.junit.Test;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class DefaultQuotaModule extends AbstractModule {
 
-public class FixedPortTest {
+    @Override
+    protected void configure() {
+        bind(NoQuotaManager.class).in(Scopes.SINGLETON);
+        bind(DefaultQuotaRootResolver.class).in(Scopes.SINGLETON);
+        bind(NoMaxQuotaManager.class).in(Scopes.SINGLETON);
 
-    @Test
-    public void toIntShouldThrowOnNegativePort() {
-        assertThatThrownBy(() -> new FixedPort(-1)).isInstanceOf(IllegalArgumentException.class);
+        bind(MaxQuotaManager.class).to(NoMaxQuotaManager.class);
+        bind(QuotaManager.class).to(NoQuotaManager.class);
+        bind(QuotaRootResolver.class).to(DefaultQuotaRootResolver.class);
     }
-
-    @Test
-    public void toIntShouldThrowOnNullPort() {
-        assertThatThrownBy(() -> new FixedPort(0)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldThrowOnTooBigNumbers() {
-        assertThatThrownBy(() -> new FixedPort(65536)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldReturnedDesiredPort() {
-        int expectedPort = 452;
-        assertThat(new FixedPort(expectedPort).toInt()).isEqualTo(expectedPort);
-    }
-
-    @Test
-    public void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(FixedPort.class).verify();
-    }
-
+    
 }

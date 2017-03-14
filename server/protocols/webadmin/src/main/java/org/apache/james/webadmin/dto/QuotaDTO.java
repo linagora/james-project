@@ -17,38 +17,57 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin;
 
-import java.util.Objects;
+package org.apache.james.webadmin.dto;
 
+import org.apache.james.mailbox.model.Quota;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.base.Preconditions;
 
-public class FixedPort implements Port {
-
-    private final int port;
-
-    public FixedPort(int port) {
-        Preconditions.checkArgument(port > 0 && port < 65536, "Port should be strictly contained between 0 and 65536");
-        this.port = port;
+@JsonDeserialize(builder = QuotaDTO.Builder.class)
+public class QuotaDTO {
+    public static Builder builder() {
+        return new Builder();
     }
 
-    @Override
-    public int toInt() {
-        return port;
-    }
+    @JsonPOJOBuilder(withPrefix="")
+    public static class Builder {
+        private long count;
+        private long size;
 
-    @Override
-    public final boolean equals(Object o) {
-        if (o instanceof FixedPort) {
-            FixedPort that = (FixedPort) o;
-
-            return Objects.equals(this.port, that.port);
+        public Builder count(long count) {
+            this.count = count;
+            return this;
         }
-        return false;
+
+        public Builder size(long size) {
+            this.size = size;
+            return this;
+        }
+
+        public QuotaDTO build() {
+            return new QuotaDTO(count, size);
+        }
+
     }
 
-    @Override
-    public final int hashCode() {
-        return Objects.hash(port);
+    private final long count;
+    private final long size;
+
+    private QuotaDTO(long count, long size) {
+        Preconditions.checkArgument(count >= Quota.UNLIMITED);
+        Preconditions.checkArgument(size >= Quota.UNLIMITED);
+        this.count = count;
+        this.size = size;
+    }
+
+    public long getCount() {
+        return count;
+    }
+
+    public long getSize() {
+        return size;
     }
 }
