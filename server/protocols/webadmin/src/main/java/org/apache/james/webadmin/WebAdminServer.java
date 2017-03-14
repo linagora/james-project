@@ -24,11 +24,12 @@ import java.util.Set;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.webadmin.authentication.AuthenticationFilter;
+import org.apache.james.webadmin.authentication.NoAuthenticationFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,35 +42,45 @@ public class WebAdminServer implements Configurable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WebAdminServer.class);
     public static final HierarchicalConfiguration NO_CONFIGURATION = null;
-    public static final String WEBADMIN_PORT = "webadmin_port";
-    public static final String WEBADMIN_ENABLED = "webadmin_enabled";
     public static final int DEFAULT_PORT = 8080;
 
-    private final Port port;
+    private final WebAdminConfiguration configuration;
     private final Set<Routes> routesList;
-    private final boolean enabled;
     private final Service service;
+    private final AuthenticationFilter authenticationFilter;
 
     // Spark do not allow to retrieve allocated port when using a random port. Thus we generate the port.
-
-
     @Inject
-    private WebAdminServer(@Named(WEBADMIN_ENABLED) boolean enabled, @Named(WEBADMIN_PORT)Port port, Set<Routes> routesList) {
-        this.port = port;
+    private WebAdminServer(WebAdminConfiguration configuration, Set<Routes> routesList, AuthenticationFilter authenticationFilter) {
+        this.configuration = configuration;
         this.routesList = routesList;
-        this.enabled = enabled;
+        this.authenticationFilter = authenticationFilter;
         this.service = Service.ignite();
     }
 
     @VisibleForTesting
     public WebAdminServer(Routes... routes) throws IOException {
-        this(true, new RandomPort(), ImmutableSet.copyOf(routes));
+        this(WebAdminConfiguration.builder()
+            .enabled()
+            .port(new RandomPort())
+            .build(),
+            ImmutableSet.copyOf(routes),
+            new NoAuthenticationFilter());
     }
 
     @Override
     public void configure(HierarchicalConfiguration config) throws ConfigurationException {
-        if (enabled) {
-            service.port(port.toInt());
+        if (configuration.isEnabled()) {
+            service.port(configuration.getPort().toInt());
+            HttpsConfiguration httpsConfiguration = configuration.getHttpsConfiguration();
+            if (httpsConfiguration.isEnabled()) {
+                service.secure(httpsConfiguration.getKeystoreFilePath(),
+                    httpsConfiguration.getKeystorePassword(),
+                    httpsConfiguration.getTruststoreFilePath(),
+                    httpsConfiguration.getTruststorePassword());
+                LOGGER.info("Web admin set up to use HTTPS");
+            }
+            service.before(authenticationFilter);
             routesList.forEach(routes -> routes.define(service));
             LOGGER.info("Web admin server started");
         }
@@ -77,7 +88,7 @@ public class WebAdminServer implements Configurable {
 
     @PreDestroy
     public void destroy() {
-        if (enabled) {
+        if (configuration.isEnabled()) {
             service.stop();
             LOGGER.info("Web admin server stopped");
         }
@@ -88,6 +99,6 @@ public class WebAdminServer implements Configurable {
     }
 
     public Port getPort() {
-        return port;
+        return configuration.getPort();
     }
 }

@@ -16,48 +16,29 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
+package org.apache.james.jwt;
+
+import java.security.PublicKey;
 
 import javax.inject.Inject;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
+public class PublicKeyProvider {
 
-public class JwtTokenVerifier {
-
-    private final PublicKeyProvider pubKeyProvider;
+    private final JwtConfiguration jwtConfiguration;
+    private final PublicKeyReader reader;
 
     @Inject
     @VisibleForTesting
-    JwtTokenVerifier(PublicKeyProvider pubKeyProvider) {
-        this.pubKeyProvider = pubKeyProvider;
+    PublicKeyProvider(JwtConfiguration jwtConfiguration, PublicKeyReader reader) {
+        this.jwtConfiguration = jwtConfiguration;
+        this.reader = reader;
     }
 
-    public boolean verify(String token) throws JwtException {
-        String subject = extractLogin(token);
-        if (Strings.isNullOrEmpty(subject)) {
-            throw new MalformedJwtException("'subject' field in token is mandatory");
-        }
-        return true;
+    public PublicKey get() throws MissingOrInvalidKeyException {
+        return reader.fromPEM(jwtConfiguration.getJwtPublicKeyPem())
+                .orElseThrow(MissingOrInvalidKeyException::new);
     }
 
-    public String extractLogin(String token) throws JwtException {
-        Jws<Claims> jws = parseToken(token);
-        return jws
-                .getBody()
-                .getSubject();
-    }
-
-    private Jws<Claims> parseToken(String token) throws JwtException {
-        return Jwts
-                .parser()
-                .setSigningKey(pubKeyProvider.get())
-                .parseClaimsJws(token);
-    }
 }
