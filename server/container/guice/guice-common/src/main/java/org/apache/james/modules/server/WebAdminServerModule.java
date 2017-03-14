@@ -20,22 +20,26 @@
 package org.apache.james.modules.server;
 
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
-import static org.apache.james.webadmin.WebAdminServer.WEBADMIN_ENABLED;
-import static org.apache.james.webadmin.WebAdminServer.WEBADMIN_PORT;
 
 import java.io.FileNotFoundException;
 import java.util.List;
 
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.james.jwt.JwtTokenVerifier;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.GuiceProbe;
 import org.apache.james.utils.PropertiesProvider;
 import org.apache.james.utils.WebAdminGuiceProbe;
 import org.apache.james.webadmin.FixedPort;
-import org.apache.james.webadmin.Port;
+import org.apache.james.webadmin.HttpsConfiguration;
 import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.WebAdminConfiguration;
 import org.apache.james.webadmin.WebAdminServer;
+import org.apache.james.webadmin.authentication.AuthenticationFilter;
+import org.apache.james.webadmin.authentication.JwtFilter;
+import org.apache.james.webadmin.authentication.NoAuthenticationFilter;
 import org.apache.james.webadmin.routes.DomainRoutes;
 import org.apache.james.webadmin.routes.UserMailboxesRoutes;
 import org.apache.james.webadmin.routes.UserRoutes;
@@ -49,9 +53,10 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import com.google.inject.name.Named;
 
 public class WebAdminServerModule extends AbstractModule {
+
+    public static final boolean DEFAULT_JWT_DISABLED = false;
 
     @Override
     protected void configure() {
@@ -68,23 +73,55 @@ public class WebAdminServerModule extends AbstractModule {
     }
 
     @Provides
-    @Named(WEBADMIN_PORT)
-    public Port provideWebAdminPort(PropertiesProvider propertiesProvider) throws Exception {
+    public WebAdminConfiguration provideWebAdminConfiguration(PropertiesProvider propertiesProvider) throws Exception {
         try {
-            return new FixedPort(propertiesProvider.getConfiguration("webadmin").getInt("port", WebAdminServer.DEFAULT_PORT));
+            PropertiesConfiguration configurationFile = propertiesProvider.getConfiguration("webadmin");
+            return WebAdminConfiguration.builder()
+                .enable(configurationFile.getBoolean("enabled", false))
+                .port(new FixedPort(configurationFile.getInt("port", WebAdminServer.DEFAULT_PORT)))
+                .https(readHttpsConfiguration(configurationFile))
+                .enableCORS(configurationFile.getBoolean("cors.enable", false))
+                .urlCORSOrigin(configurationFile.getString("cors.origin", null))
+                .build();
         } catch (FileNotFoundException e) {
-            return new FixedPort(WebAdminServer.DEFAULT_PORT);
+            return WebAdminConfiguration.builder()
+                .disabled()
+                .build();
         }
     }
 
     @Provides
-    @Named(WEBADMIN_ENABLED)
-    public boolean provideWebAdminEnabled(PropertiesProvider propertiesProvider) throws Exception {
+    public AuthenticationFilter providesAuthenticationFilter(PropertiesProvider propertiesProvider,
+                                                             JwtTokenVerifier jwtTokenVerifier) throws Exception {
         try {
-            return propertiesProvider.getConfiguration("webadmin").getBoolean("enabled", false);
+            PropertiesConfiguration configurationFile = propertiesProvider.getConfiguration("webadmin");
+            if (configurationFile.getBoolean("jwt.enabled", DEFAULT_JWT_DISABLED)) {
+                return new JwtFilter(jwtTokenVerifier);
+            }
+            return new NoAuthenticationFilter();
         } catch (FileNotFoundException e) {
-            return false;
+            return new NoAuthenticationFilter();
         }
+    }
+
+    private HttpsConfiguration readHttpsConfiguration(PropertiesConfiguration configurationFile) {
+        boolean enabled = configurationFile.getBoolean("https.enabled", DEFAULT_HTTPS_DISABLED());
+        if (enabled) {
+            return HttpsConfiguration.builder()
+                .enabled()
+                .raw(configurationFile.getString("https.keystore", null),
+                    configurationFile.getString("https.password", null),
+                    configurationFile.getString("https.trust.keystore", null),
+                    configurationFile.getString("https.trust.password", null))
+                .build();
+        }
+        return HttpsConfiguration.builder()
+            .disabled()
+            .build();
+    }
+
+    private boolean DEFAULT_HTTPS_DISABLED() {
+        return false;
     }
 
     @Singleton

@@ -16,29 +16,27 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.james.jmap.JMAPConfiguration;
+package org.apache.james.webadmin.routes;
 
-import javax.inject.Inject;
-import java.security.PublicKey;
+import org.apache.james.webadmin.Routes;
 
-public class PublicKeyProvider {
+import spark.Service;
 
-    private final JMAPConfiguration config;
-    private final PublicKeyReader reader;
+public class CORSRoute implements Routes {
 
-    @Inject
-    @VisibleForTesting
-    PublicKeyProvider(JMAPConfiguration config, PublicKeyReader reader) {
-        this.config = config;
-        this.reader = reader;
+    @Override
+    public void define(Service service) {
+        service.options("/*", (request, response) -> {
+            String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
+            if (accessControlRequestHeaders != null) {
+                response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+            }
+            String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
+            if (accessControlRequestMethod != null) {
+                response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+            }
+            return "";
+        });
     }
-
-    public PublicKey get() throws MissingOrInvalidKeyException {
-        return reader.fromPEM(config.getJwtPublicKeyPem())
-                .orElseThrow(() -> new MissingOrInvalidKeyException());
-    }
-
 }
