@@ -16,7 +16,21 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-public class MissingOrInvalidKeyException extends RuntimeException {
+package org.apache.james.modules.server;
+
+import java.util.Optional;
+
+import org.apache.james.jwt.JwtConfiguration;
+import org.apache.james.webadmin.authentication.AuthenticationFilter;
+import org.apache.james.webadmin.authentication.NoAuthenticationFilter;
+
+import com.google.inject.AbstractModule;
+
+public class NoJwtModule extends AbstractModule {
+
+    @Override
+    protected void configure() {
+        bind(JwtConfiguration.class).toInstance(new JwtConfiguration(Optional.empty()));
+    }
 }

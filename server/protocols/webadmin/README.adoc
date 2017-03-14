@@ -213,3 +213,93 @@ Response codes :
  - 204 : The user do not have mailboxes anymore
  - 404 : The user name does not exist
  - 500 : Internal error
+
+== Administrating quotas
+
+=== Reading per quotaroot mail count limitation
+
+.bash
+====
+curl -XGET http://ip:port/quota/count
+====
+
+The answer looks like :
+
+.json
+====
+100000
+====
+
+Response codes :
+ - 200 : Nothing special
+ - 500 : Internal error
+
+=== Reading per quotaroot mail count limitation
+
+.bash
+====
+curl -XPUT http://ip:port/quota/count -d '1024000000'
+====
+
+Response codes :
+ - 204 : Value updated
+ - 400 : The body is not a positive integer
+ - 500 : Internal error
+
+=== Removing per quotaroot mail count limitation
+
+It removes the limitation, and the quota becomes UNILIMITED.
+
+.bash
+====
+curl -XPUT http://ip:port/quota/count -d '1024000000'
+====
+
+Response codes :
+ - 204 : Value updated to UNLIMITED
+ - 500 : Internal error
+
+=== Reading per quotaroot size limitation
+
+.bash
+====
+curl -XGET http://ip:port/quota/size
+====
+
+The answer looks like :
+
+.json
+====
+100000
+====
+
+It represent the allowed Byte count of the mailboxes belonging to this quotaroot.
+
+Response codes :
+ - 200 : Nothing special
+ - 500 : Internal error
+
+=== Reading per quotaroot size limitation
+
+.bash
+====
+curl -XPUT http://ip:port/quota/size -d '1024000000'
+====
+
+Response codes :
+ - 204 : Value updated
+ - 400 : The body is not a positive integer
+ - 500 : Internal error
+
+=== Removing per quotaroot size limitation
+
+It removes the limitation, and the quota becomes UNILIMITED.
+
+.bash
+====
+curl -XPUT http://ip:port/quota/size -d '1024000000'
+====
+
+Response codes :
+ - 204 : Value updated to UNLIMITED
+ - 500 : Internal error

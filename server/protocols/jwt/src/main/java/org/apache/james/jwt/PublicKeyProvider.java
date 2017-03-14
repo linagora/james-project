@@ -16,42 +16,29 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.jwt;
 
-package org.apache.james.webadmin;
+import java.security.PublicKey;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import javax.inject.Inject;
 
-import org.junit.Test;
+import com.google.common.annotations.VisibleForTesting;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class PublicKeyProvider {
 
-public class FixedPortTest {
+    private final JwtConfiguration jwtConfiguration;
+    private final PublicKeyReader reader;
 
-    @Test
-    public void toIntShouldThrowOnNegativePort() {
-        assertThatThrownBy(() -> new FixedPort(-1)).isInstanceOf(IllegalArgumentException.class);
+    @Inject
+    @VisibleForTesting
+    PublicKeyProvider(JwtConfiguration jwtConfiguration, PublicKeyReader reader) {
+        this.jwtConfiguration = jwtConfiguration;
+        this.reader = reader;
     }
 
-    @Test
-    public void toIntShouldThrowOnNullPort() {
-        assertThatThrownBy(() -> new FixedPort(0)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldThrowOnTooBigNumbers() {
-        assertThatThrownBy(() -> new FixedPort(65536)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldReturnedDesiredPort() {
-        int expectedPort = 452;
-        assertThat(new FixedPort(expectedPort).toInt()).isEqualTo(expectedPort);
-    }
-
-    @Test
-    public void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(FixedPort.class).verify();
+    public PublicKey get() throws MissingOrInvalidKeyException {
+        return reader.fromPEM(jwtConfiguration.getJwtPublicKeyPem())
+                .orElseThrow(MissingOrInvalidKeyException::new);
     }
 
 }

@@ -16,48 +16,44 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-import javax.inject.Inject;
+package org.apache.james.webadmin.dto;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-public class JwtTokenVerifier {
+public class QuotaRequestTest {
 
-    private final PublicKeyProvider pubKeyProvider;
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
-    @Inject
-    @VisibleForTesting
-    JwtTokenVerifier(PublicKeyProvider pubKeyProvider) {
-        this.pubKeyProvider = pubKeyProvider;
+    @Test
+    public void parseShouldThrowWhenNotANumber() {
+        expectedException.expect(NumberFormatException.class);
+
+        QuotaRequest.parse("invalid");
     }
 
-    public boolean verify(String token) throws JwtException {
-        String subject = extractLogin(token);
-        if (Strings.isNullOrEmpty(subject)) {
-            throw new MalformedJwtException("'subject' field in token is mandatory");
-        }
-        return true;
+    @Test
+    public void parseShouldThrowOnNegativeNumber() {
+        expectedException.expect(IllegalArgumentException.class);
+
+        QuotaRequest.parse("-1");
     }
 
-    public String extractLogin(String token) throws JwtException {
-        Jws<Claims> jws = parseToken(token);
-        return jws
-                .getBody()
-                .getSubject();
+    @Test
+    public void parseShouldParseZero() {
+        assertThat(QuotaRequest.parse("0").getValue())
+            .isEqualTo(0);
     }
 
-    private Jws<Claims> parseToken(String token) throws JwtException {
-        return Jwts
-                .parser()
-                .setSigningKey(pubKeyProvider.get())
-                .parseClaimsJws(token);
+    @Test
+    public void parseShouldParsePositiveValue() {
+        assertThat(QuotaRequest.parse("42").getValue())
+            .isEqualTo(42);
     }
+
 }

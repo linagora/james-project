@@ -17,41 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin;
+package org.apache.james.jwt;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import java.util.Optional;
 
-import org.junit.Test;
+public class JwtConfiguration {
+    private final Optional<String> jwtPublicKeyPem;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-
-public class FixedPortTest {
-
-    @Test
-    public void toIntShouldThrowOnNegativePort() {
-        assertThatThrownBy(() -> new FixedPort(-1)).isInstanceOf(IllegalArgumentException.class);
+    public JwtConfiguration(Optional<String> jwtPublicKeyPem) {
+        this.jwtPublicKeyPem = jwtPublicKeyPem;
     }
 
-    @Test
-    public void toIntShouldThrowOnNullPort() {
-        assertThatThrownBy(() -> new FixedPort(0)).isInstanceOf(IllegalArgumentException.class);
+    public Optional<String> getJwtPublicKeyPem() {
+        return jwtPublicKeyPem;
     }
-
-    @Test
-    public void toIntShouldThrowOnTooBigNumbers() {
-        assertThatThrownBy(() -> new FixedPort(65536)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldReturnedDesiredPort() {
-        int expectedPort = 452;
-        assertThat(new FixedPort(expectedPort).toInt()).isEqualTo(expectedPort);
-    }
-
-    @Test
-    public void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(FixedPort.class).verify();
-    }
-
 }

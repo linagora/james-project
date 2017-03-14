@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
+package org.apache.james.jwt;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -35,7 +35,6 @@ public class PublicKeyReader {
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicKeyReader.class);
 
     Optional<PublicKey> fromPEM(Optional<String> pemKey) {
-
         return pemKey
                 .map(k -> new PEMParser(new PemReader(new StringReader(k))))
                 .flatMap(this::publicKeyFrom);
@@ -47,6 +46,7 @@ public class PublicKeyReader {
             if (readPEM instanceof SubjectPublicKeyInfo) {
                 return Optional.of(new JcaPEMKeyConverter().getPublicKey((SubjectPublicKeyInfo) readPEM));
             }
+            LOGGER.warn("Key is not an instance of SubjectPublicKeyInfo but of " + readPEM);
             return Optional.empty();
         } catch (IOException e) {
             LOGGER.warn("Error when reading the PEM file", e);
