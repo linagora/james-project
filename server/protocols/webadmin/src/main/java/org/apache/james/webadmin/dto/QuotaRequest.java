@@ -17,41 +17,23 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin;
+package org.apache.james.webadmin.dto;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.google.common.base.Preconditions;
 
-import org.junit.Test;
-
-import nl.jqno.equalsverifier.EqualsVerifier;
-
-public class FixedPortTest {
-
-    @Test
-    public void toIntShouldThrowOnNegativePort() {
-        assertThatThrownBy(() -> new FixedPort(-1)).isInstanceOf(IllegalArgumentException.class);
+public class QuotaRequest {
+    public static QuotaRequest parse(String serialized) {
+        return new QuotaRequest(Long.valueOf(serialized));
     }
 
-    @Test
-    public void toIntShouldThrowOnNullPort() {
-        assertThatThrownBy(() -> new FixedPort(0)).isInstanceOf(IllegalArgumentException.class);
+    private final long value;
+
+    public QuotaRequest(long value) {
+        Preconditions.checkArgument(value >= 0);
+        this.value = value;
     }
 
-    @Test
-    public void toIntShouldThrowOnTooBigNumbers() {
-        assertThatThrownBy(() -> new FixedPort(65536)).isInstanceOf(IllegalArgumentException.class);
+    public long getValue() {
+        return value;
     }
-
-    @Test
-    public void toIntShouldReturnedDesiredPort() {
-        int expectedPort = 452;
-        assertThat(new FixedPort(expectedPort).toInt()).isEqualTo(expectedPort);
-    }
-
-    @Test
-    public void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(FixedPort.class).verify();
-    }
-
 }

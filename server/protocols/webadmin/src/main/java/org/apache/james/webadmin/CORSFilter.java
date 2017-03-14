@@ -19,39 +19,22 @@
 
 package org.apache.james.webadmin;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import spark.Filter;
+import spark.Request;
+import spark.Response;
 
-import org.junit.Test;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class CORSFilter implements Filter {
+    private final String urlCORSOrigin;
 
-public class FixedPortTest {
-
-    @Test
-    public void toIntShouldThrowOnNegativePort() {
-        assertThatThrownBy(() -> new FixedPort(-1)).isInstanceOf(IllegalArgumentException.class);
+    public CORSFilter(String urlCORSOrigin) {
+        this.urlCORSOrigin = urlCORSOrigin;
     }
 
-    @Test
-    public void toIntShouldThrowOnNullPort() {
-        assertThatThrownBy(() -> new FixedPort(0)).isInstanceOf(IllegalArgumentException.class);
+    @Override
+    public void handle(Request request, Response response) throws Exception {
+            response.header("Access-Control-Allow-Origin", urlCORSOrigin);
+            response.header("Access-Control-Request-Method", "DELETE, GET, POST, PUT");
+            response.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
     }
-
-    @Test
-    public void toIntShouldThrowOnTooBigNumbers() {
-        assertThatThrownBy(() -> new FixedPort(65536)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldReturnedDesiredPort() {
-        int expectedPort = 452;
-        assertThat(new FixedPort(expectedPort).toInt()).isEqualTo(expectedPort);
-    }
-
-    @Test
-    public void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(FixedPort.class).verify();
-    }
-
 }

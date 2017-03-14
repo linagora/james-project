@@ -19,20 +19,18 @@
 
 package org.apache.james.modules.server;
 
-import org.apache.james.mailbox.quota.QuotaManager;
-import org.apache.james.mailbox.quota.QuotaRootResolver;
-import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
-import org.apache.james.mailbox.store.quota.NoQuotaManager;
+import java.util.Optional;
+
+import org.apache.james.jwt.JwtConfiguration;
+import org.apache.james.webadmin.authentication.AuthenticationFilter;
+import org.apache.james.webadmin.authentication.NoAuthenticationFilter;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Scopes;
 
-public class QuotaModule extends AbstractModule {
+public class NoJwtModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(QuotaManager.class).to(NoQuotaManager.class).in(Scopes.SINGLETON);
-        bind(QuotaRootResolver.class).to(DefaultQuotaRootResolver.class).in(Scopes.SINGLETON);
+        bind(JwtConfiguration.class).toInstance(new JwtConfiguration(Optional.empty()));
     }
-    
 }

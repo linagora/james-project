@@ -16,7 +16,26 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-public class MissingOrInvalidKeyException extends RuntimeException {
+
+package org.apache.james.webadmin.metric;
+
+import org.apache.james.metrics.api.MetricFactory;
+
+import spark.Filter;
+import spark.Request;
+import spark.Response;
+
+public class MetricPreFilter implements Filter {
+    public static final String METRICS = "metrics";
+    private final MetricFactory metricFactory;
+
+    public MetricPreFilter(MetricFactory metricFactory) {
+        this.metricFactory = metricFactory;
+    }
+
+    @Override
+    public void handle(Request request, Response response) throws Exception {
+        request.attribute(METRICS, metricFactory.timer("webAdmin"));
+    }
 }

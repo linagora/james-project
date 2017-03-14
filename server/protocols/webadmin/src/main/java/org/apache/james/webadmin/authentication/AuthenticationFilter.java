@@ -17,41 +17,9 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin;
+package org.apache.james.webadmin.authentication;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import spark.Filter;
 
-import org.junit.Test;
-
-import nl.jqno.equalsverifier.EqualsVerifier;
-
-public class FixedPortTest {
-
-    @Test
-    public void toIntShouldThrowOnNegativePort() {
-        assertThatThrownBy(() -> new FixedPort(-1)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldThrowOnNullPort() {
-        assertThatThrownBy(() -> new FixedPort(0)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldThrowOnTooBigNumbers() {
-        assertThatThrownBy(() -> new FixedPort(65536)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void toIntShouldReturnedDesiredPort() {
-        int expectedPort = 452;
-        assertThat(new FixedPort(expectedPort).toInt()).isEqualTo(expectedPort);
-    }
-
-    @Test
-    public void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(FixedPort.class).verify();
-    }
-
+public interface AuthenticationFilter extends Filter {
 }
