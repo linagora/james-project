@@ -132,6 +132,7 @@ public class RemoteDelivery extends GenericMailet {
     private final DNSService dnsServer;
     private final DomainList domainList;
     private final MailQueueFactory queueFactory;
+    private final MetricFactory metricFactory;
     private final Metric outgoingMailsMetric;
     private final AtomicBoolean isDestroyed;
     private final THREAD_STATE startThreads;
@@ -151,6 +152,7 @@ public class RemoteDelivery extends GenericMailet {
         this.domainList = domainList;
         this.queueFactory = queueFactory;
         this.outgoingMailsMetric = metricFactory.generate(OUTGOING_MAILS);
+        this.metricFactory = metricFactory;
         this.isDestroyed = new AtomicBoolean(false);
         this.startThreads = startThreads;
     }
@@ -181,7 +183,7 @@ public class RemoteDelivery extends GenericMailet {
                     logger,
                     getMailetContext(),
                     new Bouncer(configuration, getMailetContext(), logger),
-                    isDestroyed));
+                    isDestroyed, metricFactory));
         }
     }
 

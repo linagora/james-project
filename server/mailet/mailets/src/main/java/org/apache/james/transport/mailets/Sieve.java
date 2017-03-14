@@ -27,6 +27,8 @@ import javax.mail.MessagingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.transport.mailets.delivery.MailStore;
 import org.apache.james.transport.mailets.jsieve.CommonsLoggingAdapter;
@@ -48,18 +50,21 @@ import com.google.common.collect.ImmutableList;
  */
 public class Sieve extends GenericMailet {
 
+    public static final String SIEVE_EXECUTION = "sieveExecution";
     private final UsersRepository usersRepository;
     private final ResourceLocator resourceLocator;
+    private final MetricFactory metricFactory;
     private SieveExecutor sieveExecutor;
 
     @Inject
-    public Sieve(UsersRepository usersRepository, SieveRepository sieveRepository) throws MessagingException {
-        this(usersRepository, new ResourceLocator(sieveRepository, usersRepository));
+    public Sieve(UsersRepository usersRepository, SieveRepository sieveRepository, MetricFactory metricFactory) throws MessagingException {
+        this(usersRepository, new ResourceLocator(sieveRepository, usersRepository), metricFactory);
     }
 
-    public Sieve(UsersRepository usersRepository, ResourceLocator resourceLocator) throws MessagingException {
+    public Sieve(UsersRepository usersRepository, ResourceLocator resourceLocator, MetricFactory metricFactory) throws MessagingException {
         this.usersRepository = usersRepository;
         this.resourceLocator = resourceLocator;
+        this.metricFactory = metricFactory;
     }
 
     @Override
@@ -84,8 +89,13 @@ public class Sieve extends GenericMailet {
 
     @Override
     public void service(Mail mail) throws MessagingException {
-        List<MailAddress> recipientsWithSuccessfulSieveExecution = executeRetrieveSuccess(mail);
-        mail.setRecipients(keepNonDiscardedRecipients(mail, recipientsWithSuccessfulSieveExecution));
+        TimeMetric timeMetric = metricFactory.timer(SIEVE_EXECUTION);
+        try {
+            List<MailAddress> recipientsWithSuccessfulSieveExecution = executeRetrieveSuccess(mail);
+            mail.setRecipients(keepNonDiscardedRecipients(mail, recipientsWithSuccessfulSieveExecution));
+        } finally {
+            timeMetric.stopAndPublish();
+        }
     }
 
     private List<MailAddress> executeRetrieveSuccess(Mail mail) throws MessagingException {

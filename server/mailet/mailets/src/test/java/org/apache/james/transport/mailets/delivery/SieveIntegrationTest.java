@@ -29,6 +29,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeBodyPart;
 
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.transport.mailets.Sieve;
 import org.apache.james.transport.mailets.jsieve.ResourceLocator;
@@ -72,7 +73,7 @@ public class SieveIntegrationTest {
         usersRepository = mock(UsersRepository.class);
         fakeMailContext = FakeMailContext.builder().logger(mock(Logger.class)).build();
 
-        testee = new Sieve(usersRepository, resourceLocator);
+        testee = new Sieve(usersRepository, resourceLocator, new NoopMetricFactory());
         testee.init(FakeMailetConfig.builder().mailetName("Sieve").mailetContext(fakeMailContext).build());
     }
 

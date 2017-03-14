@@ -26,6 +26,7 @@ import javax.mail.Session;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.domainlist.api.DomainList;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.mailet.MailetContext;
 import org.apache.mailet.base.MailAddressFixture;
 import org.apache.mailet.base.test.FakeMail;
@@ -52,7 +53,7 @@ public class RecipientRewriteTableTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         
-        mailet = new RecipientRewriteTable(virtualTableStore, domainList);
+        mailet = new RecipientRewriteTable(virtualTableStore, domainList, new NoopMetricFactory());
 
         message = new MimeMessage(Session.getDefaultInstance(new Properties()));
 
