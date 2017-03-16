@@ -1821,4 +1821,35 @@ public abstract class SetMailboxesMethodTest {
                   hasEntry(equalTo("type"), equalTo("invalidArguments")),
                   hasEntry(equalTo("description"), equalTo("Cannot rename a mailbox to an already existing mailbox.")))));
     }
+
+    @Test
+    public void setMailboxesShouldErrorWhenCreateSystemMailbox() throws Exception {
+        String requestBody =
+            "[" +
+                "  [ \"setMailboxes\"," +
+                "    {" +
+                "      \"create\": {" +
+                "        \"create-id01\" : {" +
+                "          \"name\" : \"inBoX\"" +
+                "        }" +
+                "      }" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+            .header("Authorization", this.accessToken.serialize())
+            .body(requestBody)
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxesSet"))
+            .body(ARGUMENTS + ".notCreated", aMapWithSize(1))
+            .body(ARGUMENTS + ".notCreated", hasEntry(equalTo("create-id01"), Matchers.allOf(
+                    hasEntry(equalTo("type"), equalTo("invalidArguments")),
+                    hasEntry(equalTo("description"), equalTo("The mailbox 'inBoX' is a system mailbox.")))
+            ));
+    }
 }

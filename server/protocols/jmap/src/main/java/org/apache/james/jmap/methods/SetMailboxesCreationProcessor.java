@@ -35,6 +35,7 @@ import org.apache.james.jmap.model.SetMailboxesRequest;
 import org.apache.james.jmap.model.SetMailboxesResponse;
 import org.apache.james.jmap.model.mailbox.Mailbox;
 import org.apache.james.jmap.model.mailbox.MailboxCreateRequest;
+import org.apache.james.jmap.model.mailbox.Role;
 import org.apache.james.jmap.utils.DependencyGraph.CycleDetectedException;
 import org.apache.james.jmap.utils.SortingHierarchicalCollections;
 import org.apache.james.mailbox.MailboxManager;
@@ -162,6 +163,16 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
         if (name.contains(String.valueOf(pathDelimiter))) {
             throw new MailboxNameException(String.format("The mailbox '%s' contains an illegal character: '%c'", name, pathDelimiter));
         }
+
+        if (nameMatchesSystemMailbox(name)) {
+            throw new MailboxNameException(String.format("The mailbox '%s' is a system mailbox.", name));
+        }
+    }
+
+    private boolean nameMatchesSystemMailbox(String name) {
+        return Role.from(name)
+            .filter(Role::isSystemRole)
+            .isPresent();
     }
 
     private MailboxPath getMailboxPath(MailboxCreateRequest mailboxRequest, Map<MailboxCreationId, MailboxId> creationIdsToCreatedMailboxId, MailboxSession mailboxSession) throws MailboxException {
