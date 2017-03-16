@@ -26,16 +26,20 @@ import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.DeleteRequest;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.exception.TooLongMailboxNameException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.MetricFactory;
 
 public class DeleteProcessor extends AbstractMailboxProcessor<DeleteRequest> {
 
-    public DeleteProcessor(final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory factory) {
-        super(DeleteRequest.class, next, mailboxManager, factory);
+    public DeleteProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(DeleteRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     /**
@@ -46,7 +50,7 @@ public class DeleteProcessor extends AbstractMailboxProcessor<DeleteRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(DeleteRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = buildFullPath(session, request.getMailboxName());
+        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
         try {
             final SelectedMailbox selected = session.getSelected();
             if (selected != null && selected.getPath().equals(mailboxPath)) {
@@ -61,6 +65,11 @@ public class DeleteProcessor extends AbstractMailboxProcessor<DeleteRequest> {
                 session.getLog().debug("Delete failed for mailbox " + mailboxPath + " as it not exist", e);
             }
             no(command, tag, responder, HumanReadableText.FAILURE_NO_SUCH_MAILBOX);
+        } catch (TooLongMailboxNameException e) {
+            if (session.getLog().isDebugEnabled()) {
+                session.getLog().debug("The mailbox name length is over limit: " + mailboxPath.getName(), e);
+            }
+            taggedBad(command, tag, responder, HumanReadableText.FAILURE_MAILBOX_NAME);
         } catch (MailboxException e) {
             if (session.getLog().isInfoEnabled()) {
                 session.getLog().info("Delete failed for mailbox " + mailboxPath, e);

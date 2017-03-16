@@ -18,17 +18,25 @@
  ****************************************************************/
 package org.apache.james.mailbox.jpa;
 
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.jpa.mail.JPAAnnotationMapper;
 import org.apache.james.mailbox.jpa.mail.JPAMailboxMapper;
 import org.apache.james.mailbox.jpa.mail.JPAMessageMapper;
 import org.apache.james.mailbox.jpa.user.JPASubscriptionMapper;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.mail.AnnotationMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
@@ -36,13 +44,14 @@ import org.apache.james.mailbox.store.user.SubscriptionMapper;
  * JPA implementation of {@link MailboxSessionMapperFactory}
  *
  */
-public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory<JPAId> {
+public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory {
 
     private final EntityManagerFactory entityManagerFactory;
-    private final UidProvider<JPAId> uidProvider;
-    private final ModSeqProvider<JPAId> modSeqProvider;
+    private final UidProvider uidProvider;
+    private final ModSeqProvider modSeqProvider;
 
-    public JPAMailboxSessionMapperFactory(EntityManagerFactory entityManagerFactory, UidProvider<JPAId> uidProvider, ModSeqProvider<JPAId> modSeqProvider) {
+    @Inject
+    public JPAMailboxSessionMapperFactory(EntityManagerFactory entityManagerFactory, UidProvider uidProvider, ModSeqProvider modSeqProvider) {
         this.entityManagerFactory = entityManagerFactory;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
@@ -50,18 +59,28 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory<
     }
     
     @Override
-    public MailboxMapper<JPAId> createMailboxMapper(MailboxSession session) {
+    public MailboxMapper createMailboxMapper(MailboxSession session) {
         return new JPAMailboxMapper(entityManagerFactory);
     }
 
     @Override
-    public MessageMapper<JPAId> createMessageMapper(MailboxSession session) {
+    public MessageMapper createMessageMapper(MailboxSession session) {
         return new JPAMessageMapper(session, uidProvider, modSeqProvider, entityManagerFactory);
+    }
+
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException {
+        throw new NotImplementedException();
     }
 
     @Override
     public SubscriptionMapper createSubscriptionMapper(MailboxSession session) {
         return new JPASubscriptionMapper(entityManagerFactory);
+    }
+    
+    @Override
+    public AttachmentMapper createAttachmentMapper(MailboxSession session) throws MailboxException {
+        return new NoopAttachmentMapper();
     }
 
     /**
@@ -71,6 +90,22 @@ public class JPAMailboxSessionMapperFactory extends MailboxSessionMapperFactory<
      */
     private EntityManager createEntityManager() {
         return entityManagerFactory.createEntityManager();
+    }
+
+    @Override
+    public AnnotationMapper createAnnotationMapper(MailboxSession session)
+            throws MailboxException {
+        return new JPAAnnotationMapper(entityManagerFactory);
+    }
+
+    @Override
+    public UidProvider getUidProvider() {
+        return uidProvider;
+    }
+
+    @Override
+    public ModSeqProvider getModSeqProvider() {
+        return modSeqProvider;
     }
 
 }

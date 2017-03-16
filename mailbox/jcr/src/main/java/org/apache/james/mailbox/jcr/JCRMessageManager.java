@@ -19,6 +19,7 @@
 package org.apache.james.mailbox.jcr;
 
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
@@ -30,12 +31,15 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailbox;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailboxMessage;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
-import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.slf4j.Logger;
@@ -44,20 +48,25 @@ import org.slf4j.Logger;
  * JCR implementation of a {@link org.apache.james.mailbox.MessageManager}
  *
  */
-public class JCRMessageManager extends StoreMessageManager<JCRId> {
+public class JCRMessageManager extends StoreMessageManager {
 
     private final Logger log;
 
-    public JCRMessageManager(MailboxSessionMapperFactory<JCRId> mapperFactory, MessageSearchIndex<JCRId> index, 
-            final MailboxEventDispatcher<JCRId> dispatcher, final MailboxPathLocker locker, final JCRMailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, final Logger log, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver) throws MailboxException {
-        super(mapperFactory, index, dispatcher, locker, mailbox, aclResolver, groupMembershipResolver, quotaManager, quotaRootResolver);
+    public JCRMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, 
+            final MailboxEventDispatcher dispatcher, MailboxPathLocker locker, JCRMailbox mailbox, 
+            MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, Logger log, 
+            QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory)
+                    throws MailboxException {
+        super(mapperFactory, index, dispatcher, locker, mailbox, aclResolver, groupMembershipResolver, quotaManager, 
+                quotaRootResolver, messageParser, messageIdFactory);
         this.log = log;
     }
 
 
     @Override
-    protected MailboxMessage<JCRId> createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder) throws MailboxException{
-        return new JCRMailboxMessage(getMailboxEntity().getMailboxId(), internalDate,
+    protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException{
+        JCRId mailboxId = (JCRId) getMailboxEntity().getMailboxId();
+        return new JCRMailboxMessage(mailboxId, getMessageIdFactory().generate(), internalDate,
                 size, flags, content, bodyStartOctet, propertyBuilder, log);
     }
 

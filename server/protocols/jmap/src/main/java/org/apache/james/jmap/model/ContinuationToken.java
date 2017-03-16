@@ -34,7 +34,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
-public class ContinuationToken {
+public class ContinuationToken implements SignedExpiringToken {
 
     public static final String SEPARATOR = "_";
 
@@ -103,24 +103,32 @@ public class ContinuationToken {
         return username;
     }
 
+    @Override
     public ZonedDateTime getExpirationDate() {
         return expirationDate;
     }
 
+    @Override
     public String getSignature() {
         return signature;
     }
 
     public String serialize() {
-        return getContent()
+        return getPayload()
             + SEPARATOR
             + signature;
     }
     
-    public String getContent() {
+    @Override
+    public String getPayload() {
         return username
             + SEPARATOR
             + DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(expirationDate);
+    }
+
+    @Override
+    public String getSignedContent() {
+        return getPayload();
     }
 
     @Override

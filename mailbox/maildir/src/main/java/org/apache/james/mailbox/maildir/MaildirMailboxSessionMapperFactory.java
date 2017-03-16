@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.maildir;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
@@ -25,12 +26,18 @@ import org.apache.james.mailbox.maildir.mail.MaildirMailboxMapper;
 import org.apache.james.mailbox.maildir.mail.MaildirMessageMapper;
 import org.apache.james.mailbox.maildir.user.MaildirSubscriptionMapper;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.mail.AnnotationMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.ModSeqProvider;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
+import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
 public class MaildirMailboxSessionMapperFactory extends
-        MailboxSessionMapperFactory<MaildirId> {
+        MailboxSessionMapperFactory {
 
     private final MaildirStore store;
 
@@ -41,21 +48,49 @@ public class MaildirMailboxSessionMapperFactory extends
     
     
     @Override
-    public MailboxMapper<MaildirId> createMailboxMapper(MailboxSession session)
+    public MailboxMapper createMailboxMapper(MailboxSession session)
             throws MailboxException {
         return new MaildirMailboxMapper(store, session);
     }
 
     @Override
-    public MessageMapper<MaildirId> createMessageMapper(MailboxSession session)
+    public MessageMapper createMessageMapper(MailboxSession session)
             throws MailboxException {
         return new MaildirMessageMapper(session, store);
+    }
+
+    @Override
+    public MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException {
+        throw new NotImplementedException();
     }
 
     @Override
     public SubscriptionMapper createSubscriptionMapper(MailboxSession session)
             throws SubscriptionException {
         return new MaildirSubscriptionMapper(store);
+    }
+
+
+    @Override
+    public AttachmentMapper createAttachmentMapper(MailboxSession session) throws MailboxException {
+        return new NoopAttachmentMapper();
+    }
+
+
+    @Override
+    public AnnotationMapper createAnnotationMapper(MailboxSession session)
+            throws MailboxException {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public UidProvider getUidProvider() {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public ModSeqProvider getModSeqProvider() {
+        throw new NotImplementedException();
     }
 
 }

@@ -18,22 +18,27 @@
  ****************************************************************/
 package org.apache.james.mailbox.jpa.mail;
 
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceException;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.JPAId;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.store.mail.AbstractLockingUidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
-public class JPAUidProvider extends AbstractLockingUidProvider<JPAId> {
+import com.google.common.base.Optional;
+
+public class JPAUidProvider extends AbstractLockingUidProvider {
 
     private final EntityManagerFactory factory;
 
+    @Inject
     public JPAUidProvider(MailboxPathLocker locker, EntityManagerFactory factory) {
         super(locker);
         this.factory = factory;
@@ -41,14 +46,18 @@ public class JPAUidProvider extends AbstractLockingUidProvider<JPAId> {
     
     
     @Override
-    public long lastUid(MailboxSession session, Mailbox<JPAId> mailbox) throws MailboxException {
+    public Optional<MessageUid> lastUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
         EntityManager manager = null;
         try {
             manager = factory.createEntityManager();
             manager.getTransaction().begin();
-            long uid = (Long) manager.createNamedQuery("findLastUid").setParameter("idParam", mailbox.getMailboxId().getRawId()).getSingleResult();
+            JPAId mailboxId = (JPAId) mailbox.getMailboxId();
+            long uid = (Long) manager.createNamedQuery("findLastUid").setParameter("idParam", mailboxId.getRawId()).getSingleResult();
             manager.getTransaction().commit();
-            return uid;
+            if (uid == 0) {
+                return Optional.absent();
+            }
+            return Optional.of(MessageUid.of(uid));
         } catch (PersistenceException e) {
             if (manager != null && manager.getTransaction().isActive()) {
                 manager.getTransaction().rollback();
@@ -62,16 +71,17 @@ public class JPAUidProvider extends AbstractLockingUidProvider<JPAId> {
     }
 
     @Override
-    protected long lockedNextUid(MailboxSession session, Mailbox<JPAId> mailbox) throws MailboxException {
+    protected MessageUid lockedNextUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
         EntityManager manager = null;
         try {
             manager = factory.createEntityManager();
             manager.getTransaction().begin();
-            JPAMailbox m = manager.find(JPAMailbox.class, mailbox.getMailboxId().getRawId());
+            JPAId mailboxId = (JPAId) mailbox.getMailboxId();
+            JPAMailbox m = manager.find(JPAMailbox.class, mailboxId.getRawId());
             long uid = m.consumeUid();
             manager.persist(m);
             manager.getTransaction().commit();
-            return uid;
+            return MessageUid.of(uid);
         } catch (PersistenceException e) {
             if (manager != null && manager.getTransaction().isActive()) {
                 manager.getTransaction().rollback();

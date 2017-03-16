@@ -19,11 +19,11 @@
 
 package org.apache.james.mailbox.tika.extractor;
 
-import java.io.InputStream;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.mailbox.store.extractor.TextExtractor;
+import java.io.InputStream;
+
+import org.apache.james.mailbox.extractor.TextExtractor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -73,7 +73,7 @@ public class TikaTextExtractorTest {
         InputStream inputStream = ClassLoader.getSystemResourceAsStream("documents/slides.pptx");
         assertThat(inputStream).isNotNull();
         assertThat(textExtractor.extractContent(inputStream, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "slides.pptx").getTextualContent())
-            .isEqualTo("James is awesome\nIt manages attachments so well !\n");
+            .isEqualTo("James is awesome\nIt manages attachments so well !\n\n\n");
     }
 
     @Test

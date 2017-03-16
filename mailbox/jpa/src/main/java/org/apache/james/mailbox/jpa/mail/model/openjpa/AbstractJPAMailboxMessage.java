@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -40,75 +41,60 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.JPAId;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.jpa.mail.model.JPAProperty;
 import org.apache.james.mailbox.jpa.mail.model.JPAUserFlag;
-import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
-import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+import org.apache.james.mailbox.store.search.comparator.UidComparator;
 import org.apache.openjpa.persistence.jdbc.ElementJoinColumn;
 import org.apache.openjpa.persistence.jdbc.ElementJoinColumns;
 import org.apache.openjpa.persistence.jdbc.Index;
 
+import com.google.common.base.Objects;
+
 /**
- * Abstract base class for JPA based implementations of {@link DelegatingMailboxMessage}
+ * Abstract base class for JPA based implementations of
+ * {@link DelegatingMailboxMessage}
  */
 @IdClass(AbstractJPAMailboxMessage.MailboxIdUidKey.class)
 @NamedQueries({
-    @NamedQuery(name="findRecentMessageUidsInMailbox",
-            query="SELECT message.uid FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.recent = TRUE ORDER BY message.uid ASC"),
-    @NamedQuery(name="findUnseenMessagesInMailboxOrderByUid",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.seen = FALSE ORDER BY message.uid ASC"),
-    @NamedQuery(name="findMessagesInMailbox",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam ORDER BY message.uid ASC"),
-    @NamedQuery(name="findMessagesInMailboxBetweenUIDs",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid BETWEEN :fromParam AND :toParam ORDER BY message.uid ASC"),
-    @NamedQuery(name="findMessagesInMailboxWithUID",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid=:uidParam ORDER BY message.uid ASC"),
-    @NamedQuery(name="findMessagesInMailboxAfterUID",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid>=:uidParam ORDER BY message.uid ASC"),
-    @NamedQuery(name="findDeletedMessagesInMailbox",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
-    @NamedQuery(name="findDeletedMessagesInMailboxBetweenUIDs",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid BETWEEN :fromParam AND :toParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
-    @NamedQuery(name="findDeletedMessagesInMailboxWithUID",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid=:uidParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
-    @NamedQuery(name="findDeletedMessagesInMailboxAfterUID",
-            query="SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid>=:uidParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
-            
-    @NamedQuery(name="deleteDeletedMessagesInMailbox",
-            query="DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.deleted=TRUE"),
-    @NamedQuery(name="deleteDeletedMessagesInMailboxBetweenUIDs",
-            query="DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid BETWEEN :fromParam AND :toParam AND message.deleted=TRUE"),
-    @NamedQuery(name="deleteDeletedMessagesInMailboxWithUID",
-            query="DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid=:uidParam AND message.deleted=TRUE"),
-    @NamedQuery(name="deleteDeletedMessagesInMailboxAfterUID",
-            query="DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid>=:uidParam AND message.deleted=TRUE"),
-                    
-    @NamedQuery(name="countUnseenMessagesInMailbox",
-            query="SELECT COUNT(message) FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.seen=FALSE"),
-    @NamedQuery(name="countMessagesInMailbox",
-            query="SELECT COUNT(message) FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam"),
-    @NamedQuery(name="deleteMessages",
-            query="DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam"),
-    @NamedQuery(name="findLastUidInMailbox",
-            query="SELECT message.uid FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam ORDER BY message.uid DESC"),
-    @NamedQuery(name="findHighestModSeqInMailbox",
-            query="SELECT message.modSeq FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam ORDER BY message.modSeq DESC"),
-    @NamedQuery(name="deleteAllMemberships",
-            query="DELETE FROM MailboxMessage message")
-})
-@MappedSuperclass
-public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId> {
+        @NamedQuery(name = "findRecentMessageUidsInMailbox", query = "SELECT message.uid FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.recent = TRUE ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findUnseenMessagesInMailboxOrderByUid", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.seen = FALSE ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findMessagesInMailbox", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findMessagesInMailboxBetweenUIDs", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid BETWEEN :fromParam AND :toParam ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findMessagesInMailboxWithUID", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid=:uidParam ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findMessagesInMailboxAfterUID", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid>=:uidParam ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findDeletedMessagesInMailbox", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findDeletedMessagesInMailboxBetweenUIDs", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid BETWEEN :fromParam AND :toParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findDeletedMessagesInMailboxWithUID", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid=:uidParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
+        @NamedQuery(name = "findDeletedMessagesInMailboxAfterUID", query = "SELECT message FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid>=:uidParam AND message.deleted=TRUE ORDER BY message.uid ASC"),
 
-    private static final MessageUidComparator MESSAGE_UID_COMPARATOR = new MessageUidComparator();
+        @NamedQuery(name = "deleteDeletedMessagesInMailbox", query = "DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.deleted=TRUE"),
+        @NamedQuery(name = "deleteDeletedMessagesInMailboxBetweenUIDs", query = "DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid BETWEEN :fromParam AND :toParam AND message.deleted=TRUE"),
+        @NamedQuery(name = "deleteDeletedMessagesInMailboxWithUID", query = "DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid=:uidParam AND message.deleted=TRUE"),
+        @NamedQuery(name = "deleteDeletedMessagesInMailboxAfterUID", query = "DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.uid>=:uidParam AND message.deleted=TRUE"),
+
+        @NamedQuery(name = "countUnseenMessagesInMailbox", query = "SELECT COUNT(message) FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam AND message.seen=FALSE"),
+        @NamedQuery(name = "countMessagesInMailbox", query = "SELECT COUNT(message) FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam"),
+        @NamedQuery(name = "deleteMessages", query = "DELETE FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam"),
+        @NamedQuery(name = "findLastUidInMailbox", query = "SELECT message.uid FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam ORDER BY message.uid DESC"),
+        @NamedQuery(name = "findHighestModSeqInMailbox", query = "SELECT message.modSeq FROM MailboxMessage message WHERE message.mailbox.mailboxId = :idParam ORDER BY message.modSeq DESC"),
+        @NamedQuery(name = "deleteAllMemberships", query = "DELETE FROM MailboxMessage message") })
+@MappedSuperclass
+public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
+
+    private static final Comparator<MailboxMessage> MESSAGE_UID_COMPARATOR = new UidComparator();
     private static final String TOSTRING_SEPARATOR = " ";
 
     /** Identifies composite key */
@@ -116,11 +102,12 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
 
         private static final long serialVersionUID = 7847632032426660997L;
 
-        public MailboxIdUidKey() {}
+        public MailboxIdUidKey() {
+        }
 
         /** The value for the mailbox field */
         public long mailbox;
-        
+
         /** The value for the uid field */
         public long uid;
 
@@ -153,12 +140,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
 
     /** The value for the mailboxId field */
     @Id
-    @ManyToOne(
-            cascade = {
-                    CascadeType.PERSIST, 
-                    CascadeType.REFRESH, 
-                    CascadeType.MERGE}, 
-            fetch=FetchType.EAGER)
+    @ManyToOne(cascade = { CascadeType.PERSIST, CascadeType.REFRESH, CascadeType.MERGE }, fetch = FetchType.EAGER)
     @Column(name = "MAILBOX_ID", nullable = true)
     private JPAMailbox mailbox;
 
@@ -175,7 +157,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     /** The value for the internalDate field */
     @Basic(optional = false)
     @Column(name = "MAIL_DATE")
-    private final Date internalDate;
+    private Date internalDate;
 
     /** The value for the answered field */
     @Basic(optional = false)
@@ -210,52 +192,55 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     @Index
     private boolean seen = false;
 
-    
     /** The first body octet */
     @Basic(optional = false)
     @Column(name = "MAIL_BODY_START_OCTET", nullable = false)
-    private final int bodyStartOctet;
-    
+    private int bodyStartOctet;
+
     /** Number of octets in the full document content */
     @Basic(optional = false)
     @Column(name = "MAIL_CONTENT_OCTETS_COUNT", nullable = false)
-    private final long contentOctets;
-    
+    private long contentOctets;
+
     /** MIME media type */
     @Basic(optional = true)
     @Column(name = "MAIL_MIME_TYPE", nullable = true, length = 200)
-    private final String mediaType;
-    
+    private String mediaType;
+
     /** MIME sub type */
     @Basic(optional = true)
     @Column(name = "MAIL_MIME_SUBTYPE", nullable = true, length = 200)
-    private final String subType;
-    
+    private String subType;
+
     /** THE CRFL count when this document is textual, null otherwise */
     @Basic(optional = true)
     @Column(name = "MAIL_TEXTUAL_LINE_COUNT", nullable = true)
-    private final Long textualLineCount;
-    
+    private Long textualLineCount;
 
     /** Meta data for this message */
-    @OneToMany(cascade = CascadeType.ALL, fetch=FetchType.EAGER)
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @OrderBy("line")
-    @ElementJoinColumns({@ElementJoinColumn(name="MAILBOX_ID", referencedColumnName="MAILBOX_ID"),
-                @ElementJoinColumn(name="MAIL_UID", referencedColumnName="MAIL_UID")})
-    private final List<JPAProperty> properties;
+    @ElementJoinColumns({ @ElementJoinColumn(name = "MAILBOX_ID", referencedColumnName = "MAILBOX_ID"),
+            @ElementJoinColumn(name = "MAIL_UID", referencedColumnName = "MAIL_UID") })
+    private List<JPAProperty> properties;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch=FetchType.EAGER, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     @OrderBy("id")
-    @ElementJoinColumns({@ElementJoinColumn(name="MAILBOX_ID", referencedColumnName="MAILBOX_ID"),
-    @ElementJoinColumn(name="MAIL_UID", referencedColumnName="MAIL_UID")})
-    private final List<JPAUserFlag> userFlags;
-    
-    public AbstractJPAMailboxMessage(JPAMailbox mailbox, Date internalDate, Flags flags, final long contentOctets, final int bodyStartOctet, final PropertyBuilder propertyBuilder) {
+    @ElementJoinColumns({ @ElementJoinColumn(name = "MAILBOX_ID", referencedColumnName = "MAILBOX_ID"),
+            @ElementJoinColumn(name = "MAIL_UID", referencedColumnName = "MAIL_UID") })
+    private List<JPAUserFlag> userFlags;
+
+    public AbstractJPAMailboxMessage() {
+        
+    }
+
+    public AbstractJPAMailboxMessage(JPAMailbox mailbox, Date internalDate, Flags flags, long contentOctets,
+            int bodyStartOctet, PropertyBuilder propertyBuilder) {
         this.mailbox = mailbox;
         this.internalDate = internalDate;
         userFlags = new ArrayList<JPAUserFlag>();
 
-        setFlags(flags);        
+        setFlags(flags);
         this.contentOctets = contentOctets;
         this.bodyStartOctet = bodyStartOctet;
         this.textualLineCount = propertyBuilder.getTextualLineCount();
@@ -264,36 +249,41 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
         final List<Property> properties = propertyBuilder.toProperties();
         this.properties = new ArrayList<JPAProperty>(properties.size());
         int order = 0;
-        for (final Property property:properties) {
+        for (Property property : properties) {
             this.properties.add(new JPAProperty(property, order++));
         }
-        
+
     }
 
     /**
-     * Constructs a copy of the given message.
-     * All properties are cloned except mailbox and UID.
-     * @param mailbox new mailbox
-     * @param uid new UID
-     * @param modSeq new modSeq
-     * @param original message to be copied, not null
+     * Constructs a copy of the given message. All properties are cloned except
+     * mailbox and UID.
+     * 
+     * @param mailbox
+     *            new mailbox
+     * @param uid
+     *            new UID
+     * @param modSeq
+     *            new modSeq
+     * @param original
+     *            message to be copied, not null
      */
-    public AbstractJPAMailboxMessage(JPAMailbox mailbox, long uid, long modSeq, MailboxMessage<?> original) throws MailboxException {
+    public AbstractJPAMailboxMessage(JPAMailbox mailbox, MessageUid uid, long modSeq, MailboxMessage original)
+            throws MailboxException {
         super();
         this.mailbox = mailbox;
-        this.uid = uid;
+        this.uid = uid.asLong();
         this.modSeq = modSeq;
         this.userFlags = new ArrayList<JPAUserFlag>();
         setFlags(original.createFlags());
-        
-        // A copy of a message is recent 
+
+        // A copy of a message is recent
         // See MAILBOX-85
         this.recent = true;
 
         this.contentOctets = original.getFullContentOctets();
         this.bodyStartOctet = (int) (original.getFullContentOctets() - original.getBodyOctets());
         this.internalDate = original.getInternalDate();
-
 
         PropertyBuilder pBuilder = new PropertyBuilder(original.getProperties());
         this.textualLineCount = original.getTextualLineCount();
@@ -302,39 +292,24 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
         final List<Property> properties = pBuilder.toProperties();
         this.properties = new ArrayList<JPAProperty>(properties.size());
         int order = 0;
-        for (final Property property:properties) {
+        for (Property property : properties) {
             this.properties.add(new JPAProperty(property, order++));
         }
     }
 
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + (int) (getMailboxId().getRawId() ^ (getMailboxId().getRawId() >>> 32));
-        result = PRIME * result + (int) (uid ^ (uid >>> 32));
-        return result;
+        return Objects.hashCode(getMailboxId().getRawId(), uid);
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final AbstractJPAMailboxMessage other = (AbstractJPAMailboxMessage) obj;
-        if (getMailboxId() != null) {
-            if (!getMailboxId().equals(other.getMailboxId()))
-            return false;
-        } else {
-            if (other.getMailboxId() != null)
-            return false;
+        if (obj instanceof AbstractJPAMailboxMessage) {
+            AbstractJPAMailboxMessage other = (AbstractJPAMailboxMessage) obj;
+            return Objects.equal(getMailboxId(), other.getMailboxId())
+                    && Objects.equal(uid, other.getUid());
         }
-        if (uid != other.uid)
-            return false;
-        return true;
+        return false;
     }
 
     /**
@@ -350,7 +325,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     public void setModSeq(long modSeq) {
         this.modSeq = modSeq;
     }
-    
+
     /**
      * Gets the top level MIME content media type.
      * 
@@ -359,7 +334,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     public String getMediaType() {
         return mediaType;
     }
-    
+
     /**
      * Gets the MIME content subtype.
      * 
@@ -370,19 +345,20 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     }
 
     /**
-     * Gets a read-only list of meta-data properties.
-     * For properties with multiple values, this list will contain
-     * several enteries with the same namespace and local name.
+     * Gets a read-only list of meta-data properties. For properties with
+     * multiple values, this list will contain several enteries with the same
+     * namespace and local name.
+     * 
      * @return unmodifiable list of meta-data, not null
      */
     public List<Property> getProperties() {
         return new ArrayList<Property>(properties);
     }
-    
+
     /**
      * Gets the number of CRLF in a textual document.
-     * @return CRLF count when document is textual,
-     * null otherwise
+     * 
+     * @return CRLF count when document is textual, null otherwise
      */
     public Long getTextualLineCount() {
         return textualLineCount;
@@ -398,7 +374,6 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
     protected int getBodyStartOctet() {
         return bodyStartOctet;
     }
-    
 
     /**
      * @see MailboxMessage#getInternalDate()
@@ -407,69 +382,52 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
         return internalDate;
     }
 
-    /**
-     * @see MailboxMessage#getMailboxId()
-     */
+    @Override
     public JPAId getMailboxId() {
         return getMailbox().getMailboxId();
     }
 
-    /**
-     * @see MailboxMessage#getUid()
-     */
-    public long getUid() {
-        return uid;
+    @Override
+    public MessageUid getUid() {
+        return MessageUid.of(uid);
     }
 
-    /**
-     * @see MailboxMessage#isAnswered()
-     */
+    @Override
     public boolean isAnswered() {
         return answered;
     }
 
-    /**
-     * @see MailboxMessage#isDeleted()
-     */
+    @Override
     public boolean isDeleted() {
         return deleted;
     }
 
-    /**
-     * @see MailboxMessage#isDraft()
-     */
+    @Override
     public boolean isDraft() {
         return draft;
     }
 
-    /**
-     * @see MailboxMessage#isFlagged()
-     */
+    @Override
     public boolean isFlagged() {
         return flagged;
     }
 
-    /**
-     * @see MailboxMessage#isRecent()
-     */
+    @Override
     public boolean isRecent() {
         return recent;
     }
 
-    /**
-     * @see MailboxMessage#isSeen()
-     */
+    @Override
     public boolean isSeen() {
         return seen;
     }
-    
-    public void setUid(long uid) {
-        this.uid = uid;
+
+    @Override
+    public void setUid(MessageUid uid) {
+        this.uid = uid.asLong();
     }
-    
-    /**
-     * @see MailboxMessage#setFlags(javax.mail.Flags)
-     */
+
+    @Override
     public void setFlags(Flags flags) {
         answered = flags.contains(Flags.Flag.ANSWERED);
         deleted = flags.contains(Flags.Flag.DELETED);
@@ -477,35 +435,8 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
         flagged = flags.contains(Flags.Flag.FLAGGED);
         recent = flags.contains(Flags.Flag.RECENT);
         seen = flags.contains(Flags.Flag.SEEN);
-        
-        /*
-        // Loop over the user flags and check which of them needs to get added / removed
-        List<String> uFlags = Arrays.asList(flags.getUserFlags());
-        for (int i = 0; i < userFlags.size(); i++) {
-            JPAUserFlag f = userFlags.get(i);
-            if (uFlags.contains(f.getName()) == false) {
-                userFlags.remove(f);
-                i++;
-            }
-        }
-        for (int i = 0; i < uFlags.size(); i++) {
-            boolean found = false;
-            String uFlag = uFlags.get(i);
-            for (int a = 0; a < userFlags.size(); a++) {
-                String userFlag = userFlags.get(a).getName();
-                if (userFlag.equals(uFlag)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found == false) {
-                userFlags.add(new JPAUserFlag(uFlag));
-            }
-            
-            
-        }
-        */
-        String[] userflags =  flags.getUserFlags();
+
+        String[] userflags = flags.getUserFlags();
         userFlags.clear();
         for (String userflag : userflags) {
             userFlags.add(new JPAUserFlag(userflag));
@@ -551,27 +482,31 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage<JPAId>
 
     @Override
     public MessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), uid);
+        return new DefaultMessageId();
     }
 
     @Override
-    public int compareTo(MailboxMessage<JPAId> other) {
+    public int compareTo(MailboxMessage other) {
         return MESSAGE_UID_COMPARATOR.compare(this, other);
     }
 
     public String toString() {
-        return "message("
-        + "mailboxId = " + this.getMailboxId() + TOSTRING_SEPARATOR
-        + "uid = " + this.uid + TOSTRING_SEPARATOR
-        + "internalDate = " + this.internalDate + TOSTRING_SEPARATOR
-        + "answered = " + this.answered + TOSTRING_SEPARATOR
-        + "deleted = " + this.deleted + TOSTRING_SEPARATOR
-        + "draft = " + this.draft + TOSTRING_SEPARATOR
-        + "flagged = " + this.flagged + TOSTRING_SEPARATOR
-        + "recent = " + this.recent + TOSTRING_SEPARATOR
-        + "seen = " + this.seen + TOSTRING_SEPARATOR
-        + " )";
+        return "message(" 
+                + "mailboxId = " + this.getMailboxId() + TOSTRING_SEPARATOR 
+                + "uid = " + this.uid + TOSTRING_SEPARATOR
+                + "internalDate = " + this.internalDate + TOSTRING_SEPARATOR 
+                + "answered = " + this.answered + TOSTRING_SEPARATOR
+                + "deleted = " + this.deleted + TOSTRING_SEPARATOR 
+                + "draft = " + this.draft + TOSTRING_SEPARATOR
+                + "flagged = " + this.flagged + TOSTRING_SEPARATOR 
+                + "recent = " + this.recent + TOSTRING_SEPARATOR 
+                + "seen = " + this.seen + TOSTRING_SEPARATOR 
+                + " )";
     }
-    
+
+    @Override
+    public List<MessageAttachment> getAttachments() {
+        throw new NotImplementedException("Attachments are not implemented");
+    }
 
 }

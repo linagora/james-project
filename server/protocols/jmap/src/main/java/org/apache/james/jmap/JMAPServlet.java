@@ -36,6 +36,10 @@ import org.apache.james.jmap.methods.RequestHandler;
 import org.apache.james.jmap.model.AuthenticatedProtocolRequest;
 import org.apache.james.jmap.model.ProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -44,20 +48,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JMAPServlet extends HttpServlet {
 
+    public static final Logger LOG = LoggerFactory.getLogger(JMAPServlet.class);
     public static final String JSON_CONTENT_TYPE = "application/json";
     public static final String JSON_CONTENT_TYPE_UTF8 = "application/json; charset=UTF-8";
 
     private final ObjectMapper objectMapper;
     private final RequestHandler requestHandler;
+    private final MetricFactory metricFactory;
 
     @Inject
-    public JMAPServlet(RequestHandler requestHandler) {
+    public JMAPServlet(RequestHandler requestHandler, MetricFactory metricFactory) {
         this.requestHandler = requestHandler;
+        this.metricFactory = metricFactory;
         this.objectMapper = new ObjectMapper();
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
+        TimeMetric timeMetric = metricFactory.timer("JMAP-request");
         try {
             List<Object[]> responses = 
                 requestAsJsonStream(req)
@@ -70,7 +78,10 @@ public class JMAPServlet extends HttpServlet {
             resp.setContentType(JSON_CONTENT_TYPE);
             objectMapper.writeValue(resp.getOutputStream(), responses);
         } catch (IOException e) {
+            LOG.error("error handling request", e);
             resp.setStatus(SC_BAD_REQUEST);
+        } finally {
+            timeMetric.stopAndPublish();
         }
     }
     

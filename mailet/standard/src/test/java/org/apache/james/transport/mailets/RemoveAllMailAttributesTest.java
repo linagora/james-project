@@ -20,49 +20,52 @@
 
 package org.apache.james.transport.mailets;
 
-import org.apache.james.transport.mailets.RemoveAllMailAttributes;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import javax.mail.MessagingException;
+
 import org.apache.mailet.Mail;
 import org.apache.mailet.Mailet;
-import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMailetConfig;
 import org.apache.mailet.base.test.MailUtil;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.ParseException;
-
 public class RemoveAllMailAttributesTest {
 
-    private Mail mockedMail;
-
+    private Mail mail;
     private Mailet mailet;
 
     @Before
     public void setUp() throws Exception {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .build();
         mailet = new RemoveAllMailAttributes();
-        FakeMailetConfig mci = new FakeMailetConfig("Test", new FakeMailContext());
-        mailet.init(mci);
+        mailet.init(mailetConfig);
     }
 
-    private void setupMockedMail(MimeMessage m) throws ParseException {
-        mockedMail = MailUtil.createMockMail2Recipients(m);
-        mockedMail.setAttribute("org.apache.james.test.junit", "true");
-    }
-
-    // test if ToProcessor works
     @Test
-    public void testRemoveAllMailAttributes() throws MessagingException {
-        setupMockedMail(null);
-        // check if the mail has a attribute
-        Assert.assertTrue(mockedMail.getAttributeNames().hasNext());
-
-        mailet.service(mockedMail);
-
-        // check if all was removed
-        Assert.assertFalse(mockedMail.getAttributeNames().hasNext());
+    public void getMailetInfoShouldReturnValue() {
+        assertThat(mailet.getMailetInfo()).isEqualTo("Remove All Mail Attributes Mailet");
     }
 
+    @Test
+    public void serviceShouldRemoveAllMailAttributes() throws MessagingException {
+        mail = MailUtil.createMockMail2Recipients();
+        mail.setAttribute("org.apache.james.test.junit", "true");
+
+        mailet.service(mail);
+
+        assertThat(mail.getAttributeNames()).isEmpty();
+    }
+
+    @Test
+    public void serviceShouldRemoveAllMailAttributesWhenNone() throws MessagingException {
+        mail = MailUtil.createMockMail2Recipients();
+
+        mailet.service(mail);
+
+        assertThat(mail.getAttributeNames()).isEmpty();
+    }
 }

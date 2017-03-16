@@ -30,6 +30,7 @@ import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.LoginRequest;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.metrics.api.MetricFactory;
 
 /**
  * Processes a <code>LOGIN</code> command.
@@ -37,8 +38,9 @@ import org.apache.james.mailbox.MailboxManager;
 public class LoginProcessor extends AbstractAuthProcessor<LoginRequest> implements CapabilityImplementingProcessor{
 
     private final static List<String> LOGINDISABLED_CAPS = Collections.unmodifiableList(Arrays.asList("LOGINDISABLED"));
-    public LoginProcessor(final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory factory) {
-        super(LoginRequest.class, next, mailboxManager, factory);
+    public LoginProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(LoginRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     /**
@@ -48,13 +50,12 @@ public class LoginProcessor extends AbstractAuthProcessor<LoginRequest> implemen
      * org.apache.james.imap.api.ImapCommand, org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(LoginRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-            final String userid = request.getUserid();
-            final String passwd = request.getPassword();
             // check if the login is allowed with LOGIN command. See IMAP-304
             if (session.isPlainAuthDisallowed() && session.isTLSActive() == false) {
                 no(command, tag, responder, HumanReadableText.DISABLED_LOGIN);
             } else {
-                doAuth(userid, passwd, session, tag, command, responder, HumanReadableText.INVALID_LOGIN);
+                doAuth(noDelegation(request.getUserid(), request.getPassword()),
+                    session, tag, command, responder, HumanReadableText.INVALID_LOGIN);
             }
     }
 

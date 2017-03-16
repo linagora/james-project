@@ -40,10 +40,12 @@ import org.apache.james.mailbox.hbase.HBaseMailboxSessionMapperFactory;
 import org.apache.james.mailbox.hbase.mail.HBaseModSeqProvider;
 import org.apache.james.mailbox.hbase.mail.HBaseUidProvider;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.MockAuthenticator;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
+import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
 import org.apache.james.mpt.host.JamesImapHostSystem;
@@ -63,7 +65,6 @@ public class HBaseHostSystem extends JamesImapHostSystem {
     public static Boolean useMiniCluster = true;
     
     private final HBaseMailboxManager mailboxManager;
-    private final MockAuthenticator userManager;
     private MiniHBaseCluster hbaseCluster;
     private final Configuration conf;
 
@@ -88,17 +89,17 @@ public class HBaseHostSystem extends JamesImapHostSystem {
             conf = HBaseConfiguration.create();
         }
 
-        userManager = new MockAuthenticator();
-
         final HBaseModSeqProvider modSeqProvider = new HBaseModSeqProvider(conf);
         final HBaseUidProvider uidProvider = new HBaseUidProvider(conf);
-
+        DefaultMessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
         final HBaseMailboxSessionMapperFactory mapperFactory = new HBaseMailboxSessionMapperFactory(
-                conf, uidProvider, modSeqProvider);
+                conf, uidProvider, modSeqProvider, messageIdFactory);
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
+        MessageParser messageParser = new MessageParser();
         
-        mailboxManager = new HBaseMailboxManager(mapperFactory, userManager, aclResolver, groupMembershipResolver);
+        mailboxManager = new HBaseMailboxManager(mapperFactory, authenticator, authorizator, aclResolver, groupMembershipResolver,
+                messageParser, messageIdFactory);
         mailboxManager.init();
 
         SubscriptionManager subscriptionManager = new StoreSubscriptionManager(mapperFactory);
@@ -108,7 +109,8 @@ public class HBaseHostSystem extends JamesImapHostSystem {
                         mailboxManager, 
                         subscriptionManager, 
                         new NoQuotaManager(), 
-                        new DefaultQuotaRootResolver(mapperFactory));
+                        new DefaultQuotaRootResolver(mapperFactory),
+                        new DefaultMetricFactory());
 
         resetUserMetaData();
 
@@ -125,11 +127,6 @@ public class HBaseHostSystem extends JamesImapHostSystem {
         mailboxManager.deleteEverything(session);
         mailboxManager.endProcessingRequest(session);
         mailboxManager.logout(session, false);
-    }
-
-    public boolean addUser(String user, String password) {
-        userManager.addUser(user, password);
-        return true;
     }
 
     public final void resetUserMetaData() throws Exception {

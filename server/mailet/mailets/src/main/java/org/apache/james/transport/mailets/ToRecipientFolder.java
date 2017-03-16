@@ -18,22 +18,23 @@
  ****************************************************************/
 package org.apache.james.transport.mailets;
 
-import java.util.Arrays;
-import java.util.Iterator;
+import static org.apache.james.transport.mailets.LocalDelivery.LOCAL_DELIVERED_MAILS_METRIC_NAME;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.mail.MessagingException;
 
+import org.apache.commons.logging.Log;
 import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.sieverepository.api.SieveRepository;
+import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.transport.mailets.delivery.MailDispatcher;
+import org.apache.james.transport.mailets.delivery.MailboxAppender;
+import org.apache.james.transport.mailets.delivery.SimpleMailStore;
+import org.apache.james.transport.mailets.jsieve.CommonsLoggingAdapter;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.mailet.Mail;
-import org.apache.mailet.MailetConfig;
-import org.apache.mailet.MailetContext;
 import org.apache.mailet.base.GenericMailet;
-
-import com.google.common.collect.Iterators;
 
 /**
  * Receives a Mail from the Queue and takes care to deliver the message
@@ -53,76 +54,46 @@ import com.google.common.collect.Iterators;
  */
 public class ToRecipientFolder extends GenericMailet {
 
-    private MailboxManager mailboxManager;
-    private SieveRepository sieveRepository;
-    private UsersRepository usersRepository;
+    public static final String FOLDER_PARAMETER = "folder";
+    public static final String CONSUME_PARAMETER = "consume";
+
+    private final MailboxManager mailboxManager;
+    private final UsersRepository usersRepository;
+    private final MetricFactory metricFactory;
+    private MailDispatcher mailDispatcher;
 
     @Inject
-    public void setMailboxManager(@Named("mailboxmanager")MailboxManager mailboxManager) {
+    public ToRecipientFolder(@Named("mailboxmanager")MailboxManager mailboxManager, UsersRepository usersRepository,
+                             MetricFactory metricFactory) {
+        this.metricFactory = metricFactory;
         this.mailboxManager = mailboxManager;
-    }
-
-    @Inject
-    public void setSetUsersRepository(SieveRepository setUsersRepository) {
-        this.sieveRepository = setUsersRepository;
-    }
-
-    @Inject
-    public void setUsersRepository(UsersRepository usersRepository) {
         this.usersRepository = usersRepository;
     }
 
-    private SieveMailet sieveMailet;  // Mailet that actually stores the message
-
-    /**
-     * Delivers a mail to a local mailbox in a given folder.
-     * 
-     * @see org.apache.mailet.base.GenericMailet#service(org.apache.mailet.Mail)
-     */
     @Override
     public void service(Mail mail) throws MessagingException {
-        if (!mail.getState().equals(Mail.GHOST)) {
-            sieveMailet.service(mail);
-        }
+        mailDispatcher.dispatch(mail);
     }
 
     @Override
     public void init() throws MessagingException {
-        super.init();
-        sieveMailet = new SieveMailet(usersRepository, mailboxManager, sieveRepository, "INBOX");
-        sieveMailet.init(new MailetConfig() {
-            
-            @Override
-            public String getInitParameter(String name) {
-                if ("addDeliveryHeader".equals(name)) {
-                    return "Delivered-To";
-                } else if ("resetReturnPath".equals(name)) {
-                    return "true";
-                } else {
-                    return getMailetConfig().getInitParameter(name);
-                }
-            }
-            
-
-            @Override
-            public Iterator<String> getInitParameterNames() {
-                return Iterators.concat(getMailetConfig().getInitParameterNames(),
-                        Arrays.asList("addDeliveryHeader", "resetReturnPath").iterator());
-            }
-            
-            @Override
-            public MailetContext getMailetContext() {
-                return getMailetConfig().getMailetContext();
-            }
-
-            @Override
-            public String getMailetName() {
-                return getMailetConfig().getMailetName();
-            }
-
-        });
-        // Override the default value of "quiet"
-        sieveMailet.setQuiet(getInitParameter("quiet", true));
+        Log log = CommonsLoggingAdapter.builder()
+            .wrappedLogger(getMailetContext().getLogger())
+            .quiet(getInitParameter("quiet", true))
+            .verbose(getInitParameter("verbose", false))
+            .build();
+        mailDispatcher = MailDispatcher.builder()
+            .mailStore(SimpleMailStore.builder()
+                .mailboxAppender(new MailboxAppender(mailboxManager, getMailetContext().getLogger()))
+                .usersRepository(usersRepository)
+                .folder(getInitParameter(FOLDER_PARAMETER, MailboxConstants.INBOX))
+                .metric(metricFactory.generate(LOCAL_DELIVERED_MAILS_METRIC_NAME))
+                .log(log)
+                .build())
+            .consume(getInitParameter(CONSUME_PARAMETER, false))
+            .mailetContext(getMailetContext())
+            .log(log)
+            .build();
     }
 
     @Override

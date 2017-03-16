@@ -20,6 +20,8 @@ package org.apache.james.jmap.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Optional;
+
 import org.junit.Test;
 
 public class EmailerTest {
@@ -51,7 +53,7 @@ public class EmailerTest {
     
     @Test
     public void buildShouldWork() {
-        Emailer expected = new Emailer("name", "user@domain");
+        Emailer expected = new Emailer(Optional.of("name"), Optional.of("user@domain"));
         Emailer emailer = Emailer.builder()
             .name("name")
             .email("user@domain")
@@ -59,4 +61,54 @@ public class EmailerTest {
         assertThat(emailer).isEqualToComparingFieldByField(expected);
     }
 
+    @Test
+    public void buildInvalidAllowedShouldConsiderNullValuesAsInvalid() {
+        Emailer expected = new Emailer(Optional.empty(), Optional.empty());
+
+        Emailer actual = Emailer.builder()
+            .allowInvalid()
+            .build();
+
+        assertThat(actual).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void buildInvalidAllowedShouldConsiderEmptyValuesAsInvalid() {
+        Emailer expected = new Emailer(Optional.empty(), Optional.empty());
+
+        Emailer actual = Emailer.builder()
+            .name("")
+            .email("")
+            .allowInvalid()
+            .build();
+
+        assertThat(actual).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void buildInvalidAllowedShouldDeclareInvalidAddressesAsInvalid() {
+        Emailer expected = new Emailer(Optional.empty(), Optional.of("invalidAddress"));
+
+        Emailer actual = Emailer.builder()
+            .email("invalidAddress")
+            .allowInvalid()
+            .build();
+
+        assertThat(actual).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void buildInvalidAllowedShouldWork() {
+        String name = "bob";
+        String address = "me@apache.org";
+        Emailer expected = new Emailer(Optional.of(name), Optional.of(address));
+
+        Emailer actual = Emailer.builder()
+            .name(name)
+            .email(address)
+            .allowInvalid()
+            .build();
+
+        assertThat(actual).isEqualToComparingFieldByField(expected);
+    }
 }

@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.james.mpt.api.Monitor;
 import org.apache.james.mpt.api.Session;
@@ -51,11 +52,11 @@ public final class ExternalSession implements Session {
 
     private final String shabang;
 
-    public ExternalSession(final SocketChannel socket, final Monitor monitor, String shabang) {
+    public ExternalSession(SocketChannel socket, Monitor monitor, String shabang) {
         this(socket, monitor, shabang, false);
     }
 
-    public ExternalSession(final SocketChannel socket, final Monitor monitor, String shabang, boolean debug) {
+    public ExternalSession(SocketChannel socket, Monitor monitor, String shabang, boolean debug) {
         super();
         this.socket = socket;
         this.monitor = monitor;
@@ -149,6 +150,10 @@ public final class ExternalSession implements Session {
             monitor.note("connecting...");
             Thread.sleep(10);
         }
+    }
+
+    public void restart() throws Exception {
+        throw new NotImplementedException("Restart is not implemented for ExternalSession");
     }
 
     public void stop() throws Exception {

@@ -18,51 +18,96 @@
  ****************************************************************/
 package org.apache.james.transport.matchers;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collection;
+
 import javax.mail.MessagingException;
+
+import org.apache.james.dnsservice.api.mock.MockDNSService;
 import org.apache.mailet.MailAddress;
-import static org.junit.Assert.*;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.junit.Before;
 import org.junit.Test;
 
-public class RemoteAddrInNetworkTest extends AbstractRemoteAddrInNetworkTest {
+public class RemoteAddrInNetworkTest {
+    private RemoteAddrInNetwork matcher;
+    private FakeMail fakeMail;
+    private MailAddress testRecipient;
 
-    // test if the recipients get returned as matched
+    @Before
+    public void setup() throws MessagingException {
+        MockDNSService dnsServer = new MockDNSService() {
+            @Override
+            public InetAddress getByName(String host) throws UnknownHostException {
+                return InetAddress.getByName(host);
+            }
+        };
+        FakeMatcherConfig matcherConfig = FakeMatcherConfig.builder()
+                .matcherName("AllowedNetworkIs")
+                .condition("192.168.200.0/24")
+                .build();
+
+        matcher = new RemoteAddrInNetwork();
+        matcher.setDNSService(dnsServer);
+        matcher.init(matcherConfig);
+        testRecipient = new MailAddress("test@james.apache.org");
+    }
+
     @Test
-    public void testRemoteAddrInNetworkMatched() throws MessagingException {
-        setRemoteAddr("192.168.200.1");
+    public void shouldMatchWhenOnSameNetwork() throws MessagingException {
+        fakeMail = FakeMail.builder()
+                .recipient(testRecipient)
+                .remoteAddr("192.168.200.1")
+                .build();
 
-        setupAll();
+        Collection<MailAddress> actual = matcher.match(fakeMail);
 
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-
-        assertNotNull(matchedRecipients);
-        assertEquals(matchedRecipients.size(), mockedMail.getRecipients().size());
+        assertThat(actual).containsOnly(testRecipient);
     }
 
-    // test if no recipient get returned cause it not match
     @Test
-    public void testRemoteAddrInNetworkNotMatch() throws MessagingException {
-        setRemoteAddr("192.168.1.1");
+    public void shouldNotMatchWhenOnDifferentNetwork() throws MessagingException {
+        fakeMail = FakeMail.builder()
+                .recipient(testRecipient)
+                .remoteAddr("192.168.1.1")
+                .build();
 
-        setupAll();
+        Collection<MailAddress> actual = matcher.match(fakeMail);
 
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-
-        assertNull(matchedRecipients);
+        assertThat(actual).isNull();
     }
 
-    @Override
-    protected AbstractNetworkMatcher createMatcher() {
-        return new RemoteAddrInNetwork();
+    @Test
+    public void shouldNotMatchWhenNoCondition() throws MessagingException {
+        FakeMatcherConfig matcherConfig = FakeMatcherConfig.builder()
+                .matcherName("")
+                .build();
+
+        RemoteAddrInNetwork testee = new RemoteAddrInNetwork();
+        testee.init(matcherConfig);
+
+        fakeMail = FakeMail.builder()
+                .recipient(testRecipient)
+                .build();
+
+        Collection<MailAddress> actual = testee.match(fakeMail);
+
+        assertThat(actual).isNull();
     }
 
-    @Override
-    protected String getConfigOption() {
-        return "AllowedNetworkIs=";
-    }
+    @Test
+    public void shouldNotMatchWhenInvalidAddress() throws MessagingException {
+        fakeMail = FakeMail.builder()
+                .recipient(testRecipient)
+                .remoteAddr("invalid")
+                .build();
 
-    @Override
-    protected String getAllowedNetworks() {
-        return "192.168.200.0/24";
+        Collection<MailAddress> actual = matcher.match(fakeMail);
+
+        assertThat(actual).isNull();
     }
 }

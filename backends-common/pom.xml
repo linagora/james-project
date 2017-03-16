@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-project</artifactId>
-        <version>1.8.3-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
     </parent>
 
     <artifactId>james-backends-common</artifactId>
@@ -35,10 +35,14 @@
 
     <properties>
         <assertj-3.version>3.2.0</assertj-3.version>
+        <junit.version>4.11</junit.version>
+        <slf4j.version>1.7.7</slf4j.version>
     </properties>
 
     <modules>
         <module>cassandra</module>
+        <module>jpa</module>
+        <module>elasticsearch</module>
     </modules>
 
     <dependencyManagement>
@@ -46,17 +50,33 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>james-server-util-java8</artifactId>
-                <version>3.0.0-beta5-SNAPSHOT</version>
+                <version>3.0.0-beta6-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>16.0</version>
+                <version>18.0</version>
             </dependency>
             <dependency>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
                 <version>1</version>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
 

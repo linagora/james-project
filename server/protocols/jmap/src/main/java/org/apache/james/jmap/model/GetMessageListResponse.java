@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.Method;
+import org.apache.james.mailbox.model.MessageId;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -44,7 +45,7 @@ public class GetMessageListResponse implements Method.Response {
         private int position;
         private int total;
         private final ImmutableList.Builder<String> threadIds;
-        private final ImmutableList.Builder<String> messageIds;
+        private final ImmutableList.Builder<MessageId> messageIds;
 
         private Builder() {
             sort = ImmutableList.builder();
@@ -90,17 +91,12 @@ public class GetMessageListResponse implements Method.Response {
             throw new NotImplementedException();
         }
 
-        public Builder messageId(String messageId) {
+        public Builder messageId(MessageId messageId) {
             this.messageIds.add(messageId);
             return this;
         }
 
-        public Builder messageId(long messageId) {
-            this.messageIds.add(String.valueOf(messageId));
-            return this;
-        }
-
-        public Builder messageIds(List<String> messageIds) {
+        public Builder messageIds(List<MessageId> messageIds) {
             this.messageIds.addAll(messageIds);
             return this;
         }
@@ -120,10 +116,10 @@ public class GetMessageListResponse implements Method.Response {
     private final int position;
     private final int total;
     private final List<String> threadIds;
-    private final List<String> messageIds;
+    private final List<MessageId> messageIds;
 
     @VisibleForTesting GetMessageListResponse(String accountId, Filter filter, List<String> sort, boolean collapseThreads, String state,
-            boolean canCalculateUpdates, int position, int total, List<String> threadIds, List<String> messageIds) {
+            boolean canCalculateUpdates, int position, int total, List<String> threadIds, List<MessageId> messageIds) {
 
         this.accountId = accountId;
         this.filter = filter;
@@ -173,7 +169,7 @@ public class GetMessageListResponse implements Method.Response {
         return threadIds;
     }
 
-    public List<String> getMessageIds() {
+    public List<MessageId> getMessageIds() {
         return messageIds;
     }
 }

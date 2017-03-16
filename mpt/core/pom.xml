@@ -17,15 +17,12 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>apache-james-mpt</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>0.2-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>apache-james-mpt-core</artifactId>
@@ -35,11 +32,6 @@
       scriptable functional testing of ASCII based line protocols.
     </description>
     <url>http://james.apache.org/mpt/main</url>
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/james/mpt/trunk/core</connection>
-        <developerConnection>scm:svn:https://rdonkin@svn.apache.org/repos/asf/james/mpt/trunk/core</developerConnection>
-        <url>http://svn.apache.org/viewcvs.cgi/james/mpt/trunk/main?root=Apache-SVN</url>
-    </scm>
     <dependencies>
         <dependency>
             <groupId>org.apache.james.protocols</groupId>
@@ -95,7 +87,7 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>${assertj-1.version}</version>
+            <version>${assertj-1.version}</version><!--$NO-MVN-MAN-VER$-->
             <scope>test</scope>
         </dependency>
         <dependency>

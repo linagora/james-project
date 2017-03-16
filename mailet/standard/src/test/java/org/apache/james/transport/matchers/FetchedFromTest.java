@@ -17,108 +17,79 @@
  * under the License.                                           *
  ****************************************************************/
 
-
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.FetchedFrom;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.Matcher;
-import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMatcherConfig;
-import org.apache.mailet.base.test.MailUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import static org.apache.mailet.base.MailAddressFixture.ANY_AT_JAMES;
+import static org.apache.mailet.base.MailAddressFixture.OTHER_AT_JAMES;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.ParseException;
-import java.util.Collection;
+
+import org.apache.mailet.Matcher;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.apache.mailet.base.test.MailUtil;
+import org.junit.Before;
+import org.junit.Test;
 
 public class FetchedFromTest {
-
-    private MimeMessage mockedMimeMessage;
-
-    private FakeMail mockedMail;
+    private static final String EXPECTED_HEADER_VALUE = "james-user";
+    private static final String WRONG_HEADER_VALUE = "defaultHeaderValue";
 
     private Matcher matcher;
 
-    private final String HEADER_NAME = "X-fetched-from";
-
-    private final String HEADER_VALUE = "james-user";
-
-    private String headerName = "defaultHeaderName";
-
-    private String headerValue = "defaultHeaderValue";
-
-    private void setHeaderName(String headerName) {
-        this.headerName = headerName;
-    }
-
-    private void setHeaderValue(String headerValue) {
-        this.headerValue = headerValue;
-    }
-
-    private void setupMockedMimeMessage() throws MessagingException {
-        mockedMimeMessage = MailUtil.createMimeMessage(headerName, headerValue);
-    }
-
-    private void setupMockedMail(MimeMessage m) throws ParseException {
-        mockedMail = MailUtil.createMockMail2Recipients(m);
-    }
-
-    private void setupMatcher() throws MessagingException {
-        setupMockedMimeMessage();
+    @Before
+    public void setUp() throws MessagingException {
         matcher = new FetchedFrom();
-        FakeMatcherConfig mci = new FakeMatcherConfig("FetchedFrom="
-                + HEADER_VALUE, new FakeMailContext());
-        matcher.init(mci);
+        FakeMatcherConfig matcherConfig = FakeMatcherConfig.builder()
+                .matcherName("FetchedFrom")
+                .condition(EXPECTED_HEADER_VALUE)
+                .build();
+
+        matcher.init(matcherConfig);
     }
 
-    // test if the Header was matched
     @Test
-    public void testHeaderIsMatched() throws MessagingException {
-        setHeaderName(HEADER_NAME);
-        setHeaderValue(HEADER_VALUE);
+    public void matchShouldReturnMatchWhenFetchFromHeaderHoldsRightValue() throws MessagingException {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients(ANY_AT_JAMES, OTHER_AT_JAMES)
+            .mimeMessage(MailUtil.createMimeMessage(FetchedFrom.X_FETCHED_FROM, EXPECTED_HEADER_VALUE))
+            .build();
 
-        setupMockedMimeMessage();
-        setupMockedMail(mockedMimeMessage);
-        setupMatcher();
-
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-        Assert.assertNotNull(matchedRecipients);
-        Assert.assertEquals(matchedRecipients.size(), mockedMail.getRecipients()
-                .size());
+        assertThat(matcher.match(fakeMail)).containsExactly(ANY_AT_JAMES, OTHER_AT_JAMES);
     }
 
-    // test if the Header was not matched
     @Test
-    public void testHeaderIsNotMatched() throws MessagingException {
-        setHeaderName(HEADER_NAME);
-        setHeaderValue(headerValue);
+    public void matchShouldReturnNotMatchWhenFetchFromHeaderHoldsWrongValue() throws MessagingException {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients(ANY_AT_JAMES, OTHER_AT_JAMES)
+            .mimeMessage(MailUtil.createMimeMessage(FetchedFrom.X_FETCHED_FROM, WRONG_HEADER_VALUE))
+            .build();
 
-        setupMockedMimeMessage();
-        setupMockedMail(mockedMimeMessage);
-        setupMatcher();
-
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-        Assert.assertNull(matchedRecipients);
+        assertThat(matcher.match(fakeMail)).isNull();
     }
 
-    // test if the Header was removed after matched
     @Test
-    public void testHeaderWasRemovedAfterMatched() throws MessagingException {
-        setHeaderName(HEADER_NAME);
-        setHeaderValue(HEADER_VALUE);
+    public void matchShouldRemoveMatchingHeaders() throws MessagingException {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients(ANY_AT_JAMES, OTHER_AT_JAMES)
+            .mimeMessage(MailUtil.createMimeMessage(FetchedFrom.X_FETCHED_FROM, EXPECTED_HEADER_VALUE))
+            .build();
 
-        setupMockedMimeMessage();
-        setupMockedMail(mockedMimeMessage);
-        setupMatcher();
+        matcher.match(fakeMail);
 
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-        Collection<MailAddress> matchedRecipients2 = matcher.match(mockedMail);
+        assertThat(fakeMail.getMessage().getHeader(FetchedFrom.X_FETCHED_FROM)).isNull();
+    }
 
-        Assert.assertNotNull(matchedRecipients);
-        Assert.assertNull(matchedRecipients2);
+    @Test
+    public void matchShouldNotRemoveNonMatchingHeaders() throws MessagingException {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients(ANY_AT_JAMES, OTHER_AT_JAMES)
+            .mimeMessage(MailUtil.createMimeMessage(FetchedFrom.X_FETCHED_FROM, WRONG_HEADER_VALUE))
+            .build();
+
+        matcher.match(fakeMail);
+
+        assertThat(fakeMail.getMessage().getHeader(FetchedFrom.X_FETCHED_FROM)).containsExactly(WRONG_HEADER_VALUE);
     }
 }

@@ -43,7 +43,9 @@ import org.apache.activemq.util.JMSExceptionSupport;
 import org.apache.james.core.MimeMessageCopyOnWriteProxy;
 import org.apache.james.core.MimeMessageInputStream;
 import org.apache.james.core.MimeMessageSource;
+import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.queue.api.MailQueue;
+import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.queue.jms.JMSMailQueue;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
@@ -91,8 +93,8 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
      * Construct a {@link ActiveMQMailQueue} which only use {@link BlobMessage}
      * 
      */
-    public ActiveMQMailQueue(final ConnectionFactory connectionFactory, final String queuename, final Logger logger) {
-        this(connectionFactory, queuename, true, logger);
+    public ActiveMQMailQueue(ConnectionFactory connectionFactory, MailQueueItemDecoratorFactory mailQueueItemDecoratorFactory, String queuename, MetricFactory metricFactory, Logger logger) {
+        this(connectionFactory, mailQueueItemDecoratorFactory, queuename, true, metricFactory, logger);
     }
 
     /**
@@ -103,8 +105,8 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
      * @param useBlob
      * @param logger
      */
-    public ActiveMQMailQueue(final ConnectionFactory connectionFactory, final String queuename, boolean useBlob, final Logger logger) {
-        super(connectionFactory, queuename, logger);
+    public ActiveMQMailQueue(ConnectionFactory connectionFactory, MailQueueItemDecoratorFactory mailQueueItemDecoratorFactory, String queuename, boolean useBlob, MetricFactory metricFactory, Logger logger) {
+        super(connectionFactory, mailQueueItemDecoratorFactory, queuename, metricFactory, logger);
         this.useBlob = useBlob;
     }
 
@@ -240,7 +242,8 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
     @Override
     protected MailQueueItem createMailQueueItem(Connection connection, Session session, MessageConsumer consumer, Message message) throws JMSException, MessagingException {
         Mail mail = createMail(message);
-        return new ActiveMQMailQueueItem(mail, connection, session, consumer, message, logger);
+        ActiveMQMailQueueItem activeMQMailQueueItem = new ActiveMQMailQueueItem(mail, connection, session, consumer, message, logger);
+        return mailQueueItemDecoratorFactory.decorate(activeMQMailQueueItem);
     }
 
     @Override
@@ -285,7 +288,6 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
     @Override
     public long getSize() throws MailQueueException {
 
-        Connection connection = null;
         Session session = null;
         MessageConsumer consumer = null;
         MessageProducer producer = null;
@@ -293,9 +295,6 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
         long size;
 
         try {
-            connection = connectionFactory.createConnection();
-            connection.start();
-
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
             replyTo = session.createTemporaryQueue();
             consumer = session.createConsumer(replyTo);
@@ -358,13 +357,6 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
             try {
                 if (session != null)
                     session.close();
-            } catch (JMSException e1) {
-                // ignore here
-            }
-
-            try {
-                if (connection != null)
-                    connection.close();
             } catch (JMSException e1) {
                 // ignore here
             }

@@ -57,6 +57,14 @@
 
     <!-- 
     ===========================================================================
+       Authorizator
+    ===========================================================================
+    -->
+
+    <import resource="classpath:META-INF/org/apache/james/spring-mailbox-authorizator.xml"/>
+
+    <!-- 
+    ===========================================================================
        Queues
     ===========================================================================
     -->
@@ -119,6 +127,7 @@
        Mailbox
     ===========================================================================
     -->
+    <bean id="messageParser" class="org.apache.james.mailbox.store.mail.model.impl.MessageParser" init-method="init"/>
 
     <!-- Mailbox Managers -->
     <bean class="org.apache.james.container.spring.bean.factorypostprocessor.MailboxConfigurationBeanFactoryPostProcessor"/>
@@ -139,6 +148,9 @@
 
     <!-- Event system -->
     <bean class="org.apache.james.container.spring.bean.factorypostprocessor.EventsConfigurationBeanFactoryPostProcessor"/>
+    <bean id="dispatcher" class="org.apache.james.mailbox.store.event.MailboxEventDispatcher">
+        <constructor-arg index="0" ref="delegating-listener"/>
+    </bean>
 
     <import resource="classpath:META-INF/spring/event-system.xml"/>
 
@@ -250,12 +262,13 @@
                 <entry key="org.apache.james:type=container,name=logprovider" value-ref="logprovider"/>
                 <entry key="org.apache.james:type=component,name=quotamanagerbean" value-ref="quotamanagermanagement"/>
                 <entry key="org.apache.james:type=component,name=reindexerbean" value-ref="reindexermanagement"/>
+                <entry key="org.apache.james:type=component,name=sievemanagerbean" value-ref="sievemanagerbean"/>
             </map>
         </property>
         <property name="assembler">
             <bean class="org.springframework.jmx.export.assembler.InterfaceBasedMBeanInfoAssembler">
                 <property name="managedInterfaces"
-                          value="org.apache.james.fetchmail.FetchSchedulerMBean,org.apache.james.domainlist.api.DomainListManagementMBean,org.apache.james.dnsservice.api.DNSServiceMBean,org.apache.james.rrt.api.RecipientRewriteTableManagementMBean,org.apache.james.user.api.UsersRepositoryManagementMBean,org.apache.james.adapter.mailbox.MailboxManagerManagementMBean,org.apache.james.adapter.mailbox.MailboxCopierManagementMBean,org.apache.james.mailetcontainer.api.jmx.MailSpoolerMBean,org.apache.james.container.spring.lifecycle.LogProviderManagementMBean,org.apache.james.adapter.mailbox.QuotaManagementMBean,org.apache.james.adapter.mailbox.ReIndexerManagementMBean"/>
+                          value="org.apache.james.fetchmail.FetchSchedulerMBean,org.apache.james.domainlist.api.DomainListManagementMBean,org.apache.james.dnsservice.api.DNSServiceMBean,org.apache.james.rrt.api.RecipientRewriteTableManagementMBean,org.apache.james.user.api.UsersRepositoryManagementMBean,org.apache.james.adapter.mailbox.MailboxManagerManagementMBean,org.apache.james.adapter.mailbox.MailboxCopierManagementMBean,org.apache.james.mailetcontainer.api.jmx.MailSpoolerMBean,org.apache.james.container.spring.lifecycle.LogProviderManagementMBean,org.apache.james.adapter.mailbox.QuotaManagementMBean,org.apache.james.adapter.mailbox.ReIndexerManagementMBean,org.apache.james.sieverepository.api.SieveRepositoryManagementMBean"/>
             </bean>
         </property>
     </bean>
@@ -272,9 +285,8 @@
         <property name="quotaRootResolver" ref="quotaRootResolver"/>
         <property name="quotaManager" ref="quotaManager"/>
     </bean>
-    <bean id="reindexermanagement" class="org.apache.james.adapter.mailbox.ReIndexerManagement">
-        <constructor-arg index="0" ref="reindexer"/>
-    </bean>
+    <bean id="reindexermanagement" class="org.apache.james.adapter.mailbox.ReIndexerManagement"/>
+    <bean id="sievemanagerbean" class="org.apache.james.sieverepository.lib.SieveRepositoryManagement"/>
     <!--
         <bean id="james23importermanagement" class="org.apache.james.container.spring.tool.James23ImporterManagement" />
     -->
@@ -284,9 +296,28 @@
         <import resource="classpath:jetm-monitoring.conf" />
     -->
 
+    <!--
+    ======================================================================
+    Metrics
+    ======================================================================
+    -->
 
-    <beans profile="cassandra">
-        <import resource="classpath:META-INF/cassandra-session.xml"/>
-    </beans>
+    <bean id="metricFactory" class="org.apache.james.metrics.dropwizard.DropWizardMetricFactory">
+        <constructor-arg index="0" ref="metricRegistry"/>
+    </bean>
+
+    <bean id="metricRegistry" class="com.codahale.metrics.MetricRegistry"/>
+
+    <!--
+    ======================================================================
+    JSPF
+    ======================================================================
+    -->
+
+    <bean id="jspfDnsService" class="org.apache.james.jspf.impl.DNSServiceXBillImpl">
+        <constructor-arg index="0" ref="jspfLogger"/>
+    </bean>
+
+    <bean id="jspfLogger" class="org.apache.james.smtpserver.fastfail.SPFHandler.SPFLogger"/>
 
 </beans>

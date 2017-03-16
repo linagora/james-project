@@ -23,25 +23,42 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
+import javax.inject.Inject;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 /**
  * Helper class to dispatch {@link org.apache.james.mailbox.MailboxListener.Event}'s to registerend MailboxListener
  */
-public class MailboxEventDispatcher<Id extends MailboxId> {
+public class MailboxEventDispatcher {
+
+    @VisibleForTesting
+    public static MailboxEventDispatcher ofListener(MailboxListener mailboxListener) {
+        return new MailboxEventDispatcher(mailboxListener, new EventFactory());
+    }
 
     private final MailboxListener listener;
-    private final EventFactory<Id> eventFactory;
+    private final EventFactory eventFactory;
 
-    public MailboxEventDispatcher(MailboxListener listener) {
+    @Inject
+    public MailboxEventDispatcher(DelegatingMailboxListener delegatingMailboxListener) {
+        this(delegatingMailboxListener, new EventFactory());
+    }
+
+    private MailboxEventDispatcher(MailboxListener listener, EventFactory eventFactory) {
         this.listener = listener;
-        this.eventFactory = new EventFactory<Id>();
+        this.eventFactory = eventFactory;
     }
 
     /**
@@ -52,8 +69,15 @@ public class MailboxEventDispatcher<Id extends MailboxId> {
      * @param uids Sorted map with uids and message meta data
      * @param mailbox The mailbox
      */
-    public void added(MailboxSession session, SortedMap<Long, MessageMetaData> uids, Mailbox<Id> mailbox) {
+    public void added(MailboxSession session, SortedMap<MessageUid, MessageMetaData> uids, Mailbox mailbox) {
         listener.event(eventFactory.added(session, uids, mailbox));
+    }
+
+    public void added(MailboxSession session, MessageMetaData messageMetaData, Mailbox mailbox) {
+        SortedMap<MessageUid, MessageMetaData> metaDataMap = ImmutableSortedMap.<MessageUid, MessageMetaData>naturalOrder()
+                .put(messageMetaData.getUid(), messageMetaData)
+                .build();
+        added(session, metaDataMap, mailbox);
     }
 
     /**
@@ -64,23 +88,34 @@ public class MailboxEventDispatcher<Id extends MailboxId> {
      * @param uids Sorted map with uids and message meta data
      * @param mailbox The mailbox
      */
-    public void expunged(final MailboxSession session,  Map<Long, MessageMetaData> uids, Mailbox<Id> mailbox) {
+    public void expunged(MailboxSession session,  Map<MessageUid, MessageMetaData> uids, Mailbox mailbox) {
         listener.event(eventFactory.expunged(session, uids, mailbox));
+    }
+
+    public void expunged(MailboxSession session,  MessageMetaData messageMetaData, Mailbox mailbox) {
+        Map<MessageUid, MessageMetaData> metaDataMap = ImmutableMap.<MessageUid, MessageMetaData>builder()
+            .put(messageMetaData.getUid(), messageMetaData)
+            .build();
+        expunged(session, metaDataMap, mailbox);
     }
 
     /**
      * Should get called when the message flags were update in a Mailbox. All
      * registered MailboxListener will get triggered then
      */
-    public void flagsUpdated(MailboxSession session, final List<Long> uids, final Mailbox<Id> mailbox, final List<UpdatedFlags> uflags) {
+    public void flagsUpdated(MailboxSession session, List<MessageUid> uids, Mailbox mailbox, List<UpdatedFlags> uflags) {
         listener.event(eventFactory.flagsUpdated(session, uids, mailbox, uflags));
+    }
+
+    public void flagsUpdated(MailboxSession session, MessageUid uid, Mailbox mailbox, UpdatedFlags uflags) {
+        flagsUpdated(session, ImmutableList.of(uid), mailbox, ImmutableList.of(uflags));
     }
 
     /**
      * Should get called when a Mailbox was renamed. All registered
      * MailboxListener will get triggered then
      */
-    public void mailboxRenamed(MailboxSession session, MailboxPath from, Mailbox<Id> to) {
+    public void mailboxRenamed(MailboxSession session, MailboxPath from, Mailbox to) {
         listener.event(eventFactory.mailboxRenamed(session, from, to));
     }
 
@@ -88,7 +123,7 @@ public class MailboxEventDispatcher<Id extends MailboxId> {
      * Should get called when a Mailbox was deleted. All registered
      * MailboxListener will get triggered then
      */
-    public void mailboxDeleted(MailboxSession session, Mailbox<Id> mailbox) {
+    public void mailboxDeleted(MailboxSession session, Mailbox mailbox) {
         listener.event(eventFactory.mailboxDeleted(session, mailbox));
     }
 
@@ -96,7 +131,7 @@ public class MailboxEventDispatcher<Id extends MailboxId> {
      * Should get called when a Mailbox was added. All registered
      * MailboxListener will get triggered then
      */
-    public void mailboxAdded(MailboxSession session, Mailbox<Id> mailbox) {
+    public void mailboxAdded(MailboxSession session, Mailbox mailbox) {
         listener.event(eventFactory.mailboxAdded(session, mailbox));
     }
 

@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.mail.Flags;
@@ -33,21 +34,20 @@ import javax.mail.Flags;
 import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.GetMailboxesRequest;
 import org.apache.james.jmap.model.GetMailboxesResponse;
+import org.apache.james.jmap.model.MailboxFactory;
 import org.apache.james.jmap.model.mailbox.Mailbox;
+import org.apache.james.jmap.model.mailbox.Role;
+import org.apache.james.jmap.model.mailbox.SortOrder;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
-import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
-import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
+import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
+import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.MockAuthenticator;
-import org.apache.james.mailbox.store.SimpleMailboxSession;
-import org.apache.james.mailbox.store.StoreMailboxManager;
+import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.assertj.core.groups.Tuple;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,21 +62,20 @@ public class GetMailboxesMethodTest {
     private static final String USERNAME = "username@domain.tld";
     private static final String USERNAME2 = "username2@domain.tld";
 
-    private StoreMailboxManager<InMemoryId> mailboxManager;
-    private GetMailboxesMethod<InMemoryId> getMailboxesMethod;
+    private MailboxManager mailboxManager;
+    private GetMailboxesMethod getMailboxesMethod;
     private ClientId clientId;
-    private InMemoryMailboxSessionMapperFactory mailboxMapperFactory;
+    private MailboxFactory mailboxFactory;
 
     @Before
     public void setup() throws Exception {
         clientId = ClientId.of("#0");
-        mailboxMapperFactory = new InMemoryMailboxSessionMapperFactory();
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
-        GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
-        mailboxManager = new StoreMailboxManager<>(mailboxMapperFactory, new MockAuthenticator(), aclResolver, groupMembershipResolver);
-        mailboxManager.init();
+        InMemoryIntegrationResources inMemoryIntegrationResources = new InMemoryIntegrationResources();
+        GroupMembershipResolver groupMembershipResolver = inMemoryIntegrationResources.createGroupMembershipResolver();
+        mailboxManager = inMemoryIntegrationResources.createMailboxManager(groupMembershipResolver);
+        mailboxFactory = new MailboxFactory(mailboxManager);
 
-        getMailboxesMethod = new GetMailboxesMethod<>(mailboxManager, mailboxMapperFactory);
+        getMailboxesMethod = new GetMailboxesMethod(mailboxManager, mailboxFactory, new DefaultMetricFactory());
     }
 
     @Test
@@ -102,13 +101,13 @@ public class GetMailboxesMethodTest {
         MailboxManager mockedMailboxManager = mock(MailboxManager.class);
         when(mockedMailboxManager.list(any()))
             .thenReturn(ImmutableList.of(new MailboxPath("namespace", "user", "name")));
-        when(mockedMailboxManager.getMailbox(any(), any()))
+        when(mockedMailboxManager.getMailbox(any(MailboxPath.class), any()))
             .thenThrow(new MailboxException());
-        GetMailboxesMethod<InMemoryId> testee = new GetMailboxesMethod<>(mockedMailboxManager, mailboxMapperFactory);
+        GetMailboxesMethod testee = new GetMailboxesMethod(mockedMailboxManager, mailboxFactory, new DefaultMetricFactory());
         
         GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder()
                 .build();
-        MailboxSession session = new SimpleMailboxSession(0, USERNAME, "", null, null, '.', null);
+        MailboxSession session = new MockMailboxSession(USERNAME);
         
         List<JmapResponse> getMailboxesResponse = testee.process(getMailboxesRequest, clientId, session).collect(Collectors.toList());
         
@@ -142,7 +141,7 @@ public class GetMailboxesMethodTest {
                 .extracting(GetMailboxesResponse.class::cast)
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getId, Mailbox::getName, Mailbox::getUnreadMessages)
-                .containsOnly(Tuple.tuple("1", mailboxPath.getName(), 2L));
+                .containsOnly(Tuple.tuple(InMemoryId.of(1), mailboxPath.getName(), 2L));
     }
 
     @Test
@@ -166,7 +165,7 @@ public class GetMailboxesMethodTest {
                 .extracting(GetMailboxesResponse.class::cast)
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getId, Mailbox::getName)
-                .containsOnly(Tuple.tuple("1", mailboxPathToReturn.getName()));
+                .containsOnly(Tuple.tuple(InMemoryId.of(1), mailboxPathToReturn.getName()));
     }
 
     @Test
@@ -187,7 +186,7 @@ public class GetMailboxesMethodTest {
                 .extracting(GetMailboxesResponse.class::cast)
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getSortOrder)
-                .containsOnly(10);
+                .containsOnly(SortOrder.of(10));
     }
 
     @Test
@@ -208,7 +207,7 @@ public class GetMailboxesMethodTest {
                 .extracting(GetMailboxesResponse.class::cast)
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getSortOrder)
-                .containsOnly(1000);
+                .containsOnly(SortOrder.of(1000));
     }
 
     @Test
@@ -229,7 +228,7 @@ public class GetMailboxesMethodTest {
                 .extracting(GetMailboxesResponse.class::cast)
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getSortOrder)
-                .containsOnly(10);
+                .containsOnly(SortOrder.of(10));
     }
 
     @Test
@@ -257,14 +256,14 @@ public class GetMailboxesMethodTest {
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getName, Mailbox::getSortOrder)
                 .containsExactly(
-                        Tuple.tuple("INBOX", 10),
-                        Tuple.tuple("ARCHIVE", 20),
-                        Tuple.tuple("DRAFTS", 30),
-                        Tuple.tuple("OUTBOX", 40),
-                        Tuple.tuple("SENT", 50),
-                        Tuple.tuple("TRASH", 60),
-                        Tuple.tuple("SPAM", 70),
-                        Tuple.tuple("TEMPLATES", 80));
+                        Tuple.tuple("INBOX", SortOrder.of(10)),
+                        Tuple.tuple("ARCHIVE", SortOrder.of(20)),
+                        Tuple.tuple("DRAFTS", SortOrder.of(30)),
+                        Tuple.tuple("OUTBOX", SortOrder.of(40)),
+                        Tuple.tuple("SENT", SortOrder.of(50)),
+                        Tuple.tuple("TRASH", SortOrder.of(60)),
+                        Tuple.tuple("SPAM", SortOrder.of(70)),
+                        Tuple.tuple("TEMPLATES", SortOrder.of(80)));
     }
 
     @Test
@@ -337,5 +336,42 @@ public class GetMailboxesMethodTest {
                 .flatExtracting(GetMailboxesResponse::getList)
                 .extracting(Mailbox::getUnreadMessages)
                 .containsExactly(2L);
+    }
+
+    @Test
+    public void getMailboxesShouldReturnMailboxesWithRoles() throws Exception {
+        MailboxSession mailboxSession = mailboxManager.createSystemSession(USERNAME, LOGGER);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "INBOX"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "ARCHIVE"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "DRAFTS"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "OUTBOX"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "SENT"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "TRASH"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "SPAM"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "TEMPLATES"), mailboxSession);
+        mailboxManager.createMailbox(new MailboxPath("#private", USERNAME, "WITHOUT ROLE"), mailboxSession);
+        
+        GetMailboxesRequest getMailboxesRequest = GetMailboxesRequest.builder()
+                .build();
+
+        List<JmapResponse> getMailboxesResponse = getMailboxesMethod.process(getMailboxesRequest, clientId, mailboxSession).collect(Collectors.toList());
+
+        assertThat(getMailboxesResponse)
+                .hasSize(1)
+                .extracting(JmapResponse::getResponse)
+                .hasOnlyElementsOfType(GetMailboxesResponse.class)
+                .extracting(GetMailboxesResponse.class::cast)
+                .flatExtracting(GetMailboxesResponse::getList)
+                .extracting(Mailbox::getName, Mailbox::getRole)
+                .containsOnly(
+                        Tuple.tuple("INBOX", Optional.of(Role.INBOX)),
+                        Tuple.tuple("ARCHIVE", Optional.of(Role.ARCHIVE)),
+                        Tuple.tuple("DRAFTS", Optional.of(Role.DRAFTS)),
+                        Tuple.tuple("OUTBOX", Optional.of(Role.OUTBOX)),
+                        Tuple.tuple("SENT", Optional.of(Role.SENT)),
+                        Tuple.tuple("TRASH", Optional.of(Role.TRASH)),
+                        Tuple.tuple("SPAM", Optional.of(Role.SPAM)),
+                        Tuple.tuple("TEMPLATES", Optional.of(Role.TEMPLATES)),
+                        Tuple.tuple("WITHOUT ROLE", Optional.empty()));
     }
 }

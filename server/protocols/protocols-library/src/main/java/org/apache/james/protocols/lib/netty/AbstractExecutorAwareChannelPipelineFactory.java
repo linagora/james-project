@@ -19,6 +19,7 @@
 package org.apache.james.protocols.lib.netty;
 
 import org.apache.james.protocols.netty.AbstractSSLAwareChannelPipelineFactory;
+import org.apache.james.protocols.netty.ChannelHandlerFactory;
 import org.apache.james.protocols.netty.HandlerConstants;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.group.ChannelGroup;
@@ -31,12 +32,12 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  */
 public abstract class AbstractExecutorAwareChannelPipelineFactory extends AbstractSSLAwareChannelPipelineFactory{
 
-    public AbstractExecutorAwareChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup group, ExecutionHandler eHandler) {
-        super(timeout, maxConnections, maxConnectsPerIp, group, eHandler);
+    public AbstractExecutorAwareChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup group, ExecutionHandler eHandler, ChannelHandlerFactory frameHandlerFactory) {
+        super(timeout, maxConnections, maxConnectsPerIp, group, eHandler, frameHandlerFactory);
     }
 
-    public AbstractExecutorAwareChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup group, String[] enabledCipherSuites, ExecutionHandler eHandler) {
-        super(timeout, maxConnections, maxConnectsPerIp, group, enabledCipherSuites, eHandler);
+    public AbstractExecutorAwareChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup group, String[] enabledCipherSuites, ExecutionHandler eHandler, ChannelHandlerFactory frameHandlerFactory) {
+        super(timeout, maxConnections, maxConnectsPerIp, group, enabledCipherSuites, eHandler, frameHandlerFactory);
     }
     
     @Override

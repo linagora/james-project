@@ -19,35 +19,99 @@
 package org.apache.james.jmap.model.mailbox;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public enum Role {
+import org.apache.james.jmap.DefaultMailboxes;
 
-    INBOX("inbox"),
-    ARCHIVE("archive"),
-    DRAFTS("drafts"),
-    OUTBOX("outbox"),
-    SENT("sent"),
-    TRASH("trash"),
-    SPAM("spam"),
-    TEMPLATES("templates");
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 
+public class Role {
+
+    public static final String USER_DEFINED_ROLE_PREFIX = "x-";
+    
+    public static final Role INBOX = new Role("inbox", DefaultMailboxes.INBOX);
+    public static final Role DRAFTS = new Role("drafts", DefaultMailboxes.DRAFTS);
+    public static final Role OUTBOX = new Role("outbox", DefaultMailboxes.OUTBOX);
+    public static final Role SENT = new Role("sent", DefaultMailboxes.SENT);
+    public static final Role TRASH = new Role("trash", DefaultMailboxes.TRASH);
+    public static final Role ARCHIVE = new Role("archive");
+    public static final Role SPAM = new Role("spam");
+    public static final Role TEMPLATES = new Role("templates");
+    
+    private static final Map<String, Role> ROLES = 
+            ImmutableList.<Role>of(INBOX, ARCHIVE, DRAFTS, OUTBOX, SENT, TRASH, SPAM, TEMPLATES)
+                .stream()
+                .collect(Collectors.toMap((Role x) -> x.name.toLowerCase(Locale.ENGLISH), Function.identity()));
+    
     private final String name;
+    private final String defaultMailbox;
 
-    Role(String name) {
+    @VisibleForTesting Role(String name, String defaultMailbox) {
         this.name = name;
+        this.defaultMailbox = defaultMailbox;
+    }
+
+    @VisibleForTesting Role(String name) {
+        this.name = name;
+        this.defaultMailbox = null;
     }
 
     public static Optional<Role> from(String name) {
-        for (Role role : values()) {
-            if (role.serialize().equals(name.toLowerCase(Locale.ENGLISH))) {
-                return Optional.of(role);
-            }
+        Optional<Role> predefinedRole = Optional.ofNullable(ROLES.get(name.toLowerCase(Locale.ENGLISH)));
+        if (predefinedRole.isPresent()) {
+            return predefinedRole;
+        } else {
+            return tryBuildCustomRole(name);
+        }
+    }
+
+    private static Optional<Role> tryBuildCustomRole(String name) {
+        if (name.startsWith(USER_DEFINED_ROLE_PREFIX)) {
+            return Optional.of(new Role(name));
         }
         return Optional.empty();
     }
 
+    public boolean isSystemRole() {
+        return ROLES.containsKey(name.toLowerCase(Locale.ENGLISH));
+    }
+
+    @JsonValue
     public String serialize() {
         return name;
+    }
+
+    public String getDefaultMailbox() {
+        return defaultMailbox;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(name, defaultMailbox);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object instanceof Role) {
+            Role that = (Role) object;
+            return Objects.equal(this.name, that.name)
+                && Objects.equal(this.defaultMailbox, that.defaultMailbox);
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("name", name)
+            .add("defaultMailbox", defaultMailbox)
+            .toString();
     }
 }

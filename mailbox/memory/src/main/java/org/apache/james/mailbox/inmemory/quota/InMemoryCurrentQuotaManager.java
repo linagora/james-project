@@ -23,23 +23,21 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.model.QuotaRoot;
 import org.apache.james.mailbox.store.quota.CurrentQuotaCalculator;
 import org.apache.james.mailbox.store.quota.StoreCurrentQuotaManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Singleton
+import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
 public class InMemoryCurrentQuotaManager implements StoreCurrentQuotaManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryCurrentQuotaManager.class);
@@ -47,7 +45,7 @@ public class InMemoryCurrentQuotaManager implements StoreCurrentQuotaManager {
     private final LoadingCache<QuotaRoot, Entry> quotaCache;
 
     @Inject
-    public InMemoryCurrentQuotaManager(final CurrentQuotaCalculator<InMemoryId> quotaCalculator, final MailboxManager mailboxManager) {
+    public InMemoryCurrentQuotaManager(final CurrentQuotaCalculator quotaCalculator, final MailboxManager mailboxManager) {
         this.quotaCache = CacheBuilder.newBuilder().build(new CacheLoader<QuotaRoot, Entry>() {
             @Override
             public Entry load(QuotaRoot quotaRoot) throws Exception {

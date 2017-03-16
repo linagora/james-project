@@ -19,12 +19,13 @@
 
 package org.apache.james.mailbox.elasticsearch.json;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.elasticsearch.common.base.MoreObjects;
-
 import java.util.Objects;
 
-public class EMailer {
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
+
+public class EMailer implements Serializable {
 
     private final String name;
     private final String address;
@@ -42,6 +43,11 @@ public class EMailer {
     @JsonProperty(JsonMessageConstants.EMailer.ADDRESS)
     public String getAddress() {
         return address;
+    }
+
+    @Override
+    public String serialize() {
+        return Joiner.on(" ").join(name, address);
     }
 
     @Override

@@ -29,6 +29,7 @@ import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.LsubRequest;
 import org.apache.james.imap.message.response.LSubResponse;
 import org.apache.james.mailbox.MailboxManager;
@@ -39,14 +40,16 @@ import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.metrics.api.MetricFactory;
 
 public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
 
-    public LSubProcessor(ImapProcessor next, MailboxManager mailboxManager, SubscriptionManager subscriptionManager, StatusResponseFactory factory) {
-        super(LsubRequest.class, next, mailboxManager, subscriptionManager, factory);
+    public LSubProcessor(ImapProcessor next, MailboxManager mailboxManager, SubscriptionManager subscriptionManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(LsubRequest.class, next, mailboxManager, subscriptionManager, factory, metricFactory);
     }
 
-    private void listSubscriptions(ImapSession session, Responder responder, final String referenceName, final String mailboxName) throws SubscriptionException, MailboxException {
+    private void listSubscriptions(ImapSession session, Responder responder, String referenceName, String mailboxName) throws SubscriptionException, MailboxException {
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
         final Collection<String> mailboxes = getSubscriptionManager().subscriptions(mailboxSession);
         // If the mailboxName is fully qualified, ignore the reference name.
@@ -62,17 +65,17 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
         if (isRelative) {
             basePath = new MailboxPath(MailboxConstants.USER_NAMESPACE, mailboxSession.getUser().getUserName(), CharsetUtil.decodeModifiedUTF7(finalReferencename));
         } else {
-            basePath = buildFullPath(session, CharsetUtil.decodeModifiedUTF7(finalReferencename));
+            basePath = PathConverter.forSession(session).buildFullPath(CharsetUtil.decodeModifiedUTF7(finalReferencename));
         }
 
         final MailboxQuery expression = new MailboxQuery(basePath, CharsetUtil.decodeModifiedUTF7(mailboxName), mailboxSession.getPathDelimiter());
         final Collection<String> mailboxResponses = new ArrayList<String>();
-        for (final String mailbox : mailboxes) {
+        for (String mailbox : mailboxes) {
             respond(responder, expression, mailbox, true, mailboxes, mailboxResponses, mailboxSession.getPathDelimiter());
         }
     }
 
-    private void respond(Responder responder, final MailboxQuery expression, final String mailboxName, final boolean originalSubscription, final Collection<String> mailboxes, final Collection<String> mailboxResponses, final char delimiter) {
+    private void respond(Responder responder, MailboxQuery expression, String mailboxName, boolean originalSubscription, Collection<String> mailboxes, Collection<String> mailboxResponses, char delimiter) {
         if (expression.isExpressionMatch(mailboxName)) {
             if (!mailboxResponses.contains(mailboxName)) {
                 final LSubResponse response = new LSubResponse(mailboxName, !originalSubscription, delimiter);
@@ -97,7 +100,7 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
      * @param referenceName
      *            IMAP reference name, possibly null
      */
-    private void respondWithHierarchyDelimiter(final Responder responder, final char delimiter) {
+    private void respondWithHierarchyDelimiter(Responder responder, char delimiter) {
         final LSubResponse response = new LSubResponse("", true, delimiter);
         responder.respond(response);
     }

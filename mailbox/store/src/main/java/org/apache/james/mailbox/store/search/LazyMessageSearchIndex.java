@@ -18,19 +18,27 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.search;
 
+import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.mail.Flags;
-
+import org.apache.james.mailbox.MailboxManager.SearchCapabilities;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.exception.UnsupportedSearchException;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+
+import com.google.common.base.Preconditions;
 
 /**
  * {@link ListeningMessageSearchIndex} implementation which wraps another {@link ListeningMessageSearchIndex} and will forward all calls to it.
@@ -40,15 +48,14 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
  * This class is mostly useful for in-memory indexes or for indexed that should be recreated on every server restart.
  * 
  *
- * @param <Id>
  */
-public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessageSearchIndex<Id> {
+public class LazyMessageSearchIndex extends ListeningMessageSearchIndex {
 
-    private final ListeningMessageSearchIndex<Id> index;
-    private final ConcurrentHashMap<Id, Object> indexed = new ConcurrentHashMap<Id, Object>();
+    private final ListeningMessageSearchIndex index;
+    private final ConcurrentHashMap<MailboxId, Object> indexed = new ConcurrentHashMap<MailboxId, Object>();
     
     
-    public LazyMessageSearchIndex(ListeningMessageSearchIndex<Id> index) {
+    public LazyMessageSearchIndex(ListeningMessageSearchIndex index) {
         super(index.getFactory());
         this.index = index;
     }
@@ -57,15 +64,25 @@ public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessa
     public ListenerType getType() {
         return index.getType();
     }
+    
+    @Override
+    public EnumSet<SearchCapabilities> getSupportedCapabilities() {
+        return EnumSet.noneOf(SearchCapabilities.class);
+    }
 
     @Override
-    public void add(MailboxSession session, Mailbox<Id> mailbox, MailboxMessage<Id> message) throws MailboxException {
+    public void add(MailboxSession session, Mailbox mailbox, MailboxMessage message) throws MailboxException {
         index.add(session, mailbox, message);
     }
 
     @Override
-    public void delete(MailboxSession session, Mailbox<Id> mailbox, MessageRange range) throws MailboxException {
-        index.delete(session, mailbox, range);
+    public void delete(MailboxSession session, Mailbox mailbox, List<MessageUid> expungedUids) throws MailboxException {
+        index.delete(session, mailbox, expungedUids);
+    }
+
+    @Override
+    public void deleteAll(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        index.deleteAll(session, mailbox);
     }
 
     /**
@@ -75,8 +92,9 @@ public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessa
      * 
      */
     @Override
-    public Iterator<Long> search(final MailboxSession session, final Mailbox<Id> mailbox, SearchQuery searchQuery) throws MailboxException {
-        Id id = mailbox.getMailboxId();
+    public Iterator<MessageUid> search(MailboxSession session, Mailbox mailbox, SearchQuery searchQuery) throws MailboxException {
+        Preconditions.checkArgument(session != null, "'session' is mandatory");
+        MailboxId id = mailbox.getMailboxId();
         
         Object done = indexed.get(id);
         if (done == null) {
@@ -86,9 +104,9 @@ public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessa
                 done = oldDone;
             }
             synchronized (done) {
-                Iterator<MailboxMessage<Id>> messages = getFactory().getMessageMapper(session).findInMailbox(mailbox, MessageRange.all(), FetchType.Full, -1);
+                Iterator<MailboxMessage> messages = getFactory().getMessageMapper(session).findInMailbox(mailbox, MessageRange.all(), FetchType.Full, -1);
                 while(messages.hasNext()) {
-                    final MailboxMessage<Id> message = messages.next();
+                    final MailboxMessage message = messages.next();
                     try {
                         add(session, mailbox, message);
                     } catch (MailboxException e) {
@@ -102,10 +120,14 @@ public class LazyMessageSearchIndex<Id extends MailboxId> extends ListeningMessa
         return index.search(session, mailbox, searchQuery);
     }
 
+    @Override
+    public void update(MailboxSession session, Mailbox mailbox, List<UpdatedFlags> updatedFlagsList) throws MailboxException {
+        index.update(session, mailbox, updatedFlagsList);
+    }
+    
 
     @Override
-    public void update(MailboxSession session, Mailbox<Id> mailbox, MessageRange range, Flags flags, long modSeq) throws MailboxException {
-        index.update(session, mailbox, range, flags, modSeq);
+    public List<MessageId> search(MailboxSession session, MultimailboxesSearchQuery searchQuery, long limit) throws MailboxException {
+        throw new UnsupportedSearchException();
     }
-
 }

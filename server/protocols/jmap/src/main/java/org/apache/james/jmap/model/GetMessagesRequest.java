@@ -18,15 +18,16 @@
  ****************************************************************/
 package org.apache.james.jmap.model;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.james.jmap.methods.JmapRequest;
+import org.apache.james.mailbox.model.MessageId;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 @JsonDeserialize(builder = GetMessagesRequest.Builder.class)
 public class GetMessagesRequest implements JmapRequest {
@@ -40,7 +41,7 @@ public class GetMessagesRequest implements JmapRequest {
         
         private Optional<String> accountId;
         private final ImmutableList.Builder<MessageId> ids;
-        private Optional<ImmutableSet<MessageProperty>> properties;
+        private Optional<ImmutableSet<String>> properties;
 
         private Builder() {
             accountId = Optional.empty();
@@ -53,26 +54,26 @@ public class GetMessagesRequest implements JmapRequest {
             return this;
         }
 
-        public Builder ids(MessageId... ids) {
-            this.ids.addAll(Arrays.asList(ids));
+        public Builder ids(List<MessageId> ids) {
+            this.ids.addAll(ids);
             return this;
         }
 
-        public Builder properties(MessageProperty... properties) {
-            this.properties = Optional.of(ImmutableSet.copyOf(properties));
+        public Builder properties(List<String> properties) {
+            this.properties = Optional.ofNullable(properties).map(ImmutableSet::copyOf);
             return this;
         }
         
         public GetMessagesRequest build() {
-            return new GetMessagesRequest(accountId, ids.build(), properties);
+            return new GetMessagesRequest(accountId, ids.build(), new MessageProperties(properties));
         }
     }
-
+    
     private final Optional<String> accountId;
     private final ImmutableList<MessageId> ids;
-    private final Optional<ImmutableSet<MessageProperty>> properties;
+    private final MessageProperties properties;
 
-    public GetMessagesRequest(Optional<String> accountId, ImmutableList<MessageId> ids, Optional<ImmutableSet<MessageProperty>> properties) {
+    public GetMessagesRequest(Optional<String> accountId, ImmutableList<MessageId> ids, MessageProperties properties) {
         this.accountId = accountId;
         this.ids = ids;
         this.properties = properties;
@@ -86,7 +87,7 @@ public class GetMessagesRequest implements JmapRequest {
         return ids;
     }
     
-    public Optional<ImmutableSet<MessageProperty>> getProperties() {
+    public MessageProperties getProperties() {
         return properties;
     }
 }

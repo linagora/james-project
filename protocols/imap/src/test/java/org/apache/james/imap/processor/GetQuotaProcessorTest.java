@@ -19,7 +19,6 @@
 
 package org.apache.james.imap.processor;
 
-import com.google.common.collect.Lists;
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.ImapSessionUtils;
@@ -41,6 +40,7 @@ import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.quota.QuotaImpl;
 import org.apache.james.mailbox.store.quota.QuotaRootImpl;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -48,6 +48,8 @@ import org.jmock.integration.junit4.JUnit4Mockery;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.google.common.collect.Lists;
 
 @RunWith(JMock.class)
 public class GetQuotaProcessorTest {
@@ -77,7 +79,7 @@ public class GetQuotaProcessorTest {
         mockedResponder = mockery.mock(ImapProcessor.Responder.class);
         mockedMailboxManager = mockery.mock(MailboxManager.class);
         testee = new GetQuotaProcessor(mockery.mock(ImapProcessor.class), mockedMailboxManager,
-            statusResponseFactory, mockedQuotaManager, mockedQuotaRootResolver);
+            statusResponseFactory, mockedQuotaManager, mockedQuotaRootResolver, new NoopMetricFactory());
     }
 
     @Test

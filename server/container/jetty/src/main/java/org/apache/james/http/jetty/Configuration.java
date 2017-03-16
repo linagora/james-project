@@ -24,7 +24,9 @@ import java.util.Optional;
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 
@@ -41,9 +43,10 @@ public class Configuration {
     public static class Builder {
         
         private static final Range<Integer> VALID_PORT_RANGE = Range.closed(1, 65535);
+        private static final String TEMPLATE_LEVEL1 = "/*";
 
         private final ImmutableMap.Builder<String, Object> mappings;
-        private final ImmutableMap.Builder<String, Object> filters;
+        private final ImmutableListMultimap.Builder<String, Object> filters;
         private Optional<Integer> port;
         
         public class ServletBinder {
@@ -73,35 +76,57 @@ public class Configuration {
                 this.filterUrl = filterUrl;
             }
             
-            public Configuration.Builder with(Filter filter) {
+            public FilterBinder with(Filter filter) {
                 Preconditions.checkNotNull(filter);
                 filters.put(filterUrl, filter);
+                return this;
+            }
+            
+            public FilterBinder and(Filter filter) {
+                return with(filter);
+            }
+
+            public FilterBinder with(Class<? extends Filter> filterClass) {
+                Preconditions.checkNotNull(filterClass);
+                filters.put(filterUrl, filterClass);
+                return this;
+            }
+
+            public Configuration.Builder only() {
                 return Builder.this;
             }
 
-            public Configuration.Builder with(Class<? extends Filter> filterClass) {
-                Preconditions.checkNotNull(filterClass);
-                filters.put(filterUrl, filterClass);
-                return Builder.this;
-            }
         }
         
         private Builder() {
             mappings = ImmutableMap.builder();
-            filters = ImmutableMap.builder();
+            filters = ImmutableListMultimap.builder();
             port = Optional.empty();
         }
         
         public ServletBinder serve(String mappingUrl) {
-            Preconditions.checkNotNull(mappingUrl);
-            Preconditions.checkArgument(!mappingUrl.trim().isEmpty());
+            urlPreconditions(mappingUrl);
             return new ServletBinder(mappingUrl);
         }
         
+        public ServletBinder serveAsOneLevelTemplate(String mappingUrl) {
+            urlPreconditions(mappingUrl);
+            return new ServletBinder(mappingUrl + TEMPLATE_LEVEL1);
+        }
+        
         public FilterBinder filter(String mappingUrl) {
+            urlPreconditions(mappingUrl);
+            return new FilterBinder(mappingUrl);
+        }
+        
+        public FilterBinder filterAsOneLevelTemplate(String mappingUrl) {
+            urlPreconditions(mappingUrl);
+            return new FilterBinder(mappingUrl + TEMPLATE_LEVEL1);
+        }
+
+        private void urlPreconditions(String mappingUrl) {
             Preconditions.checkNotNull(mappingUrl);
             Preconditions.checkArgument(!mappingUrl.trim().isEmpty());
-            return new FilterBinder(mappingUrl);
         }
 
         public Builder port(int port) {
@@ -121,10 +146,10 @@ public class Configuration {
     }
 
     private final ImmutableMap<String, Object> mappings;
-    private final ImmutableMap<String, Object> filters;
+    private final ImmutableListMultimap<String, Object> filters;
     private final Optional<Integer> port;
 
-    private Configuration(ImmutableMap<String, Object> mappings, ImmutableMap<String, Object> filters, Optional<Integer> port) {
+    private Configuration(ImmutableMap<String, Object> mappings, ImmutableListMultimap<String, Object> filters, Optional<Integer> port) {
         this.mappings = mappings;
         this.filters = filters;
         this.port = port;
@@ -134,7 +159,7 @@ public class Configuration {
         return mappings;
     }
 
-    public ImmutableMap<String, Object> getFilters() {
+    public ImmutableListMultimap<String, Object> getFilters() {
         return filters;
     }
 
@@ -161,7 +186,7 @@ public class Configuration {
     
     @Override
     public String toString() {
-        return com.google.common.base.Objects.toStringHelper(getClass())
+        return MoreObjects.toStringHelper(getClass())
                 .add("mappings", mappings)
                 .add("filters", filters)
                 .add("port", port)

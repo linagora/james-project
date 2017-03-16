@@ -41,9 +41,11 @@ import org.apache.james.mailbox.jcr.mail.JCRModSeqProvider;
 import org.apache.james.mailbox.jcr.mail.JCRUidProvider;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
-import org.apache.james.mailbox.store.MockAuthenticator;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
+import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
 import org.apache.james.mpt.host.JamesImapHostSystem;
@@ -51,14 +53,13 @@ import org.apache.james.mpt.imapmailbox.MailboxCreationDelegate;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 
-public class JCRHostSystem extends JamesImapHostSystem{
+public class JCRHostSystem extends JamesImapHostSystem {
 
     public static JamesImapHostSystem build() throws Exception {
         return new JCRHostSystem();
     }
     
     private final JCRMailboxManager mailboxManager;
-    private final MockAuthenticator userManager; 
 
     private static final String JACKRABBIT_HOME = "target/jackrabbit";
     public static final String META_DATA_DIRECTORY = "target/user-meta-data";
@@ -81,8 +82,7 @@ public class JCRHostSystem extends JamesImapHostSystem{
             
             // Register imap cnd file
             JCRUtils.registerCnd(repository, workspace, user, pass);
-            
-            userManager = new MockAuthenticator();
+
             JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
             JCRUidProvider uidProvider = new JCRUidProvider(locker, sessionRepos);
             JCRModSeqProvider modSeqProvider = new JCRModSeqProvider(locker, sessionRepos);
@@ -90,15 +90,18 @@ public class JCRHostSystem extends JamesImapHostSystem{
 
             MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
+            MessageParser messageParser = new MessageParser();
 
-            mailboxManager = new JCRMailboxManager(mf, userManager, locker, aclResolver, groupMembershipResolver);
+            mailboxManager = new JCRMailboxManager(mf, authenticator, authorizator, aclResolver, groupMembershipResolver, messageParser,
+                    new DefaultMessageId.Factory());
             mailboxManager.init();
 
             final ImapProcessor defaultImapProcessorFactory = 
                     DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, 
                             new JCRSubscriptionManager(mf), 
                             new NoQuotaManager(), 
-                            new DefaultQuotaRootResolver(mf));
+                            new DefaultQuotaRootResolver(mf),
+                            new DefaultMetricFactory());
             resetUserMetaData();
             MailboxSession session = mailboxManager.createSystemSession("test", LoggerFactory.getLogger("TestLog"));
             mailboxManager.startProcessingRequest(session);
@@ -111,12 +114,6 @@ public class JCRHostSystem extends JamesImapHostSystem{
             shutdownRepository();
             throw e;
         }
-    }
-
-   
-    public boolean addUser(String user, String password) {
-        userManager.addUser(user, password);
-        return true;
     }
 
     public void resetData() throws Exception {

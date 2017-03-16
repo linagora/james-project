@@ -18,14 +18,11 @@
  ****************************************************************/
 package org.apache.james.mailbox.jpa.migrator;
 
-import org.apache.james.mailbox.jpa.migrator.JpaMigrator;
-import org.apache.james.mailbox.jpa.migrator.exception.JpaMigrateException;
 import org.junit.Test;
 
 /**
  * TODO this test class needs to be reviewed.
  */
-@SuppressWarnings("unused")
 public class JpaMigratorTest {
     
     @Test()

@@ -20,18 +20,21 @@ package org.apache.james.mailbox.hbase.mail.model;
 
 import java.util.UUID;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxUtil;
 
 /**
  * This class implements a mailbox. Most of the code is done after mailbox-jpa 
  * implementations.
  * 
  */
-public class HBaseMailbox implements Mailbox<HBaseId> {
+public class HBaseMailbox implements Mailbox {
 
     private static final String TAB = " ";
     /** The value for the mailboxId field */
@@ -56,6 +59,11 @@ public class HBaseMailbox implements Mailbox<HBaseId> {
         this.mailboxId = HBaseId.of(UUID.randomUUID());
     }
 
+    @Override
+    public MailboxPath generateAssociatedPath() {
+        return new MailboxPath(getNamespace(), getUser(), getName());
+    }
+
     /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getMailboxId()
      */
@@ -64,8 +72,9 @@ public class HBaseMailbox implements Mailbox<HBaseId> {
         return mailboxId;
     }
 
-    public void setMailboxId(HBaseId mailboxId) {
-        this.mailboxId = mailboxId;
+    @Override
+    public void setMailboxId(MailboxId mailboxId) {
+        this.mailboxId = (HBaseId)mailboxId;
     }
     /*
      * (non-Javadoc)
@@ -212,6 +221,11 @@ public class HBaseMailbox implements Mailbox<HBaseId> {
     @Override
     public void setACL(MailboxACL acl) {
         // TODO ACL support
+    }
+
+    @Override
+    public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
+        return MailboxUtil.isMailboxChildOf(this, potentialParent, mailboxSession);
     }
     
 }

@@ -33,6 +33,7 @@ import javax.persistence.Lob;
 import javax.persistence.Table;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -46,16 +47,21 @@ public class JPAMailboxMessage extends AbstractJPAMailboxMessage {
     /** We use a max length to represent 1gb data. Thats prolly overkill, but who knows */
     @Basic(optional = false, fetch = FetchType.LAZY)
     @Column(name = "MAIL_BYTES", length = 1048576000, nullable = false)
-    @Lob private final byte[] body;
+    @Lob private byte[] body;
 
 
     /** The value for the header field. Lazy loaded */
     /** We use a max length to represent 10mb data. Thats prolly overkill, but who knows */
     @Basic(optional = false, fetch = FetchType.LAZY)
     @Column(name = "HEADER_BYTES", length = 10485760, nullable = false)
-    @Lob private final byte[] header;
+    @Lob private byte[] header;
     
-    public JPAMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, final PropertyBuilder propertyBuilder) throws MailboxException {
+
+    public JPAMailboxMessage() {
+        
+    }
+
+    public JPAMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, PropertyBuilder propertyBuilder) throws MailboxException {
         super(mailbox, internalDate, flags, size ,bodyStartOctet, propertyBuilder);
         try {
             int headerEnd = bodyStartOctet;
@@ -73,7 +79,7 @@ public class JPAMailboxMessage extends AbstractJPAMailboxMessage {
     /**
      * Create a copy of the given message
      */
-    public JPAMailboxMessage(JPAMailbox mailbox, long uid, long modSeq, MailboxMessage<?> message) throws MailboxException{
+    public JPAMailboxMessage(JPAMailbox mailbox, MessageUid uid, long modSeq, MailboxMessage message) throws MailboxException{
         super(mailbox, uid, modSeq, message);
         try {
             this.body = IOUtils.toByteArray(message.getBodyContent());

@@ -29,6 +29,9 @@ import org.apache.james.protocols.api.ProtocolTransport;
 import org.apache.james.protocols.api.logger.ProtocolLoggerAdapter;
 import org.apache.james.protocols.lib.handler.HandlersPackage;
 import org.apache.james.protocols.lib.netty.AbstractProtocolAsyncServer;
+import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
+import org.apache.james.protocols.netty.ChannelHandlerFactory;
+import org.apache.james.protocols.smtp.AllButStartTlsLineDelimiterChannelHandlerFactory;
 import org.apache.james.protocols.smtp.SMTPConfiguration;
 import org.apache.james.protocols.smtp.SMTPProtocol;
 import org.apache.james.smtpserver.CoreCmdHandlerLoader;
@@ -75,6 +78,7 @@ public class SMTPServer extends AbstractProtocolAsyncServer implements SMTPServe
      * The configuration data to be passed to the handler
      */
     private final SMTPConfiguration theConfigData = new SMTPHandlerConfigurationDataImpl();
+    private final SmtpMetrics smtpMetrics;
 
     private boolean addressBracketsEnforcement = true;
 
@@ -84,6 +88,10 @@ public class SMTPServer extends AbstractProtocolAsyncServer implements SMTPServe
     private String authorizedAddresses;
     
     private SMTPChannelUpstreamHandler coreHandler;
+
+    public SMTPServer(SmtpMetrics smtpMetrics) {
+        this.smtpMetrics = smtpMetrics;
+    }
 
     @Inject
     public void setDnsService(DNSService dns) {
@@ -110,11 +118,11 @@ public class SMTPServer extends AbstractProtocolAsyncServer implements SMTPServe
             }
             
         };
-        coreHandler = new SMTPChannelUpstreamHandler(transport, getLogger(), getEncryption());        
+        coreHandler = new SMTPChannelUpstreamHandler(transport, getLogger(), getEncryption(), smtpMetrics);
     }
 
     @Override
-    public void doConfigure(final HierarchicalConfiguration configuration) throws ConfigurationException {
+    public void doConfigure(HierarchicalConfiguration configuration) throws ConfigurationException {
         super.doConfigure(configuration);
         if (isEnabled()) {
             String authRequiredString = configuration.getString("authRequired", "false").trim().toLowerCase();
@@ -352,6 +360,11 @@ public class SMTPServer extends AbstractProtocolAsyncServer implements SMTPServe
     @Override
     protected Class<? extends HandlersPackage> getJMXHandlersPackage() {
         return JMXHandlersLoader.class;
+    }
+
+    @Override
+    protected ChannelHandlerFactory createFrameHandlerFactory() {
+        return new AllButStartTlsLineDelimiterChannelHandlerFactory(AbstractChannelPipelineFactory.MAX_LINE_LENGTH);
     }
 
 }

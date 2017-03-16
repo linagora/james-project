@@ -27,17 +27,13 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Properties;
 
-import javax.activation.DataHandler;
 import javax.mail.MessagingException;
-import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMessage.RecipientType;
 import javax.mail.internet.MimeMultipart;
-import javax.mail.util.ByteArrayDataSource;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.james.managesieve.api.SieveParser;
@@ -51,6 +47,7 @@ import org.apache.mailet.MailAddress;
 import org.apache.mailet.base.test.FakeMail;
 import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMailetConfig;
+import org.apache.mailet.base.test.MimeMessageBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -466,18 +463,21 @@ public class ManageSieveMailetTestCase {
         mailet.setSieveParser(sieveParser);
         mailet.setSieveRepository(sieveRepository);
         mailet.setUsersRepository(usersRepository);
-        fakeMailContext = new FakeMailContext();
-        FakeMailetConfig config = new FakeMailetConfig("ManageSieve mailet", fakeMailContext);
-        config.setProperty("helpURL", "file:./src/test/resources/help.txt");
+        fakeMailContext = FakeMailContext.defaultContext();
+        FakeMailetConfig config = FakeMailetConfig.builder()
+                .mailetName("ManageSieve mailet")
+                .mailetContext(fakeMailContext)
+                .setProperty("helpURL", "file:./src/test/resources/help.txt")
+                .build();
         mailet.init(config);
     }
 
     private Mail createUnauthenticatedMail(MimeMessage message) throws Exception {
-        FakeMail mail = new FakeMail();
-        mail.setMessage(message);
-        mail.setSender(new MailAddress(USER));
-        mail.setRecipients(Lists.newArrayList(new MailAddress(SIEVE_LOCALHOST)));
-        return mail;
+        return FakeMail.builder()
+                .mimeMessage(message)
+                .sender(new MailAddress(USER))
+                .recipient(new MailAddress(SIEVE_LOCALHOST))
+                .build();
     }
 
     private Mail createAuthentificatedMail(MimeMessage message) throws Exception {
@@ -487,35 +487,26 @@ public class ManageSieveMailetTestCase {
     }
 
     private MimeMessage prepareMimeMessage(String subject) throws MessagingException {
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        message.setSubject(subject);
-        message.setSender(new InternetAddress(USER));
-        message.setRecipient(RecipientType.TO, new InternetAddress(SIEVE_LOCALHOST));
-        message.saveChanges();
-        return message;
+        return MimeMessageBuilder.mimeMessageBuilder()
+            .setSubject(subject)
+            .addToRecipient(SIEVE_LOCALHOST)
+            .setSender(USER)
+            .build();
     }
 
     private MimeMessage prepareMessageWithAttachment(String scriptContent, String subject) throws MessagingException, IOException {
-        MimeMessage message = prepareMimeMessage(subject);
-        MimeMultipart multipart = new MimeMultipart();
-        MimeBodyPart scriptPart = new MimeBodyPart();
-        scriptPart.setDataHandler(
-            new DataHandler(
-                new ByteArrayDataSource(
-                    scriptContent,
-                    "application/sieve; charset=UTF-8")
-            ));
-        scriptPart.setDisposition(MimeBodyPart.ATTACHMENT);
-        // setting a DataHandler with no mailcap definition is not
-        // supported by the specs. Javamail activation still work,
-        // but Geronimo activation translate it to text/plain.
-        // Let's manually force the header.
-        scriptPart.setHeader("Content-Type", "application/sieve; charset=UTF-8");
-        scriptPart.setFileName(SCRIPT_NAME);
-        multipart.addBodyPart(scriptPart);
-        message.setContent(multipart);
-        message.saveChanges();
-        return message;
+        return MimeMessageBuilder.mimeMessageBuilder()
+            .setSubject(subject)
+            .addToRecipient(SIEVE_LOCALHOST)
+            .setSender(USER)
+            .setMultipartWithBodyParts(
+                MimeMessageBuilder.bodyPartBuilder()
+                    .data(scriptContent)
+                    .disposition(MimeBodyPart.ATTACHMENT)
+                    .filename(SCRIPT_NAME)
+                    .addHeader("Content-Type", "application/sieve; charset=UTF-8")
+                    .build())
+            .build();
     }
 
     private void ensureResponse(String subject, String... contents) throws MessagingException, IOException {
@@ -538,7 +529,11 @@ public class ManageSieveMailetTestCase {
     }
 
     private MimeMessage verifyHeaders(String subject) throws MessagingException {
-        assertThat(fakeMailContext.getSentMails()).containsOnly(new FakeMailContext.SentMail(new MailAddress(SIEVE_LOCALHOST), Lists.newArrayList(new MailAddress(USER)), null));
+        FakeMailContext.SentMail sentMail = FakeMailContext.sentMailBuilder()
+            .recipient(new MailAddress(USER))
+            .sender(new MailAddress(SIEVE_LOCALHOST))
+            .build();
+        assertThat(fakeMailContext.getSentMails()).containsOnly(sentMail);
         MimeMessage result = fakeMailContext.getSentMails().get(0).getMsg();
         assertThat(result.getSubject()).isEqualTo(subject);
         assertThat(result.getRecipients(RecipientType.TO)).containsOnly(new InternetAddress(USER));

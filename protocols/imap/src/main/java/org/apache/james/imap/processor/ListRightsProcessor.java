@@ -29,6 +29,7 @@ import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.ListRightsRequest;
 import org.apache.james.imap.message.response.ListRightsResponse;
 import org.apache.james.mailbox.MailboxManager;
@@ -40,6 +41,7 @@ import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.metrics.api.MetricFactory;
 import org.slf4j.Logger;
 
 /**
@@ -51,8 +53,9 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
 
     private static final List<String> CAPABILITIES = Collections.singletonList(ImapConstants.SUPPORTS_ACL);
 
-    public ListRightsProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(ListRightsRequest.class, next, mailboxManager, factory);
+    public ListRightsProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(ListRightsRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     @Override
@@ -64,7 +67,7 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
         final String identifier = message.getIdentifier();
         try {
 
-            MailboxPath mailboxPath = buildFullPath(session, mailboxName);
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
             // Check that mailbox exists
             mailboxManager.getMailbox(mailboxPath, mailboxSession);
 

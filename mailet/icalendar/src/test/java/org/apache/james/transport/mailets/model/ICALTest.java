@@ -1,0 +1,173 @@
+/****************************************************************
+ * Licensed to the Apache Software Foundation (ASF) under one   *
+ * or more contributor license agreements.  See the NOTICE file *
+ * distributed with this work for additional information        *
+ * regarding copyright ownership.  The ASF licenses this file   *
+ * to you under the Apache License, Version 2.0 (the            *
+ * "License"); you may not use this file except in compliance   *
+ * with the License.  You may obtain a copy of the License at   *
+ *                                                              *
+ *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *                                                              *
+ * Unless required by applicable law or agreed to in writing,   *
+ * software distributed under the License is distributed on an  *
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
+ * KIND, either express or implied.  See the License for the    *
+ * specific language governing permissions and limitations      *
+ * under the License.                                           *
+ ****************************************************************/
+
+package org.apache.james.transport.mailets.model;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.ByteArrayInputStream;
+
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.MailAddressFixture;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import com.google.common.io.ByteStreams;
+
+import net.fortuna.ical4j.data.CalendarBuilder;
+import net.fortuna.ical4j.model.Calendar;
+import nl.jqno.equalsverifier.EqualsVerifier;
+
+public class ICALTest {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void buildShouldFailWhenNoCalendar() throws Exception {
+        expectedException.expect(NullPointerException.class);
+
+        ICAL.builder()
+            .recipient(MailAddressFixture.ANY_AT_JAMES)
+            .sender(MailAddressFixture.OTHER_AT_JAMES.asString())
+            .build();
+    }
+
+    @Test
+    public void buildShouldFailWhenNoSender() throws Exception {
+        expectedException.expect(NullPointerException.class);
+
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        ICAL.builder()
+            .recipient(MailAddressFixture.ANY_AT_JAMES)
+            .from(calendar, ics)
+            .build();
+    }
+
+    @Test
+    public void buildShouldFailWhenNoRecipient() throws Exception {
+        expectedException.expect(NullPointerException.class);
+
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        ICAL.builder()
+            .sender(MailAddressFixture.OTHER_AT_JAMES.asString())
+            .from(calendar, ics)
+            .build();
+    }
+
+
+    @Test
+    public void buildShouldWork() throws Exception {
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
+        MailAddress sender = MailAddressFixture.OTHER_AT_JAMES;
+        ICAL ical = ICAL.builder()
+            .recipient(recipient)
+            .sender(sender.asString())
+            .from(calendar, ics)
+            .build();
+
+        assertThat(ical.getRecipient()).isEqualTo(recipient.asString());
+        assertThat(ical.getSender()).isEqualTo(sender.asString());
+        assertThat(ical.getUid())
+            .contains("f1514f44bf39311568d640727cff54e819573448d09d2e5677987ff29caa01a9e047feb2aab16e43439a608f28671ab7" +
+                "c10e754ce92be513f8e04ae9ff15e65a9819cf285a6962bc");
+        assertThat(ical.getMethod()).contains("REQUEST");
+        assertThat(ical.getRecurrenceId()).isEmpty();
+        assertThat(ical.getDtstamp()).contains("20170106T115036Z");
+        assertThat(ical.getSequence()).isEqualTo("0");
+        assertThat(ical.getIcal()).isEqualTo(new String(ics, "UTF-8"));
+    }
+
+    @Test
+    public void equalsAndHashCodeShouldBeWellImplemented() {
+        EqualsVerifier.forClass(ICAL.class).verify();
+    }
+
+    @Test
+    public void buildShouldThrowOnCalendarWithoutDtstamp() throws Exception {
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting_without_dtstamp.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        expectedException.expect(IllegalStateException.class);
+
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
+        MailAddress sender = MailAddressFixture.OTHER_AT_JAMES;
+        ICAL.builder()
+            .recipient(recipient)
+            .sender(sender.asString())
+            .from(calendar, ics)
+            .build();
+    }
+
+    @Test
+    public void buildShouldThrowOnCalendarWithoutUid() throws Exception {
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting_without_uid.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        expectedException.expect(IllegalStateException.class);
+
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
+        MailAddress sender = MailAddressFixture.OTHER_AT_JAMES;
+        ICAL.builder()
+            .recipient(recipient)
+            .sender(sender.asString())
+            .from(calendar, ics)
+            .build();
+    }
+
+    @Test
+    public void buildShouldThrowOnCalendarWithoutMethod() throws Exception {
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting_without_method.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        expectedException.expect(IllegalStateException.class);
+
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
+        MailAddress sender = MailAddressFixture.OTHER_AT_JAMES;
+        ICAL.builder()
+            .recipient(recipient)
+            .sender(sender.asString())
+            .from(calendar, ics)
+            .build();
+    }
+
+    @Test
+    public void buildShouldSetDefaultValueWhenCalendarWithoutSequence() throws Exception {
+        byte[] ics = ByteStreams.toByteArray(ClassLoader.getSystemResourceAsStream("ics/meeting_without_sequence.ics"));
+        Calendar calendar = new CalendarBuilder().build(new ByteArrayInputStream(ics));
+
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
+        MailAddress sender = MailAddressFixture.OTHER_AT_JAMES;
+        ICAL ical = ICAL.builder()
+            .recipient(recipient)
+            .sender(sender.asString())
+            .from(calendar, ics)
+            .build();
+
+        assertThat(ical.getSequence()).isEqualTo(ICAL.DEFAULT_SEQUENCE_VALUE);
+    }
+}

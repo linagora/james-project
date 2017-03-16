@@ -37,13 +37,15 @@ public abstract class AbstractSSLAwareChannelPipelineFactory extends AbstractCha
     private String[] enabledCipherSuites = null;
 
     public AbstractSSLAwareChannelPipelineFactory(int timeout,
-            int maxConnections, int maxConnectsPerIp, ChannelGroup group, ExecutionHandler eHandler) {
-        super(timeout, maxConnections, maxConnectsPerIp, group, eHandler);
+            int maxConnections, int maxConnectsPerIp, ChannelGroup group, ExecutionHandler eHandler,
+            ChannelHandlerFactory frameHandlerFactory) {
+        super(timeout, maxConnections, maxConnectsPerIp, group, eHandler, frameHandlerFactory);
     }
 
     public AbstractSSLAwareChannelPipelineFactory(int timeout,
-            int maxConnections, int maxConnectsPerIp, ChannelGroup group, String[] enabledCipherSuites, ExecutionHandler eHandler) {
-        this(timeout, maxConnections, maxConnectsPerIp, group, eHandler);
+            int maxConnections, int maxConnectsPerIp, ChannelGroup group, String[] enabledCipherSuites, ExecutionHandler eHandler,
+            ChannelHandlerFactory frameHandlerFactory) {
+        this(timeout, maxConnections, maxConnectsPerIp, group, eHandler, frameHandlerFactory);
         
         // We need to copy the String array becuase of possible security issues.
         // See https://issues.apache.org/jira/browse/PROTOCOLS-18

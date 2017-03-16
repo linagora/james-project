@@ -19,9 +19,10 @@
 
 package org.apache.james.mailbox.store;
 
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.mail.model.MailboxIdDeserializer;
 
-public class TestIdDeserializer implements MailboxIdDeserializer<TestId> {
+public class TestIdDeserializer implements MailboxIdDeserializer {
 
     @Override
     public TestId deserialize(String serializedMailboxId) {

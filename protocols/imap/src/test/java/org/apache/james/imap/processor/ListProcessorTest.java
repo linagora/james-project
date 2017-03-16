@@ -29,6 +29,7 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -74,7 +75,7 @@ public class ListProcessorTest  {
 
     ListProcessor createProcessor(ImapProcessor next,
             MailboxManager manager, StatusResponseFactory factory) {
-        return new ListProcessor(next, manager, factory);
+        return new ListProcessor(next, manager, factory, new NoopMetricFactory());
     }
 
     ListResponse createResponse(boolean noinferior, boolean noselect,

@@ -23,7 +23,7 @@
     <parent>
         <artifactId>apache-james-mailbox</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>0.6-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -102,6 +102,16 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>${assertj-1.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.xenei</groupId>
+            <artifactId>junit-contracts</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

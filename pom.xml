@@ -20,20 +20,19 @@
 <!--
     Tag order follows model description at http://maven.apache.org/ref/3.0.3/maven-model/maven.html
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>14</version>
-        <relativePath/>
+        <version>18</version>
+        <relativePath />
     </parent>
 
     <groupId>org.apache.james</groupId>
     <artifactId>james-project</artifactId>
-    <version>1.8.3-SNAPSHOT</version>
+    <version>3.0.0-beta6-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Apache James Project</name>
@@ -84,7 +83,7 @@
             <id>serge</id>
             <name>Serge Knystautas</name>
             <email>sergek@lokitech.com</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
             </roles>
@@ -100,7 +99,7 @@
             <id>benrdf</id>
             <name>Bernd Fondermann</name>
             <email>bf_jak@brainlounge.de</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
             </roles>
@@ -109,7 +108,7 @@
             <id>sbrewin</id>
             <name>Steve Brewin</name>
             <email>sbrewin@synsys.com</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -119,7 +118,7 @@
             <id>hilmer</id>
             <name>Søren Hilmer</name>
             <email>sh@widetrail.dk</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -129,7 +128,7 @@
             <id>noel</id>
             <name>Noel J. Bergman</name>
             <email>noel@devtech.com</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -139,7 +138,7 @@
             <id>danny</id>
             <name>Danny Angus</name>
             <email>danny@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -182,7 +181,7 @@
             <id>vincenzo</id>
             <name>Vincenzo Gianferrari Pini</name>
             <email>vincenzo.gianferraripini@praxis.it</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -192,7 +191,7 @@
             <id>rdonkin</id>
             <name>Robert Burrell Donkin</name>
             <email>rdonkin@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -220,7 +219,7 @@
             <id>mwiederkehr</id>
             <name>Markus Wiederkehr</name>
             <email>mwiederkehr@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
             </roles>
@@ -229,7 +228,7 @@
             <id>olegk</id>
             <name>Oleg Kalnichevski</name>
             <email>olegk@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -239,7 +238,7 @@
             <id>manolo</id>
             <name>Manuel Carrasco Monino</name>
             <email>manolo@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Member</role>
@@ -249,7 +248,7 @@
             <id>eric</id>
             <name>Eric Charles</name>
             <email>eric@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
                 <role>PMC Chair</role>
@@ -261,15 +260,14 @@
             <email>felixk@apache.org</email>
             <timezone>1</timezone>
             <roles>
-                <role>Developer</role>
-                <role>PMC Member</role>
+                <role>Emeritus</role>
             </roles>
         </developer>
         <developer>
             <id>ieugen</id>
             <name>Ioan Eugen Stan</name>
             <email>ieugen@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>PMC Member</role>
                 <role>Developer</role>
@@ -279,7 +277,7 @@
             <id>matthieu</id>
             <name>Matthieu Baechler</name>
             <email>matthieu@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
             </roles>
@@ -288,7 +286,7 @@
             <id>btellier</id>
             <name>Benoit Tellier</name>
             <email>btellier@apache.org</email>
-            <timezone/>
+            <timezone />
             <roles>
                 <role>Developer</role>
             </roles>
@@ -297,7 +295,16 @@
             <id>aduprat</id>
             <name>Antoine Duprat</name>
             <email>aduprat@apache.org</email>
-            <timezone/>
+            <timezone />
+            <roles>
+                <role>Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>rouazana</id>
+            <name>Raphael Ouazana</name>
+            <email>rouazana@apache.org</email>
+            <timezone />
             <roles>
                 <role>Developer</role>
             </roles>
@@ -511,10 +518,11 @@
     </prerequisites>
 
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/james/project/trunk</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/project/trunk</developerConnection>
-        <url>http://svn.apache.org/viewvc/james/project/trunk</url>
-    </scm>
+        <connection>scm:git:http://git-wip-us.apache.org/repos/asf/james-project.git</connection>
+        <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/james-project.git</developerConnection>
+        <url>http://git-wip-us.apache.org/repos/asf/james-project.git</url>
+      <tag>HEAD</tag>
+  </scm>
 
     <issueManagement>
         <system>JIRA</system>
@@ -544,18 +552,19 @@
         -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <target.jdk>1.6</target.jdk>
-        <james-skin.version>1.7</james-skin.version>
+        <james-skin.version>1.8</james-skin.version>
         <!--
             This property contains the directory where to deploy when running using "-Psite-reports" profile
             to avoid accidently overriding the common modules website. Empty by default.
         -->
-        <deployTechnicalSiteDirectory/>
+        <deployTechnicalSiteDirectory />
     </properties>
 
     <modules>
         <module>backends-common</module>
         <module>mailbox</module>
         <module>mailet</module>
+        <module>metrics</module>
         <module>mpt</module>
         <module>protocols</module>
         <module>server</module>
@@ -716,7 +725,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-plugin-plugin</artifactId>
-                    <version>3.2</version>
+                    <version>3.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -794,7 +803,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.13</version>
+                    <version>2.19</version>
                     <configuration>
                         <argLine>-Xms256m -Xmx512m</argLine>
                         <forkMode>always</forkMode>
@@ -917,7 +926,7 @@
                                         <execute>
                                             <runOnIncremental>false</runOnIncremental>
                                         </execute>
-                                        <ignore/>
+                                        <ignore />
                                     </action>
                                 </pluginExecution>
                                 <pluginExecution>
@@ -933,7 +942,7 @@
                                         <execute>
                                             <runOnIncremental>false</runOnIncremental>
                                         </execute>
-                                        <ignore/>
+                                        <ignore />
                                     </action>
                                 </pluginExecution>
                                 <pluginExecution>
@@ -949,7 +958,7 @@
                                         <execute>
                                             <runOnIncremental>false</runOnIncremental>
                                         </execute>
-                                        <ignore/>
+                                        <ignore />
                                     </action>
                                 </pluginExecution>
                                 <pluginExecution>
@@ -963,7 +972,7 @@
                                         </goals>
                                     </pluginExecutionFilter>
                                     <action>
-                                        <ignore/>
+                                        <ignore />
                                     </action>
                                 </pluginExecution>
                                 <pluginExecution>
@@ -976,12 +985,17 @@
                                         </goals>
                                     </pluginExecutionFilter>
                                     <action>
-                                        <ignore/>
+                                        <ignore />
                                     </action>
                                 </pluginExecution>
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>animal-sniffer-maven-plugin</artifactId>
+                    <version>1.15</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -1078,6 +1092,26 @@
                         </plugin>
                     </reportPlugins>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <configuration>
+                    <signature>
+                        <groupId>org.codehaus.mojo.signature</groupId>
+                        <artifactId>java16</artifactId>
+                        <version>1.1</version>
+                    </signature>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check_java_6</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

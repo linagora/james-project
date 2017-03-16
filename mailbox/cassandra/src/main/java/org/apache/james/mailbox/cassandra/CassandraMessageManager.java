@@ -26,22 +26,27 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
-import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
 /**
  * Cassandra implementation of {@link StoreMessageManager}
  * 
  */
-public class CassandraMessageManager extends StoreMessageManager<CassandraId> {
+public class CassandraMessageManager extends StoreMessageManager {
 
-    public CassandraMessageManager(MailboxSessionMapperFactory<CassandraId> mapperFactory, MessageSearchIndex<CassandraId> index, MailboxEventDispatcher<CassandraId> dispatcher, MailboxPathLocker locker, Mailbox<CassandraId> mailbox, QuotaManager quotaManager, QuotaRootResolver quotaRootResolver) throws MailboxException {
-        super(mapperFactory, index, dispatcher, locker, mailbox, new UnionMailboxACLResolver(), new SimpleGroupMembershipResolver(), quotaManager, quotaRootResolver);
+    public CassandraMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, 
+            MailboxEventDispatcher dispatcher, MailboxPathLocker locker, Mailbox mailbox, QuotaManager quotaManager, 
+            QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory) throws MailboxException {
+        super(mapperFactory, index, dispatcher, locker, mailbox, new UnionMailboxACLResolver(), 
+                new SimpleGroupMembershipResolver(), quotaManager, quotaRootResolver, messageParser, messageIdFactory);
 
     }
 

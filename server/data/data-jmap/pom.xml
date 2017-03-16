@@ -17,14 +17,13 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <artifactId>james-server</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>3.0.0-beta5-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -178,8 +177,17 @@
                     <artifactId>james-server-data-api</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>james-server-util-java8</artifactId>
+                </dependency>
+                <dependency>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.jayway.awaitility</groupId>
+                    <artifactId>awaitility</artifactId>
+                    <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.commons</groupId>
@@ -214,22 +222,37 @@
                     <artifactId>slf4j-simple</artifactId>
                     <scope>test</scope>
                 </dependency>
+                <dependency>
+                    <groupId>org.xenei</groupId>
+                    <artifactId>junit-contracts</artifactId>
+                    <scope>test</scope>
+                </dependency>
             </dependencies>
         </profile>
         <profile>
-            <id>disable-animal-sniffer</id>
+            <id>animal-sniffer-java-8</id>
             <activation>
-                <jdk>[1.6,)</jdk>
+                <jdk>[1.8,)</jdk>
             </activation>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>animal-sniffer-maven-plugin</artifactId>
+                        <configuration>
+                            <signature>
+                                <groupId>org.codehaus.mojo.signature</groupId>
+                                <artifactId>java18</artifactId>
+                                <version>1.0</version>
+                            </signature>
+                        </configuration>
                         <executions>
                             <execution>
-                                <id>check_java_6</id>
-                                <phase>none</phase>
+                                <id>check_java_8</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>

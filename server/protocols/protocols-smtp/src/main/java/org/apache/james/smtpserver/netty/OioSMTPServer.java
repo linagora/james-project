@@ -28,6 +28,10 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  */
 public class OioSMTPServer extends SMTPServer {
 
+    public OioSMTPServer(SmtpMetricsImpl smtpMetrics) {
+        super(smtpMetrics);
+    }
+
     @Override
     protected ServerSocketChannelFactory createSocketChannelFactory() {
         return new OioServerSocketChannelFactory(createBossExecutor(), createWorkerExecutor());

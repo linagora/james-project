@@ -18,7 +18,9 @@
  ****************************************************************/
 package org.apache.james.protocols.lmtp;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -37,17 +39,18 @@ import org.apache.james.protocols.api.ProtocolServer;
 import org.apache.james.protocols.api.handler.ProtocolHandler;
 import org.apache.james.protocols.api.handler.WiringException;
 import org.apache.james.protocols.api.utils.MockLogger;
-import org.apache.james.protocols.api.utils.TestUtils;
+import org.apache.james.protocols.api.utils.ProtocolServerUtils;
 import org.apache.james.protocols.lmtp.hook.DeliverToRecipientHook;
+import org.apache.james.protocols.smtp.AbstractSMTPServerTest;
 import org.apache.james.protocols.smtp.MailAddress;
 import org.apache.james.protocols.smtp.MailEnvelope;
 import org.apache.james.protocols.smtp.SMTPProtocol;
-import org.apache.james.protocols.smtp.AbstractSMTPServerTest;
 import org.apache.james.protocols.smtp.SMTPSession;
 import org.apache.james.protocols.smtp.hook.HookResult;
 import org.apache.james.protocols.smtp.hook.HookReturnCode;
 import org.apache.james.protocols.smtp.hook.MessageHook;
 import org.apache.james.protocols.smtp.utils.TestMessageHook;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public abstract class AbstractLMTPServerTest extends AbstractSMTPServerTest{
@@ -68,38 +71,41 @@ public abstract class AbstractLMTPServerTest extends AbstractSMTPServerTest{
         return new SMTPProtocol(chain, new LMTPConfigurationImpl(), new MockLogger());
     }
     
-    
+
+    @Ignore("LMTP can't handle the queue")
+    @Override
+    public void testDeliveryWith4SimultaneousThreads() {
+    }
+
+    @Ignore("Disable")
     @Override
     public void testInvalidNoBracketsEnformance() throws Exception {
-        // Disable
     }
 
 
+    @Ignore("Disable")
     @Override
     public void testHeloEnforcement() throws Exception {
-        // Disable
     }
 
 
+    @Ignore("Disable")
     @Override
     public void testHeloEnforcementDisabled() throws Exception {
-        // Disable
-
     }
 
 
     @Override
     public void testMailWithoutBrackets() throws Exception {
         TestMessageHook hook = new TestMessageHook();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", TestUtils.getFreePort());
-        
         ProtocolServer server = null;
         try {
-            server = createServer(createProtocol(hook), address);
+            server = createServer(createProtocol(hook));
             server.bind();
             
             SMTPClient client = createClient();
-            client.connect(address.getAddress().getHostAddress(), address.getPort());
+            InetSocketAddress bindedAddress = new ProtocolServerUtils(server).retrieveBindedAddress();
+            client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
             assertTrue(SMTPReply.isPositiveCompletion(client.getReplyCode()));
             
             client.helo("localhost");
@@ -127,15 +133,14 @@ public abstract class AbstractLMTPServerTest extends AbstractSMTPServerTest{
     @Override
     public void testRcptWithoutBrackets() throws Exception {
         TestMessageHook hook = new TestMessageHook();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", TestUtils.getFreePort());
-        
         ProtocolServer server = null;
         try {
-            server = createServer(createProtocol(hook), address);
+            server = createServer(createProtocol(hook));
             server.bind();
             
             SMTPClient client = createClient();
-            client.connect(address.getAddress().getHostAddress(), address.getPort());
+            InetSocketAddress bindedAddress = new ProtocolServerUtils(server).retrieveBindedAddress();
+            client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
             assertTrue(SMTPReply.isPositiveCompletion(client.getReplyCode()));
             
             client.helo("localhost");
@@ -164,15 +169,14 @@ public abstract class AbstractLMTPServerTest extends AbstractSMTPServerTest{
     @Test
     public void testEhloNotSupported() throws Exception {
         TestMessageHook hook = new TestMessageHook();
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", TestUtils.getFreePort());
-        
         ProtocolServer server = null;
         try {
-            server = createServer(createProtocol(hook), address);
+            server = createServer(createProtocol(hook));
             server.bind();
             
             SMTPClient client = createClient();
-            client.connect(address.getAddress().getHostAddress(), address.getPort());
+            InetSocketAddress bindedAddress = new ProtocolServerUtils(server).retrieveBindedAddress();
+            client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
             assertTrue(SMTPReply.isPositiveCompletion(client.getReplyCode()));
             
             client.sendCommand("HELO localhost");
@@ -196,15 +200,14 @@ public abstract class AbstractLMTPServerTest extends AbstractSMTPServerTest{
     public void testDeliveryHook() throws Exception {
         TestDeliverHook deliverHook = new TestDeliverHook();
         
-        InetSocketAddress address = new InetSocketAddress("127.0.0.1", TestUtils.getFreePort());
-        
         ProtocolServer server = null;
         try {
-            server = createServer(createProtocol(deliverHook), address);
+            server = createServer(createProtocol(deliverHook));
             server.bind();
             
             SMTPClient client = createClient();
-            client.connect(address.getAddress().getHostAddress(), address.getPort());
+            InetSocketAddress bindedAddress = new ProtocolServerUtils(server).retrieveBindedAddress();
+            client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
             assertTrue(SMTPReply.isPositiveCompletion(client.getReplyCode()));
             
             client.helo("localhost");

@@ -20,12 +20,15 @@
 package org.apache.james.mailbox.inmemory.manager;
 
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
+import org.apache.james.mailbox.inmemory.InMemoryMessageId;
+import org.apache.james.mailbox.inmemory.InMemoryMessageIdManager;
 import org.apache.james.mailbox.inmemory.quota.InMemoryCurrentQuotaManager;
 import org.apache.james.mailbox.inmemory.quota.InMemoryPerUserMaxQuotaManager;
 import org.apache.james.mailbox.manager.IntegrationResources;
@@ -33,10 +36,11 @@ import org.apache.james.mailbox.manager.ManagerTestResources;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
-import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
-import org.apache.james.mailbox.store.MockAuthenticator;
+import org.apache.james.mailbox.store.FakeAuthenticator;
+import org.apache.james.mailbox.store.FakeAuthorizator;
 import org.apache.james.mailbox.store.NoMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.CurrentQuotaCalculator;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.ListeningCurrentQuotaUpdater;
@@ -49,20 +53,27 @@ public class InMemoryIntegrationResources implements IntegrationResources {
 
     @Override
     public MailboxManager createMailboxManager(GroupMembershipResolver groupMembershipResolver) throws MailboxException {
-        MockAuthenticator mockAuthenticator = new MockAuthenticator();
-        mockAuthenticator.addUser(ManagerTestResources.USER, ManagerTestResources.USER_PASS);
-        MailboxSessionMapperFactory<InMemoryId> factory = new InMemoryMailboxSessionMapperFactory();
-        final StoreMailboxManager<InMemoryId> manager = new StoreMailboxManager<InMemoryId>(
-            factory,
-            mockAuthenticator,
+        FakeAuthenticator fakeAuthenticator = new FakeAuthenticator();
+        fakeAuthenticator.addUser(ManagerTestResources.USER, ManagerTestResources.USER_PASS);
+        InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
+        final StoreMailboxManager manager = new InMemoryMailboxManager(
+            mailboxSessionMapperFactory,
+            fakeAuthenticator,
+            FakeAuthorizator.defaultReject(),
             new NoMailboxPathLocker(),
             new UnionMailboxACLResolver(),
-            groupMembershipResolver);
+            groupMembershipResolver,
+            new MessageParser(),
+            new InMemoryMessageId.Factory());
         manager.init();
         return manager;
     }
 
-    @SuppressWarnings("unchecked")
+    @Override
+    public MessageIdManager createMessageIdManager(MailboxManager mailboxManager) {
+        return new InMemoryMessageIdManager(mailboxManager);
+    }
+    
     @Override
     public QuotaManager createQuotaManager(MaxQuotaManager maxQuotaManager, MailboxManager mailboxManager) throws Exception {
         StoreQuotaManager quotaManager = new StoreQuotaManager();
@@ -71,7 +82,7 @@ public class InMemoryIntegrationResources implements IntegrationResources {
         QuotaRootResolver quotaRootResolver =  createQuotaRootResolver(mailboxManager);
 
         InMemoryCurrentQuotaManager currentQuotaManager = new InMemoryCurrentQuotaManager(
-            new CurrentQuotaCalculator<InMemoryId>(((StoreMailboxManager<InMemoryId>)mailboxManager).getMapperFactory(), quotaRootResolver),
+            new CurrentQuotaCalculator(((StoreMailboxManager)mailboxManager).getMapperFactory(), quotaRootResolver),
             mailboxManager
         );
 
@@ -81,7 +92,7 @@ public class InMemoryIntegrationResources implements IntegrationResources {
 
         quotaManager.setCurrentQuotaManager(currentQuotaManager);
         quotaManager.setMaxQuotaManager(maxQuotaManager);
-        ((StoreMailboxManager<InMemoryId>) mailboxManager).setQuotaManager(quotaManager);
+        ((StoreMailboxManager) mailboxManager).setQuotaManager(quotaManager);
         mailboxManager.addGlobalListener(listeningCurrentQuotaUpdater, null);
         return quotaManager;
     }
@@ -97,11 +108,10 @@ public class InMemoryIntegrationResources implements IntegrationResources {
         return groupMembershipResolver;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public DefaultQuotaRootResolver createQuotaRootResolver(MailboxManager mailboxManager) throws Exception {
         if (quotaRootResolver == null) {
-            quotaRootResolver = new DefaultQuotaRootResolver(((StoreMailboxManager<InMemoryId>) mailboxManager).getMapperFactory());
+            quotaRootResolver = new DefaultQuotaRootResolver(((StoreMailboxManager) mailboxManager).getMapperFactory());
         }
         return quotaRootResolver;
     }

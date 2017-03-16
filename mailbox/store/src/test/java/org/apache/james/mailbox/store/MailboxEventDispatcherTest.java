@@ -19,331 +19,350 @@
 
 package org.apache.james.mailbox.store;
 
-import static org.junit.Assert.*;
-
-import java.util.Arrays;
-import java.util.Iterator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.util.EventCollector;
-import org.jmock.Expectations;
-import org.jmock.Mockery;
-import org.jmock.integration.junit4.JMock;
-import org.jmock.integration.junit4.JUnit4Mockery;
+import org.assertj.core.api.Condition;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-@RunWith(JMock.class)
+import com.google.common.collect.ImmutableList;
+
 public class MailboxEventDispatcherTest {
+    private static final int sessionId = 10;
+    private static final int MOD_SEQ = -1;
+    public static final Condition<MailboxListener.Event> INSTANCE_OF_EVENT_FLAGS_UPDATED = new Condition<MailboxListener.Event>() {
+        @Override
+        public boolean matches(MailboxListener.Event event) {
+            return event instanceof MailboxListener.FlagsUpdated;
+        }
+    };
+    public static final TestId MAILBOX_ID = TestId.of(147L);
+    public static final int UID_VALIDITY = 145;
 
-    MailboxEventDispatcher<TestId> dispatcher;
-
-    EventCollector collector;
-
-    MessageResult result;
-    int sessionId = 10;
+    private MailboxEventDispatcher dispatcher;
+    private EventCollector collector;
+    private MessageResult result;
+    private Mailbox mailbox;
 
     private MailboxSession session = new MockMailboxSession("test") {
-
         @Override
         public long getSessionId() {
             return sessionId;
         }
-        
     };
 
-    private  Mockery mockery = new JUnit4Mockery();
-
-    private Mailbox<TestId> mailbox = new Mailbox<TestId>() {
-
-        @Override
-        public TestId getMailboxId() {
-            return TestId.of(1L);
-        }
-
-        @Override
-        public String getNamespace() {
-            return null;
-        }
-
-        @Override
-        public void setNamespace(String namespace) {            
-        }
-
-        @Override
-        public String getUser() {
-            return null;
-        }
-
-        @Override
-        public void setUser(String user) {
-            
-        }
-
-        @Override
-        public String getName() {
-            return "test";
-        }
-
-        @Override
-        public void setName(String name) {
-        }
-
-        @Override
-        public long getUidValidity() {
-            return 0;
-        }
-        
-        @Override
-        public MailboxACL getACL() {
-            return SimpleMailboxACL.EMPTY;
-        }
-
-        @Override
-        public void setACL(MailboxACL acl) {
-        }
-
-    };
-    
     @Before
     public void setUp() throws Exception {
         collector = new EventCollector();
 
-        dispatcher = new MailboxEventDispatcher<TestId>(collector);
-        result = mockery.mock(MessageResult.class);
-        mockery.checking(new Expectations() {{
-            allowing(result).getUid();will(returnValue(23L));
-        }});
+        dispatcher = MailboxEventDispatcher.ofListener(collector);
+        result = mock(MessageResult.class);
+        mailbox = new SimpleMailbox(new MailboxPath(MailboxConstants.USER_NAMESPACE, "user", "name"), UID_VALIDITY, MAILBOX_ID);
+
+        when(result.getUid()).thenReturn(MessageUid.of(23));
     }
 
 
     @Test
     public void testShouldReturnNoChangesWhenSystemFlagsUnchanged() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1,  new Flags(
-                Flags.Flag.DELETED), new Flags(Flags.Flag.DELETED))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags(Flags.Flag.DELETED))
+                .oldFlags(new Flags(Flags.Flag.DELETED))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator()).isEmpty();
     }
 
     @Test
     public void testShouldShowAnsweredAdded() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(),
-                new Flags(Flags.Flag.ANSWERED))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(
+                UpdatedFlags.builder()
+                    .uid(result.getUid())
+                    .modSeq(MOD_SEQ)
+                    .newFlags(new Flags(Flags.Flag.ANSWERED))
+                    .oldFlags(new Flags())
+                    .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.ANSWERED, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.ANSWERED);
     }
 
     @Test
     public void testShouldShowAnsweredRemoved() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(
-                Flags.Flag.ANSWERED), new Flags())));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(
+                UpdatedFlags.builder()
+                    .uid(result.getUid())
+                    .modSeq(MOD_SEQ)
+                    .newFlags(new Flags(Flags.Flag.ANSWERED))
+                    .oldFlags(new Flags())
+                    .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.ANSWERED, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.ANSWERED);
     }
 
     @Test
     public void testShouldShowDeletedAdded() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(),
-                new Flags(Flags.Flag.DELETED))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags())
+                .oldFlags(new Flags(Flags.Flag.DELETED))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.DELETED, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.DELETED);
     }
 
     @Test
     public void testShouldShowDeletedRemoved() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(
-                Flags.Flag.DELETED), new Flags())));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags(Flags.Flag.DELETED))
+                .oldFlags(new Flags())
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.DELETED, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.DELETED);
     }
 
     @Test
     public void testShouldShowDraftAdded() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(),
-                new Flags(Flags.Flag.DRAFT))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags())
+                .oldFlags(new Flags(Flags.Flag.DRAFT))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.DRAFT, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.DRAFT);
     }
 
     @Test
     public void testShouldShowDraftRemoved() {
-        dispatcher.flagsUpdated(session,Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(
-                Flags.Flag.DRAFT), new Flags())));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags())
+                .oldFlags(new Flags(Flags.Flag.DRAFT))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.DRAFT, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.DRAFT);
     }
 
     @Test
     public void testShouldShowFlaggedAdded() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(),
-                new Flags(Flags.Flag.FLAGGED))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags(Flags.Flag.FLAGGED))
+                .oldFlags(new Flags())
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.FLAGGED, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.FLAGGED);
     }
 
     @Test
     public void testShouldShowFlaggedRemoved() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(
-                Flags.Flag.FLAGGED), new Flags())));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags())
+                .oldFlags(new Flags(Flags.Flag.FLAGGED))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.FLAGGED, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.FLAGGED);
     }
 
     @Test
     public void testShouldShowRecentAdded() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(),
-                new Flags(Flags.Flag.RECENT))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags(Flags.Flag.RECENT))
+                .oldFlags(new Flags())
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.RECENT, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.RECENT);
     }
 
     @Test
     public void testShouldShowRecentRemoved() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(
-                Flags.Flag.RECENT), new Flags())));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags())
+                .oldFlags(new Flags(Flags.Flag.RECENT))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.RECENT, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.RECENT);
     }
 
     @Test
     public void testShouldShowSeenAdded() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(),
-                new Flags(Flags.Flag.SEEN))));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags(Flags.Flag.SEEN))
+                .oldFlags(new Flags())
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.SEEN, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.SEEN);
     }
 
     @Test
     public void testShouldShowSeenRemoved() {
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, new Flags(
-                Flags.Flag.SEEN), new Flags())));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(new Flags())
+                .oldFlags(new Flags(Flags.Flag.SEEN))
+                .build()));
+
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
-                .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.SEEN, iterator.next());
-        assertFalse(iterator.hasNext());
+            .get(0);
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.SEEN);
     }
 
     @Test
     public void testShouldShowMixedChanges() {
-        Flags originals = new Flags();
-        originals.add(Flags.Flag.DRAFT);
-        originals.add(Flags.Flag.RECENT);
-        Flags updated = new Flags();
-        updated.add(Flags.Flag.ANSWERED);
-        updated.add(Flags.Flag.DRAFT);
-        updated.add(Flags.Flag.SEEN);
+        dispatcher.flagsUpdated(session,
+            ImmutableList.of(result.getUid()),
+            mailbox,
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(result.getUid())
+                .modSeq(MOD_SEQ)
+                .newFlags(FlagsBuilder.builder()
+                    .add(Flags.Flag.ANSWERED, Flags.Flag.DRAFT, Flags.Flag.SEEN)
+                    .build())
+                .oldFlags(FlagsBuilder.builder()
+                    .add(Flags.Flag.DRAFT, Flags.Flag.RECENT)
+                    .build())
+                .build()));
 
-        dispatcher.flagsUpdated(session, Arrays.asList(result.getUid()), mailbox, Arrays.asList(new UpdatedFlags(result.getUid(), -1, originals, updated)));
-        assertEquals(1, collector.getEvents().size());
-        assertTrue(collector.getEvents().get(0) instanceof MailboxListener.FlagsUpdated);
+        assertThat(collector.getEvents()).hasSize(1)
+            .are(INSTANCE_OF_EVENT_FLAGS_UPDATED);
         MailboxListener.FlagsUpdated event = (MailboxListener.FlagsUpdated) collector.getEvents()
                 .get(0);
-        Iterator<Flags.Flag> iterator = event.getUpdatedFlags().get(0).systemFlagIterator();
-        assertNotNull(iterator);
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.ANSWERED, iterator.next());
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.RECENT, iterator.next());
-        assertTrue(iterator.hasNext());
-        assertEquals(Flags.Flag.SEEN, iterator.next());
-        assertFalse(iterator.hasNext());
+        assertThat(event.getUpdatedFlags().get(0).systemFlagIterator())
+            .containsOnly(Flags.Flag.SEEN, Flags.Flag.RECENT, Flags.Flag.ANSWERED);
     }
 }

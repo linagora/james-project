@@ -26,6 +26,7 @@ import javax.mail.Flags;
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.display.CharsetUtil;
 import org.apache.james.imap.api.message.IdRange;
+import org.apache.james.imap.api.message.UidRange;
 import org.apache.james.imap.message.response.Literal;
 
 public interface ImapResponseComposer {
@@ -99,7 +100,7 @@ public interface ImapResponseComposer {
      * @return composer
      * @throws IOException
      */
-    ImapResponseComposer commandName(final String name) throws IOException;
+    ImapResponseComposer commandName(String name) throws IOException;
 
     /**
      * Write the message of type <code>String</code>
@@ -108,7 +109,7 @@ public interface ImapResponseComposer {
      * @return composer
      * @throws IOException
      */
-    ImapResponseComposer message(final String message) throws IOException;
+    ImapResponseComposer message(String message) throws IOException;
 
     /**
      * Write the message of type <code>Long</code>
@@ -117,7 +118,7 @@ public interface ImapResponseComposer {
      * @return composer
      * @throws IOException
      */
-    ImapResponseComposer message(final long number) throws IOException;
+    ImapResponseComposer message(long number) throws IOException;
 
     /**
      * First encodes the given {@code mailboxName} using
@@ -128,17 +129,18 @@ public interface ImapResponseComposer {
      * @return
      * @throws IOException
      */
-    ImapResponseComposer mailbox(final String mailboxName) throws IOException;
+    ImapResponseComposer mailbox(String mailboxName) throws IOException;
 
     /**
      * Write the given sequence-set
-     * 
-     * @param ranges
-     * @return composer
-     * @throws IOException
      */
-    ImapResponseComposer sequenceSet(final IdRange[] ranges) throws IOException;
+    ImapResponseComposer sequenceSet(UidRange[] ranges) throws IOException;
 
+    /**
+     * Write the given sequence-set
+     */
+    ImapResponseComposer sequenceSet(IdRange[] ranges) throws IOException;
+    
     /**
      * Write a CRLF and flush the composer which will write the content of it to
      * the socket
@@ -202,7 +204,7 @@ public interface ImapResponseComposer {
      * @return self, not null
      * @throws IOException
      */
-    ImapResponseComposer upperCaseAscii(final String message) throws IOException;
+    ImapResponseComposer upperCaseAscii(String message) throws IOException;
 
     /**
      * Appends the given message after conversion to upper case. The message may
@@ -214,7 +216,7 @@ public interface ImapResponseComposer {
      * @return self, not null
      * @throws IOException
      */
-    ImapResponseComposer quoteUpperCaseAscii(final String message) throws IOException;
+    ImapResponseComposer quoteUpperCaseAscii(String message) throws IOException;
 
     /**
      * Tell the {@link ImapResponseComposer} to skip the next written space

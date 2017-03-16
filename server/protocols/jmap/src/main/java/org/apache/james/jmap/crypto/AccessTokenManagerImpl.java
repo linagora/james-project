@@ -19,8 +19,9 @@
 
 package org.apache.james.jmap.crypto;
 
+import java.util.concurrent.CompletionException;
+
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
@@ -28,8 +29,8 @@ import org.apache.james.jmap.api.access.AccessTokenRepository;
 import org.apache.james.jmap.api.access.exceptions.InvalidAccessToken;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 
-@Singleton
 public class AccessTokenManagerImpl implements AccessTokenManager {
 
     private final AccessTokenRepository accessTokenRepository;
@@ -49,7 +50,15 @@ public class AccessTokenManagerImpl implements AccessTokenManager {
 
     @Override
     public String getUsernameFromToken(AccessToken token) throws InvalidAccessToken {
-        return accessTokenRepository.getUsernameFromToken(token);
+        try {
+            return accessTokenRepository.getUsernameFromToken(token).join();
+        } catch (CompletionException completionException) {
+            if (completionException.getCause() instanceof InvalidAccessToken) {
+                throw (InvalidAccessToken) completionException.getCause();
+            } else {
+                throw Throwables.propagate(completionException);
+            }
+        }
     }
     
     @Override
@@ -64,7 +73,7 @@ public class AccessTokenManagerImpl implements AccessTokenManager {
 
     @Override
     public void revoke(AccessToken token) {
-        accessTokenRepository.removeToken(token);
+        accessTokenRepository.removeToken(token).join();
     }
 
 }

@@ -19,20 +19,30 @@
 
 package org.apache.james.mailbox;
 
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.james.mailbox.exception.AnnotationException;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxAnnotation;
+import org.apache.james.mailbox.model.MailboxAnnotationKey;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.slf4j.Logger;
+
+import com.google.common.base.Optional;
 
 /**
  * <p>
@@ -69,6 +79,37 @@ import org.slf4j.Logger;
 
 public interface MailboxManager extends RequestAware, MailboxListenerSupport {
 
+    enum MailboxCapabilities {
+        Annotation,
+        Move,
+        Namespace,
+        UserFlag
+    }
+
+    EnumSet<MailboxCapabilities> getSupportedMailboxCapabilities();
+
+    boolean hasCapability(MailboxCapabilities capability);
+
+    enum MessageCapabilities {
+        Attachment,
+        UniqueID
+    }
+
+    EnumSet<MessageCapabilities> getSupportedMessageCapabilities();
+
+    enum SearchCapabilities {
+        MultimailboxSearch,
+        /**
+         *  The implementation supporting this capability should
+         *  provide an index on the fields: 
+         *  From, To, Cc, Bcc, Subjects, textBody & htmlBody
+         */
+        Text
+    }
+    
+    EnumSet<SearchCapabilities> getSupportedSearchCapabilities();
+
+    
     /**
      * Return the delimiter to use for folders
      * 
@@ -77,19 +118,32 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
     char getDelimiter();
 
     /**
-     * Gets an session suitable for IMAP.
+     * Gets an object managing the given mailbox.
      * 
      * @param mailboxPath
      *            the Path of the mailbox, not null
      * @param session
      *            the context for this call, not null
-     * @return <code>ImapMailboxSession</code>, not null
      * @throws MailboxException
      *             when the mailbox cannot be opened
      * @throws MailboxNotFoundException
      *             when the given mailbox does not exist
      */
     MessageManager getMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
+
+    /**
+     * Gets an object managing the given mailbox.
+     * 
+     * @param mailboxId
+     *            the Id of the mailbox, not null
+     * @param session
+     *            the context for this call, not null
+     * @throws MailboxException
+     *             when the mailbox cannot be opened
+     * @throws MailboxNotFoundException
+     *             when the given mailbox does not exist
+     */
+    MessageManager getMailbox(MailboxId mailboxId, MailboxSession session) throws MailboxException;
 
     /**
      * Creates a new mailbox. Any intermediary mailboxes missing from the
@@ -100,8 +154,10 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      *            the context for this call, not null
      * @throws MailboxException
      *             when creation fails
+     * @return Empty optional when the mailbox name is empty. If mailbox is created, the id of the mailboxPath specified as
+     *  parameter is returned (and potential mailboxIds of parent mailboxes created in the process will be omitted)
      */
-    void createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException;
+    Optional<MailboxId> createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException;
 
     /**
      * Delete the mailbox with the name
@@ -147,6 +203,8 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      */
     List<MessageRange> copyMessages(MessageRange set, MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException;
 
+    List<MessageRange> copyMessages(MessageRange set, MailboxId from, MailboxId to, MailboxSession session) throws MailboxException;
+    
     /**
      * Move the given {@link MessageRange} from one Mailbox to the other. 
      * 
@@ -174,6 +232,17 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      * @throws MailboxException
      */
     List<MailboxMetaData> search(MailboxQuery expression, MailboxSession session) throws MailboxException;
+
+    /**
+     * Searches for messages matching the given query.
+     * 
+     * @param expression
+     *            not null
+     * @param session
+     *            the context for this call, not null
+     * @throws MailboxException
+     */
+    List<MessageId> search(MultimailboxesSearchQuery expression, MailboxSession session, long limit) throws MailboxException;
 
     /**
      * Does the given mailbox exist?
@@ -208,7 +277,7 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
 
     /**
      * Autenticates the given user against the given password.<br>
-     * When authentic and authorized, a session will be supplied
+     * When authenticated and authorized, a session will be supplied
      * 
      * @param userid
      *            user name
@@ -216,14 +285,36 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      *            password supplied
      * @param log
      *            context sensitive log
-     * @return a <code>MailboxSession</code> when the user is authentic and
+     * @return a <code>MailboxSession</code> when the user is authenticated and
      *         authorized to access
      * @throws BadCredentialsException
-     *             when system access is denighed for the given user
+     *             when system access is denied for the given user
      * @throws MailboxException
      *             when the creation fails for other reasons
      */
     MailboxSession login(String userid, String passwd, Logger log) throws BadCredentialsException, MailboxException;
+
+    /**
+     * Autenticates the given administrator against the given password,
+     * then switch to an other user<br>
+     * When authenticated and authorized, a session for the other user will be supplied
+     * 
+     * @param adminUserId
+     *            user name of the admin user, matching the credentials
+     * @param passwd
+     *            password supplied for the admin user
+     * @param otherUserId
+     *            user name of the real user
+     * @param log
+     *            context sensitive log
+     * @return a <code>MailboxSession</code> for the real user
+     *         when the admin is authenticated and authorized to access
+     * @throws BadCredentialsException
+     *             when system access is denied for the given user
+     * @throws MailboxException
+     *             when the creation fails for other reasons
+     */
+    MailboxSession loginAsOtherUser(String adminUserId, String passwd, String otherUserId, Logger log) throws BadCredentialsException, MailboxException;
 
     /**
      * <p>
@@ -320,4 +411,65 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
      */
     List<MailboxPath> list(MailboxSession session) throws MailboxException;
 
+    /**
+     * Return all mailbox's annotation as the {@link List} of {@link MailboxAnnotation} without order and
+     * do not contain any two annotations with the same key
+     * 
+     * @param mailboxPath   the current mailbox
+     * @param session       the current session
+     * @return              List<MailboxAnnotation>
+     * @throws MailboxException in case of selected mailbox does not exist
+     */
+    List<MailboxAnnotation> getAllAnnotations(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
+
+    /**
+     * Return all mailbox's annotation filter by the list of the keys without order and
+     * do not contain any two annotations with the same key
+     * 
+     * @param mailboxPath   the current mailbox
+     * @param session       the current session
+     * @param keys          list of the keys should be filter
+     * @return              List<MailboxAnnotation>
+     * @throws MailboxException in case of selected mailbox does not exist
+     */
+    List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotationKey> keys) throws MailboxException;
+
+    /**
+     * Return all mailbox's annotation by the list of the keys and its children entries without order and
+     * do not contain any two annotations with the same key
+     *
+     * @param mailboxPath   the current mailbox
+     * @param session       the current session
+     * @param keys          list of the keys should be filter
+     * @return              List<MailboxAnnotation>
+     * @throws MailboxException in case of selected mailbox does not exist
+     */
+    List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotationKey> keys) throws MailboxException;
+
+    /**
+     * Return all mailbox's annotation by the list of the keys and its below entries without order and
+     * do not contain any two annotations with the same key
+     *
+     * @param mailboxPath   the current mailbox
+     * @param session       the current session
+     * @param keys          list of the keys should be filter
+     * @return              List<MailboxAnnotation>
+     * @throws MailboxException in case of selected mailbox does not exist
+     */
+    List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxPath mailboxPath, MailboxSession session, Set<MailboxAnnotationKey> keys) throws MailboxException;
+
+    /**
+     * Update the mailbox's annotations. This method can:
+     * - Insert new annotation if it does not exist
+     * - Update the new value for existed annotation
+     * - Delete the existed annotation if its value is nil
+     * 
+     * @param mailboxPath   the current mailbox
+     * @param session       the current session
+     * @param mailboxAnnotations    the list of annotation should be insert/udpate/delete
+     * @throws MailboxException in case of selected mailbox does not exist
+     */
+    void updateAnnotations(MailboxPath mailboxPath, MailboxSession session, List<MailboxAnnotation> mailboxAnnotations) throws MailboxException, AnnotationException;
+    
+    boolean hasChildren(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
 }

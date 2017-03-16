@@ -26,7 +26,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
@@ -35,8 +34,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.AccessTokenRepository;
+import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
 import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,7 +62,7 @@ public class AuthenticationFilterTest {
         when(mockedRequest.getMethod()).thenReturn("POST");
         List<AuthenticationStrategy> fakeAuthenticationStrategies = ImmutableList.of( new FakeAuthenticationStrategy(false));
 
-        testee = new AuthenticationFilter(fakeAuthenticationStrategies);
+        testee = new AuthenticationFilter(fakeAuthenticationStrategies, new NoopMetricFactory());
         filterChain = mock(FilterChain.class);
     }
 
@@ -93,7 +94,21 @@ public class AuthenticationFilterTest {
 
         accessTokenRepository.addToken("user@domain.tld", token);
 
-        AuthenticationFilter sut = new AuthenticationFilter(ImmutableList.of( new FakeAuthenticationStrategy(true)));
+        AuthenticationFilter sut = new AuthenticationFilter(ImmutableList.of( new FakeAuthenticationStrategy(true)), new NoopMetricFactory());
+        sut.doFilter(mockedRequest, mockedResponse, filterChain);
+
+        verify(filterChain).doFilter(any(ServletRequest.class), eq(mockedResponse));
+    }
+
+    @Test
+    public void filterShouldChainAuthorizationStrategy() throws Exception {
+        AccessToken token = AccessToken.fromString(TOKEN);
+        when(mockedRequest.getHeader("Authorization"))
+            .thenReturn(TOKEN);
+
+        accessTokenRepository.addToken("user@domain.tld", token);
+
+        AuthenticationFilter sut = new AuthenticationFilter(ImmutableList.of(new FakeAuthenticationStrategy(false), new FakeAuthenticationStrategy(true)), new NoopMetricFactory());
         sut.doFilter(mockedRequest, mockedResponse, filterChain);
 
         verify(filterChain).doFilter(any(ServletRequest.class), eq(mockedResponse));
@@ -114,13 +129,13 @@ public class AuthenticationFilterTest {
         when(mockedRequest.getHeader("Authorization"))
                 .thenReturn(TOKEN);
 
-        AuthenticationFilter sut = new AuthenticationFilter(ImmutableList.of());
+        AuthenticationFilter sut = new AuthenticationFilter(ImmutableList.of(), new NoopMetricFactory());
         sut.doFilter(mockedRequest, mockedResponse, filterChain);
 
         verify(mockedResponse).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
-    private class FakeAuthenticationStrategy implements AuthenticationStrategy {
+    private static class FakeAuthenticationStrategy implements AuthenticationStrategy {
 
         private final boolean isAuthorized;
 
@@ -129,13 +144,11 @@ public class AuthenticationFilterTest {
         }
 
         @Override
-        public MailboxSession createMailboxSession(Stream<String> requestHeaders) {
-            return null;
-        }
-
-        @Override
-        public boolean checkAuthorizationHeader(Stream<String> requestHeaders) {
-            return isAuthorized;
+        public MailboxSession createMailboxSession(HttpServletRequest httpRequest) {
+            if (!isAuthorized) {
+                throw new MailboxSessionCreationException(null);
+            }
+            return mock(MailboxSession.class);
         }
     }
 }

@@ -37,7 +37,7 @@ import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
-import org.apache.james.sieverepository.api.exception.UserNotFoundException;
+import org.joda.time.DateTime;
 
 /**
  * <code>SieveFileRepository</code> manages sieve scripts stored on the file system.
@@ -55,22 +55,22 @@ public class SieveDefaultRepository implements SieveRepository {
     }
 
     @Override
-    public void haveSpace(String user, String name, long size) throws UserNotFoundException, QuotaExceededException, StorageException {
+    public void haveSpace(String user, String name, long size) throws QuotaExceededException, StorageException {
         throw apologizeForQuotas();
     }
 
     @Override
-    public void putScript(String user, String name, String content) throws UserNotFoundException, StorageException, QuotaExceededException {
+    public void putScript(String user, String name, String content) throws StorageException, QuotaExceededException {
         throw new StorageException("This implementation is deprecated and does not support script put operation. You must directly position your scripts in the .sieve folder. Please consider using a SieveFileRepository.");
     }
 
     @Override
-    public List<ScriptSummary> listScripts(String user) throws UserNotFoundException, StorageException {
+    public List<ScriptSummary> listScripts(String user) throws StorageException {
         throw new StorageException("This implementation is deprecated and does not support listScripts operation. Please consider using a SieveFileRepository.");
     }
 
     @Override
-    public InputStream getActive(String user) throws UserNotFoundException, ScriptNotFoundException, StorageException {
+    public InputStream getActive(String user) throws ScriptNotFoundException, StorageException {
         try {
             return new FileInputStream(retrieveUserFile(user));
         } catch (FileNotFoundException e) {
@@ -78,33 +78,42 @@ public class SieveDefaultRepository implements SieveRepository {
         }
     }
 
-    public File retrieveUserFile(String user) throws FileNotFoundException {
+    @Override
+    public DateTime getActivationDateForActiveScript(String user) throws StorageException, ScriptNotFoundException {
+        return new DateTime(retrieveUserFile(user).lastModified());
+    }
+
+    public File retrieveUserFile(String user) throws ScriptNotFoundException {
         // RFC 5228 permits extensions: .siv .sieve
         String sieveFilePrefix = FileSystem.FILE_PROTOCOL + "sieve/" + user + ".";
         try {
             return fileSystem.getFile(sieveFilePrefix + "sieve");
         } catch (FileNotFoundException e) {
-            return fileSystem.getFile(sieveFilePrefix + "siv");
+            try {
+                return fileSystem.getFile(sieveFilePrefix + "siv");
+            } catch (FileNotFoundException fileNotFoundException) {
+                throw new ScriptNotFoundException(fileNotFoundException);
+            }
         }
     }
 
     @Override
-    public void setActive(String user, String name) throws UserNotFoundException, ScriptNotFoundException, StorageException {
+    public void setActive(String user, String name) throws ScriptNotFoundException, StorageException {
         throw new StorageException("This implementation is deprecated and does not support script SetActive operation. Your uploaded script is by default the active script. Please consider using a SieveFileRepository.");
     }
 
     @Override
-    public InputStream getScript(String user, String name) throws UserNotFoundException, ScriptNotFoundException, StorageException {
+    public InputStream getScript(String user, String name) throws ScriptNotFoundException, StorageException {
         return getActive(user);
     }
 
     @Override
-    public void deleteScript(String user, String name) throws UserNotFoundException, ScriptNotFoundException, IsActiveException, StorageException {
+    public void deleteScript(String user, String name) throws ScriptNotFoundException, IsActiveException, StorageException {
         throw new StorageException("This implementation is deprecated and does not support delete script operation. Please consider using a SieveFileRepository.");
     }
 
     @Override
-    public void renameScript(String user, String oldName, String newName) throws UserNotFoundException, ScriptNotFoundException, DuplicateException, StorageException {
+    public void renameScript(String user, String oldName, String newName) throws ScriptNotFoundException, DuplicateException, StorageException {
         throw new StorageException("This implementation is deprecated and does not support rename script operation. Please consider using a SieveFileRepository.");
     }
 
@@ -129,22 +138,22 @@ public class SieveDefaultRepository implements SieveRepository {
     }
 
     @Override
-    public boolean hasQuota(String user) throws UserNotFoundException, StorageException {
+    public boolean hasQuota(String user) throws StorageException {
         throw apologizeForQuotas();
     }
 
     @Override
-    public long getQuota(String user) throws UserNotFoundException, QuotaNotFoundException, StorageException {
+    public long getQuota(String user) throws QuotaNotFoundException, StorageException {
         throw apologizeForQuotas();
     }
 
     @Override
-    public void setQuota(String user, long quota) throws UserNotFoundException, StorageException {
+    public void setQuota(String user, long quota) throws StorageException {
         throw apologizeForQuotas();
     }
 
     @Override
-    public void removeQuota(String user) throws UserNotFoundException, QuotaNotFoundException, StorageException {
+    public void removeQuota(String user) throws QuotaNotFoundException, StorageException {
         throw apologizeForQuotas();
     }
 

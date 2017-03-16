@@ -18,40 +18,53 @@
  ****************************************************************/
 package org.apache.james.mailbox.elasticsearch.events;
 
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+
+import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
-import javax.mail.Flags;
 
+import org.apache.james.backends.es.ElasticSearchIndexer;
+import org.apache.james.mailbox.MailboxManager.SearchCapabilities;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.elasticsearch.ElasticSearchIndexer;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
 import org.apache.james.mailbox.elasticsearch.json.MessageToElasticSearchJson;
 import org.apache.james.mailbox.elasticsearch.search.ElasticSearchSearcher;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MessageRange;
-import org.apache.james.mailbox.model.MessageRange.Type;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.steveash.guavate.Guavate;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
-public class ElasticSearchListeningMessageSearchIndex<Id extends MailboxId> extends ListeningMessageSearchIndex<Id> {
+public class ElasticSearchListeningMessageSearchIndex extends ListeningMessageSearchIndex {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ElasticSearchListeningMessageSearchIndex.class);
     private final static String ID_SEPARATOR = ":";
-    
+
     private final ElasticSearchIndexer indexer;
-    private final ElasticSearchSearcher<Id> searcher;
+    private final ElasticSearchSearcher searcher;
     private final MessageToElasticSearchJson messageToElasticSearchJson;
 
     @Inject
-    public ElasticSearchListeningMessageSearchIndex(MessageMapperFactory<Id> factory, ElasticSearchIndexer indexer,
-        ElasticSearchSearcher<Id> searcher, MessageToElasticSearchJson messageToElasticSearchJson) {
+    public ElasticSearchListeningMessageSearchIndex(MessageMapperFactory factory, ElasticSearchIndexer indexer,
+        ElasticSearchSearcher searcher, MessageToElasticSearchJson messageToElasticSearchJson) {
         super(factory);
         this.indexer = indexer;
         this.messageToElasticSearchJson = messageToElasticSearchJson;
@@ -64,50 +77,103 @@ public class ElasticSearchListeningMessageSearchIndex<Id extends MailboxId> exte
     }
 
     @Override
-    public Iterator<Long> search(MailboxSession session, Mailbox<Id> mailbox, SearchQuery searchQuery) throws MailboxException {
-        return searcher.search(mailbox, searchQuery);
+    public EnumSet<SearchCapabilities> getSupportedCapabilities() {
+        return EnumSet.of(SearchCapabilities.MultimailboxSearch, SearchCapabilities.Text);
+    }
+    
+    @Override
+    public Iterator<MessageUid> search(MailboxSession session, Mailbox mailbox, SearchQuery searchQuery) throws MailboxException {
+        Preconditions.checkArgument(session != null, "'session' is mandatory");
+        MailboxId mailboxId = mailbox.getMailboxId();
+        MultimailboxesSearchQuery query = MultimailboxesSearchQuery.from(searchQuery).inMailboxes(mailboxId).build();
+        Optional<Long> noLimit = Optional.empty();
+        return searcher
+                .search(ImmutableList.of(session.getUser()), query, noLimit)
+                .map(SearchResult::getMessageUid)
+                .iterator();
+    }
+    
+    @Override
+    public List<MessageId> search(MailboxSession session, MultimailboxesSearchQuery searchQuery, long limit)
+            throws MailboxException {
+        Preconditions.checkArgument(session != null, "'session' is mandatory");
+        return searcher.search(ImmutableList.of(session.getUser()), searchQuery, Optional.empty())
+            .peek(this::logIfNoMessageId)
+            .map(SearchResult::getMessageId)
+            .map(com.google.common.base.Optional::get)
+            .distinct()
+            .limit(limit)
+            .collect(Guavate.toImmutableList());
     }
 
     @Override
-    public void add(MailboxSession session, Mailbox<Id> mailbox, MailboxMessage<Id> message) throws MailboxException {
+    public void add(MailboxSession session, Mailbox mailbox, MailboxMessage message) throws MailboxException {
         try {
-            indexer.indexMessage(indexIdFor(mailbox, message.getUid()), messageToElasticSearchJson.convertToJson(message));
+            indexer.indexMessage(indexIdFor(mailbox, message.getUid()), messageToElasticSearchJson.convertToJson(message, ImmutableList.of(session.getUser())));
         } catch (Exception e) {
-            LOGGER.error("Error when indexing message " + message.getUid(), e);
-        }
-    }
-
-    @Override
-    public void delete(MailboxSession session, Mailbox<Id> mailbox, MessageRange range) throws MailboxException {
-        if (range.getType() == Type.ALL) {
-            indexer.deleteAllWithIdStarting(mailbox.getMailboxId() + ID_SEPARATOR);
-        } else {
-            range.forEach(messageId -> {
-                try {
-                    indexer.deleteMessage(indexIdFor(mailbox, messageId));
-                } catch (Exception e) {
-                    LOGGER.error("Error when deleting index for message " + messageId, e);
-                }
-            });
-        }
-    }
-
-    @Override
-    public void update(MailboxSession session, Mailbox<Id> mailbox, MessageRange range, Flags flags, long modseq) throws MailboxException {
-        range.forEach(messageId -> {
             try {
-                indexer.updateMessage(
-                    indexIdFor(mailbox, messageId),
-                    messageToElasticSearchJson.getUpdatedJsonMessagePart(flags, modseq));
-            } catch (Exception e) {
-                LOGGER.error("Error when updating index for message " + messageId, e);
+                LOGGER.warn("indexing message {} without attachments ", message.getUid());
+                indexer.indexMessage(indexIdFor(mailbox, message.getUid()), messageToElasticSearchJson.convertToJsonWithoutAttachment(message, ImmutableList.of(session.getUser())));
+            } catch (JsonProcessingException e1) {
+                LOGGER.error("Error when indexing message " + message.getUid() + " without its attachment", e1);
             }
-        });
+        }
+    }
+    
+    @Override
+    public void delete(MailboxSession session, Mailbox mailbox, List<MessageUid> expungedUids) throws MailboxException {
+        try {
+            indexer.deleteMessages(expungedUids.stream()
+                .map(uid ->  indexIdFor(mailbox, uid))
+                .collect(Collectors.toList()));
+        } catch (Exception e) {
+            LOGGER.error("Error when deleting messages {} in mailbox {} from index", mailbox.getMailboxId().serialize(), expungedUids, e);
+        }
+    }
 
+    @Override
+    public void deleteAll(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        try {
+            indexer.deleteAllMatchingQuery(
+                termQuery(
+                    JsonMessageConstants.MAILBOX_ID,
+                    mailbox.getMailboxId().serialize()));
+        } catch (Exception e) {
+            LOGGER.error("Error when deleting all messages in mailbox {}", mailbox.getMailboxId().serialize(), e);
+        }
     }
-    
-    private String indexIdFor(Mailbox<Id> mailbox, long messageId) {
-        return String.join(ID_SEPARATOR, mailbox.getMailboxId().serialize(), String.valueOf(messageId));
+
+    @Override
+    public void update(MailboxSession session, Mailbox mailbox, List<UpdatedFlags> updatedFlagsList) throws MailboxException {
+        try {
+            indexer.updateMessages(updatedFlagsList.stream()
+                .map(updatedFlags -> createUpdatedDocumentPartFromUpdatedFlags(mailbox, updatedFlags))
+                .collect(Collectors.toList()));
+        } catch (Exception e) {
+            LOGGER.error("Error when updating index on mailbox {}", mailbox.getMailboxId().serialize(), e);
+        }
     }
-    
+
+    private ElasticSearchIndexer.UpdatedRepresentation createUpdatedDocumentPartFromUpdatedFlags(Mailbox mailbox, UpdatedFlags updatedFlags) {
+        try {
+            return new ElasticSearchIndexer.UpdatedRepresentation(
+                indexIdFor(mailbox, updatedFlags.getUid()),
+                    messageToElasticSearchJson.getUpdatedJsonMessagePart(
+                        updatedFlags.getNewFlags(),
+                        updatedFlags.getModSeq()));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error while creating updatedDocumentParts", e);
+        }
+    }
+
+    private String indexIdFor(Mailbox mailbox, MessageUid uid) {
+        return String.join(ID_SEPARATOR, mailbox.getMailboxId().serialize(), String.valueOf(uid.asLong()));
+    }
+
+    private void logIfNoMessageId(SearchResult searchResult) {
+        if (!searchResult.getMessageId().isPresent()) {
+            LOGGER.error("No messageUid for {} in mailbox {}", searchResult.getMessageUid(), searchResult.getMailboxId());
+        }
+    }
+
 }

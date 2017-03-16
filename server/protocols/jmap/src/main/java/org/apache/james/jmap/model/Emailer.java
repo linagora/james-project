@@ -20,12 +20,15 @@
 package org.apache.james.jmap.model;
 
 import java.util.Objects;
+import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 
 @JsonDeserialize(builder = Emailer.Builder.class)
 public class Emailer {
@@ -36,40 +39,81 @@ public class Emailer {
 
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
-        private String name;
-        private String email;
+        private static final boolean DEFAULT_DISABLE = false;
 
-        public Builder name(String name) {
+        private Optional<Boolean> allowInvalid = Optional.empty();
+        private Optional<String> name = Optional.empty();
+        private Optional<String> email = Optional.empty();
+
+        @JsonProperty("name")
+        public Builder name(Optional<String> name) {
             this.name = name;
             return this;
         }
 
-        public Builder email(String email) {
+        @JsonIgnore
+        public Builder name(String name) {
+            this.name = Optional.ofNullable(name);
+            return this;
+        }
+
+        @JsonProperty("email")
+        public Builder email(Optional<String> email) {
             this.email = email;
             return this;
         }
 
+        @JsonIgnore
+        public Builder email(String email) {
+            this.email = Optional.ofNullable(email);
+            return this;
+        }
+
+        @JsonIgnore
+        public Builder allowInvalid() {
+            this.allowInvalid = Optional.of(true);
+            return this;
+        }
+
         public Emailer build() {
-            Preconditions.checkState(!Strings.isNullOrEmpty(name), "'name' is mandatory");
-            Preconditions.checkState(!Strings.isNullOrEmpty(email), "'email' is mandatory");
-            Preconditions.checkState(email.contains("@"), "'email' must contain '@' character");
+            if (allowInvalid.orElse(DEFAULT_DISABLE)) {
+                return buildRelaxed();
+            } else {
+                return buildStrict();
+            }
+        }
+
+        private Emailer buildStrict() {
+            Preconditions.checkState(name.isPresent(), "'name' is mandatory");
+            Preconditions.checkState(email.isPresent(), "'email' is mandatory");
+            Preconditions.checkState(!name.get().isEmpty(), "'name' should not be empty");
+            Preconditions.checkState(!email.get().isEmpty(), "'email' should not be empty");
+            Preconditions.checkState(email.get().contains("@"), "'email' must contain '@' character");
             return new Emailer(name, email);
+        }
+
+        private Emailer buildRelaxed() {
+            return new Emailer(replaceIfNeeded(name), replaceIfNeeded(email));
+        }
+
+        private Optional<String> replaceIfNeeded(Optional<String> value) {
+            return value.filter(s -> !s.isEmpty());
         }
     }
 
-    private final String name;
-    private final String email;
+    private final Optional<String> name;
+    private final Optional<String> email;
 
-    @VisibleForTesting Emailer(String name, String email) {
+    @VisibleForTesting Emailer(Optional<String> name, Optional<String> email) {
         this.name = name;
         this.email = email;
     }
 
-    public String getName() {
+    public Optional<String> getName() {
         return name;
     }
 
-    public String getEmail() {
+    public Optional<String> getEmail() {
         return email;
     }
 
@@ -90,7 +134,7 @@ public class Emailer {
 
     @Override
     public String toString() {
-        return com.google.common.base.Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
             .add("name", name)
             .add("email", email)
             .toString();

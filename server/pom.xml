@@ -20,18 +20,16 @@
 <!--
     Tag order follows model description at http://maven.apache.org/ref/3.0.3/maven-model/maven.html
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <artifactId>james-project</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>1.8.3-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
     </parent>
 
     <artifactId>james-server</artifactId>
-    <version>3.0.0-beta5-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Apache James :: Server</name>
@@ -58,13 +56,14 @@
         <module>karaf/features</module>
         <module>karaf/integration</module>
 
-        <module>container/cassandra-guice</module>
         <module>container/cli</module>
         <module>container/core</module>
         <module>container/filesystem-api</module>
+        <module>container/guice</module>
         <module>container/jetty</module>
         <module>container/lifecycle-api</module>
         <module>container/mailbox-adapter</module>
+        <module>container/metrics/metrics-es-reporter</module>
         <module>container/spring</module>
         <module>container/util</module>
         <module>container/util-java8</module>
@@ -72,6 +71,7 @@
         <module>mailet/mailetcontainer-api</module>
         <module>mailet/mailetcontainer-camel</module>
         <module>mailet/mailets</module>
+        <module>mailet/integration-testing</module>
 
         <module>dns-service/dnsservice-api</module>
         <module>dns-service/dnsservice-dnsjava</module>
@@ -84,8 +84,10 @@
         <module>data/data-jcr</module>
         <module>data/data-jdbc</module>
         <module>data/data-jmap</module>
+        <module>data/data-jmap-cassandra</module>
         <module>data/data-file</module>
         <module>data/data-ldap</module>
+        <module>data/data-ldap-integration-testing</module>
         <module>data/data-hbase</module>
         <module>data/data-memory</module>
 
@@ -103,13 +105,12 @@
         <module>queue/queue-file</module>
         <module>queue/queue-jms</module>
         <module>queue/queue-activemq</module>
-    </modules>
+        <module>protocols/webadmin</module>
+        <module>protocols/webadmin-integration-test</module>
 
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/james/server/trunk</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/server/trunk</developerConnection>
-        <url>http://svn.apache.org/viewcvs.cgi/james/server/trunk?root=Apache-SVN</url>
-    </scm>
+        <module>testing</module>
+        <module>protocols/jwt</module>
+    </modules>
 
     <distributionManagement>
         <site>
@@ -121,26 +122,24 @@
     <properties>
         <productName>Apache-James Mail Server</productName>
 
-        <activemq.version>5.7.0</activemq.version>
-        <camel.version>2.10.3</camel.version>
+        <activemq.version>5.10.2</activemq.version>
+        <apache-mime4j.version>0.8.0</apache-mime4j.version>
+        <camel.version>2.13.4</camel.version>
         <derby.version>10.9.1.0</derby.version>
         <hadoop.version>1.1.1</hadoop.version>
         <hbase.version>0.94.27</hbase.version>
         <javax.inject.version>1</javax.inject.version>
-        <javax.mail.groupId>org.apache.geronimo.javamail</javax.mail.groupId>
-        <javax.mail.artifactId>geronimo-javamail_1.4_mail</javax.mail.artifactId>
-        <javax.activation.groupId>org.apache.geronimo.specs</javax.activation.groupId>
-        <javax.activation.artifactId>geronimo-activation_1.1_spec</javax.activation.artifactId>
+        <javax.mail.groupId>javax.mail</javax.mail.groupId>
+        <javax.mail.artifactId>javax.mail-api</javax.mail.artifactId>
+        <javax.activation.groupId>javax.activation</javax.activation.groupId>
+        <javax.activation.artifactId>activation</javax.activation.artifactId>
         <jackrabbit.version>2.5.2</jackrabbit.version>
-        <jsieve.version>0.6-SNAPSHOT</jsieve.version>
-        <mailbox.version>0.6-SNAPSHOT</mailbox.version>
-        <mailet.version>2.5.1-SNAPSHOT</mailet.version>
-        <protocols.version>1.6.4-SNAPSHOT</protocols.version>
+        <jsieve.version>0.6</jsieve.version>
         <spring.version>3.2.14.RELEASE</spring.version>
         <geronimo-jms-spec.version>1.1.1</geronimo-jms-spec.version>
         <h2.version>1.3.170</h2.version>
-        <apache-jspf-resolver.version>1.0.1-SNAPSHOT</apache-jspf-resolver.version>
-        <javamail.version>1.4.4</javamail.version>
+        <apache-jspf-resolver.version>1.0.1</apache-jspf-resolver.version>
+        <javamail.version>1.5.4</javamail.version>
         <javax-activation.version>1.1.1</javax-activation.version>
         <geronimo-activation-spec.version>1.1</geronimo-activation-spec.version>
         <geronimo-javamail.version>1.8.3</geronimo-javamail.version>
@@ -165,17 +164,14 @@
         <jmock.version>2.6.0</jmock.version>
         <concurrent.version>1.3.4</concurrent.version>
         <log4j.version>1.2.17</log4j.version>
-        <openjpa.version>2.2.1</openjpa.version>
-        <geronimo-jpa-spec.version>1.1</geronimo-jpa-spec.version>
         <jcr.version>2.0</jcr.version>
-        <tika-parsers.version>1.2</tika-parsers.version>
         <xbean-spring.version>3.12</xbean-spring.version>
-        <netty.version>3.10.5.Final</netty.version>
+        <netty.version>3.10.6.Final</netty.version>
         <geronimo-annotation-spec.version>1.0.1</geronimo-annotation-spec.version>
         <spring-osgi-extender.version>1.2.1</spring-osgi-extender.version>
         <org.osgi.core.version>5.0.0</org.osgi.core.version>
-        <guava.version>16.0</guava.version>
-        <cucumber.version>1.2.3</cucumber.version>
+        <guava.version>18.0</guava.version>
+        <cucumber.version>1.2.4</cucumber.version>
 
         <!-- karaf dependencies -->
         <exam.version>2.6.0</exam.version>
@@ -186,13 +182,16 @@
         <karaf.tooling.exam.container.version>2.3.0</karaf.tooling.exam.container.version>
         <pax-logging-api.version>1.6.4</pax-logging-api.version>
         <mockito-core.version>1.9.0</mockito-core.version>
-        <backends.version>1.8.3-SNAPSHOT</backends.version>
-        <apache-backends-cassandra.version>1.8.3-SNAPSHOT</apache-backends-cassandra.version>
         <jackson-data.version>2.6.3</jackson-data.version>
         <jetty.version>9.3.5.v20151012</jetty.version>
         <cassandra-unit.version>2.1.9.2</cassandra-unit.version>
         <assertj-1.version>1.7.1</assertj-1.version>
-        <assertj-3.version>3.2.0</assertj-3.version>
+        <assertj-1-guava.version>1.3.1</assertj-1-guava.version>
+        <assertj-3.version>3.3.0</assertj-3.version>
+        <testcontainers-version>1.1.7</testcontainers-version>
+        <guavate.version>1.0.0</guavate.version>
+        <metrics.version>3.1.0</metrics.version>
+        <joda.version>2.9.4</joda.version>
     </properties>
 
     <dependencyManagement>
@@ -224,6 +223,43 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-cassandra-ldap-guice</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-onami</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-common</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-jmap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-jmap</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-mailbox</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
@@ -319,19 +355,46 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
-                <artifactId>apache-james-backends-cassandra</artifactId>
-                <version>${apache-backends-cassandra.version}</version>
+                <artifactId>james-server-testing</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-backends-cassandra</artifactId>
-                <version>${apache-backends-cassandra.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-cassandra</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-es</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-es</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-jpa</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-jpa</artifactId>
+                <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-mailet-api</artifactId>
-                <version>${mailet.version}</version>
+                <version>${project.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
@@ -342,7 +405,7 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-mailet-base</artifactId>
-                <version>${mailet.version}</version>
+                <version>${project.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
@@ -355,6 +418,13 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-mailet-base</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-jms_1.1_spec</artifactId>
                 <version>${geronimo-jms-spec.version}</version>
@@ -362,7 +432,7 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-mailet-base</artifactId>
-                <version>${mailet.version}</version>
+                <version>${project.version}</version>
                 <classifier>tests</classifier>
                 <scope>test</scope>
                 <exclusions>
@@ -375,7 +445,7 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-mailet-standard</artifactId>
-                <version>${mailet.version}</version>
+                <version>${project.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
@@ -386,7 +456,7 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-mailet-standard</artifactId>
-                <version>${mailet.version}</version>
+                <version>${project.version}</version>
                 <classifier>tests</classifier>
                 <scope>test</scope>
                 <exclusions>
@@ -398,46 +468,62 @@
             </dependency>
 
             <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>metrics-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>metrics-dropwizard</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>metrics-logger</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-api</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-api</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-netty</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-pop3</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-smtp</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-lmtp</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-managesieve</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-managesieve</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
             </dependency>
@@ -526,7 +612,24 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-jmap</artifactId>
+                <scope>test</scope>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-jmap-cassandra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
                 <artifactId>james-server-data-jcr</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-memory</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -551,6 +654,17 @@
                 <artifactId>james-server-data-library</artifactId>
                 <version>${project.version}</version>
                 <scope>test</scope>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-memory-guice</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-memory-guice</artifactId>
+                <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
@@ -564,69 +678,110 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-jmap-integration-testing</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-webadmin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-smtp</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-memory</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-memory</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-cassandra</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-cassandra</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-kafka</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-api</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-api</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-elasticsearch</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-elasticsearch</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-tika</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.pdfbox</groupId>
+                        <artifactId>pdfbox</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.poi</groupId>
+                        <artifactId>poi-ooxml</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.poi</groupId>
+                        <artifactId>poi-scratchpad</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>edu.ucar</groupId>
+                        <artifactId>netcdf</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-spring</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-lucene</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-imap</artifactId>
-                <version>${protocols.version}</version>
+                <version>${project.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -638,12 +793,22 @@
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-hbase</artifactId>
                 <classifier>tests</classifier>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>james-server-data-ldap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-ldap-integration-testing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-jwt</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -687,31 +852,43 @@
                 <artifactId>james-server-util-java8</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-util-java8</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
 
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-maildir</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-jpa</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-jpa</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-tool</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-jcr</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-store</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-collections</groupId>
@@ -726,7 +903,7 @@
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-store</artifactId>
-                <version>${mailbox.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
                 <exclusions>
                     <exclusion>
@@ -785,20 +962,17 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
-                <artifactId>apache-jsieve-mailet</artifactId>
-                <version>${jsieve.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>javax.activation</groupId>
-                        <artifactId>activation</artifactId>
-                    </exclusion>
-                </exclusions>
+                <artifactId>apache-mime4j-dom</artifactId>
+                <version>${apache-mime4j.version}</version>
             </dependency>
-            <!-- Declare javamail as provided to be able to easily switch -->
-            <!-- to different implementations (Geronimo) -->
             <dependency>
-                <groupId>javax.mail</groupId>
-                <artifactId>mail</artifactId>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-mime4j-james-utils</artifactId>
+                <version>${apache-mime4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.mail</groupId>
+                <artifactId>javax.mail</artifactId>
                 <version>${javamail.version}</version>
                 <exclusions>
                     <exclusion>
@@ -823,9 +997,9 @@
                 <version>${geronimo-activation-spec.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.geronimo.javamail</groupId>
-                <artifactId>geronimo-javamail_1.4_mail</artifactId>
-                <version>${geronimo-javamail.version}</version>
+                <groupId>com.jason-goodwin</groupId>
+                <artifactId>better-monads</artifactId>
+                <version>0.4.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-daemon</groupId>
@@ -841,6 +1015,11 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
                 <version>4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>java-hamcrest</artifactId>
+                <version>2.0.0.0</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -935,7 +1114,6 @@
                 <groupId>commons-net</groupId>
                 <artifactId>commons-net</artifactId>
                 <version>${commons-net.version}</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
@@ -958,6 +1136,11 @@
                 <version>2.6.1</version>
             </dependency>
             <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>4.0.0</version>
+            </dependency>
+            <dependency>
                 <groupId>dnsjava</groupId>
                 <artifactId>dnsjava</artifactId>
                 <version>${dnsjava.version}</version>
@@ -974,6 +1157,11 @@
                 <artifactId>jmock</artifactId>
                 <version>${jmock.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.xenei</groupId>
+                <artifactId>junit-contracts</artifactId>
+                <version>0.1.5</version>
             </dependency>
             <dependency>
                 <groupId>pl.pragmatists</groupId>
@@ -1090,18 +1278,6 @@
             </dependency>
 
             <dependency>
-                <groupId>org.apache.openjpa</groupId>
-                <artifactId>openjpa</artifactId>
-                <version>${openjpa.version}</version>
-                <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.geronimo.specs</groupId>
-                <artifactId>geronimo-jpa_2.0_spec</artifactId>
-                <version>${geronimo-jpa-spec.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>javax.jcr</groupId>
                 <artifactId>jcr</artifactId>
                 <version>${jcr.version}</version>
@@ -1135,30 +1311,6 @@
             </dependency>
 
             <dependency>
-                <groupId>org.apache.tika</groupId>
-                <artifactId>tika-parsers</artifactId>
-                <version>${tika-parsers.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.apache.pdfbox</groupId>
-                        <artifactId>pdfbox</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.poi</groupId>
-                        <artifactId>poi-ooxml</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.poi</groupId>
-                        <artifactId>poi-scratchpad</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>edu.ucar</groupId>
-                        <artifactId>netcdf</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-
-            <dependency>
                 <groupId>org.apache.camel</groupId>
                 <artifactId>camel-core</artifactId>
                 <version>${camel.version}</version>
@@ -1178,7 +1330,7 @@
 
             <dependency>
                 <groupId>org.apache.activemq</groupId>
-                <artifactId>activemq-core</artifactId>
+                <artifactId>activemq-broker</artifactId>
                 <version>${activemq.version}</version>
                 <exclusions>
                     <exclusion>
@@ -1216,6 +1368,11 @@
                 <artifactId>netty</artifactId>
                 <version>${netty.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
             <!-- This needed to let the bundle plugin to generate the right import statement -->
             <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
@@ -1223,6 +1380,11 @@
                 <version>${geronimo-annotation-spec.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.github.steveash.guavate</groupId>
+                <artifactId>guavate</artifactId>
+                <version>${guavate.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
@@ -1317,9 +1479,9 @@
                 <version>4.0</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.onami.lifecycle</groupId>
-                <artifactId>org.apache.onami.lifecycle.jsr250</artifactId>
-                <version>0.2.0-SNAPSHOT</version>
+                <groupId>com.nurkiewicz.asyncretry</groupId>
+                <artifactId>asyncretry</artifactId>
+                <version>0.0.7</version>
             </dependency>
 
             <!-- Apache Felix Karaf integration -->
@@ -1374,6 +1536,11 @@
             </dependency>
             <dependency>
                 <groupId>info.cukes</groupId>
+                <artifactId>cucumber-guice</artifactId>
+                <version>${cucumber.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>info.cukes</groupId>
                 <artifactId>cucumber-java</artifactId>
                 <version>${cucumber.version}</version>
             </dependency>
@@ -1386,7 +1553,11 @@
                 <groupId>info.cukes</groupId>
                 <artifactId>cucumber-picocontainer</artifactId>
                 <version>${cucumber.version}</version>
-                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>${joda.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.github.fge</groupId>
@@ -1396,7 +1567,7 @@
             <dependency>
                 <groupId>com.jayway.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
-                <version>1.6.3</version>
+                <version>1.6.5</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
@@ -1415,8 +1586,13 @@
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
-                <artifactId>bcprov-jdk16</artifactId>
-                <version>1.46</version>
+                <artifactId>bcprov-jdk15on</artifactId>
+                <version>1.52</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
+                <version>1.52</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
@@ -1432,6 +1608,16 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
                 <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.elasticsearch</groupId>
+                <artifactId>metrics-elasticsearch-reporter</artifactId>
+                <version>2.2.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>${testcontainers-version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -1486,15 +1672,6 @@
     </build>
 
     <profiles>
-        <profile>
-            <id>oracle-javamail</id>
-            <properties>
-                <javax.activation.groupId>javax.activation</javax.activation.groupId>
-                <javax.activation.artifactId>activation</javax.activation.artifactId>
-                <javax.mail.groupId>javax.mail</javax.mail.groupId>
-                <javax.mail.artifactId>mail</javax.mail.artifactId>
-            </properties>
-        </profile>
         <profile>
             <!-- run live tests, ie. ones that do not run stably enough in
             a CI environment (for example, karaf integration tests accessing external network

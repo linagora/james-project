@@ -25,16 +25,20 @@ import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.CreateRequest;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
+import org.apache.james.mailbox.exception.TooLongMailboxNameException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.MetricFactory;
 
 public class CreateProcessor extends AbstractMailboxProcessor<CreateRequest> {
 
-    public CreateProcessor(final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory factory) {
-        super(CreateRequest.class, next, mailboxManager, factory);
+    public CreateProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(CreateRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     /**
@@ -45,7 +49,7 @@ public class CreateProcessor extends AbstractMailboxProcessor<CreateRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(CreateRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = buildFullPath(session, request.getMailboxName());
+        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
         try {
             final MailboxManager mailboxManager = getMailboxManager();
             mailboxManager.createMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
@@ -56,6 +60,11 @@ public class CreateProcessor extends AbstractMailboxProcessor<CreateRequest> {
                 session.getLog().debug("Create failed for mailbox " + mailboxPath + " as it already exists", e);
             }
             no(command, tag, responder, HumanReadableText.MAILBOX_EXISTS);
+        } catch (TooLongMailboxNameException e) {
+            if (session.getLog().isDebugEnabled()) {
+                session.getLog().debug("The mailbox name length is over limit: " + mailboxPath.getName(), e);
+            }
+            taggedBad(command, tag, responder, HumanReadableText.FAILURE_MAILBOX_NAME);
         } catch (MailboxException e) {
             if (session.getLog().isInfoEnabled()) {
                 session.getLog().info("Create failed for mailbox " + mailboxPath, e);

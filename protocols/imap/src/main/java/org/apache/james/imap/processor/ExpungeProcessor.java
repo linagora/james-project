@@ -40,16 +40,19 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.metrics.api.MetricFactory;
 
 public class ExpungeProcessor extends AbstractMailboxProcessor<ExpungeRequest> implements CapabilityImplementingProcessor {
 
     private final static List<String> UIDPLUS = Collections.unmodifiableList(Arrays.asList("UIDPLUS"));
 
-    public ExpungeProcessor(final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory factory) {
-        super(ExpungeRequest.class, next, mailboxManager, factory);
+    public ExpungeProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(ExpungeRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     protected void doProcess(ExpungeRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
@@ -104,12 +107,12 @@ public class ExpungeProcessor extends AbstractMailboxProcessor<ExpungeRequest> i
     }
 
     private int expunge(MessageManager mailbox, MessageRange range, ImapSession session, MailboxSession mailboxSession) throws MailboxException {
-        final Iterator<Long> it = mailbox.expunge(range, mailboxSession);
+        final Iterator<MessageUid> it = mailbox.expunge(range, mailboxSession);
         final SelectedMailbox selected = session.getSelected();
         int expunged = 0;
         if (mailboxSession != null) {
             while (it.hasNext()) {
-                final long uid = it.next();
+                final MessageUid uid = it.next();
                 selected.removeRecent(uid);
                 expunged++;
             }

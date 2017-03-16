@@ -21,14 +21,19 @@ package org.apache.james.mpt.protocol;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.apache.james.mpt.api.ProtocolInteractor;
 import org.apache.james.mpt.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Stopwatch;
 
 /**
  * A protocol session which can be run against a reader and writer, which checks
@@ -57,6 +62,8 @@ public class ProtocolSession implements ProtocolInteractor {
     private ProtocolElement nextTest;
 
     private boolean continueAfterFailure = false;
+
+    private Map<String, Stopwatch> timers = new HashMap<String, Stopwatch>();
 
     public final boolean isContinueAfterFailure() {
         return continueAfterFailure;
@@ -200,6 +207,15 @@ public class ProtocolSession implements ProtocolInteractor {
     public void LOG(int sessionNumber, LolLevel level, String message) {
         this.maxSessionNumber = Math.max(this.maxSessionNumber, sessionNumber);
         testElements.add(new LogElement(level, message));
+    }
+
+    public void REINIT(int sessionNumber) {
+        this.maxSessionNumber = Math.max(this.maxSessionNumber, sessionNumber);
+        testElements.add(new ReinitElement(sessionNumber));
+    }
+
+    public void TIMER(TimerCommand timerCommand, String timerName) {
+        testElements.add(new TimerElement(timerCommand, timerName));
     }
 
     /**
@@ -466,8 +482,8 @@ public class ProtocolSession implements ProtocolInteractor {
 
         private final int sessionNumber;
 
-        public ContinuationElement(final int sessionNumber) throws Exception {
-            this.sessionNumber = sessionNumber < 0 ? 0 : sessionNumber;
+        public ContinuationElement(int sessionNumber) throws Exception {
+            this.sessionNumber = Math.max(0, sessionNumber);
         }
 
         public void testProtocol(Session[] sessions, boolean continueAfterFailure) throws Exception {
@@ -492,6 +508,95 @@ public class ProtocolSession implements ProtocolInteractor {
             }
         }
 
+        public boolean isClient() {
+            return false;
+        }
+    }
+
+    private class ReinitElement implements ProtocolElement {
+
+        private final int sessionNumber;
+
+        public ReinitElement(int sessionNumber) {
+            this.sessionNumber = Math.max(0, sessionNumber);
+        }
+
+        public void testProtocol(Session[] sessions, boolean continueAfterFailure) throws Exception {
+            Session session = sessions[sessionNumber];
+            session.restart();
+        }
+
+        public boolean isClient() {
+            return false;
+        }
+    }
+
+    protected enum TimerCommand {
+        START, PRINT, RESET;
+
+        public static TimerCommand from(String value) throws InvalidServerResponseException {
+            if (value.equalsIgnoreCase("start")) {
+                return START;
+            }
+            if (value.equalsIgnoreCase("print")) {
+                return PRINT;
+            }
+            if (value.equalsIgnoreCase("reset")) {
+                return RESET;
+            }
+            throw new InvalidServerResponseException("Invalid TIMER command '" + value + "'");
+        }
+    }
+
+    private class TimerElement implements ProtocolElement {
+
+        private TimerCommand timerCommand;
+        private String timerName;
+
+        public TimerElement(TimerCommand timerCommand, String timerName) {
+            this.timerCommand = timerCommand;
+            this.timerName = timerName;
+        }
+
+        @Override
+        public void testProtocol(Session[] sessions, boolean continueAfterFailure) throws Exception {
+            switch(timerCommand) {
+            case START:
+                start();
+                break;
+            case PRINT:
+                print();
+                break;
+            case RESET:
+                reset();
+                break;
+            default:
+                throw new InvalidServerResponseException("Invalid TIMER command '" + timerCommand + "' for timer name: '" + timerName + "'");
+            }
+        }
+
+        private void start() {
+            timers.put(timerName, Stopwatch.createStarted());
+        }
+
+        private void print() throws InvalidServerResponseException {
+            Stopwatch stopwatch = timers.get(timerName);
+            if (stopwatch == null) {
+                throw new InvalidServerResponseException("TIMER '" + timerName + "' undefined");
+            }
+            LOGGER.info("Time spent in '" + timerName + "': " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " ms");
+        }
+
+        private void reset() throws InvalidServerResponseException {
+            Stopwatch stopwatch = timers.get(timerName);
+            if (stopwatch == null) {
+                throw new InvalidServerResponseException("TIMER '" + timerName + "' undefined");
+            }
+            stopwatch.reset();
+            stopwatch.start();
+        }
+
+        @Override
         public boolean isClient() {
             return false;
         }

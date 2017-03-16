@@ -19,24 +19,21 @@
 
 package org.apache.james.jmap.model;
 
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.Predicate;
 
-import com.fasterxml.jackson.annotation.JsonFilter;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.GetMessagesMethod;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
-import org.apache.james.jmap.model.message.EMailer;
-import org.apache.james.jmap.model.message.IndexableMessage;
-import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
@@ -44,128 +41,26 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 @JsonDeserialize(builder = Message.Builder.class)
 @JsonFilter(JmapResponseWriterImpl.PROPERTIES_FILTER)
 public class Message {
-    public static final String NO_SUBJECT = "(No subject)";
-    public static final String MULTIVALUED_HEADERS_SEPARATOR = ", ";
-    public static final String NO_BODY = "(Empty)";
-    public static final ZoneId UTC_ZONE_ID = ZoneId.of("Z");
 
     public static Builder builder() {
         return new Builder();
     }
 
-    public static Message fromMailboxMessage(MailboxMessage<? extends MailboxId> mailboxMessage,
-            Function<Long, MessageId> uidToMessageId) {
-        IndexableMessage im = IndexableMessage.from(mailboxMessage, new DefaultTextExtractor(), UTC_ZONE_ID);
-        if (im.getHasAttachment()) {
-            throw new NotImplementedException();
-        }
-        return builder()
-                .id(uidToMessageId.apply(im.getId()))
-                .blobId(String.valueOf(im.getId()))
-                .threadId(String.valueOf(im.getId()))
-                .mailboxIds(ImmutableList.of(im.getMailboxId()))
-                .inReplyToMessageId(getHeaderAsSingleValue(im, "in-reply-to"))
-                .isUnread(im.isUnRead())
-                .isFlagged(im.isFlagged())
-                .isAnswered(im.isAnswered())
-                .isDraft(im.isDraft())
-                .subject(getSubject(im))
-                .headers(toMap(im.getHeaders()))
-                .from(firstElasticSearchEmailers(im.getFrom()))
-                .to(fromElasticSearchEmailers(im.getTo()))
-                .cc(fromElasticSearchEmailers(im.getCc()))
-                .bcc(fromElasticSearchEmailers(im.getBcc()))
-                .replyTo(fromElasticSearchEmailers(im.getReplyTo()))
-                .size(im.getSize())
-                .date(getInternalDate(mailboxMessage, im))
-                .preview(getPreview(im))
-                .textBody(im.getBodyText().map(Strings::emptyToNull).orElse(null))
-                .build();
-    }
-
-    private static String getSubject(IndexableMessage im) {
-        return Optional.ofNullable(
-                    Strings.emptyToNull(
-                        im.getSubjects()
-                            .stream()
-                            .collect(Collectors.joining(MULTIVALUED_HEADERS_SEPARATOR))))
-                .orElse(NO_SUBJECT);
-    }
-    
-    private static Emailer firstElasticSearchEmailers(Set<EMailer> emailers) {
-        return emailers.stream()
-                    .findFirst()
-                    .map(Message::fromElasticSearchEmailer)
-                    .orElse(null);
-    }
-    
-    private static ImmutableList<Emailer> fromElasticSearchEmailers(Set<EMailer> emailers) {
-        return emailers.stream()
-                    .map(Message::fromElasticSearchEmailer)
-                    .collect(org.apache.james.util.streams.Collectors.toImmutableList());
-    }
-    
-    private static Emailer fromElasticSearchEmailer(EMailer emailer) {
-        return Emailer.builder()
-                    .name(emailer.getName())
-                    .email(emailer.getAddress())
-                    .build();
-    }
-    
-    private static String getPreview(IndexableMessage im) {
-        return Optional.ofNullable(
-                Strings.emptyToNull(
-                    im.getBodyText()
-                        .map(Message::computePreview)
-                        .orElse(NO_BODY)))
-            .orElse(NO_BODY);
-    }
-
-    @VisibleForTesting static String computePreview(String body) {
-        if (body.length() <= 256) {
-            return body;
-        }
-        return body.substring(0, 253) + "...";
-    }
-    
-    private static ImmutableMap<String, String> toMap(Multimap<String, String> multimap) {
-        return multimap
-                .asMap()
-                .entrySet()
-                .stream()
-                .collect(org.apache.james.util.streams.Collectors.toImmutableMap(Map.Entry::getKey, x -> joinOnComma(x.getValue())));
-    }
-    
-    private static String getHeaderAsSingleValue(IndexableMessage im, String header) {
-        return Strings.emptyToNull(joinOnComma(im.getHeaders().get(header)));
-    }
-    
-    private static String joinOnComma(Iterable<String> iterable) {
-        return String.join(MULTIVALUED_HEADERS_SEPARATOR, iterable);
-    }
-    
-    private static ZonedDateTime getInternalDate(MailboxMessage<? extends MailboxId> mailboxMessage, IndexableMessage im) {
-        return ZonedDateTime.ofInstant(mailboxMessage.getInternalDate().toInstant(), UTC_ZONE_ID);
-    }
-
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
         private MessageId id;
-        private String blobId;
+        private BlobId blobId;
         private String threadId;
-        private ImmutableList<String> mailboxIds;
+        private ImmutableList<MailboxId> mailboxIds;
         private String inReplyToMessageId;
         private boolean isUnread;
         private boolean isFlagged;
         private boolean isAnswered;
         private boolean isDraft;
-        private boolean hasAttachment;
         private ImmutableMap<String, String> headers;
         private Emailer from;
         private final ImmutableList.Builder<Emailer> to;
@@ -179,7 +74,7 @@ public class Message {
         private String textBody;
         private String htmlBody;
         private final ImmutableList.Builder<Attachment> attachments;
-        private final ImmutableMap.Builder<String, SubMessage> attachedMessages;
+        private final ImmutableMap.Builder<BlobId, SubMessage> attachedMessages;
 
         private Builder() {
             to = ImmutableList.builder();
@@ -195,7 +90,7 @@ public class Message {
             return this;
         }
 
-        public Builder blobId(String blobId) {
+        public Builder blobId(BlobId blobId) {
             this.blobId = blobId;
             return this;
         }
@@ -205,8 +100,18 @@ public class Message {
             return this;
         }
 
-        public Builder mailboxIds(ImmutableList<String> mailboxIds) {
-            this.mailboxIds = mailboxIds;
+        @JsonIgnore
+        public Builder mailboxId(MailboxId mailboxId) {
+            return this.fluentMailboxIds(mailboxId);
+        }
+
+        @JsonIgnore
+        public Builder fluentMailboxIds(MailboxId... mailboxIds) {
+            return this.mailboxIds(Arrays.asList((mailboxIds)));
+        }
+
+        public Builder mailboxIds(Collection<MailboxId> mailboxIds) {
+            this.mailboxIds = ImmutableList.copyOf(mailboxIds);
             return this;
         }
 
@@ -232,11 +137,6 @@ public class Message {
 
         public Builder isDraft(boolean isDraft) {
             this.isDraft = isDraft;
-            return this;
-        }
-
-        public Builder hasAttachment(boolean hasAttachment) {
-            this.hasAttachment = hasAttachment;
             return this;
         }
 
@@ -305,40 +205,54 @@ public class Message {
             return this;
         }
 
-        public Builder attachedMessages(Map<String, SubMessage> attachedMessages) {
+        public Builder attachedMessages(Map<BlobId, SubMessage> attachedMessages) {
             this.attachedMessages.putAll(attachedMessages);
             return this;
         }
 
         public Message build() {
             Preconditions.checkState(id != null, "'id' is mandatory");
-            Preconditions.checkState(!Strings.isNullOrEmpty(blobId), "'blobId' is mandatory");
+            Preconditions.checkState(blobId != null, "'blobId' is mandatory");
             Preconditions.checkState(!Strings.isNullOrEmpty(threadId), "'threadId' is mandatory");
             Preconditions.checkState(mailboxIds != null, "'mailboxIds' is mandatory");
             Preconditions.checkState(headers != null, "'headers' is mandatory");
-            Preconditions.checkState(!Strings.isNullOrEmpty(subject), "'subject' is mandatory");
             Preconditions.checkState(size != null, "'size' is mandatory");
             Preconditions.checkState(date != null, "'date' is mandatory");
             Preconditions.checkState(!Strings.isNullOrEmpty(preview), "'preview' is mandatory");
             ImmutableList<Attachment> attachments = this.attachments.build();
-            ImmutableMap<String, SubMessage> attachedMessages = this.attachedMessages.build();
+            ImmutableMap<BlobId, SubMessage> attachedMessages = this.attachedMessages.build();
             Preconditions.checkState(areAttachedMessagesKeysInAttachments(attachments, attachedMessages), "'attachedMessages' keys must be in 'attachements'");
+            boolean hasAttachment = hasAttachment(attachments);
 
             return new Message(id, blobId, threadId, mailboxIds, Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, hasAttachment, headers, Optional.ofNullable(from),
                     to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, size, preview, Optional.ofNullable(textBody), Optional.ofNullable(htmlBody), attachments, attachedMessages);
         }
     }
 
-    protected static boolean areAttachedMessagesKeysInAttachments(ImmutableList<Attachment> attachments, ImmutableMap<String, SubMessage> attachedMessages) {
-        return attachments.stream()
+    protected static boolean areAttachedMessagesKeysInAttachments(ImmutableList<Attachment> attachments, ImmutableMap<BlobId, SubMessage> attachedMessages) {
+        return attachedMessages.isEmpty() || attachedMessages.keySet().stream()
+                .anyMatch(inAttachments(attachments));
+    }
+
+    private static Predicate<BlobId> inAttachments(ImmutableList<Attachment> attachments) {
+        return (key) -> {
+            return attachments.stream()
                 .map(Attachment::getBlobId)
-                .allMatch(attachedMessages::containsKey);
+                .anyMatch(blobId -> blobId.equals(key));
+        };
+    }
+
+    private static boolean hasAttachment(List<Attachment> attachments) {
+        return attachments.stream()
+                .filter(attachment -> !attachment.isIsInline())
+                .findAny()
+                .isPresent();
     }
 
     private final MessageId id;
-    private final String blobId;
+    private final BlobId blobId;
     private final String threadId;
-    private final ImmutableList<String> mailboxIds;
+    private final ImmutableList<MailboxId> mailboxIds;
     private final Optional<String> inReplyToMessageId;
     private final boolean isUnread;
     private final boolean isFlagged;
@@ -359,11 +273,11 @@ public class Message {
     private final Optional<String> textBody;
     private final Optional<String> htmlBody;
     private final ImmutableList<Attachment> attachments;
-    private final ImmutableMap<String, SubMessage> attachedMessages;
+    private final ImmutableMap<BlobId, SubMessage> attachedMessages;
 
-    @VisibleForTesting Message(MessageId id, String blobId, String threadId, ImmutableList<String> mailboxIds, Optional<String> inReplyToMessageId, boolean isUnread, boolean isFlagged, boolean isAnswered, boolean isDraft, boolean hasAttachment, ImmutableMap<String, String> headers, Optional<Emailer> from,
+    @VisibleForTesting Message(MessageId id, BlobId blobId, String threadId, ImmutableList<MailboxId> mailboxIds, Optional<String> inReplyToMessageId, boolean isUnread, boolean isFlagged, boolean isAnswered, boolean isDraft, boolean hasAttachment, ImmutableMap<String, String> headers, Optional<Emailer> from,
             ImmutableList<Emailer> to, ImmutableList<Emailer> cc, ImmutableList<Emailer> bcc, ImmutableList<Emailer> replyTo, String subject, ZonedDateTime date, long size, String preview, Optional<String> textBody, Optional<String> htmlBody, ImmutableList<Attachment> attachments,
-            ImmutableMap<String, SubMessage> attachedMessages) {
+            ImmutableMap<BlobId, SubMessage> attachedMessages) {
         this.id = id;
         this.blobId = blobId;
         this.threadId = threadId;
@@ -394,7 +308,7 @@ public class Message {
         return id;
     }
 
-    public String getBlobId() {
+    public BlobId getBlobId() {
         return blobId;
     }
 
@@ -402,7 +316,7 @@ public class Message {
         return threadId;
     }
 
-    public ImmutableList<String> getMailboxIds() {
+    public ImmutableList<MailboxId> getMailboxIds() {
         return mailboxIds;
     }
 
@@ -482,7 +396,7 @@ public class Message {
         return attachments;
     }
 
-    public ImmutableMap<String, SubMessage> getAttachedMessages() {
+    public ImmutableMap<BlobId, SubMessage> getAttachedMessages() {
         return attachedMessages;
     }
 

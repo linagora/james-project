@@ -29,6 +29,7 @@ import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.GetACLRequest;
 import org.apache.james.imap.message.response.ACLResponse;
 import org.apache.james.mailbox.MailboxManager;
@@ -40,6 +41,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.metrics.api.MetricFactory;
 import org.slf4j.Logger;
 
 /**
@@ -50,8 +52,9 @@ public class GetACLProcessor extends AbstractMailboxProcessor<GetACLRequest> imp
 
     private static final List<String> CAPABILITIES = Collections.singletonList(ImapConstants.SUPPORTS_ACL);
 
-    public GetACLProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(GetACLRequest.class, next, mailboxManager, factory);
+    public GetACLProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(GetACLRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     @Override
@@ -62,7 +65,7 @@ public class GetACLProcessor extends AbstractMailboxProcessor<GetACLRequest> imp
         final String mailboxName = message.getMailboxName();
         try {
 
-            MailboxPath mailboxPath = buildFullPath(session, mailboxName);
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
             // Check that mailbox exists
             MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
             /*

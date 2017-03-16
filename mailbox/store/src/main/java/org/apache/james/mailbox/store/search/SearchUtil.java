@@ -19,8 +19,12 @@
 package org.apache.james.mailbox.store.search;
 
 import java.nio.charset.Charset;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mime4j.codec.DecodeMonitor;
 import org.apache.james.mime4j.codec.DecoderUtil;
 import org.apache.james.mime4j.dom.address.Address;
@@ -30,6 +34,8 @@ import org.apache.james.mime4j.dom.address.Mailbox;
 import org.apache.james.mime4j.dom.address.MailboxList;
 import org.apache.james.mime4j.field.address.LenientAddressParser;
 import org.apache.james.mime4j.util.MimeUtil;
+
+import com.google.common.base.Predicate;
 
 /**
  * Utility class which helps with extracting of data for searches
@@ -170,6 +176,18 @@ public class SearchUtil {
             }
         }
         return "";
+    }
+
+
+    public static String getSerializedMessageIdIfSupportedByUnderlyingStorageOrNull(MailboxMessage mailboxMessage) {
+        try {
+            MessageId messageId = mailboxMessage.getMessageId();
+            if (messageId != null) {
+                return messageId.serialize();
+            }
+        } catch(UnsupportedOperationException e) {}
+
+        return null;
     }
     
     
@@ -456,6 +474,17 @@ public class SearchUtil {
             return subject.substring(i);
         }
 
+    }
+
+    public static Predicate<MessageId> distinct() {
+        return new Predicate<MessageId>() {
+            private final Set<MessageId> set = new HashSet<MessageId>();
+
+            @Override
+            public boolean apply(MessageId input) {
+                return set.add(input);
+            }
+        };
     }
 
 

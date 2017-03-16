@@ -21,52 +21,64 @@ package org.apache.james.mailbox.store.json;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.collect.Lists;
+import java.util.TreeMap;
+
+import javax.mail.Flags;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.model.TestId;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
-import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.event.EventSerializer;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.mail.Flags;
-import java.util.TreeMap;
+import com.google.common.collect.Lists;
 
 public abstract class EventSerializerTest {
 
-    public static final long UID = 42L;
+    public static final MessageUid UID = MessageUid.of(42);
     public static final long MOD_SEQ = 24L;
-    public static final UpdatedFlags UPDATED_FLAGS = new UpdatedFlags(UID, MOD_SEQ, new Flags(), new Flags(Flags.Flag.SEEN));
     public static final Flags FLAGS = new Flags();
+    public static final UpdatedFlags UPDATED_FLAGS = UpdatedFlags.builder()
+        .uid(UID)
+        .modSeq(MOD_SEQ)
+        .oldFlags(FLAGS)
+        .newFlags(new Flags(Flags.Flag.SEEN))
+        .build();
     public static final long SIZE = 45L;
-    public static final SimpleMessageMetaData MESSAGE_META_DATA = new SimpleMessageMetaData(UID, MOD_SEQ, FLAGS, SIZE, null);
+    private static final MessageId MESSAGE_ID = new TestMessageId.Factory().generate();
+    public static final SimpleMessageMetaData MESSAGE_META_DATA = new SimpleMessageMetaData(UID, MOD_SEQ, FLAGS, SIZE, null, MESSAGE_ID);
     public static final MailboxPath FROM = new MailboxPath("namespace", "user", "name");
+
     private EventSerializer serializer;
-    private EventFactory<TestId> eventFactory;
+    private EventFactory eventFactory;
     private MailboxSession mailboxSession;
-    private SimpleMailbox<TestId> mailbox;
+    private SimpleMailbox mailbox;
 
     abstract EventSerializer createSerializer();
 
     @Before
     public void setUp() {
-        eventFactory = new EventFactory<TestId>();
+        eventFactory = new EventFactory();
         serializer = createSerializer();
         mailboxSession = new MockMailboxSession("benwa");
-        mailbox = new SimpleMailbox<TestId>(new MailboxPath("#private", "benwa", "name"), 42);
+        mailbox = new SimpleMailbox(new MailboxPath("#private", "benwa", "name"), 42);
         mailbox.setMailboxId(TestId.of(28L));
     }
 
     @Test
     public void addedEventShouldBeWellConverted() throws Exception {
-        TreeMap<Long, MessageMetaData> treeMap = new TreeMap<Long, MessageMetaData>();
+        TreeMap<MessageUid, MessageMetaData> treeMap = new TreeMap<MessageUid, MessageMetaData>();
         treeMap.put(UID, MESSAGE_META_DATA);
         MailboxListener.Event event = eventFactory.added(mailboxSession, treeMap, mailbox);
         byte[] serializedEvent = serializer.serializeEvent(event);
@@ -75,12 +87,14 @@ public abstract class EventSerializerTest {
         assertThat(deserializedEvent.getSession().getSessionId()).isEqualTo(event.getSession().getSessionId());
         assertThat(deserializedEvent).isInstanceOf(MailboxListener.Added.class);
         assertThat(((MailboxListener.Added)deserializedEvent).getUids()).containsOnly(UID);
-        assertThat(((MailboxListener.Added)deserializedEvent).getMetaData(UID)).isEqualTo(MESSAGE_META_DATA);
+        MessageMetaData messageMetaData = ((MailboxListener.Added)deserializedEvent).getMetaData(UID);
+        assertThat(messageMetaData).isEqualTo(MESSAGE_META_DATA);
+        assertThat(messageMetaData.getMessageId()).isEqualTo(MESSAGE_ID);
     }
 
     @Test
     public void expungedEventShouldBeWellConverted() throws Exception {
-        TreeMap<Long, MessageMetaData> treeMap = new TreeMap<Long, MessageMetaData>();
+        TreeMap<MessageUid, MessageMetaData> treeMap = new TreeMap<MessageUid, MessageMetaData>();
         treeMap.put(UID, MESSAGE_META_DATA);
         MailboxListener.Event event = eventFactory.expunged(mailboxSession, treeMap, mailbox);
         byte[] serializedEvent = serializer.serializeEvent(event);
@@ -89,7 +103,9 @@ public abstract class EventSerializerTest {
         assertThat(deserializedEvent.getSession().getSessionId()).isEqualTo(event.getSession().getSessionId());
         assertThat(deserializedEvent).isInstanceOf(MailboxListener.Expunged.class);
         assertThat(((MailboxListener.Expunged)deserializedEvent).getUids()).containsOnly(UID);
-        assertThat(((MailboxListener.Expunged)deserializedEvent).getMetaData(UID)).isEqualTo(MESSAGE_META_DATA);
+        MessageMetaData messageMetaData = ((MailboxListener.Expunged)deserializedEvent).getMetaData(UID);
+        assertThat(messageMetaData).isEqualTo(MESSAGE_META_DATA);
+        assertThat(messageMetaData.getMessageId()).isEqualTo(MESSAGE_ID);
     }
 
     @Test

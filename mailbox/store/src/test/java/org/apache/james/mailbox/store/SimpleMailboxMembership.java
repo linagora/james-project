@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.SequenceInputStream;
 import java.io.Writer;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -35,16 +34,23 @@ import java.util.Map.Entry;
 
 import javax.mail.Flags;
 
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 
-public class SimpleMailboxMembership implements MailboxMessage<TestId> {
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+
+public class SimpleMailboxMembership implements MailboxMessage {
     
     private static final String TOSTRING_SEPARATOR = " ";
     
     public TestId mailboxId;
-    public long uid;
+    public MessageUid uid;
     public Date internalDate;
     public boolean recent = false;
     public boolean answered = false;
@@ -53,9 +59,12 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
     public boolean flagged = false;
     public boolean seen = false;
 
-    public SimpleMailboxMembership(TestId mailboxId, long uid, long modSeq, Date internalDate, int size, 
-            Flags flags, byte[] body, final Map<String, String> headers) throws Exception {
+    private MessageId messageId;
+
+    public SimpleMailboxMembership(MessageId messageId, TestId mailboxId, MessageUid uid, long modSeq, Date internalDate, int size, 
+            Flags flags, byte[] body, Map<String, String> headers) throws Exception {
         super();
+        this.messageId = messageId;
         this.mailboxId = mailboxId;
         this.uid = uid;
         this.internalDate = internalDate;
@@ -79,7 +88,7 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
         return mailboxId;
     }
     
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
     }
 
@@ -146,28 +155,17 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
 
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + (int) (mailboxId.id ^ (mailboxId.id >>> 32));
-        result = PRIME * result + (int) (uid ^ (uid >>> 32));
-        return result;
+        return Objects.hashCode(mailboxId.id, uid);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final MailboxMessage<TestId> other = (MailboxMessage<TestId>) obj;
-        if (mailboxId.id != other.getMailboxId().id)
-            return false;
-        if (uid != other.getUid())
-            return false;
-        return true;
+        if (obj instanceof SimpleMailboxMembership) {
+            SimpleMailboxMembership other = (SimpleMailboxMembership) obj;
+            return Objects.equal(this.mailboxId.id, other.mailboxId.id)
+                    && Objects.equal(this.uid, other.uid);
+        }
+        return false;
     }
 
     public String toString() {
@@ -235,7 +233,11 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
     }
 
     public List<Property> getProperties() {
-        return new ArrayList<Property>(properties);
+        if (properties != null) {
+            return ImmutableList.<Property>copyOf(properties);
+        } else {
+            return ImmutableList.of();
+        }
     }
 
     public Long getTextualLineCount() {
@@ -246,8 +248,8 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
         return size;
     }
 
-    public int compareTo(MailboxMessage<TestId> other) {
-        return (int) (getUid() - other.getUid());
+    public int compareTo(MailboxMessage other) {
+        return getUid().compareTo(other.getUid());
     }
 
     public long getModSeq() {
@@ -258,7 +260,8 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
         this.modSeq = modSeq;
     }
 
-    public void setUid(long uid) {
+    @Override
+    public void setUid(MessageUid uid) {
         this.uid = uid;
     }
 
@@ -268,8 +271,13 @@ public class SimpleMailboxMembership implements MailboxMessage<TestId> {
     }
 
     @Override
-    public DefaultMessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), getUid());
+    public MessageId getMessageId() {
+        return messageId;
+    }
+
+    @Override
+    public List<MessageAttachment> getAttachments() {
+        throw new NotImplementedException("Attachments Ids not implemented");
     }
     
 }

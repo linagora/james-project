@@ -20,13 +20,18 @@ package org.apache.james.mailbox.store;
 
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.Headers;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageRange.Type;
 import org.apache.james.mailbox.model.MessageResult;
@@ -35,25 +40,26 @@ import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.MimeDescriptor;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
-public class StoreMessageResultIterator<Id extends MailboxId> implements MessageResultIterator {
+import com.google.common.base.Objects;
 
-    private Iterator<MailboxMessage<Id>> next = null;
+public class StoreMessageResultIterator implements MessageResultIterator {
+
+    private Iterator<MailboxMessage> next = null;
     private MailboxException exception;
-    private final Mailbox<Id> mailbox;
+    private final Mailbox mailbox;
     private final FetchGroup group;
-    private final long from;
-    private long cursor;
-    private final long to;
+    private final MessageUid from;
+    private MessageUid cursor;
+    private final MessageUid to;
     private final int batchSize;
     private final Type type;
-    private final MessageMapper<Id> mapper;
+    private final MessageMapper mapper;
     private final FetchType ftype;
 
-    public StoreMessageResultIterator(MessageMapper<Id> mapper, Mailbox<Id> mailbox, MessageRange range, int batchSize, org.apache.james.mailbox.model.MessageResult.FetchGroup group) {
+    public StoreMessageResultIterator(MessageMapper mapper, Mailbox mailbox, MessageRange range, int batchSize, org.apache.james.mailbox.model.MessageResult.FetchGroup group) {
         this.mailbox = mailbox;
         this.group = group;
         this.mapper = mapper;
@@ -82,7 +88,10 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
             headers = true;
             content -= FetchGroup.HEADERS;
         }
-        if ((content & FetchGroup.BODY_CONTENT) > 0) {
+        if (group.getPartContentDescriptors().size() > 0) {
+            full = true;
+        }
+        if ((content & FetchGroup.BODY_CONTENT ) > 0 ) {
             body = true;
             content -= FetchGroup.BODY_CONTENT;
         }
@@ -112,7 +121,7 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
 
     @Override
     public boolean hasNext() {
-        if (cursor > to) 
+        if (cursor.compareTo(to) > 0) 
           return false;
 
         if (next == null || !next.hasNext()) {
@@ -154,16 +163,16 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
           throw new NoSuchElementException();
         }
         
-        final MailboxMessage<Id> message = next.next();
+        final MailboxMessage message = next.next();
         MessageResult result;
         try {
             result = ResultUtils.loadMessageResult(message, group);
             cursor = result.getUid();
         } catch (MailboxException e) {
-            result = new UnloadedMessageResult<Id>(message, e);
+            result = new UnloadedMessageResult(message, e);
         }
 
-        cursor++;
+        cursor = cursor.next();
         return result;
     }
 
@@ -177,27 +186,38 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
         return exception;
     }
 
-    private static final class UnloadedMessageResult<Id extends MailboxId> implements MessageResult {
+    private static final class UnloadedMessageResult implements MessageResult {
         private final MailboxException exception;
 
         private final Date internalDate;
 
         private final long size;
 
-        private final long uid;
+        private final MessageUid uid;
 
         private final Flags flags;
 
+        private final MessageId messageId;
+
         private long modSeq = -1;
 
-        public UnloadedMessageResult(final MailboxMessage<Id> message, final MailboxException exception) {
+        private final MailboxId mailboxId;
+
+        public UnloadedMessageResult(MailboxMessage message, MailboxException exception) {
             super();
             internalDate = message.getInternalDate();
             size = message.getFullContentOctets();
             uid = message.getUid();
             flags = message.createFlags();
             modSeq = message.getModSeq();
+            mailboxId = message.getMailboxId();
+            messageId = message.getMessageId();
             this.exception = exception;
+        }
+
+        @Override
+        public MailboxId getMailboxId() {
+            return mailboxId;
         }
 
         public Flags getFlags() {
@@ -220,26 +240,22 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
             return size;
         }
 
-        public long getUid() {
+        public MessageUid getUid() {
             return uid;
         }
 
+        @Override
+        public MessageId getMessageId() {
+            return messageId;
+        }
+        
         public int compareTo(MessageResult that) {
-            // Java 1.5 return (int) Math.signum(uid - that.getUid());
-            long diff = uid - that.getUid();
-            return (int) diff == 0 ? 0 : diff > 0 ? 1 : -1;
+            return uid.compareTo(that.getUid());
         }
 
         @Override
         public int hashCode() {
-            int ret = 19 * 37;
-            ret = ret * 37 + exception.hashCode();
-            ret = ret * 37 + internalDate.hashCode();
-            ret = ret * 37 + (int)size;
-            ret = ret * 37 + (int)uid;
-            ret = ret * 37 + flags.hashCode();
-            ret = ret * 37 + (int)modSeq;
-            return ret;
+            return Objects.hashCode(exception, internalDate, size, uid, flags, modSeq, messageId);
         }
 
         @Override
@@ -248,9 +264,8 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
                 return true;
             }
             if (obj instanceof UnloadedMessageResult) {
-                @SuppressWarnings("unchecked")
-                UnloadedMessageResult<Id> that = (UnloadedMessageResult<Id>)obj;
-                return (size == that.size) && (uid == that.uid) && (modSeq == that.modSeq) && exception.equals(that.exception)
+                UnloadedMessageResult that = (UnloadedMessageResult)obj;
+                return (size == that.size) && (uid.equals(that.uid)) && (modSeq == that.modSeq) && exception.equals(that.exception)
                         && internalDate.equals(that.internalDate) && flags.equals(that.flags);
             }
             return false;
@@ -286,6 +301,11 @@ public class StoreMessageResultIterator<Id extends MailboxId> implements Message
 
         @Override
         public Headers getHeaders() throws MailboxException {
+            throw exception;
+        }
+
+        @Override
+        public List<MessageAttachment> getAttachments() throws MailboxException {
             throw exception;
         }
 

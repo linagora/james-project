@@ -29,9 +29,13 @@ import java.util.Map;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.Headers;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MimeDescriptor;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -39,6 +43,8 @@ import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.streaming.InputStreamContent;
 import org.apache.james.mailbox.store.streaming.InputStreamContent.Type;
 import org.apache.james.mime4j.MimeException;
+
+import com.google.common.base.Objects;
 
 /**
  * Bean based implementation.
@@ -49,29 +55,34 @@ public class MessageResultImpl implements MessageResult {
 
     private MimeDescriptor mimeDescriptor;
 
-	private final MailboxMessage<?> message;
+	private final MailboxMessage message;
 
     private HeadersImpl headers;
     private Content fullContent;
     private Content bodyContent;
 
     
-    public MessageResultImpl(MailboxMessage<?> message) throws IOException {
+    public MessageResultImpl(MailboxMessage message) throws IOException {
         this.message = message;
         this.headers = new HeadersImpl(message);
-        
     }
 
-    /**
-     * @see org.apache.james.mailbox.model.MessageResult#getUid()
-     */
-    public long getUid() {
+    @Override
+    public MailboxId getMailboxId() {
+        return message.getMailboxId();
+    }
+
+    @Override
+    public MessageUid getUid() {
         return message.getUid();
     }
 
-    /**
-     * @see org.apache.james.mailbox.model.MessageResult#getInternalDate()
-     */
+    @Override
+    public MessageId getMessageId() {
+        return message.getMessageId();
+    }
+    
+    @Override
     public Date getInternalDate() {
         return message.getInternalDate();
     }
@@ -90,35 +101,16 @@ public class MessageResultImpl implements MessageResult {
         return message.getFullContentOctets();
     }
 
-    /**
-     * @see java.lang.Comparable#compareTo(java.lang.Object)
-     */
+    @Override
     public int compareTo(MessageResult that) {
-        if (getUid() > 0 && that.getUid() > 0) {
-            // TODO: this seems inefficient
-            return Long.valueOf(getUid()).compareTo(Long.valueOf(that.getUid()));
-        } else {
-            // TODO: throwing an undocumented untyped runtime seems wrong
-            // TODO: if uids must be greater than zero then this should be
-            // enforced
-            // TODO: on the way in
-            // TODO: probably an IllegalArgumentException would be better
-            throw new RuntimeException("can't compare");
-        }
-
+        return this.getUid().compareTo(that.getUid());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
-        return 37 * 17 + (int)getUid();
+        return Objects.hashCode(getUid());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -127,7 +119,6 @@ public class MessageResultImpl implements MessageResult {
         if (obj instanceof MessageResultImpl) {
             MessageResultImpl that = (MessageResultImpl)obj;
             return this.headers.equals(that.headers) && this.message.equals(that.message);
-//            return this.message.equals(that.message);
         }
         return false;
     }
@@ -368,6 +359,11 @@ public class MessageResultImpl implements MessageResult {
             headers = new HeadersImpl(message);
         }
         return headers;
+    }
+    
+    @Override
+    public List<MessageAttachment> getAttachments() throws MailboxException {
+        return message.getAttachments();
     }
     
     private final class HeadersImpl implements Headers {

@@ -20,72 +20,50 @@
 
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.IsSingleRecipient;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.Matcher;
-import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMatcherConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import static org.apache.mailet.base.MailAddressFixture.ANY_AT_JAMES;
+import static org.apache.mailet.base.MailAddressFixture.OTHER_AT_JAMES;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
-import java.util.Arrays;
-import java.util.Collection;
+
+import org.apache.mailet.Matcher;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.junit.Before;
+import org.junit.Test;
 
 public class IsSingleRecipientTest {
 
-    private FakeMail mockedMail;
-
     private Matcher matcher;
 
-    private MailAddress[] recipients;
-
-    private void setRecipients(MailAddress[] recipients) {
-        this.recipients = recipients;
-    }
-
-    private void setupMockedMail() {
-        mockedMail = new FakeMail();
-        mockedMail.setRecipients(Arrays.asList(recipients));
-
-    }
-
-    private void setupMatcher() throws MessagingException {
-
+    @Before
+    public void setUp() throws MessagingException {
         matcher = new IsSingleRecipient();
-        FakeMatcherConfig mci = new FakeMatcherConfig("IsSingleRecipient",
-                new FakeMailContext());
-        matcher.init(mci);
+        FakeMatcherConfig matcherConfig = FakeMatcherConfig.builder()
+                .matcherName("IsSingleRecipient")
+                .build();
+        matcher.init(matcherConfig);
     }
 
-    // test if matched
     @Test
-    public void testHostIsMatchedAllRecipients() throws MessagingException {
-        setRecipients(new MailAddress[]{new MailAddress(
-                "test@james.apache.org")});
+    public void matchShouldMatchOneRecipientsEmails() throws MessagingException {
+        FakeMail fakeMail = FakeMail.builder().recipient(ANY_AT_JAMES).build();
 
-        setupMockedMail();
-        setupMatcher();
-
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-
-        Assert.assertNotNull(matchedRecipients);
+        assertThat(matcher.match(fakeMail)).containsExactly(ANY_AT_JAMES);
     }
 
-    // test if not matched
     @Test
-    public void testHostIsMatchedOneRecipient() throws MessagingException {
-        setRecipients(new MailAddress[]{
-                new MailAddress("test@james2.apache.org"),
-                new MailAddress("test2@james.apache.org")});
+    public void matchShouldNotMatchMultiRecipientsEMail() throws MessagingException {
+        FakeMail fakeMail = FakeMail.builder().recipients(ANY_AT_JAMES, OTHER_AT_JAMES).build();
 
-        setupMockedMail();
-        setupMatcher();
+        assertThat(matcher.match(fakeMail)).isNull();
+    }
 
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
+    @Test
+    public void matchShouldNotMatchMailWithNotRecipients() throws MessagingException {
+        FakeMail fakeMail = FakeMail.defaultFakeMail();
 
-        Assert.assertNull(matchedRecipients);
+        assertThat(matcher.match(fakeMail)).isNull();
     }
 
 }

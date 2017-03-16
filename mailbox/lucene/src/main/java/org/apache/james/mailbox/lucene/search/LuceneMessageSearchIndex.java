@@ -28,23 +28,31 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
+import javax.inject.Inject;
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
+import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MailboxManager.SearchCapabilities;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.UnsupportedSearchException;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.AllCriterion;
+import org.apache.james.mailbox.model.SearchQuery.AttachmentCriterion;
 import org.apache.james.mailbox.model.SearchQuery.ContainsOperator;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.CustomFlagCriterion;
@@ -54,12 +62,13 @@ import org.apache.james.mailbox.model.SearchQuery.FlagCriterion;
 import org.apache.james.mailbox.model.SearchQuery.HeaderCriterion;
 import org.apache.james.mailbox.model.SearchQuery.HeaderOperator;
 import org.apache.james.mailbox.model.SearchQuery.NumericOperator;
-import org.apache.james.mailbox.model.SearchQuery.NumericRange;
 import org.apache.james.mailbox.model.SearchQuery.UidCriterion;
+import org.apache.james.mailbox.model.SearchQuery.UidRange;
+import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.apache.james.mailbox.store.search.SearchUtil;
 import org.apache.james.mime4j.MimeException;
@@ -94,6 +103,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
@@ -109,14 +119,21 @@ import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.Version;
 
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 /**
  * Lucene based {@link ListeningMessageSearchIndex} which offers message searching via a Lucene index
  * 
  * 
 
- * @param <Id>
+ * @param 
  */
-public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMessageSearchIndex<Id> {
+public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
     private final static Date MAX_DATE;
     private final static Date MIN_DATE;
     
@@ -145,6 +162,11 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
      */
     public final static String UID_FIELD = "uid";
     
+    /**
+     * {@link Field} boolean field that say if the message as an attachment or not
+     */
+    public final static String HAS_ATTACHMENT_FIELD = "hasAttachment";
+
     /**
      * {@link Field} which will contain the {@link Flags} of the {@link MailboxMessage}
      */
@@ -251,6 +273,11 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     public final static String MAILBOX_ID_FIELD ="mailboxid";
 
     /**
+     * {@link Field} which will contain the id of the {@link MessageId}
+     */
+    public final static String MESSAGE_ID_FIELD ="messageid";
+
+    /**
      * {@link Field} which contain the Date header of the message with YEAR-Resolution
      */
     public final static String SENT_DATE_FIELD_YEAR_RESOLUTION ="sentdateYearResolution";
@@ -296,12 +323,6 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     private final static String MEDIA_TYPE_MESSAGE = "message"; 
     private final static String DEFAULT_ENCODING = "US-ASCII";
     
-    private final IndexWriter writer;
-    
-    private int maxQueryResults = DEFAULT_MAX_QUERY_RESULTS;
-
-    private boolean suffixMatch = false;
-    
     private final static SortField UID_SORT = new SortField(UID_FIELD, SortField.LONG);
     private final static SortField UID_SORT_REVERSE = new SortField(UID_FIELD, SortField.LONG, true);
 
@@ -332,21 +353,39 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
 
     private final static SortField FIRST_FROM_MAILBOX_DISPLAY_SORT = new SortField(FIRST_FROM_MAILBOX_DISPLAY_FIELD, SortField.STRING);
     private final static SortField FIRST_FROM_MAILBOX_DISPLAY_SORT_REVERSE = new SortField(FIRST_FROM_MAILBOX_DISPLAY_FIELD, SortField.STRING, true);
+    
+    private final MailboxId.Factory mailboxIdFactory;
+    private final MessageId.Factory messageIdFactory;
+    private final IndexWriter writer;
+    
+    private int maxQueryResults = DEFAULT_MAX_QUERY_RESULTS;
 
-    
-    public LuceneMessageSearchIndex(MessageMapperFactory<Id> factory, Directory directory) throws CorruptIndexException, LockObtainFailedException, IOException {
-        this(factory, directory, false, true);
+    private boolean suffixMatch = false;
+
+    @Inject
+    public LuceneMessageSearchIndex(MessageMapperFactory factory, MailboxId.Factory mailboxIdFactory, Directory directory, MessageId.Factory messageIdFactory, MailboxManager mailboxManager) throws CorruptIndexException, LockObtainFailedException, IOException {
+        this(factory, mailboxIdFactory, directory, false, true, messageIdFactory);
     }
-    
-    
-    public LuceneMessageSearchIndex(MessageMapperFactory<Id> factory, Directory directory, boolean dropIndexOnStart, boolean lenient) throws CorruptIndexException, LockObtainFailedException, IOException {
+
+    public LuceneMessageSearchIndex(
+            MessageMapperFactory factory,
+            MailboxId.Factory mailboxIdFactory,
+            Directory directory,
+            boolean dropIndexOnStart,
+            boolean lenient,
+            MessageId.Factory messageIdFactory)
+                    throws CorruptIndexException, LockObtainFailedException, IOException {
         super(factory);
+        this.mailboxIdFactory = mailboxIdFactory;
+        this.messageIdFactory = messageIdFactory;
         this.writer = new IndexWriter(directory,  createConfig(createAnalyzer(lenient), dropIndexOnStart));
     }
     
     
-    public LuceneMessageSearchIndex(MessageMapperFactory<Id> factory, IndexWriter writer) {
+    public LuceneMessageSearchIndex(MessageMapperFactory factory, MailboxId.Factory mailboxIdFactory, MessageId.Factory messageIdFactory, IndexWriter writer) {
         super(factory);
+        this.mailboxIdFactory = mailboxIdFactory;
+        this.messageIdFactory = messageIdFactory;
         this.writer = writer;
     }
 
@@ -355,6 +394,12 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
         return ListenerType.EACH_NODE;
     }
 
+
+    @Override
+    public EnumSet<SearchCapabilities> getSupportedCapabilities() {
+        return EnumSet.noneOf(SearchCapabilities.class);
+    }
+    
     /**
      * Set the max count of results which will get returned from a query. The default is {@link #DEFAULT_MAX_QUERY_RESULTS}
      * 
@@ -405,30 +450,65 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     
     
     
-    /**
-     * @see org.apache.james.mailbox.store.search.MessageSearchIndex#search(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.store.mail.model.Mailbox, org.apache.james.mailbox.model.SearchQuery)
-     */
-    public Iterator<Long> search(MailboxSession session, Mailbox<Id> mailbox, SearchQuery searchQuery) throws MailboxException {
-        Set<Long> uids = new LinkedHashSet<Long>();
+    @Override
+    public Iterator<MessageUid> search(MailboxSession session, Mailbox mailbox, SearchQuery searchQuery) throws MailboxException {
+        Preconditions.checkArgument(session != null, "'session' is mandatory");
+        MailboxId mailboxId = mailbox.getMailboxId();
+        return FluentIterable.from(searchMultimap(
+            MultimailboxesSearchQuery
+                .from(searchQuery)
+                .inMailboxes(mailboxId)
+                .build()))
+            .transform(new Function<SearchResult, MessageUid>() {
+                @Override
+                public MessageUid apply(SearchResult input) {
+                    return input.getMessageUid();
+                }
+            })
+            .iterator();
+    }
+
+    @Override
+    public List<MessageId> search(MailboxSession session, MultimailboxesSearchQuery searchQuery, long limit) throws MailboxException {
+        Preconditions.checkArgument(session != null, "'session' is mandatory");
+        return FluentIterable.from(searchMultimap(searchQuery))
+            .transform(new Function<SearchResult, MessageId>() {
+                @Override
+                public MessageId apply(SearchResult input) {
+                    return input.getMessageId().get();
+                }
+            })
+            .filter(SearchUtil.distinct())
+            .limit(Long.valueOf(limit).intValue())
+            .toList();
+    }
+    
+    private List<SearchResult> searchMultimap(MultimailboxesSearchQuery searchQuery) throws MailboxException {
+        ImmutableList.Builder<SearchResult> results = ImmutableList.builder();
         IndexSearcher searcher = null;
 
+        Query inMailboxes = buildQueryFromMailboxes(searchQuery.getInMailboxes());
+        
         try {
             searcher = new IndexSearcher(IndexReader.open(writer, true));
             BooleanQuery query = new BooleanQuery();
-            query.add(new TermQuery(new Term(MAILBOX_ID_FIELD, mailbox.getMailboxId().serialize())), BooleanClause.Occur.MUST);
+            query.add(inMailboxes, BooleanClause.Occur.MUST);
             // Not return flags documents
             query.add(new PrefixQuery(new Term(FLAGS_FIELD, "")), BooleanClause.Occur.MUST_NOT);
-            List<Criterion> crits = searchQuery.getCriterias();
+            List<Criterion> crits = searchQuery.getSearchQuery().getCriterias();
             for (Criterion crit : crits) {
-                query.add(createQuery(crit, mailbox, searchQuery.getRecentMessageUids()), BooleanClause.Occur.MUST);
+                query.add(createQuery(crit, inMailboxes, searchQuery.getSearchQuery().getRecentMessageUids()), BooleanClause.Occur.MUST);
             }
 
             // query for all the documents sorted as specified in the SearchQuery
-            TopDocs docs = searcher.search(query, null, maxQueryResults, createSort(searchQuery.getSorts()));
+            TopDocs docs = searcher.search(query, null, maxQueryResults, createSort(searchQuery.getSearchQuery().getSorts()));
             ScoreDoc[] sDocs = docs.scoreDocs;
             for (ScoreDoc sDoc : sDocs) {
-                long uid = Long.valueOf(searcher.doc(sDoc.doc).get(UID_FIELD));
-                uids.add(uid);
+                Document doc = searcher.doc(sDoc.doc);
+                MessageUid uid = MessageUid.of(Long.valueOf(doc.get(UID_FIELD)));
+                MailboxId mailboxId = mailboxIdFactory.fromString(doc.get(MAILBOX_ID_FIELD));
+                Optional<MessageId> messageId = toMessageId(Optional.fromNullable(doc.get(MESSAGE_ID_FIELD)));
+                results.add(new SearchResult(messageId, mailboxId, uid));
             }
         } catch (IOException e) {
             throw new MailboxException("Unable to search the mailbox", e);
@@ -441,10 +521,29 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
                 }
             }
         }
-        return uids.iterator();
+        return results.build();
     }
 
-   
+    private Optional<MessageId> toMessageId(Optional<String> messageIdField) {
+        if (messageIdField.isPresent()) {
+            return Optional.of(messageIdFactory.fromString(messageIdField.get()));
+        }
+        return Optional.absent();
+    }
+
+    private Query buildQueryFromMailboxes(ImmutableSet<MailboxId> mailboxIds) {
+        if (mailboxIds.isEmpty()) {
+            return new MatchAllDocsQuery();
+        }
+        BooleanQuery query = new BooleanQuery();
+        for (MailboxId id: mailboxIds) {
+            String idAsString = id.serialize();
+            query.add(new TermQuery(new Term(MAILBOX_ID_FIELD, idAsString)), BooleanClause.Occur.SHOULD);
+        }
+        return query;
+    }
+
+
     /**
      * Create a new {@link Document} for the given {@link MailboxMessage}. This Document does not contain any flags data. The {@link Flags} are stored in a seperate Document.
      * 
@@ -453,14 +552,16 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
      * @param membership
      * @return document
      */
-    private Document createMessageDocument(final MailboxSession session, final MailboxMessage<?> membership) throws MailboxException{
+    private Document createMessageDocument(final MailboxSession session, final MailboxMessage membership) throws MailboxException{
         final Document doc = new Document();
         // TODO: Better handling
         doc.add(new Field(MAILBOX_ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH), Store.YES, Index.NOT_ANALYZED));
-        doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(membership.getUid()));
-        
+        doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(membership.getUid().asLong()));
+        doc.add(new Field(HAS_ATTACHMENT_FIELD, Boolean.toString(hasAttachment(membership)), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(MESSAGE_ID_FIELD, SearchUtil.getSerializedMessageIdIfSupportedByUnderlyingStorageOrNull(membership), Store.YES, Index.NOT_ANALYZED));
+
         // create an unqiue key for the document which can be used later on updates to find the document
-        doc.add(new Field(ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH) +"-" + Long.toString(membership.getUid()), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH) +"-" + Long.toString(membership.getUid().asLong()), Store.YES, Index.NOT_ANALYZED));
 
         doc.add(new Field(INTERNAL_DATE_FIELD_YEAR_RESOLUTION, DateTools.dateToString(membership.getInternalDate(), DateTools.Resolution.YEAR), Store.NO, Index.NOT_ANALYZED));
         doc.add(new Field(INTERNAL_DATE_FIELD_MONTH_RESOLUTION, DateTools.dateToString(membership.getInternalDate(), DateTools.Resolution.MONTH), Store.NO, Index.NOT_ANALYZED));
@@ -476,6 +577,7 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
         SimpleContentHandler handler = new SimpleContentHandler() {
             
 
+            @Override
             public void headers(Header header) {
                 
                 Date sentDate = null;
@@ -657,6 +759,11 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
         return doc;
     }
 
+    private static boolean hasAttachment(MailboxMessage membership) {
+       return FluentIterable.from(membership.getProperties())
+            .anyMatch(PropertyBuilder.isHasAttachmentProperty());
+    }
+
     private String toSentDateField(DateResolution res) {
         String field;
         switch (res) {
@@ -836,20 +943,16 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     
     /**
      * Return a {@link Query} which is build based on the given {@link SearchQuery.UidCriterion}
-     * 
-     * @param crit
-     * @return query
-     * @throws UnsupportedSearchException
      */
     private Query createUidQuery(SearchQuery.UidCriterion crit) throws UnsupportedSearchException {
-        NumericRange[] ranges = crit.getOperator().getRange();
+        UidRange[] ranges = crit.getOperator().getRange();
         if (ranges.length == 1) {
-            NumericRange range = ranges[0];
-            return NumericRangeQuery.newLongRange(UID_FIELD, range.getLowValue(), range.getHighValue(), true, true);
+            UidRange range = ranges[0];
+            return NumericRangeQuery.newLongRange(UID_FIELD, range.getLowValue().asLong(), range.getHighValue().asLong(), true, true);
         } else {
             BooleanQuery rangesQuery = new BooleanQuery();
-            for (NumericRange range : ranges) {
-                rangesQuery.add(NumericRangeQuery.newLongRange(UID_FIELD, range.getLowValue(), range.getHighValue(), true, true), BooleanClause.Occur.SHOULD);
+            for (UidRange range : ranges) {
+                rangesQuery.add(NumericRangeQuery.newLongRange(UID_FIELD, range.getLowValue().asLong(), range.getHighValue().asLong(), true, true), BooleanClause.Occur.SHOULD);
             }        
             return rangesQuery;
         }
@@ -877,6 +980,10 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
         }
     }
     
+    private Query createAttachmentQuery(boolean isSet, Query inMailboxes) throws MailboxException, UnsupportedSearchException {
+        return new TermQuery(new Term(HAS_ATTACHMENT_FIELD, Boolean.toString(isSet)));
+    }
+
     /**
      * Return a {@link Query} which is build based on the given {@link SearchQuery.FlagCriterion}. This is kind of a hack
      * as it will do a search for the flags in this method and 
@@ -885,7 +992,7 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
      * @return query
      * @throws UnsupportedSearchException
      */
-    private Query createFlagQuery(String flag, boolean isSet, Mailbox<?> mailbox, Collection<Long> recentUids) throws MailboxException, UnsupportedSearchException {
+    private Query createFlagQuery(String flag, boolean isSet, Query inMailboxes, Collection<MessageUid> recentUids) throws MailboxException, UnsupportedSearchException {
         BooleanQuery query = new BooleanQuery();
         
         if (isSet) {   
@@ -898,20 +1005,20 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
             
             query.add(bQuery, BooleanClause.Occur.MUST);
         }
-        query.add(new TermQuery(new Term(MAILBOX_ID_FIELD, mailbox.getMailboxId().serialize())), BooleanClause.Occur.MUST);
+        query.add(inMailboxes, BooleanClause.Occur.MUST);
         
         
         IndexSearcher searcher = null;
 
         try {
-            Set<Long> uids = new HashSet<Long>();
+            Set<MessageUid> uids = new HashSet<MessageUid>();
             searcher = new IndexSearcher(IndexReader.open(writer, true));
             
             // query for all the documents sorted by uid
             TopDocs docs = searcher.search(query, null, maxQueryResults, new Sort(UID_SORT));
             ScoreDoc[] sDocs = docs.scoreDocs;
             for (ScoreDoc sDoc : sDocs) {
-                long uid = Long.valueOf(searcher.doc(sDoc.doc).get(UID_FIELD));
+                MessageUid uid = MessageUid.of(Long.valueOf(searcher.doc(sDoc.doc).get(UID_FIELD)));
                 uids.add(uid);
             }
             
@@ -924,15 +1031,15 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
                 }
             }
             
-            List<MessageRange> ranges = MessageRange.toRanges(new ArrayList<Long>(uids));
-            NumericRange[] nRanges = new NumericRange[ranges.size()];
+            List<MessageRange> ranges = MessageRange.toRanges(new ArrayList<MessageUid>(uids));
+            UidRange[] nRanges = new UidRange[ranges.size()];
             for (int i = 0; i < ranges.size(); i++) {
                 MessageRange range = ranges.get(i);
-                nRanges[i] = new NumericRange(range.getUidFrom(), range.getUidTo());
+                nRanges[i] = new UidRange(range.getUidFrom(), range.getUidTo());
             }
             return createUidQuery((UidCriterion) SearchQuery.uid(nRanges));
         } catch (IOException e) {
-            throw new MailboxException("Unable to search mailbox " + mailbox, e);
+            throw new MailboxException("Unable to search mailbox " + inMailboxes, e);
         } finally {
             if (searcher != null) {
                 try {
@@ -1114,26 +1221,26 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
      * @return query
      * @throws UnsupportedSearchException
      */
-    private Query createConjunctionQuery(SearchQuery.ConjunctionCriterion crit, Mailbox<?> mailbox, Collection<Long> recentUids) throws UnsupportedSearchException, MailboxException {
+    private Query createConjunctionQuery(SearchQuery.ConjunctionCriterion crit, Query inMailboxes, Collection<MessageUid> recentUids) throws UnsupportedSearchException, MailboxException {
         List<Criterion> crits = crit.getCriteria();
         BooleanQuery conQuery = new BooleanQuery();
         switch (crit.getType()) {
         case AND:
             for (Criterion criterion : crits) {
-                conQuery.add(createQuery(criterion, mailbox, recentUids), BooleanClause.Occur.MUST);
+                conQuery.add(createQuery(criterion, inMailboxes, recentUids), BooleanClause.Occur.MUST);
             }
             return conQuery;
         case OR:
             for (Criterion criterion : crits) {
-                conQuery.add(createQuery(criterion, mailbox, recentUids), BooleanClause.Occur.SHOULD);
+                conQuery.add(createQuery(criterion, inMailboxes, recentUids), BooleanClause.Occur.SHOULD);
             }
             return conQuery;
         case NOR:
             BooleanQuery nor = new BooleanQuery();
             for (Criterion criterion : crits) {
-                conQuery.add(createQuery(criterion, mailbox, recentUids), BooleanClause.Occur.SHOULD);
+                conQuery.add(createQuery(criterion, inMailboxes, recentUids), BooleanClause.Occur.SHOULD);
             }
-            nor.add(new TermQuery(new Term(MAILBOX_ID_FIELD, mailbox.getMailboxId().serialize())), BooleanClause.Occur.MUST);
+            nor.add(inMailboxes, BooleanClause.Occur.MUST);
 
             nor.add(conQuery, BooleanClause.Occur.MUST_NOT);
             return nor;
@@ -1150,7 +1257,7 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
      * @return query
      * @throws UnsupportedSearchException
      */
-    private Query createQuery(Criterion criterion, Mailbox<?> mailbox, Collection<Long> recentUids) throws UnsupportedSearchException, MailboxException {
+    private Query createQuery(Criterion criterion, Query inMailboxes, Collection<MessageUid> recentUids) throws UnsupportedSearchException, MailboxException {
         if (criterion instanceof SearchQuery.InternalDateCriterion) {
             SearchQuery.InternalDateCriterion crit = (SearchQuery.InternalDateCriterion) criterion;
             return createInternalDateQuery(crit);
@@ -1165,10 +1272,13 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
             return createUidQuery(crit);
         } else if (criterion instanceof SearchQuery.FlagCriterion) {
             FlagCriterion crit = (FlagCriterion) criterion;
-            return createFlagQuery(toString(crit.getFlag()), crit.getOperator().isSet(), mailbox, recentUids);
+            return createFlagQuery(toString(crit.getFlag()), crit.getOperator().isSet(), inMailboxes, recentUids);
+        } else if (criterion instanceof SearchQuery.AttachmentCriterion) {
+            AttachmentCriterion crit = (AttachmentCriterion) criterion;
+            return createAttachmentQuery(crit.getOperator().isSet(), inMailboxes);
         } else if (criterion instanceof SearchQuery.CustomFlagCriterion) {
             CustomFlagCriterion crit = (CustomFlagCriterion) criterion;
-            return createFlagQuery(crit.getFlag(), crit.getOperator().isSet(), mailbox, recentUids);
+            return createFlagQuery(crit.getFlag(), crit.getOperator().isSet(), inMailboxes, recentUids);
         } else if (criterion instanceof SearchQuery.TextCriterion) {
             SearchQuery.TextCriterion crit = (SearchQuery.TextCriterion) criterion;
             return createTextQuery(crit);
@@ -1176,7 +1286,7 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
             return createAllQuery((AllCriterion) criterion);
         } else if (criterion instanceof SearchQuery.ConjunctionCriterion) {
             SearchQuery.ConjunctionCriterion crit = (SearchQuery.ConjunctionCriterion) criterion;
-            return createConjunctionQuery(crit, mailbox, recentUids);
+            return createConjunctionQuery(crit, inMailboxes, recentUids);
         } else if (criterion instanceof SearchQuery.ModSeqCriterion) {
             return createModSeqQuery((SearchQuery.ModSeqCriterion) criterion);
         }
@@ -1189,7 +1299,8 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     /**
      * @see org.apache.james.mailbox.store.search.ListeningMessageSearchIndex#add(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.store.mail.model.Mailbox, MailboxMessage)
      */
-    public void add(MailboxSession session, Mailbox<Id> mailbox, MailboxMessage<Id> membership) throws MailboxException {
+    @Override
+    public void add(MailboxSession session, Mailbox mailbox, MailboxMessage membership) throws MailboxException {
         Document doc = createMessageDocument(session, membership);
         Document flagsDoc = createFlagsDocument(membership);
 
@@ -1204,15 +1315,22 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     }
 
     /**
-     * @see org.apache.james.mailbox.store.search.ListeningMessageSearchIndex#update(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.store.mail.model.Mailbox, org.apache.james.mailbox.model.MessageRange, javax.mail.Flags)
+     * @see ListeningMessageSearchIndex#update
      */
-    public void update(MailboxSession session, Mailbox<Id> mailbox, MessageRange range, Flags f, long modSeq) throws MailboxException {
+    @Override
+    public void update(MailboxSession session, Mailbox mailbox, List<UpdatedFlags> updatedFlagsList) throws MailboxException {
+        for (UpdatedFlags updatedFlags : updatedFlagsList) {
+            update(mailbox, updatedFlags.getUid(), updatedFlags.getNewFlags());
+        }
+    }
+
+    private void update(Mailbox mailbox, MessageUid uid, Flags f) throws MailboxException {
         IndexSearcher searcher = null;
         try {
             searcher = new IndexSearcher(IndexReader.open(writer, true));
             BooleanQuery query = new BooleanQuery();
             query.add(new TermQuery(new Term(MAILBOX_ID_FIELD, mailbox.getMailboxId().serialize())), BooleanClause.Occur.MUST);
-            query.add(createQuery(range), BooleanClause.Occur.MUST);
+            query.add(createQuery(MessageRange.one(uid)), BooleanClause.Occur.MUST);
             query.add( new PrefixQuery(new Term(FLAGS_FIELD, "")), BooleanClause.Occur.MUST);
 
             TopDocs docs = searcher.search(query, 100000);
@@ -1243,15 +1361,12 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
 
     /**
      * Index the {@link Flags} and add it to the {@link Document}
-     * 
-     * @param f
-     * @param doc
      */
-    private Document createFlagsDocument(MailboxMessage<?> message) {
+    private Document createFlagsDocument(MailboxMessage message) {
         Document doc = new Document();
-        doc.add(new Field(ID_FIELD, "flags-" + message.getMailboxId().serialize() +"-" + Long.toString(message.getUid()), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(ID_FIELD, "flags-" + message.getMailboxId().serialize() +"-" + Long.toString(message.getUid().asLong()), Store.YES, Index.NOT_ANALYZED));
         doc.add(new Field(MAILBOX_ID_FIELD, message.getMailboxId().serialize(), Store.YES, Index.NOT_ANALYZED));
-        doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(message.getUid()));
+        doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(message.getUid().asLong()));
         
         indexFlags(doc, message.createFlags());
         return doc;
@@ -1286,17 +1401,32 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
     private Query createQuery(MessageRange range) {
         switch (range.getType()) {
         case ONE:
-            return NumericRangeQuery.newLongRange(UID_FIELD, range.getUidFrom(), range.getUidTo(), true, true);
+            return NumericRangeQuery.newLongRange(UID_FIELD, 
+                    range.getUidFrom().asLong(), 
+                    range.getUidTo().asLong(), true, true);
         case FROM:
-            return NumericRangeQuery.newLongRange(UID_FIELD, range.getUidFrom(), Long.MAX_VALUE, true, true);
+            return NumericRangeQuery.newLongRange(UID_FIELD, 
+                    range.getUidFrom().asLong(), 
+                    MessageUid.MAX_VALUE.asLong(), true, true);
         default:
-            return NumericRangeQuery.newLongRange(UID_FIELD, 0L, Long.MAX_VALUE, true, true);
+            return NumericRangeQuery.newLongRange(UID_FIELD, MessageUid.MIN_VALUE.asLong(), MessageUid.MAX_VALUE.asLong(), true, true);
         }
     }
-    /**
-     * @see org.apache.james.mailbox.store.search.ListeningMessageSearchIndex#delete(org.apache.james.mailbox.MailboxSession, org.apache.james.mailbox.store.mail.model.Mailbox, org.apache.james.mailbox.model.MessageRange)
-     */
-    public void delete(MailboxSession session, Mailbox<Id> mailbox, MessageRange range) throws MailboxException {
+
+    @Override
+    public void delete(MailboxSession session, Mailbox mailbox, List<MessageUid> expungedUids) throws MailboxException {
+        Collection<MessageRange> messageRanges = MessageRange.toRanges(expungedUids);
+        for (MessageRange messageRange : messageRanges) {
+            delete(mailbox, messageRange);
+        }
+    }
+
+    @Override
+    public void deleteAll(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        delete(mailbox, MessageRange.all());
+    }
+
+    public void delete(Mailbox mailbox, MessageRange range) throws MailboxException {
         BooleanQuery query = new BooleanQuery();
         query.add(new TermQuery(new Term(MAILBOX_ID_FIELD, mailbox.getMailboxId().serialize())), BooleanClause.Occur.MUST);
         query.add(createQuery(range), BooleanClause.Occur.MUST);
@@ -1310,7 +1440,4 @@ public class LuceneMessageSearchIndex<Id extends MailboxId> extends ListeningMes
             throw new MailboxException("Unable to delete message from index", e);
         }
     }
-    
-
-
 }

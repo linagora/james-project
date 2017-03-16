@@ -19,17 +19,18 @@
 
 package org.apache.james.jmap.api.access;
 
-import org.apache.james.jmap.api.access.exceptions.AccessTokenAlreadyStored;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.james.jmap.api.access.exceptions.InvalidAccessToken;
 
 public interface AccessTokenRepository {
 
     String TOKEN_EXPIRATION_IN_MS = "tokenExpirationInMs";
     
-    void addToken(String username, AccessToken accessToken) throws AccessTokenAlreadyStored;
+    CompletableFuture<Void> addToken(String username, AccessToken accessToken);
 
-    void removeToken(AccessToken accessToken);
+    CompletableFuture<Void> removeToken(AccessToken accessToken);
 
-    String getUsernameFromToken(AccessToken accessToken) throws InvalidAccessToken;
+    CompletableFuture<String> getUsernameFromToken(AccessToken accessToken) throws InvalidAccessToken;
 
 }

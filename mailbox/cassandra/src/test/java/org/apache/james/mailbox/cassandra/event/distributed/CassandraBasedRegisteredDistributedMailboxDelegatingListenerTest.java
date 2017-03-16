@@ -19,13 +19,18 @@
 
 package org.apache.james.mailbox.cassandra.event.distributed;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.TreeMap;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.modules.CassandraRegistrationModule;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.TestId;
+import org.apache.james.mailbox.model.TestId;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.store.TestIdDeserializer;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.event.distributed.DistantMailboxPathRegister;
@@ -38,10 +43,6 @@ import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.util.EventCollector;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.TreeMap;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  Integration tests for RegisteredDelegatingMailboxListener using a cassandra back-end.
@@ -77,8 +78,9 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
                 CASSANDRA_TIME_OUT_IN_S),
             SCHEDULER_PERIOD_IN_S);
         registeredDelegatingMailboxListener1 = new RegisteredDelegatingMailboxListener(
-            new MessagePackEventSerializer<>(
-                new EventConverter<>(new MailboxConverter<>(new TestIdDeserializer()))
+            new MessagePackEventSerializer(
+                new EventConverter(new MailboxConverter(new TestIdDeserializer())),
+                new TestMessageId.Factory()
             ),
             publisherReceiver,
             publisherReceiver,
@@ -90,8 +92,9 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
                 CASSANDRA_TIME_OUT_IN_S),
             SCHEDULER_PERIOD_IN_S);
         registeredDelegatingMailboxListener2 = new RegisteredDelegatingMailboxListener(
-            new MessagePackEventSerializer<>(
-                new EventConverter<>(new MailboxConverter<>(new TestIdDeserializer()))
+            new MessagePackEventSerializer(
+                new EventConverter(new MailboxConverter(new TestIdDeserializer())),
+                new TestMessageId.Factory()
             ),
             publisherReceiver,
             publisherReceiver,
@@ -103,8 +106,9 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
                 CASSANDRA_TIME_OUT_IN_S),
             SCHEDULER_PERIOD_IN_S);
         registeredDelegatingMailboxListener3 = new RegisteredDelegatingMailboxListener(
-            new MessagePackEventSerializer<>(
-                new EventConverter<>(new MailboxConverter<>(new TestIdDeserializer()))
+            new MessagePackEventSerializer(
+                new EventConverter(new MailboxConverter(new TestIdDeserializer())),
+                new TestMessageId.Factory()
             ),
             publisherReceiver,
             publisherReceiver,
@@ -126,9 +130,9 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
 
     @Test
     public void mailboxEventListenersShouldBeTriggeredIfRegistered() throws Exception {
-        SimpleMailbox<TestId> simpleMailbox = new SimpleMailbox<>(MAILBOX_PATH_1, 42);
+        SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42);
         simpleMailbox.setMailboxId(TestId.of(52));
-        final MailboxListener.Event event = new EventFactory<TestId>().added(mailboxSession, new TreeMap<>(), simpleMailbox);
+        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<>(), simpleMailbox);
 
         registeredDelegatingMailboxListener1.event(event);
 
@@ -139,9 +143,9 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
 
     @Test
     public void onceEventListenersShouldBeTriggeredOnceAcrossTheCluster() {
-        SimpleMailbox<TestId> simpleMailbox = new SimpleMailbox<>(MAILBOX_PATH_1, 42);
+        SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42);
         simpleMailbox.setMailboxId(TestId.of(52));
-        final MailboxListener.Event event = new EventFactory<TestId>().added(mailboxSession, new TreeMap<>(), simpleMailbox);
+        final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<>(), simpleMailbox);
 
         registeredDelegatingMailboxListener1.event(event);
 

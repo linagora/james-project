@@ -33,41 +33,30 @@ public class AttachmentTest {
 
     @Test(expected=IllegalStateException.class)
     public void buildShouldThrowWhenTypeIsNull() {
-        Attachment.builder().blobId("blobId").build();
+        Attachment.builder().blobId(BlobId.of("blobId")).build();
     }
 
     @Test(expected=IllegalStateException.class)
     public void buildShouldThrowWhenNameIsNull() {
-        Attachment.builder().blobId("blobId").type("type").build();
+        Attachment.builder().blobId(BlobId.of("blobId")).type("type").build();
     }
 
     @Test(expected=IllegalStateException.class)
     public void buildShouldThrowWhenSizeIsNull() {
-        Attachment.builder().blobId("blobId").type("type").name("name").build();
-    }
-    
-    @Test(expected=IllegalStateException.class)
-    public void buildShouldThrowWhenBlobIdIsEmpty() {
-        Attachment.builder().blobId("").type("type").name("name").size(123).build();
+        Attachment.builder().blobId(BlobId.of("blobId")).type("type").name("name").build();
     }
     
     @Test(expected=IllegalStateException.class)
     public void buildShouldThrowWhenTypeIsEmpty() {
-        Attachment.builder().blobId("blobId").type("").name("name").size(123).build();
-    }
-    
-    @Test(expected=IllegalStateException.class)
-    public void buildShouldThrowWhenNameIsEmpty() {
-        Attachment.builder().blobId("blobId").type("type").name("").size(123).build();
+        Attachment.builder().blobId(BlobId.of("blobId")).type("").name("name").size(123).build();
     }
     
     @Test
     public void buildShouldWorkWhenMandatoryFieldsArePresent() {
-        Attachment expected = new Attachment("blobId", "type", "name", 123, Optional.empty(), false, Optional.empty(), Optional.empty());
+        Attachment expected = new Attachment(BlobId.of("blobId"), "type", Optional.empty(), 123, Optional.empty(), false, Optional.empty(), Optional.empty());
         Attachment tested = Attachment.builder()
-            .blobId("blobId")
+            .blobId(BlobId.of("blobId"))
             .type("type")
-            .name("name")
             .size(123)
             .build();
         assertThat(tested).isEqualToComparingFieldByField(expected);
@@ -75,9 +64,9 @@ public class AttachmentTest {
 
     @Test
     public void buildShouldWorkWithAllFieldsSet() {
-        Attachment expected = new Attachment("blobId", "type", "name", 123, Optional.of("cid"), true, Optional.of(456L), Optional.of(789L));
+        Attachment expected = new Attachment(BlobId.of("blobId"), "type", Optional.of("name"), 123, Optional.of("cid"), true, Optional.of(456L), Optional.of(789L));
         Attachment tested = Attachment.builder()
-            .blobId("blobId")
+            .blobId(BlobId.of("blobId"))
             .type("type")
             .name("name")
             .size(123)

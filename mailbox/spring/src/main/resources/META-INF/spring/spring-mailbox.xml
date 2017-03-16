@@ -22,14 +22,17 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <!-- 
+    <bean id="messageIdFactory" class="org.apache.james.mailbox.store.mail.model.DefaultMessageId.Factory" />
+    <!--
       Mailbox Managers
      -->
 
     <import resource="classpath:META-INF/spring/mailbox-locker.xml"/>
     <!-- TODO: fix dependency issues with lucene and JCR and re-enable -->
-    <!--<import resource="classpath:META-INF/spring/mailbox-index-lucene.xml" />-->
     <import resource="classpath:META-INF/spring/mailbox-jpa.xml"/>
+
+    <import resource="classpath:META-INF/spring/mailbox-index-lucene.xml" />
+<!--    <import resource="classpath:META-INF/spring/mailbox-elasticsearch.xml"/> -->
 
     <!-- TODO: update spring context creation to match new Jackrabbit version -->
     <!--<import resource="classpath:META-INF/spring/mailbox-jcr.xml" />-->
@@ -52,11 +55,9 @@
       Group Membership Resolver
      -->
     <bean id="groupMembershipResolver" class="org.apache.james.mailbox.acl.SimpleGroupMembershipResolver"/>
+    <!--
+      Attachments
+     -->
+    <bean id="messageParser" class="org.apache.james.mailbox.store.mail.model.impl.MessageParser"/>
 
-
-    <beans profile="cassandra">
-        <import resource="classpath:META-INF/spring/mailbox-cassandra.xml"/>
-        <import resource="classpath:META-INF/spring/mailbox-elasticsearch.xml"/>
-        <import resource="classpath:META-INF/spring/kafka.xml"/>
-    </beans>
 </beans>

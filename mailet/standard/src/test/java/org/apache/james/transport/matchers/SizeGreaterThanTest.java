@@ -17,73 +17,164 @@
  * under the License.                                           *
  ****************************************************************/
 
-
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.SizeGreaterThan;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.Matcher;
-import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMatcherConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import static org.apache.mailet.base.MailAddressFixture.ANY_AT_JAMES;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
-import javax.mail.internet.ParseException;
-import java.util.Arrays;
-import java.util.Collection;
+
+import org.apache.mailet.Mail;
+import org.apache.mailet.Matcher;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class SizeGreaterThanTest {
 
-    private FakeMail mockedMail;
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     private Matcher matcher;
 
-    private void setupMockedMail(long size) throws ParseException {
-        mockedMail = new FakeMail();
-        mockedMail.setMessageSize(size);
-        mockedMail.setRecipients(Arrays.asList(new MailAddress("test@email")));
-
-    }
-
-    private void setupMatcher(String size) throws MessagingException {
+    @Before
+    public void setUp() throws Exception {
         matcher = new SizeGreaterThan();
-        FakeMatcherConfig mci = new FakeMatcherConfig("SizeGreaterThan=" + size,
-                new FakeMailContext());
-        matcher.init(mci);
-    }
-
-
-    @Test
-    public void testSizeGreater() throws MessagingException {
-        setupMockedMail(2000000);
-        setupMatcher("1m");
-
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-
-        Assert.assertNotNull(matchedRecipients);
-        Assert.assertEquals(matchedRecipients.size(), mockedMail.getRecipients().size());
     }
 
     @Test
-    public void testSizeNotGreater() throws MessagingException {
-        setupMockedMail(200000);
-        setupMatcher("1m");
+    public void matchShouldMatchWhenMailAboveSize() throws MessagingException {
+        Mail mail = FakeMail.builder()
+            .size(2000000)
+            .recipient(ANY_AT_JAMES)
+            .build();
 
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("1m")
+                .build();
 
-        Assert.assertNull(matchedRecipients);
+        matcher.init(matcherConfiguration);
+
+        assertThat(matcher.match(mail)).containsExactly(ANY_AT_JAMES);
     }
 
     @Test
-    public void testThrowExceptionOnInvalidAmount() {
-        boolean exception = false;
-        try {
-            setupMatcher("1mb");
-        } catch (MessagingException e) {
-            exception = true;
-        }
-        Assert.assertTrue("Exception thrown", exception);
+    public void matchShouldNotMatchWhenMailUnderSize() throws MessagingException {
+        Mail mail = FakeMail.builder()
+            .size(200000)
+            .recipient(ANY_AT_JAMES)
+            .build();
+
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("1m")
+                .build();
+
+        matcher.init(matcherConfiguration);
+
+        assertThat(matcher.match(mail)).isNull();
+    }
+
+    @Test
+    public void matchShouldNotMatchMailsWithSpecifiedSize() throws MessagingException {
+        Mail mail = FakeMail.builder()
+            .size(1024)
+            .recipient(ANY_AT_JAMES)
+            .build();
+
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("1k")
+                .build();
+
+        matcher.init(matcherConfiguration);
+
+        assertThat(matcher.match(mail)).isNull();
+    }
+
+    @Test
+    public void matchShouldMatchMailsWithSizeSuperiorToSpecifiedSize() throws MessagingException {
+        Mail mail = FakeMail.builder()
+            .size(1025)
+            .recipient(ANY_AT_JAMES)
+            .build();
+
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("1k")
+                .build();
+
+        matcher.init(matcherConfiguration);
+
+        assertThat(matcher.match(mail)).containsExactly(ANY_AT_JAMES);
+    }
+
+    @Test
+    public void matchShouldReturnNullWhenUnderLimitNoUnit() throws MessagingException {
+        Mail mail = FakeMail.builder()
+            .size(4)
+            .recipient(ANY_AT_JAMES)
+            .build();
+
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("4")
+                .build();
+
+        matcher.init(matcherConfiguration);
+
+        assertThat(matcher.match(mail)).isNull();
+    }
+
+    @Test
+    public void matchShouldMatchOverLimitWhenNoUnit() throws MessagingException {
+        Mail mail = FakeMail.builder()
+            .size(5)
+            .recipient(ANY_AT_JAMES)
+            .build();
+
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("4")
+                .build();
+
+        matcher.init(matcherConfiguration);
+
+        assertThat(matcher.match(mail)).containsExactly(ANY_AT_JAMES);
+    }
+
+    @Test
+    public void initShouldThrowOnInvalidUnits() throws Exception {
+        expectedException.expect(MessagingException.class);
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("1mb")
+                .build();
+
+        matcher.init(matcherConfiguration);
+    }
+
+    @Test(expected = MessagingException.class)
+    public void initShouldThrowOnNullSize() throws Exception {
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("0")
+                .build();
+
+        matcher.init(matcherConfiguration);
+    }
+
+    @Test(expected = MessagingException.class)
+    public void initShouldThrowOnNegativeSize() throws Exception {
+        FakeMatcherConfig matcherConfiguration = FakeMatcherConfig.builder()
+                .matcherName("SizeGreaterThan")
+                .condition("-1")
+                .build();
+
+        matcher.init(matcherConfiguration);
     }
 }

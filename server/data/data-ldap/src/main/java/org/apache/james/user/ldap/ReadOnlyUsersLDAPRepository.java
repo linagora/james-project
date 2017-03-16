@@ -51,7 +51,10 @@ import org.apache.james.user.ldap.api.LdapConstants;
 import org.apache.james.util.retry.DoublingRetrySchedule;
 import org.apache.james.util.retry.api.RetrySchedule;
 import org.apache.james.util.retry.naming.ldap.RetryingLdapContext;
+import org.apache.mailet.MailAddress;
 import org.slf4j.Logger;
+
+import com.google.common.base.Optional;
 
 /**
  * <p>
@@ -90,6 +93,7 @@ import org.slf4j.Logger;
  *      retryStartInterval=&quot;0&quot;
  *      retryMaxInterval=&quot;30&quot;
  *      retryIntervalScale=&quot;1000&quot;
+ *      administratorId=&quot;ldapAdmin&quot;
  *  &lt;/users-store&gt;
  * </pre>
  *
@@ -212,7 +216,19 @@ import org.slf4j.Logger;
  * <b>readTimeout:</b> (optional) Sets property
  * <code>com.sun.jndi.ldap.read.timeout</code> to the specified integer value.
  * Applicable to Java 6 and above.
+ * <li>
+ * <b>administratorId:</b> (optional) User identifier of the administrator user.
+ * The administrator user is allowed to authenticate as other users.
  * </ul>
+ * </p>
+ *
+ * <p>
+ * The <b>supportsVirtualHosting</b> tag allows you to define this repository as supporing
+ * virtual hosting. For this LDAP repository, it means users will be looked for by their email
+ * address instead of their unique identifier.
+ * Generally to make it work, you need to configure <b>userIdAttribute</b> attribute to map
+ * to a mail attribute such as <code>mail</code> instead of an unique id identifier.
+ * </p>
  *
  * @see ReadOnlyLDAPUser
  * @see ReadOnlyLDAPGroupRestriction
@@ -227,6 +243,7 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
     private static final String PROPERTY_NAME_CONNECTION_POOL = "com.sun.jndi.ldap.connect.pool";
     private static final String PROPERTY_NAME_CONNECT_TIMEOUT = "com.sun.jndi.ldap.connect.timeout";
     private static final String PROPERTY_NAME_READ_TIMEOUT = "com.sun.jndi.ldap.read.timeout";
+    public static final String SUPPORTS_VIRTUAL_HOSTING = "supportsVirtualHosting";
 
     /**
      * The URL of the LDAP server against which users are to be authenticated.
@@ -292,6 +309,13 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
      * &quot;principal&quot; and &quot;credentials&quot;.
      */
     private LdapContext ldapContext;
+    private boolean supportsVirtualHosting;
+    
+    /**
+     * UserId of the administrator
+     * The administrator is allowed to log in as other users
+     */
+    private Optional<String> administratorId;
 
     // Use a connection pool. Default is true.
     private boolean useConnectionPool = true;
@@ -344,6 +368,7 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
         // Default maximum retries is 1, which allows an alternate connection to
         // be found in a multi-homed environment
         maxRetries = configuration.getInt("[@maxRetries]", 1);
+        supportsVirtualHosting = configuration.getBoolean(SUPPORTS_VIRTUAL_HOSTING, false);
         // Default retry start interval is 0 second
         long retryStartInterval = configuration.getLong("[@retryStartInterval]", 0);
         // Default maximum retry interval is 60 seconds
@@ -362,6 +387,7 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
         //see if there is a filter argument
         filter = configuration.getString("[@filter]");
 
+        administratorId = Optional.fromNullable(configuration.getString("[@administratorId]"));
     }
 
     /**
@@ -758,7 +784,24 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
      * VirtualHosting not supported
      */
     public boolean supportVirtualHosting() {
-        return false;
+        return supportsVirtualHosting;
     }
 
+
+    @Override
+    public String getUser(MailAddress mailAddress) throws UsersRepositoryException {
+        if (supportVirtualHosting()) {
+            return mailAddress.asString();
+        } else {
+            return mailAddress.getLocalPart();
+        }
+    }
+
+    @Override
+    public boolean isAdministrator(String username) throws UsersRepositoryException {
+        if (administratorId.isPresent()) {
+            return administratorId.get().equals(username);
+        }
+        return false;
+    }
 }

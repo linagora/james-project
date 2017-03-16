@@ -51,6 +51,7 @@ import org.apache.james.mailbox.hbase.HBaseId;
 import org.apache.james.mailbox.hbase.io.ChunkInputStream;
 import org.apache.james.mailbox.hbase.io.ChunkOutputStream;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.junit.Before;
@@ -70,6 +71,7 @@ public class HBaseMailboxMapperTest {
     private static HBaseMailboxMapper mapper;
     private static List<HBaseMailbox> mailboxList;
     private static List<MailboxPath> pathsList;
+    private static List<HBaseId> idsList;
     private static final int NAMESPACES = 5;
     private static final int USERS = 5;
     private static final int MAILBOX_NO = 5;
@@ -109,6 +111,7 @@ public class HBaseMailboxMapperTest {
     @Test
     public void testMailboxMapperScenario() throws Exception {
         testFindMailboxByPath();
+        testFindMailboxById();
         testFindMailboxWithPathLike();
         testList();
         testSave();
@@ -132,6 +135,16 @@ public class HBaseMailboxMapperTest {
         }
     }
 
+    private void testFindMailboxById() throws Exception {
+        LOG.info("findMailboxById");
+        HBaseMailbox mailbox;
+        for (MailboxId id : idsList) {
+            LOG.info("Searching for " + id.serialize());
+            mailbox = (HBaseMailbox) mapper.findMailboxById(id);
+            assertEquals(mailbox.getMailboxId(), id);
+        }
+    }
+
     /**
      * Test of findMailboxWithPathLike method, of class HBaseMailboxMapper.
      */
@@ -139,7 +152,7 @@ public class HBaseMailboxMapperTest {
         LOG.info("findMailboxWithPathLike");
         MailboxPath path = pathsList.get(pathsList.size() / 2);
 
-        List<Mailbox<HBaseId>> result = mapper.findMailboxWithPathLike(path);
+        List<Mailbox> result = mapper.findMailboxWithPathLike(path);
         assertEquals(1, result.size());
 
         int start = 3;
@@ -164,7 +177,7 @@ public class HBaseMailboxMapperTest {
      */
     private void testList() throws Exception {
         LOG.info("list");
-        List<Mailbox<HBaseId>> result = mapper.list();
+        List<Mailbox> result = mapper.list();
         assertEquals(mailboxList.size(), result.size());
 
     }
@@ -302,6 +315,7 @@ public class HBaseMailboxMapperTest {
     private static void fillMailboxList() {
         mailboxList = new ArrayList<HBaseMailbox>();
         pathsList = new ArrayList<MailboxPath>();
+        idsList = new ArrayList<HBaseId>();
         MailboxPath path;
         String name;
         for (int i = 0; i < NAMESPACES; i++) {
@@ -314,7 +328,9 @@ public class HBaseMailboxMapperTest {
                     }
                     path = new MailboxPath("namespace" + i, "user" + j, name);
                     pathsList.add(path);
-                    mailboxList.add(new HBaseMailbox(path, 13));
+                    HBaseMailbox mailbox = new HBaseMailbox(path, 13);
+                    mailboxList.add(mailbox);
+                    idsList.add(mailbox.getMailboxId());
                 }
             }
         }

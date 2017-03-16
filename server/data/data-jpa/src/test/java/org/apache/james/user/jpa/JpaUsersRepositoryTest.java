@@ -18,70 +18,29 @@
  ****************************************************************/
 package org.apache.james.user.jpa;
 
-import java.util.HashMap;
-
 import org.apache.commons.configuration.DefaultConfigurationBuilder;
+import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.user.jpa.model.JPAUser;
 import org.apache.james.user.lib.AbstractUsersRepository;
 import org.apache.james.user.lib.AbstractUsersRepositoryTest;
-import org.apache.openjpa.persistence.OpenJPAEntityManager;
-import org.apache.openjpa.persistence.OpenJPAEntityManagerFactory;
-import org.apache.openjpa.persistence.OpenJPAEntityTransaction;
-import org.apache.openjpa.persistence.OpenJPAPersistence;
 import org.junit.After;
-import org.junit.Before;
 import org.slf4j.LoggerFactory;
 
 public class JpaUsersRepositoryTest extends AbstractUsersRepositoryTest {
 
-    private HashMap<String, String> properties;
-    private OpenJPAEntityManagerFactory factory;
-
-    @Before
-    @Override
-    public void setUp() throws Exception {
-        properties = new HashMap<String, String>();
-        properties.put("openjpa.ConnectionDriverName", "org.h2.Driver");
-        properties.put("openjpa.ConnectionURL", "jdbc:h2:target/users/db");
-        properties.put("openjpa.Log", "JDBC=WARN, SQL=WARN, Runtime=WARN");
-        properties.put("openjpa.ConnectionFactoryProperties", "PrettyPrint=true, PrettyPrintLineLength=72");
-        properties.put("openjpa.jdbc.SynchronizeMappings", "buildSchema(ForeignKeys=true)");
-        properties.put("openjpa.MetaDataFactory", "jpa(Types=" + JPAUser.class.getName() + ")");
-        super.setUp();
-        deleteAll();
-    }
+    private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPAUser.class);
 
     @After
     @Override
     public void tearDown() throws Exception {
-        deleteAll();
-        super.tearDown();
-
-    }
-
-    private void deleteAll() {
-        OpenJPAEntityManager manager = factory.createEntityManager();
-        final OpenJPAEntityTransaction transaction = manager.getTransaction();
-        try {
-            transaction.begin();
-            manager.createQuery("DELETE FROM JamesUser user").executeUpdate();
-            transaction.commit();
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
-        } finally {
-            manager.close();
-        }
+        JPA_TEST_CLUSTER.clear("JAMES_USER");
     }
 
     @Override
     protected AbstractUsersRepository getUsersRepository() throws Exception {
-        factory = OpenJPAPersistence.getEntityManagerFactory(properties);
         JPAUsersRepository repos = new JPAUsersRepository();
         repos.setLog(LoggerFactory.getLogger("JPA"));
-        repos.setEntityManagerFactory(factory);
+        repos.setEntityManagerFactory(JPA_TEST_CLUSTER.getEntityManagerFactory());
         repos.configure(new DefaultConfigurationBuilder());
         return repos;
     }

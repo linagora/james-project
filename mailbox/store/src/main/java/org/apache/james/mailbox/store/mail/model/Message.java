@@ -23,6 +23,9 @@ import java.io.InputStream;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
+
 public interface Message {
 
     MessageId getMessageId();
@@ -103,4 +106,12 @@ public interface Message {
      * @return unmodifiable list of meta-data, not null
      */
     List<Property> getProperties();
+    
+    /**
+     * Return the list of attachments
+     * 
+     * @return a read only list of attachments
+     */
+    List<MessageAttachment> getAttachments();
+
 }

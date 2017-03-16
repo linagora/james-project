@@ -106,6 +106,8 @@ public interface ImapConstants {
     String SUPPORTS_ACL = "ACL";
 
     String SUPPORTS_QUOTA = "QUOTA";
+
+    String SUPPORTS_ANNOTATION = "ANNOTATION";
     
     String INBOX_NAME = "INBOX";
 
@@ -235,6 +237,10 @@ public interface ImapConstants {
 
     String SETQUOTA_COMMAND_NAME = "SETQUOTA";
 
+    String SETANNOTATION_COMMAND_NAME = "SETMETADATA";
+
+    String GETANNOTATION_COMMAND_NAME = "GETMETADATA";
+
     String LIST_RESPONSE_NAME = "LIST";
 
     String XLIST_RESPONSE_NAME = "XLIST";
@@ -252,6 +258,8 @@ public interface ImapConstants {
     String LISTRIGHTS_RESPONSE_NAME = "LISTRIGHTS";
     
     String MYRIGHTS_RESPONSE_NAME = "MYRIGHTS";
+
+    String ANNOTATION_RESPONSE_NAME = "METADATA";
 
     String NAME_ATTRIBUTE_NOINFERIORS = "\\Noinferiors";
 

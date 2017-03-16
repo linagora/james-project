@@ -19,15 +19,16 @@
 
 package org.apache.james.jmap.model;
 
-import java.util.Date;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-
-import org.apache.commons.lang.NotImplementedException;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 
 @JsonDeserialize(builder = FilterCondition.Builder.class)
@@ -40,10 +41,10 @@ public class FilterCondition implements Filter {
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
 
-        private final ImmutableList.Builder<String> inMailboxes;
-        private final ImmutableList.Builder<String> notInMailboxes;
-        private Date before;
-        private Date after;
+        private Optional<List<String>> inMailboxes;
+        private Optional<List<String>> notInMailboxes;
+        private ZonedDateTime before;
+        private ZonedDateTime after;
         private Integer minSize;
         private Integer maxSize;
         private Boolean isFlagged;
@@ -58,102 +59,131 @@ public class FilterCondition implements Filter {
         private String bcc;
         private String subject;
         private String body;
-        private final ImmutableList.Builder<String> header;
+        private Header header;
 
         private Builder() {
-            inMailboxes = ImmutableList.builder();
-            notInMailboxes = ImmutableList.builder();
-            header = ImmutableList.builder();
+            inMailboxes = Optional.empty();
+            notInMailboxes = Optional.empty();
         }
 
-        public Builder inMailboxes(List<String> inMailboxes) {
-            this.inMailboxes.addAll(inMailboxes);
+        public Builder inMailboxes(String... inMailboxes) {
+            this.inMailboxes = Optional.of(ImmutableList.copyOf(inMailboxes));
             return this;
         }
 
-        public Builder notInMailboxes(List<Filter> notInMailboxes) {
-            throw new NotImplementedException();
+        @JsonDeserialize
+        public Builder inMailboxes(Optional<List<String>> inMailboxes) {
+            this.inMailboxes = inMailboxes.map(ImmutableList::copyOf);
+            return this;
         }
 
-        public Builder before(Date before) {
-            throw new NotImplementedException();
+        public Builder notInMailboxes(String... notInMailboxes) {
+            this.notInMailboxes = Optional.of(ImmutableList.copyOf(notInMailboxes));
+            return this;
         }
 
-        public Builder after(Date after) {
-            throw new NotImplementedException();
+        @JsonDeserialize
+        public Builder notInMailboxes(Optional<List<String>> notInMailboxes) {
+            this.notInMailboxes = notInMailboxes.map(ImmutableList::copyOf);
+            return this;
+        }
+
+        public Builder before(ZonedDateTime before) {
+            this.before = before;
+            return this;
+        }
+
+        public Builder after(ZonedDateTime after) {
+            this.after = after;
+            return this;
         }
 
         public Builder minSize(int minSize) {
-            throw new NotImplementedException();
+            this.minSize = minSize;
+            return this;
         }
 
         public Builder maxSize(int maxSize) {
-            throw new NotImplementedException();
+            this.maxSize = maxSize;
+            return this;
         }
 
-        public Builder isFlagged(boolean isFlagger) {
-            throw new NotImplementedException();
+        public Builder isFlagged(boolean isFlagged) {
+            this.isFlagged = isFlagged;
+            return this;
         }
 
         public Builder isUnread(boolean isUnread) {
-            throw new NotImplementedException();
+            this.isUnread = isUnread;
+            return this;
         }
 
         public Builder isAnswered(boolean isAnswered) {
-            throw new NotImplementedException();
+            this.isAnswered = isAnswered;
+            return this;
         }
 
         public Builder isDraft(boolean isDraft) {
-            throw new NotImplementedException();
+            this.isDraft = isDraft;
+            return this;
         }
 
         public Builder hasAttachment(boolean hasAttachment) {
-            throw new NotImplementedException();
+            this.hasAttachment = hasAttachment;
+            return this;
         }
 
         public Builder text(String text) {
-            throw new NotImplementedException();
+            this.text = text;
+            return this;
         }
 
         public Builder from(String from) {
-            throw new NotImplementedException();
+            this.from = from;
+            return this;
         }
 
         public Builder to(String to) {
-            throw new NotImplementedException();
+            this.to = to;
+            return this;
         }
 
         public Builder cc(String cc) {
-            throw new NotImplementedException();
+            this.cc = cc;
+            return this;
         }
 
         public Builder bcc(String bcc) {
-            throw new NotImplementedException();
+            this.bcc = bcc;
+            return this;
         }
 
         public Builder subject(String subject) {
-            throw new NotImplementedException();
+            this.subject = subject;
+            return this;
         }
 
         public Builder body(String body) {
-            throw new NotImplementedException();
+            this.body = body;
+            return this;
         }
 
-        public Builder header(List<String> body) {
-            throw new NotImplementedException();
+        public Builder header(Header header) {
+            this.header = header;
+            return this;
         }
 
         public FilterCondition build() {
-            return new FilterCondition(inMailboxes.build(), notInMailboxes.build(), Optional.ofNullable(before), Optional.ofNullable(after), Optional.ofNullable(minSize), Optional.ofNullable(maxSize),
+            return new FilterCondition(inMailboxes, notInMailboxes, Optional.ofNullable(before), Optional.ofNullable(after), Optional.ofNullable(minSize), Optional.ofNullable(maxSize),
                     Optional.ofNullable(isFlagged), Optional.ofNullable(isUnread), Optional.ofNullable(isAnswered), Optional.ofNullable(isDraft), Optional.ofNullable(hasAttachment),
-                    Optional.ofNullable(text), Optional.ofNullable(from), Optional.ofNullable(to), Optional.ofNullable(cc), Optional.ofNullable(bcc), Optional.ofNullable(subject), Optional.ofNullable(body), header.build());
+                    Optional.ofNullable(text), Optional.ofNullable(from), Optional.ofNullable(to), Optional.ofNullable(cc), Optional.ofNullable(bcc), Optional.ofNullable(subject), Optional.ofNullable(body), Optional.ofNullable(header));
         }
     }
 
-    private final List<String> inMailboxes;
-    private final List<String> notInMailboxes;
-    private final Optional<Date> before;
-    private final Optional<Date> after;
+    private final Optional<List<String>> inMailboxes;
+    private final Optional<List<String>> notInMailboxes;
+    private final Optional<ZonedDateTime> before;
+    private final Optional<ZonedDateTime> after;
     private final Optional<Integer> minSize;
     private final Optional<Integer> maxSize;
     private final Optional<Boolean> isFlagged;
@@ -168,11 +198,11 @@ public class FilterCondition implements Filter {
     private final Optional<String> bcc;
     private final Optional<String> subject;
     private final Optional<String> body;
-    private final List<String> header;
+    private final Optional<Header> header;
 
-    @VisibleForTesting FilterCondition(List<String> inMailboxes, List<String> notInMailboxes, Optional<Date> before, Optional<Date> after, Optional<Integer> minSize, Optional<Integer> maxSize,
+    @VisibleForTesting FilterCondition(Optional<List<String>> inMailboxes, Optional<List<String>> notInMailboxes, Optional<ZonedDateTime> before, Optional<ZonedDateTime> after, Optional<Integer> minSize, Optional<Integer> maxSize,
             Optional<Boolean> isFlagged, Optional<Boolean> isUnread, Optional<Boolean> isAnswered, Optional<Boolean> isDraft, Optional<Boolean> hasAttachment,
-            Optional<String> text, Optional<String> from, Optional<String> to, Optional<String> cc, Optional<String> bcc, Optional<String> subject, Optional<String> body, List<String> header) {
+            Optional<String> text, Optional<String> from, Optional<String> to, Optional<String> cc, Optional<String> bcc, Optional<String> subject, Optional<String> body, Optional<Header> header) {
 
         this.inMailboxes = inMailboxes;
         this.notInMailboxes = notInMailboxes;
@@ -195,19 +225,19 @@ public class FilterCondition implements Filter {
         this.header = header;
     }
 
-    public List<String> getInMailboxes() {
+    public Optional<List<String>> getInMailboxes() {
         return inMailboxes;
     }
 
-    public List<String> getNotInMailboxes() {
+    public Optional<List<String>> getNotInMailboxes() {
         return notInMailboxes;
     }
 
-    public Optional<Date> getBefore() {
+    public Optional<ZonedDateTime> getBefore() {
         return before;
     }
 
-    public Optional<Date> getAfter() {
+    public Optional<ZonedDateTime> getAfter() {
         return after;
     }
 
@@ -267,7 +297,69 @@ public class FilterCondition implements Filter {
         return body;
     }
 
-    public List<String> getHeader() {
+    public Optional<Header> getHeader() {
         return header;
+    }
+
+    @Override
+    public final boolean equals(Object obj) {
+        if (obj instanceof FilterCondition) {
+            FilterCondition other = (FilterCondition) obj;
+            return Objects.equals(this.inMailboxes, other.inMailboxes)
+                && Objects.equals(this.notInMailboxes, other.notInMailboxes)
+                && Objects.equals(this.before, other.before)
+                && Objects.equals(this.after, other.after)
+                && Objects.equals(this.minSize, other.minSize)
+                && Objects.equals(this.maxSize, other.maxSize)
+                && Objects.equals(this.isFlagged, other.isFlagged)
+                && Objects.equals(this.isUnread, other.isUnread)
+                && Objects.equals(this.isAnswered, other.isAnswered)
+                && Objects.equals(this.isDraft, other.isDraft)
+                && Objects.equals(this.hasAttachment, other.hasAttachment)
+                && Objects.equals(this.text, other.text)
+                && Objects.equals(this.from, other.from)
+                && Objects.equals(this.to, other.to)
+                && Objects.equals(this.cc, other.cc)
+                && Objects.equals(this.bcc, other.bcc)
+                && Objects.equals(this.subject, other.subject)
+                && Objects.equals(this.body, other.body)
+                && Objects.equals(this.header, other.header);
+        }
+        return false;
+    }
+
+    @Override
+    public final int hashCode() {
+        return Objects.hash(inMailboxes, notInMailboxes, before, after, minSize, maxSize, isFlagged, isUnread, isAnswered, isDraft, hasAttachment, text, from, to, cc, bcc, subject, body, header);
+    }
+
+    @Override
+    public String toString() {
+        ToStringHelper helper = MoreObjects.toStringHelper(getClass());
+        inMailboxes.ifPresent(x -> helper.add("inMailboxes", x));
+        notInMailboxes.ifPresent(x -> helper.add("notInMailboxes", x));
+        before.ifPresent(x -> helper.add("before", x));
+        after.ifPresent(x -> helper.add("after", x));
+        minSize.ifPresent(x -> helper.add("minSize", x));
+        maxSize.ifPresent(x -> helper.add("maxSize", x));
+        isFlagged.ifPresent(x -> helper.add("isFlagged", x));
+        isUnread.ifPresent(x -> helper.add("isUnread", x));
+        isAnswered.ifPresent(x -> helper.add("isAnswered", x));
+        isDraft.ifPresent(x -> helper.add("isDraft", x));
+        hasAttachment.ifPresent(x -> helper.add("hasAttachment", x));
+        text.ifPresent(x -> helper.add("text", x));
+        from.ifPresent(x -> helper.add("from", x));
+        to.ifPresent(x -> helper.add("to", x));
+        cc.ifPresent(x -> helper.add("cc", x));
+        bcc.ifPresent(x -> helper.add("bcc", x));
+        subject.ifPresent(x -> helper.add("subject", x));
+        body.ifPresent(x -> helper.add("body", x));
+        header.ifPresent(x -> helper.add("header", x));
+        return helper.toString();
+    }
+
+    @Override
+    public String prettyPrint(String indentation) {
+        return indentation + toString() + "\n";
     }
 }

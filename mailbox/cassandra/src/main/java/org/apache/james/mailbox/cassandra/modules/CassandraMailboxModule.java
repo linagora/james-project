@@ -19,20 +19,21 @@
 
 package org.apache.james.mailbox.cassandra.modules;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import static com.datastax.driver.core.DataType.bigint;
+import static com.datastax.driver.core.DataType.text;
+import static com.datastax.driver.core.DataType.timeuuid;
+
+import java.util.List;
+
 import org.apache.james.backends.cassandra.components.CassandraIndex;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.components.CassandraTable;
 import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.mailbox.cassandra.table.CassandraMailboxPathTable;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxTable;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
-import static com.datastax.driver.core.DataType.bigint;
-import static com.datastax.driver.core.DataType.text;
-import static com.datastax.driver.core.DataType.timeuuid;
+import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraMailboxModule implements CassandraModule {
 
@@ -41,27 +42,22 @@ public class CassandraMailboxModule implements CassandraModule {
     private final List<CassandraType> types;
 
     public CassandraMailboxModule() {
-        tables = Collections.singletonList(
+        tables = ImmutableList.of(
             new CassandraTable(CassandraMailboxTable.TABLE_NAME,
                 SchemaBuilder.createTable(CassandraMailboxTable.TABLE_NAME)
                     .ifNotExists()
                     .addPartitionKey(CassandraMailboxTable.ID, timeuuid())
                     .addUDTColumn(CassandraMailboxTable.MAILBOX_BASE, SchemaBuilder.frozen(CassandraMailboxTable.MAILBOX_BASE))
                     .addColumn(CassandraMailboxTable.NAME, text())
-                    .addColumn(CassandraMailboxTable.PATH, text())
-                    .addColumn(CassandraMailboxTable.UIDVALIDITY, bigint())));
-        index = Arrays.asList(
-            new CassandraIndex(
-                SchemaBuilder.createIndex(CassandraIndex.INDEX_PREFIX + CassandraMailboxTable.TABLE_NAME)
+                    .addColumn(CassandraMailboxTable.UIDVALIDITY, bigint())),
+            new CassandraTable(CassandraMailboxPathTable.TABLE_NAME,
+                SchemaBuilder.createTable(CassandraMailboxPathTable.TABLE_NAME)
                     .ifNotExists()
-                    .onTable(CassandraMailboxTable.TABLE_NAME)
-                    .andColumn(CassandraMailboxTable.PATH)),
-            new CassandraIndex(
-                SchemaBuilder.createIndex(CassandraIndex.INDEX_PREFIX + CassandraMailboxTable.MAILBOX_BASE)
-                    .ifNotExists()
-                    .onTable(CassandraMailboxTable.TABLE_NAME)
-                    .andColumn(CassandraMailboxTable.MAILBOX_BASE)));
-        types = Collections.singletonList(
+                    .addUDTPartitionKey(CassandraMailboxPathTable.NAMESPACE_AND_USER, SchemaBuilder.frozen(CassandraMailboxTable.MAILBOX_BASE))
+                    .addClusteringColumn(CassandraMailboxPathTable.MAILBOX_NAME, text())
+                    .addColumn(CassandraMailboxPathTable.MAILBOX_ID, timeuuid())));
+        index = ImmutableList.of();
+        types = ImmutableList.of(
             new CassandraType(CassandraMailboxTable.MAILBOX_BASE,
                 SchemaBuilder.createType(CassandraMailboxTable.MAILBOX_BASE)
                     .ifNotExists()

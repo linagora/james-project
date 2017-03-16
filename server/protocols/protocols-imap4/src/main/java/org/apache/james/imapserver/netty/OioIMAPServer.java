@@ -18,6 +18,9 @@
  ****************************************************************/
 package org.apache.james.imapserver.netty;
 
+import org.apache.james.imap.api.process.ImapProcessor;
+import org.apache.james.imap.decode.ImapDecoder;
+import org.apache.james.imap.encode.ImapEncoder;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.ExecutionHandler;
@@ -27,6 +30,10 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * use {@link IMAPServer}
  */
 public class OioIMAPServer extends IMAPServer {
+
+    public OioIMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics) {
+        super(decoder, encoder, processor, imapMetrics);
+    }
 
     @Override
     protected ServerSocketChannelFactory createSocketChannelFactory() {

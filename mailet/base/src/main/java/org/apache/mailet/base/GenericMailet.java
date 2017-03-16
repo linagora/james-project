@@ -20,15 +20,23 @@
 
 package org.apache.mailet.base;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+
 import javax.mail.MessagingException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.mailet.Mail;
 import org.apache.mailet.Mailet;
 import org.apache.mailet.MailetConfig;
 import org.apache.mailet.MailetContext;
 import org.apache.mailet.MailetContext.LogLevel;
 
-import java.util.*;
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 
 /**
  * GenericMailet makes writing mailets easier. It provides simple
@@ -42,6 +50,12 @@ import java.util.*;
  * @version 1.0.0, 24/04/1999
  */
 public abstract class GenericMailet implements Mailet, MailetConfig {
+
+    private static final String YES = "yes";
+    private static final String NO = "no";
+    private static final String TRUE = "true";
+    private static final String FALSE = "false";
+
     private MailetConfig config = null;
 
     /**
@@ -68,9 +82,35 @@ public abstract class GenericMailet implements Mailet, MailetConfig {
         if (config == null) {
             throw new NullPointerException("Mailet configuration must be set before getInitParameter is called.");
         }
-        return MailetUtil.getInitParameter(config, name, defaultValue);
+        return MailetUtil.getInitParameter(config, name).or(defaultValue);
     }
-    
+
+    public Optional<String> getInitParameterAsOptional(String name) {
+        String value = getInitParameter(name);
+        if (Strings.isNullOrEmpty(value)) {
+            return Optional.absent();
+        }
+        return Optional.of(value);
+    }
+
+    /**
+     * Gets a boolean valued init parameter that matches 'false', 'no', 'true' or 'yes' string values.
+     */
+    public boolean getBooleanParameter(String value, boolean defaultValue) {
+        if (defaultValue) {
+            return !isFalseOrNo(value);
+        }
+        return isTrueOrYes(value);
+    }
+
+    private static boolean isFalseOrNo(String value) {
+        return StringUtils.containsIgnoreCase(value, FALSE) || StringUtils.containsIgnoreCase(value, NO);
+    }
+
+    private static boolean isTrueOrYes(String value) {
+        return StringUtils.containsIgnoreCase(value, TRUE) || StringUtils.containsIgnoreCase(value, YES);
+    }
+
     /**
      * Returns a String containing the value of the named initialization
      * parameter, or null if the parameter does not exist.
@@ -255,27 +295,8 @@ public abstract class GenericMailet implements Mailet, MailetConfig {
         
         if (bad.size() > 0) {
             throw new MessagingException("Unexpected init parameters found: "
-                    + arrayToString(bad.toArray()));
+                    + org.apache.mailet.base.StringUtils.arrayToString(bad.toArray()));
         }
-    }
-    
-    /**
-     * Utility method for obtaining a string representation of an array of Objects.
-     */
-    protected final String arrayToString(Object[] array) {
-        if (array == null) {
-            return "null";
-        }
-        StringBuilder sb = new StringBuilder(1024);
-        sb.append("[");
-        for (int i = 0; i < array.length; i++) {
-            if (i > 0) {
-                sb.append(",");
-            }
-            sb.append(array[i]);
-        }
-        sb.append("]");
-        return sb.toString();
     }
 
 }

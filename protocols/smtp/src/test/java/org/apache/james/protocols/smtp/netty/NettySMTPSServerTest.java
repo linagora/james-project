@@ -33,10 +33,16 @@ import org.apache.james.protocols.smtp.AbstractSMTPSServerTest;
  */
 public class NettySMTPSServerTest extends AbstractSMTPSServerTest{
 
+    private static final String LOCALHOST_IP = "127.0.0.1";
+    private static final int RANDOM_PORT = 0;
+
     @Override
-    protected ProtocolServer createEncryptedServer(Protocol protocol, InetSocketAddress address, Encryption enc) {
-        NettyServer server = new NettyServer(protocol, enc);
-        server.setListenAddresses(address);
+    protected ProtocolServer createEncryptedServer(Protocol protocol, Encryption enc) {
+        NettyServer server = NettyServer.builder()
+                .protocol(protocol)
+                .secure(enc)
+                .build();
+        server.setListenAddresses(new InetSocketAddress(LOCALHOST_IP, RANDOM_PORT));
         return server;
     }
 

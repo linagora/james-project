@@ -39,6 +39,7 @@ public class MockMailboxSession implements MailboxSession{
     private final static Random RANDOM = new Random();
 
     private final long sessionId = RANDOM.nextLong();
+    private SessionType type = SessionType.User;
     
     public MockMailboxSession(final String username) {
         this.user = new User() {
@@ -54,9 +55,21 @@ public class MockMailboxSession implements MailboxSession{
             public List<Locale> getLocalePreferences() {
                 return new ArrayList<Locale>();
             }
+
+            @Override
+            public boolean isSameUser(String other) {
+                if (username == null) {
+                    return other == null;
+                }
+                return username.equalsIgnoreCase(other);
+            }
         };
     }
-    
+
+    public MockMailboxSession(final String username, SessionType type) {
+        this(username);
+        this.type = type;
+    }
     public void close() {
         this.close = true;
     }
@@ -98,7 +111,7 @@ public class MockMailboxSession implements MailboxSession{
 	}
 
     public SessionType getType() {
-        return SessionType.User;
+        return type;
     }
 
 }

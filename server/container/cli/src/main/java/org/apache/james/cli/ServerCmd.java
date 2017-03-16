@@ -34,18 +34,27 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.time.StopWatch;
-import org.apache.james.adapter.mailbox.SerializableQuota;
 import org.apache.james.cli.exceptions.InvalidArgumentNumberException;
 import org.apache.james.cli.exceptions.InvalidPortException;
 import org.apache.james.cli.exceptions.JamesCliException;
 import org.apache.james.cli.exceptions.MissingCommandException;
 import org.apache.james.cli.exceptions.UnrecognizedCommandException;
-import org.apache.james.cli.probe.ServerProbe;
-import org.apache.james.cli.probe.impl.JmxServerProbe;
+import org.apache.james.cli.probe.impl.JmxConnection;
+import org.apache.james.cli.probe.impl.JmxDataProbe;
+import org.apache.james.cli.probe.impl.JmxMailboxProbe;
+import org.apache.james.cli.probe.impl.JmxQuotaProbe;
+import org.apache.james.cli.probe.impl.JmxSieveProbe;
 import org.apache.james.cli.type.CmdType;
 import org.apache.james.cli.utils.ValueWithUnit;
 import org.apache.james.mailbox.model.Quota;
+import org.apache.james.mailbox.store.mail.model.SerializableQuota;
+import org.apache.james.mailbox.store.probe.MailboxProbe;
+import org.apache.james.mailbox.store.probe.QuotaProbe;
+import org.apache.james.mailbox.store.probe.SieveProbe;
+import org.apache.james.probe.DataProbe;
 import org.apache.james.rrt.lib.Mappings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -60,7 +69,8 @@ public class ServerCmd {
     public static final String PORT_OPT_SHORT = "p";
 
     private static final int DEFAULT_PORT = 9999;
-
+    private static final Logger LOG = LoggerFactory.getLogger(ServerCmd.class);
+    
     private static Options createOptions() {
         Options options = new Options();
         Option optHost = new Option(HOST_OPT_SHORT, HOST_OPT_LONG, true, "node hostname or ip address");
@@ -68,12 +78,6 @@ public class ServerCmd {
         options.addOption(optHost);
         options.addOption(PORT_OPT_SHORT, PORT_OPT_LONG, true, "remote jmx agent port number");
         return options;
-    }
-
-    private final ServerProbe probe;
-
-    public ServerCmd(ServerProbe probe) {
-        this.probe = probe;
     }
 
     /**
@@ -87,7 +91,13 @@ public class ServerCmd {
             StopWatch stopWatch = new StopWatch();
             stopWatch.start();
             CommandLine cmd = parseCommandLine(args);
-            CmdType cmdType =new ServerCmd(new JmxServerProbe(cmd.getOptionValue(HOST_OPT_LONG), getPort(cmd)))
+            JmxConnection jmxConnection = new JmxConnection(cmd.getOptionValue(HOST_OPT_LONG), getPort(cmd));
+            CmdType cmdType = new ServerCmd(
+                    new JmxDataProbe().connect(jmxConnection),
+                    new JmxMailboxProbe().connect(jmxConnection),
+                    new JmxQuotaProbe().connect(jmxConnection),
+                    new JmxSieveProbe().connect(jmxConnection)
+                )
                 .executeCommandLine(cmd);
             stopWatch.split();
             print(new String[] { Joiner.on(' ')
@@ -102,11 +112,24 @@ public class ServerCmd {
         } catch (IOException ioe) {
             failWithMessage("Error connecting to remote JMX agent : " + ioe.getMessage());
         } catch (Exception e) {
-            failWithMessage("Error while executing command:" + e.getMessage());
+            LOG.error("Error on command: {}", e);
+            failWithMessage("Error " + e.getClass() + " while executing command:" + e.getMessage());
         }
 
     }
 
+    private final DataProbe probe;
+    private final MailboxProbe mailboxProbe;
+    private final QuotaProbe quotaProbe;
+    private final SieveProbe sieveProbe;
+    
+    public ServerCmd(DataProbe probe, MailboxProbe mailboxProbe, QuotaProbe quotaProbe, SieveProbe sieveProbe) {
+        this.probe = probe;
+        this.mailboxProbe = mailboxProbe;
+        this.quotaProbe = quotaProbe;
+        this.sieveProbe = sieveProbe;
+    }
+    
     @VisibleForTesting
     static CommandLine parseCommandLine(String[] args) throws ParseException {
         CommandLineParser parser = new PosixParser();
@@ -208,62 +231,84 @@ public class ServerCmd {
             probe.setPassword(arguments[1], arguments[2]);
             break;
         case COPYMAILBOX:
-            probe.copyMailbox(arguments[1], arguments[2]);
+            mailboxProbe.copyMailbox(arguments[1], arguments[2]);
             break;
         case DELETEUSERMAILBOXES:
-            probe.deleteUserMailboxesNames(arguments[1]);
+            mailboxProbe.deleteUserMailboxesNames(arguments[1]);
             break;
         case CREATEMAILBOX:
-            probe.createMailbox(arguments[1], arguments[2], arguments[3]);
+            mailboxProbe.createMailbox(arguments[1], arguments[2], arguments[3]);
             break;
         case LISTUSERMAILBOXES:
-            Collection<String> mailboxes = probe.listUserMailboxes(arguments[1]);
+            Collection<String> mailboxes = mailboxProbe.listUserMailboxes(arguments[1]);
             print(mailboxes.toArray(new String[0]), System.out);
             break;
         case DELETEMAILBOX:
-            probe.deleteMailbox(arguments[1], arguments[2], arguments[3]);
+            mailboxProbe.deleteMailbox(arguments[1], arguments[2], arguments[3]);
             break;
         case GETSTORAGEQUOTA:
-            printStorageQuota(arguments[1], probe.getStorageQuota(arguments[1]));
+            printStorageQuota(arguments[1], quotaProbe.getStorageQuota(arguments[1]));
             break;
         case GETMESSAGECOUNTQUOTA:
-            printMessageQuota(arguments[1], probe.getMessageCountQuota(arguments[1]));
+            printMessageQuota(arguments[1], quotaProbe.getMessageCountQuota(arguments[1]));
             break;
         case GETQUOTAROOT:
-            System.out.println("Quota Root : " + probe.getQuotaRoot(arguments[1], arguments[2], arguments[3]));
+            System.out.println("Quota Root : " + quotaProbe.getQuotaRoot(arguments[1], arguments[2], arguments[3]));
             break;
         case GETMAXSTORAGEQUOTA:
             System.out.println("Storage space allowed for Quota Root "
                 + arguments[1]
                 + " : "
-                + formatStorageValue(probe.getMaxStorage(arguments[1])));
+                + formatStorageValue(quotaProbe.getMaxStorage(arguments[1])));
             break;
         case GETMAXMESSAGECOUNTQUOTA:
-            System.out.println("MailboxMessage count allowed for Quota Root " + arguments[1] + " : " + formatMessageValue(probe.getMaxMessageCount(arguments[1])));
+            System.out.println("MailboxMessage count allowed for Quota Root " + arguments[1] + " : " + formatMessageValue(quotaProbe.getMaxMessageCount(arguments[1])));
             break;
         case SETMAXSTORAGEQUOTA:
-            probe.setMaxStorage(arguments[1], ValueWithUnit.parse(arguments[2]).getConvertedValue());
+            quotaProbe.setMaxStorage(arguments[1], ValueWithUnit.parse(arguments[2]).getConvertedValue());
             break;
         case SETMAXMESSAGECOUNTQUOTA:
-            probe.setMaxMessageCount(arguments[1], Long.parseLong(arguments[2]));
+            quotaProbe.setMaxMessageCount(arguments[1], Long.parseLong(arguments[2]));
             break;
         case SETDEFAULTMAXSTORAGEQUOTA:
-            probe.setDefaultMaxStorage(ValueWithUnit.parse(arguments[1]).getConvertedValue());
+            quotaProbe.setDefaultMaxStorage(ValueWithUnit.parse(arguments[1]).getConvertedValue());
             break;
         case SETDEFAULTMAXMESSAGECOUNTQUOTA:
-            probe.setDefaultMaxMessageCount(Long.parseLong(arguments[1]));
+            quotaProbe.setDefaultMaxMessageCount(Long.parseLong(arguments[1]));
             break;
         case GETDEFAULTMAXSTORAGEQUOTA:
-            System.out.println("Default Maximum Storage Quota : " + formatStorageValue(probe.getDefaultMaxStorage()));
+            System.out.println("Default Maximum Storage Quota : " + formatStorageValue(quotaProbe.getDefaultMaxStorage()));
             break;
         case GETDEFAULTMAXMESSAGECOUNTQUOTA:
-            System.out.println("Default Maximum message count Quota : " + formatMessageValue(probe.getDefaultMaxMessageCount()));
+            System.out.println("Default Maximum message count Quota : " + formatMessageValue(quotaProbe.getDefaultMaxMessageCount()));
             break;
         case REINDEXMAILBOX:
-            probe.reIndexMailbox(arguments[1], arguments[2], arguments[3]);
+            mailboxProbe.reIndexMailbox(arguments[1], arguments[2], arguments[3]);
             break;
         case REINDEXALL:
-            probe.reIndexAll();
+            mailboxProbe.reIndexAll();
+            break;
+        case SETSIEVEQUOTA:
+            sieveProbe.setSieveQuota(ValueWithUnit.parse(arguments[1]).getConvertedValue());
+            break;
+        case SETSIEVEUSERQUOTA:
+            sieveProbe.setSieveQuota(arguments[1], ValueWithUnit.parse(arguments[2]).getConvertedValue());
+            break;
+        case GETSIEVEQUOTA:
+            System.out.println("Storage space allowed for Sieve scripts by default : "
+                + formatStorageValue(sieveProbe.getSieveQuota()));
+            break;
+        case GETSIEVEUSERQUOTA:
+            System.out.println("Storage space allowed for "
+                + arguments[1]
+                + " Sieve scripts : "
+                + formatStorageValue(sieveProbe.getSieveQuota(arguments[1])));
+            break;
+        case REMOVESIEVEQUOTA:
+            sieveProbe.removeSieveQuota();
+            break;
+        case REMOVESIEVEUSERQUOTA:
+            sieveProbe.removeSieveQuota(arguments[1]);
             break;
         default:
             throw new UnrecognizedCommandException(cmdType.getCommand());

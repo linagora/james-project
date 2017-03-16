@@ -10,7 +10,8 @@ printUsage() {
 }
 
 ORIGIN=/origin
-DESTINATION=/destination
+CASSANDRA_DESTINATION=/cassandra/destination
+JPA_DESTINATION=/jpa/destination
 
 for arg in "$@"
 do
@@ -34,7 +35,7 @@ do
 done
 
 if [ -z "$SHA1" ]; then
-   SHA1=trunk
+   SHA1=master
 fi
 
 # Sources retrieval
@@ -44,17 +45,28 @@ git checkout $SHA1
 # Compilation
 
 if [ "$SKIPTESTS" = "skipTests" ]; then
-   mvn package -DskipTests -Pcassandra,exclude-lucene,with-assembly,with-jetm
+   mvn package -DskipTests -Pcassandra,inmemory,jpa,elasticsearch,lucene,with-assembly,with-jetm
 else
-   mvn package -Pcassandra,exclude-lucene,with-assembly,with-jetm
+   mvn package -Pcassandra,inmemory,jpa,elasticsearch,lucene,with-assembly,with-jetm
 fi
 
 # Retrieve result
 
 if [ $? -eq 0 ]; then
-   cp server/app/target/james-server-app-*-app.zip $DESTINATION
-   cp server/container/cassandra-guice/target/james-server-cassandra-guice-*-SNAPSHOT.jar $DESTINATION
-   cp -r server/container/cassandra-guice/target/james-server-cassandra-guice-*-SNAPSHOT.lib $DESTINATION
-   cp server/container/cli/target/james-server-cli-*.jar $DESTINATION
-   cp -r server/container/cli/target/james-server-cli-*.lib $DESTINATION
+   if [ -d "$CASSANDRA_DESTINATION" ]; then
+      cp server/container/guice/cassandra-guice/target/james-server-cassandra-guice.jar $CASSANDRA_DESTINATION || true
+      cp -r server/container/guice/cassandra-guice/target/james-server-cassandra-guice.lib $CASSANDRA_DESTINATION || true
+      cp server/container/cli/target/james-server-cli.jar $CASSANDRA_DESTINATION || true
+      cp -r server/container/cli/target/james-server-cli.lib $CASSANDRA_DESTINATION || true
+
+      cp server/container/guice/cassandra-ldap-guice/target/james-server-cassandra-ldap-guice.jar $CASSANDRA_DESTINATION || true
+      cp -r server/container/guice/cassandra-ldap-guice/target/james-server-cassandra-ldap-guice.lib $CASSANDRA_DESTINATION || true
+   fi
+
+   if [ -d "$JPA_DESTINATION" ]; then
+      cp server/container/guice/jpa-guice/target/james-server-jpa-guice.jar $JPA_DESTINATION || true
+      cp -r server/container/guice/jpa-guice/target/james-server-jpa-guice.lib $JPA_DESTINATION || true
+      cp server/container/cli/target/james-server-cli.jar $JPA_DESTINATION || true
+      cp -r server/container/cli/target/james-server-cli.lib $JPA_DESTINATION || true
+   fi
 fi

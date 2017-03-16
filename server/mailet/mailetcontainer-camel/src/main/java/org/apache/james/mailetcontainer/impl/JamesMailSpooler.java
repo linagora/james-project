@@ -19,6 +19,14 @@
 
 package org.apache.james.mailetcontainer.impl;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.lifecycle.api.Configurable;
@@ -27,6 +35,8 @@ import org.apache.james.lifecycle.api.LifecycleUtil;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.mailetcontainer.api.MailProcessor;
 import org.apache.james.mailetcontainer.api.jmx.MailSpoolerMBean;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueue.MailQueueException;
 import org.apache.james.queue.api.MailQueue.MailQueueItem;
@@ -35,13 +45,6 @@ import org.apache.james.util.concurrent.JMXEnabledThreadPoolExecutor;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Manages the mail spool. This class is responsible for retrieving messages
  * from the spool, directing messages to the appropriate processor, and removing
@@ -49,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class JamesMailSpooler implements Runnable, Disposable, Configurable, LogEnabled, MailSpoolerMBean {
 
+    public static final String SPOOL_PROCESSING = "spoolProcessing";
     private MailQueue queue;
 
     /**
@@ -68,6 +72,8 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
      */
     private final AtomicBoolean active = new AtomicBoolean(false);
 
+    private final MetricFactory metricFactory;
+
     /**
      * Spool threads
      */
@@ -85,6 +91,11 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
     private MailQueueFactory queueFactory;
 
     private int numDequeueThreads;
+
+    @Inject
+    public JamesMailSpooler(MetricFactory metricFactory) {
+        this.metricFactory = metricFactory;
+    }
 
     @Inject
     public void setMailQueueFactory(MailQueueFactory queueFactory) {
@@ -150,6 +161,7 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
 
                     @Override
                     public void run() {
+                        TimeMetric timeMetric = metricFactory.timer(SPOOL_PROCESSING);
                         try {
                             numActive.incrementAndGet();
 
@@ -183,6 +195,7 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
                         } finally {
                             processingActive.decrementAndGet();
                             numActive.decrementAndGet();
+                            timeMetric.stopAndPublish();
                         }
 
                     }
@@ -192,11 +205,11 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
                     logger.error("Exception dequeue mail", e1);
 
                 }
+            } catch (InterruptedException interrupted) {
+                //MailSpooler is stopping
             }
         }
-        if (logger.isInfoEnabled()) {
-            logger.info("Stop " + getClass().getName() + ": " + Thread.currentThread().getName());
-        }
+        logger.info("Stop {} : {}", getClass().getName(), Thread.currentThread().getName());
     }
 
     /**

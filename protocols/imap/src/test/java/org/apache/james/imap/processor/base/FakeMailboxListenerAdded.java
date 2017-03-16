@@ -26,55 +26,57 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 
 public class FakeMailboxListenerAdded extends MailboxListener.Added {
 
-    public List<Long> uids;
+    public List<MessageUid> uids;
 
-    public FakeMailboxListenerAdded(MailboxSession session, List<Long> uids, MailboxPath path) {
+    public FakeMailboxListenerAdded(MailboxSession session, List<MessageUid> uids, MailboxPath path) {
         super(session, path);
         this.uids = uids;
     }
 
-    /**
-     * @see org.apache.james.mailbox.MailboxListener.MessageEvent#getUids()
-     */
-    public List<Long> getUids() {
+    @Override
+    public List<MessageUid> getUids() {
         return uids;
     }
 
-
-    /**
-     * @see org.apache.james.mailbox.MailboxListener.Added#getMetaData(long)
-     */
-    public MessageMetaData getMetaData(long uid) {
+    @Override
+    public MessageMetaData getMetaData(MessageUid uid) {
         return new MessageMetaData() {
             
-            public long getUid() {
-                // TODO Auto-generated method stub
-                return 0;
-            }
-            
-            public long getSize() {
-                // TODO Auto-generated method stub
-                return 0;
-            }
-            
-            public Date getInternalDate() {
-                // TODO Auto-generated method stub
+            @Override
+            public MessageUid getUid() {
                 return null;
             }
             
+            @Override
+            public long getSize() {
+                return 0;
+            }
+            
+            @Override
+            public Date getInternalDate() {
+                return null;
+            }
+            
+            @Override
             public Flags getFlags() {
-                // TODO Auto-generated method stub
                 return null;
             }
 
+            @Override
             public long getModSeq() {
-                // TODO Auto-generated method stub
                 return 0;
+            }
+            
+            @Override
+            public MessageId getMessageId() {
+                return null;
             }
         };
     }

@@ -20,41 +20,21 @@ package org.apache.james.imap.decode.parser;
 
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapConstants;
-import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.message.IdRange;
-import org.apache.james.imap.api.process.ImapSession;
-import org.apache.james.imap.decode.ImapRequestLineReader;
 import org.apache.james.imap.message.request.CopyRequest;
-import org.apache.james.protocols.imap.DecodingException;
 
 /**
  * Parse COPY commands
  */
-public class CopyCommandParser extends AbstractUidCommandParser {
+public class CopyCommandParser extends AbstractMessageRangeCommandParser {
 
     public CopyCommandParser() {
-        this(ImapCommand.selectedStateCommand(ImapConstants.COPY_COMMAND_NAME));
+        super(ImapCommand.selectedStateCommand(ImapConstants.COPY_COMMAND_NAME));
     }
 
-    protected CopyCommandParser(ImapCommand command) {
-    	super(command);
+    @Override
+    protected CopyRequest createRequest(ImapCommand command, String tag, boolean useUids, IdRange[] idSet, String mailboxName) {
+        return new CopyRequest(command, idSet, mailboxName, useUids, tag);
     }
-    /**
-     * @see
-     * org.apache.james.imap.decode.parser.AbstractUidCommandParser#decode(org.apache.james.imap.api.ImapCommand,
-     * org.apache.james.imap.decode.ImapRequestLineReader, java.lang.String,
-     * boolean, org.apache.james.imap.api.process.ImapSession)
-     */
-    protected ImapMessage decode(ImapCommand command, ImapRequestLineReader request, String tag, boolean useUids, ImapSession session) throws DecodingException {
-        IdRange[] idSet = request.parseIdRange(session);
-        String mailboxName = request.mailbox();
-        request.eol();
-        return createRequest(command, tag, useUids, idSet, mailboxName);
-    }
-
-	protected CopyRequest createRequest(ImapCommand command, String tag,
-			boolean useUids, IdRange[] idSet, String mailboxName) {
-		return new CopyRequest(command, idSet, mailboxName, useUids, tag);
-}
 
 }

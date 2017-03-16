@@ -25,12 +25,11 @@ import java.util.List;
 
 import javax.mail.Flags;
 
-import org.apache.james.mailbox.store.mail.model.impl.MessageUidComparator;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 
-public abstract class DelegatingMailboxMessage<Id extends MailboxId> implements MailboxMessage<Id> {
+public abstract class DelegatingMailboxMessage implements MailboxMessage {
 
-    private static final MessageUidComparator MESSAGE_UID_COMPARATOR = new MessageUidComparator();
-    
     private final Message message;
 
     protected DelegatingMailboxMessage(Message message) {
@@ -38,8 +37,8 @@ public abstract class DelegatingMailboxMessage<Id extends MailboxId> implements 
     }
 
     @Override
-    public int compareTo(MailboxMessage<Id> other) {
-        return MESSAGE_UID_COMPARATOR.compare(this, other);
+    public int compareTo(MailboxMessage other) {
+        return this.getUid().compareTo(other.getUid());
     }
 
     @Override
@@ -108,11 +107,16 @@ public abstract class DelegatingMailboxMessage<Id extends MailboxId> implements 
     }
 
     @Override
-    public DefaultMessageId getMessageId() {
-        return new DefaultMessageId(getMailboxId(), getUid());
+    public MessageId getMessageId() {
+        return message.getMessageId();
     }
 
     public Message getMessage() {
         return message;
+    }
+
+    @Override
+    public List<MessageAttachment> getAttachments() {
+        return message.getAttachments();
     }
 }

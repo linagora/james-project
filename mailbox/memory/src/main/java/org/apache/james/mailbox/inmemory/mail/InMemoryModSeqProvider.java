@@ -26,22 +26,34 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
-public class InMemoryModSeqProvider implements ModSeqProvider<InMemoryId>{
+public class InMemoryModSeqProvider implements ModSeqProvider {
     private final ConcurrentMap<InMemoryId, AtomicLong> map = new ConcurrentHashMap<InMemoryId, AtomicLong>();
 
     @Override
-    public long nextModSeq(MailboxSession session, Mailbox<InMemoryId> mailbox) throws MailboxException {
-        return getHighest(mailbox.getMailboxId()).incrementAndGet();
+    public long nextModSeq(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        return nextModSeq((InMemoryId) mailbox.getMailboxId());
 
     }
 
     @Override
-    public long highestModSeq(MailboxSession session, Mailbox<InMemoryId> mailbox) throws MailboxException {
-        return getHighest(mailbox.getMailboxId()).get();
+    public long nextModSeq(MailboxSession session, MailboxId mailboxId) throws MailboxException {
+        return nextModSeq((InMemoryId) mailboxId);
     }
+
+    @Override
+    public long highestModSeq(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        return getHighest((InMemoryId) mailbox.getMailboxId()).get();
+    }
+
+    @Override
+    public long highestModSeq(MailboxSession session, MailboxId mailboxId) throws MailboxException {
+        return getHighest((InMemoryId) mailboxId).get();
+    }
+
     private AtomicLong getHighest(InMemoryId id) {
         AtomicLong uid = map.get(id);
         if (uid == null) {
@@ -52,5 +64,9 @@ public class InMemoryModSeqProvider implements ModSeqProvider<InMemoryId>{
             }
         }
         return uid;
+    }
+
+    private long nextModSeq(InMemoryId mailboxId) {
+        return getHighest(mailboxId).incrementAndGet();
     }
 }

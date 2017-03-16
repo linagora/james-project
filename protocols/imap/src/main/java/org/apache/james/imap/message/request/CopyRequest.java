@@ -25,40 +25,9 @@ import org.apache.james.imap.api.message.request.ImapRequest;
 /**
  * {@link ImapRequest} which request the copy of messages
  */
-public class CopyRequest extends AbstractImapRequest {
+public class CopyRequest extends AbstractMessageRangeRequest {
 
-    private final IdRange[] idSet;
-
-    private final String mailboxName;
-
-    private final boolean useUids;
-
-    public CopyRequest(final ImapCommand command, final IdRange[] idSet, final String mailboxName, final boolean useUids, final String tag) {
-        super(tag, command);
-        this.idSet = idSet;
-        this.mailboxName = mailboxName;
-        this.useUids = useUids;
-    }
-
-    /**
-     * Return an Array of {@link IdRange} to copy
-     * 
-     * @return range
-     */
-    public final IdRange[] getIdSet() {
-        return idSet;
-    }
-
-    /**
-     * Return the name of the mailbox
-     * 
-     * @return mailbox
-     */
-    public final String getMailboxName() {
-        return mailboxName;
-    }
-
-    public final boolean isUseUids() {
-        return useUids;
+    public CopyRequest(ImapCommand command, IdRange[] idSet, String mailboxName, boolean useUids, String tag) {
+        super(command, idSet, mailboxName, useUids, tag);
     }
 }

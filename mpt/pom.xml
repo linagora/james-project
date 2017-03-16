@@ -17,20 +17,16 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <artifactId>james-project</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>1.8.3-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
     </parent>
 
     <artifactId>apache-james-mpt</artifactId>
-    <version>0.2-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
@@ -46,14 +42,10 @@
         <module>core</module>
         <module>impl/imap-mailbox</module>
         <module>impl/managesieve</module>
+        <module>impl/smtp</module>
         <module>mavenplugin</module>
+        <module>onami-test</module>
     </modules>
-
-    <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/james/mpt/trunk</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/james/mpt/trunk</developerConnection>
-        <url>http://svn.apache.org/viewcvs.cgi/james/mpt/trunk?root=Apache-SVN</url>
-    </scm>
 
     <issueManagement>
         <system>JIRA</system>
@@ -101,22 +93,18 @@
         <hadoop.version>1.0.1</hadoop.version>
         <hbase.version>0.94.27</hbase.version>
         <jackrabbit-core.version>2.5.2</jackrabbit-core.version>
-        <james-protocols.version>1.6.4-SNAPSHOT</james-protocols.version>
-        <james-mailbox.version>0.6-SNAPSHOT</james-mailbox.version>
         <javax.mail.version>1.4.1</javax.mail.version>
         <jmock.version>2.6.0</jmock.version>
         <junit.version>4.11</junit.version>
         <log4j.version>1.2.16</log4j.version>
         <lucene-core.version>3.6.0</lucene-core.version>
-        <onami.version>1.4.1-incubating-SNAPSHOT</onami.version>
         <slf4j.version>1.6.6</slf4j.version>
         <assertj-1.version>1.7.1</assertj-1.version>
         <assertj-3.version>3.2.0</assertj-3.version>
 
         <javax.mail.groupId>javax.mail</javax.mail.groupId>
         <javax.mail.artifactId>mail</javax.mail.artifactId>
-        <backends.version>1.8.3-SNAPSHOT</backends.version>
-        <james.version>3.0.0-beta5-SNAPSHOT</james.version>
+        <logback.version>1.1.7</logback.version>
     </properties>
 
 
@@ -162,91 +150,206 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mpt-onami-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <!-- Other Apache James sub projects -->
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-backends-cassandra</artifactId>
-                <version>${backends.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-backends-cassandra</artifactId>
                 <type>test-jar</type>
-                <version>${backends.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-es</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-es</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-backends-jpa</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-api</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-cassandra</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-elasticsearch</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-elasticsearch</artifactId>
                 <type>test-jar</type>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-cassandra</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-hbase</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-jcr</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-jpa</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-jpa</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-lucene</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-lucene</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-maildir</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-memory</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-store</artifactId>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
                 <artifactId>apache-james-mailbox-store</artifactId>
                 <type>test-jar</type>
-                <version>${james-mailbox.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-cassandra-guice</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-cassandra-guice</artifactId>
+                <version>${project.version}</version>
+                <scope>test</scope>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-cassandra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-file</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-mailbox-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-data-memory</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-dnsservice-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-common</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-guice-jmap</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-util-java8</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>metrics-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>metrics-logger</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-imap</artifactId>
-                <version>${james-protocols.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james.protocols</groupId>
                 <artifactId>protocols-imap</artifactId>
                 <type>test-jar</type>
-                <version>${james-protocols.version}</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james.protocols</groupId>
+                <artifactId>protocols-managesieve</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <!-- Other dependencies -->
             <dependency>
@@ -259,6 +362,26 @@
                 <artifactId>ant-antunit</artifactId>
                 <version>1.1</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>2.6.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jayway.restassured</groupId>
+                <artifactId>rest-assured</artifactId>
+                <version>2.6.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-client</artifactId>
+                <version>3.5.10</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -330,6 +453,11 @@
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>1</version>
+            </dependency>
+            <dependency>
                 <groupId>jmock</groupId>
                 <artifactId>jmock</artifactId>
                 <version>1.1.0</version>
@@ -344,6 +472,11 @@
                 <groupId>${javax.mail.groupId}</groupId>
                 <artifactId>${javax.mail.artifactId}</artifactId>
                 <version>${javax.mail.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj-3.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jmock</groupId>
@@ -361,9 +494,9 @@
                 <version>4.12</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.onami</groupId>
-                <artifactId>org.apache.onami.test</artifactId>
-                <version>${onami.version}</version>
+                <groupId>org.cassandraunit</groupId>
+                <artifactId>cassandra-unit</artifactId>
+                <version>2.1.9.2</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -380,6 +513,11 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>1.1.7</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

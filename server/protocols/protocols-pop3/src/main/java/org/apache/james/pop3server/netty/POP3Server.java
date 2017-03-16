@@ -24,7 +24,10 @@ import org.apache.james.protocols.api.ProtocolConfiguration;
 import org.apache.james.protocols.api.logger.ProtocolLoggerAdapter;
 import org.apache.james.protocols.lib.handler.HandlersPackage;
 import org.apache.james.protocols.lib.netty.AbstractProtocolAsyncServer;
+import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
 import org.apache.james.protocols.netty.BasicChannelUpstreamHandler;
+import org.apache.james.protocols.netty.ChannelHandlerFactory;
+import org.apache.james.protocols.netty.LineDelimiterBasedChannelHandlerFactory;
 import org.apache.james.protocols.pop3.POP3Protocol;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 
@@ -98,6 +101,11 @@ public class POP3Server extends AbstractProtocolAsyncServer implements POP3Serve
     @Override
     protected Class<? extends HandlersPackage> getJMXHandlersPackage() {
         return JMXHandlersLoader.class;
+    }
+
+    @Override
+    protected ChannelHandlerFactory createFrameHandlerFactory() {
+        return new LineDelimiterBasedChannelHandlerFactory(AbstractChannelPipelineFactory.MAX_LINE_LENGTH);
     }
 
 }

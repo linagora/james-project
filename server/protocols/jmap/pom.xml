@@ -17,14 +17,13 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <artifactId>james-server</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>3.0.0-beta5-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -150,11 +149,13 @@
             <dependencies>
                 <dependency>
                     <groupId>org.apache.james</groupId>
-                    <artifactId>james-server-util-java8</artifactId>
+                    <artifactId>apache-james-mailbox-api</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>
                     <artifactId>apache-james-mailbox-api</artifactId>
+                    <scope>test</scope>
+                    <type>test-jar</type>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>
@@ -163,7 +164,29 @@
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>
-                    <artifactId>apache-james-mailbox-store</artifactId>
+                    <artifactId>apache-james-mailbox-memory</artifactId>
+                    <scope>test</scope>
+                    <type>test-jar</type>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>apache-james-mailbox-tika</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>apache-mailet-base</artifactId>
+                    <scope>test</scope>
+                    <type>test-jar</type>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>apache-mime4j-core</artifactId>
+                    <version>${apache-mime4j.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>apache-mime4j-dom</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>
@@ -194,6 +217,10 @@
                 </dependency>
                 <dependency>
                     <groupId>org.apache.james</groupId>
+                    <artifactId>james-server-jwt</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
                     <artifactId>james-server-lifecycle-api</artifactId>
                 </dependency>
                 <dependency>
@@ -205,16 +232,52 @@
                     <artifactId>james-server-util</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>james-server-util-java8</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>metrics-api</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.james</groupId>
+                    <artifactId>metrics-logger</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>jackson-datatype-guava</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>com.fasterxml.jackson.datatype</groupId>
                     <artifactId>jackson-datatype-jdk8</artifactId>
                 </dependency>
                 <dependency>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>jackson-datatype-jsr310</artifactId>
+                </dependency>
+                <dependency>
                     <groupId>com.github.fge</groupId>
                     <artifactId>throwing-lambdas</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.github.steveash.guavate</groupId>
+                    <artifactId>guavate</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.googlecode.thread-weaver</groupId>
+                    <artifactId>threadweaver</artifactId>
+                    <version>0.2</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.jayway.jsonpath</groupId>
+                    <artifactId>json-path</artifactId>
+                    <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.jayway.restassured</groupId>
@@ -240,36 +303,40 @@
                     <scope>provided</scope>
                 </dependency>
                 <dependency>
-                    <groupId>org.bouncycastle</groupId>
-                    <artifactId>bcprov-jdk16</artifactId>
-                </dependency>
-                
-                <dependency>
-                    <groupId>org.apache.james</groupId>
-                    <artifactId>apache-james-mailbox-store</artifactId>
-                    <scope>test</scope>
-                    <type>test-jar</type>
-                </dependency>
-                <dependency>
-                    <groupId>com.jayway.jsonpath</groupId>
-                    <artifactId>json-path</artifactId>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
                     <groupId>junit</groupId>
                     <artifactId>junit</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>net.javacrumbs.json-unit</groupId>
+                    <artifactId>json-unit-fluent</artifactId>
+                    <version>1.5.5</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>nl.jqno.equalsverifier</groupId>
                     <artifactId>equalsverifier</artifactId>
                     <version>1.7.5</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                    <version>3.3.2</version>
                 </dependency>
                 <dependency>
                     <groupId>org.assertj</groupId>
                     <artifactId>assertj-core</artifactId>
                     <version>${assertj-3.version}</version>
                     <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcpkix-jdk15on</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk15on</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>org.eclipse.jetty</groupId>
@@ -285,6 +352,11 @@
                     <groupId>org.javatuples</groupId>
                     <artifactId>javatuples</artifactId>
                     <version>1.2</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.jgrapht</groupId>
+                    <artifactId>jgrapht-core</artifactId>
+                    <version>0.9.1</version>
                 </dependency>
                 <dependency>
                     <groupId>org.mockito</groupId>
@@ -328,19 +400,29 @@
             </build>
         </profile>
         <profile>
-            <id>disable-animal-sniffer</id>
+            <id>animal-sniffer-java-8</id>
             <activation>
-                <jdk>[1.6,)</jdk>
+                <jdk>[1.8,)</jdk>
             </activation>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>animal-sniffer-maven-plugin</artifactId>
+                        <configuration>
+                            <signature>
+                                <groupId>org.codehaus.mojo.signature</groupId>
+                                <artifactId>java18</artifactId>
+                                <version>1.0</version>
+                            </signature>
+                        </configuration>
                         <executions>
                             <execution>
-                                <id>check_java_6</id>
-                                <phase>none</phase>
+                                <id>check_java_8</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>

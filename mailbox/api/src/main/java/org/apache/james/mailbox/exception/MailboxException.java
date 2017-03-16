@@ -31,11 +31,11 @@ public class MailboxException extends Exception {
         super();
     }
 
-    public MailboxException(final String message) {
+    public MailboxException(String message) {
         super(message);
     }
 
-    public MailboxException(String msg, Exception cause) {
+    public MailboxException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

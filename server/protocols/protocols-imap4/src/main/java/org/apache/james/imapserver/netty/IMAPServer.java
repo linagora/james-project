@@ -22,7 +22,6 @@ import static org.jboss.netty.channel.Channels.pipeline;
 
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Inject;
 import javax.net.ssl.SSLEngine;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -34,13 +33,13 @@ import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.protocols.api.Encryption;
 import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
 import org.apache.james.protocols.netty.ChannelGroupHandler;
+import org.apache.james.protocols.netty.ChannelHandlerFactory;
 import org.apache.james.protocols.netty.ConnectionLimitUpstreamHandler;
 import org.apache.james.protocols.netty.ConnectionPerIpLimitUpstreamHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
@@ -55,9 +54,10 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
 
     private static final String softwaretype = "JAMES " + VERSION + " Server ";
 
-    private ImapProcessor processor;
-    private ImapEncoder encoder;
-    private ImapDecoder decoder;
+    private final ImapProcessor processor;
+    private final ImapEncoder encoder;
+    private final ImapDecoder decoder;
+    private final ImapMetrics imapMetrics;
 
     private String hello;
     private boolean compress;
@@ -72,23 +72,15 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     public final static int DEFAULT_TIMEOUT = 30 * 60; // default timeout is 30 seconds
     public final static int DEFAULT_LITERAL_SIZE_LIMIT = 0;
 
-    @Inject
-    public void setImapProcessor(ImapProcessor processor) {
+    public IMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics) {
         this.processor = processor;
-    }
-
-    @Inject
-    public void setImapDecoder(ImapDecoder decoder) {
-        this.decoder = decoder;
-    }
-
-    @Inject
-    public void setImapEncoder(ImapEncoder encoder) {
         this.encoder = encoder;
+        this.decoder = decoder;
+        this.imapMetrics = imapMetrics;
     }
 
     @Override
-    public void doConfigure(final HierarchicalConfiguration configuration) throws ConfigurationException {
+    public void doConfigure(HierarchicalConfiguration configuration) throws ConfigurationException {
         
         super.doConfigure(configuration);
         
@@ -147,7 +139,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
                 // Add the text line decoder which limit the max line length,
                 // don't strip the delimiter and use CRLF as delimiter
                 // Use a SwitchableDelimiterBasedFrameDecoder, see JAMES-1436
-                pipeline.addLast(FRAMER, new SwitchableDelimiterBasedFrameDecoder(maxLineLength, false, Delimiters.lineDelimiter()));
+                pipeline.addLast(FRAMER, getFrameHandlerFactory().create(pipeline));
                
                 Encryption secure = getEncryption();
                 if (secure != null && !secure.isStartTLS()) {
@@ -186,9 +178,9 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
         ImapChannelUpstreamHandler coreHandler;
         Encryption secure = getEncryption();
         if (secure!= null && secure.isStartTLS()) {
-           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, getLogger(), compress, plainAuthDisallowed, secure.getContext(), getEnabledCipherSuites());
+           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, getLogger(), compress, plainAuthDisallowed, secure.getContext(), getEnabledCipherSuites(), imapMetrics);
         } else {
-           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, getLogger(), compress, plainAuthDisallowed);
+           coreHandler = new ImapChannelUpstreamHandler(hello, processor, encoder, getLogger(), compress, plainAuthDisallowed, imapMetrics);
         }
         return coreHandler;
     }
@@ -198,6 +190,11 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
      */
     protected OneToOneEncoder createEncoder() {
         return null;
+    }
+
+    @Override
+    protected ChannelHandlerFactory createFrameHandlerFactory() {
+        return new SwitchableLineDelimiterBasedFrameDecoderFactory(maxLineLength);
     }
 
 }

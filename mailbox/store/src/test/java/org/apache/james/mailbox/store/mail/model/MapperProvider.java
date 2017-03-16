@@ -19,18 +19,55 @@
 
 package org.apache.james.mailbox.store.mail.model;
 
+import java.util.List;
+
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.store.mail.AnnotationMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 
-public interface MapperProvider<Id extends MailboxId> {
-    MailboxMapper<Id> createMailboxMapper() throws MailboxException;
+public interface MapperProvider {
+    enum Capabilities {
+        MESSAGE,
+        MAILBOX,
+        ATTACHMENT,
+        ANNOTATION,
+        MOVE,
+        UNIQUE_MESSAGE_ID,
+        THREAD_SAFE_FLAGS_UPDATE,
+        INCREMENTAL_APPLICABLE_FLAGS
+    }
 
-    MessageMapper<Id> createMessageMapper() throws MailboxException;
+    List<Capabilities> getSupportedCapabilities();
 
-    Id generateId();
+    MailboxMapper createMailboxMapper() throws MailboxException;
+
+    MessageMapper createMessageMapper() throws MailboxException;
+
+    MessageIdMapper createMessageIdMapper() throws MailboxException;
+
+    AttachmentMapper createAttachmentMapper() throws MailboxException;
+
+    AnnotationMapper createAnnotationMapper() throws MailboxException;
+
+    MailboxId generateId();
+
+    MessageUid generateMessageUid();
+
+    long generateModSeq(Mailbox mailbox) throws MailboxException;
+
+    long highestModSeq(Mailbox mailbox) throws MailboxException;
 
     void clearMapper() throws MailboxException;
 
     void ensureMapperPrepared() throws MailboxException;
+
+    boolean supportPartialAttachmentFetch();
+    
+    MessageId generateMessageId();
 }

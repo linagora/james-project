@@ -19,17 +19,6 @@
 
 package org.apache.james.mailbox.cassandra.modules;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import org.apache.james.backends.cassandra.components.CassandraIndex;
-import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
-import org.apache.james.mailbox.cassandra.table.CassandraMessageTable;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import static com.datastax.driver.core.DataType.bigint;
 import static com.datastax.driver.core.DataType.blob;
 import static com.datastax.driver.core.DataType.cboolean;
@@ -39,6 +28,23 @@ import static com.datastax.driver.core.DataType.text;
 import static com.datastax.driver.core.DataType.timestamp;
 import static com.datastax.driver.core.DataType.timeuuid;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.james.backends.cassandra.components.CassandraIndex;
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.components.CassandraTable;
+import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.mailbox.cassandra.table.CassandraMessageIdTable;
+import org.apache.james.mailbox.cassandra.table.CassandraMessageIds;
+import org.apache.james.mailbox.cassandra.table.CassandraMessageTable;
+import org.apache.james.mailbox.cassandra.table.Flag;
+import org.apache.james.mailbox.cassandra.table.MessageIdToImapUid;
+
+import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import com.google.common.collect.ImmutableList;
+
 public class CassandraMessageModule implements CassandraModule {
 
     private final List<CassandraTable> tables;
@@ -46,52 +52,66 @@ public class CassandraMessageModule implements CassandraModule {
     private final List<CassandraType> types;
 
     public CassandraMessageModule() {
-        tables = Collections.singletonList(
+        tables = ImmutableList.of(
+            new CassandraTable(MessageIdToImapUid.TABLE_NAME,
+                SchemaBuilder.createTable(MessageIdToImapUid.TABLE_NAME)
+                    .ifNotExists()
+                    .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
+                    .addClusteringColumn(CassandraMessageIds.MAILBOX_ID, timeuuid())
+                    .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
+                    .addColumn(MessageIdToImapUid.MOD_SEQ, bigint())
+                    .addColumn(Flag.ANSWERED, cboolean())
+                    .addColumn(Flag.DELETED, cboolean())
+                    .addColumn(Flag.DRAFT, cboolean())
+                    .addColumn(Flag.FLAGGED, cboolean())
+                    .addColumn(Flag.RECENT, cboolean())
+                    .addColumn(Flag.SEEN, cboolean())
+                    .addColumn(Flag.USER, cboolean())
+                    .addColumn(Flag.USER_FLAGS, set(text()))),
+            new CassandraTable(CassandraMessageIdTable.TABLE_NAME,
+                SchemaBuilder.createTable(CassandraMessageIdTable.TABLE_NAME)
+                    .ifNotExists()
+                    .addPartitionKey(CassandraMessageIds.MAILBOX_ID, timeuuid())
+                    .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
+                    .addColumn(CassandraMessageIds.MESSAGE_ID, timeuuid())
+                    .addColumn(CassandraMessageIdTable.MOD_SEQ, bigint())
+                    .addColumn(Flag.ANSWERED, cboolean())
+                    .addColumn(Flag.DELETED, cboolean())
+                    .addColumn(Flag.DRAFT, cboolean())
+                    .addColumn(Flag.FLAGGED, cboolean())
+                    .addColumn(Flag.RECENT, cboolean())
+                    .addColumn(Flag.SEEN, cboolean())
+                    .addColumn(Flag.USER, cboolean())
+                    .addColumn(Flag.USER_FLAGS, set(text()))),
+
             new CassandraTable(CassandraMessageTable.TABLE_NAME,
                 SchemaBuilder.createTable(CassandraMessageTable.TABLE_NAME)
                     .ifNotExists()
-                    .addPartitionKey(CassandraMessageTable.MAILBOX_ID, timeuuid())
-                    .addClusteringColumn(CassandraMessageTable.IMAP_UID, bigint())
+                    .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
                     .addColumn(CassandraMessageTable.INTERNAL_DATE, timestamp())
                     .addColumn(CassandraMessageTable.BODY_START_OCTET, cint())
-                    .addColumn(CassandraMessageTable.BODY_OCTECTS, cint())
+                    .addColumn(CassandraMessageTable.BODY_OCTECTS, bigint())
                     .addColumn(CassandraMessageTable.TEXTUAL_LINE_COUNT, bigint())
-                    .addColumn(CassandraMessageTable.MOD_SEQ, bigint())
-                    .addColumn(CassandraMessageTable.FULL_CONTENT_OCTETS, cint())
+                    .addColumn(CassandraMessageTable.FULL_CONTENT_OCTETS, bigint())
                     .addColumn(CassandraMessageTable.BODY_CONTENT, blob())
                     .addColumn(CassandraMessageTable.HEADER_CONTENT, blob())
-                    .addColumn(CassandraMessageTable.Flag.ANSWERED, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.DELETED, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.DRAFT, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.FLAGGED, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.RECENT, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.SEEN, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.USER, cboolean())
-                    .addColumn(CassandraMessageTable.Flag.USER_FLAGS, set(text()))
+                    .addUDTListColumn(CassandraMessageTable.ATTACHMENTS, SchemaBuilder.frozen(CassandraMessageTable.ATTACHMENTS))
                     .addUDTListColumn(CassandraMessageTable.PROPERTIES, SchemaBuilder.frozen(CassandraMessageTable.PROPERTIES))));
-        index = Arrays.asList(
-            new CassandraIndex(
-                SchemaBuilder.createIndex(CassandraIndex.INDEX_PREFIX + CassandraMessageTable.Flag.RECENT)
-                    .ifNotExists()
-                    .onTable(CassandraMessageTable.TABLE_NAME)
-                    .andColumn(CassandraMessageTable.Flag.RECENT)),
-            new CassandraIndex(
-                SchemaBuilder.createIndex(CassandraIndex.INDEX_PREFIX + CassandraMessageTable.Flag.SEEN)
-                    .ifNotExists()
-                    .onTable(CassandraMessageTable.TABLE_NAME)
-                    .andColumn(CassandraMessageTable.Flag.SEEN)),
-            new CassandraIndex(
-                SchemaBuilder.createIndex(CassandraIndex.INDEX_PREFIX + CassandraMessageTable.Flag.DELETED)
-                    .ifNotExists()
-                    .onTable(CassandraMessageTable.TABLE_NAME)
-                    .andColumn(CassandraMessageTable.Flag.DELETED)));
-        types = Collections.singletonList(
+        index = Collections.emptyList();
+        types = Arrays.asList(
             new CassandraType(CassandraMessageTable.PROPERTIES,
                 SchemaBuilder.createType(CassandraMessageTable.PROPERTIES)
                     .ifNotExists()
                     .addColumn(CassandraMessageTable.Properties.NAMESPACE, text())
                     .addColumn(CassandraMessageTable.Properties.NAME, text())
-                    .addColumn(CassandraMessageTable.Properties.VALUE, text())));
+                    .addColumn(CassandraMessageTable.Properties.VALUE, text())),
+            new CassandraType(CassandraMessageTable.ATTACHMENTS,
+                SchemaBuilder.createType(CassandraMessageTable.ATTACHMENTS)
+                    .ifNotExists()
+                    .addColumn(CassandraMessageTable.Attachments.ID, text())
+                    .addColumn(CassandraMessageTable.Attachments.NAME, text())
+                    .addColumn(CassandraMessageTable.Attachments.CID, text())
+                    .addColumn(CassandraMessageTable.Attachments.IS_INLINE, cboolean())));
     }
 
     @Override

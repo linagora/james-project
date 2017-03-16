@@ -21,6 +21,9 @@ package org.apache.james.mailet;
 
 import java.util.List;
 
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 
@@ -35,17 +38,14 @@ import org.apache.maven.project.MavenProject;
  * <li>Should only used as a report.</li>
  * <li>Mailets are instantiated during report production. </li>
  * </ul>
- * @goal aggregate
- * @since 0.2
- * @requiresDependencyResolution compile
- * @aggregator
  */
+@Mojo(name = "aggregate", 
+    requiresDependencyResolution = ResolutionScope.COMPILE,
+    aggregator = true)
 public class AggregateMailetdocsReport extends AbstractMailetdocsReport {
 
-    /**
-     * @parameter expression="${reactorProjects}"
-     * @readonly
-     */
+    @Parameter(defaultValue = "${reactorProjects}",
+            readonly = true)
     private List<MavenProject> reactorProjects;
 
     /**
@@ -57,7 +57,7 @@ public class AggregateMailetdocsReport extends AbstractMailetdocsReport {
         final DefaultDescriptorsExtractor extractor = new DefaultDescriptorsExtractor();
         if (project.isExecutionRoot()) {
             logProject(project);
-            for (final MavenProject subproject : reactorProjects) {
+            for (MavenProject subproject : reactorProjects) {
                 logSubproject(subproject);
                 extractor.extract(subproject, getLog());
             }
@@ -74,7 +74,7 @@ public class AggregateMailetdocsReport extends AbstractMailetdocsReport {
         }
     }
 
-    private void logSubproject(final MavenProject subproject) {
+    private void logSubproject(MavenProject subproject) {
         if (getLog().isDebugEnabled()) {
             getLog().debug("Adding descriptors in " + subproject.getName());
         }

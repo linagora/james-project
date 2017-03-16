@@ -26,19 +26,23 @@ import org.apache.james.imap.api.message.StatusDataItems;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.StatusRequest;
 import org.apache.james.imap.message.response.MailboxStatusResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.metrics.api.MetricFactory;
 import org.slf4j.Logger;
 
 public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
 
-    public StatusProcessor(final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory factory) {
-        super(StatusRequest.class, next, mailboxManager, factory);
+    public StatusProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(StatusRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     /**
@@ -50,7 +54,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(StatusRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = buildFullPath(session, request.getMailboxName());
+        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
         final StatusDataItems statusDataItems = request.getStatusDataItems();
         final Logger logger = session.getLog();
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
@@ -72,7 +76,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
 
             final Long messages = messages(statusDataItems, metaData);
             final Long recent = recent(statusDataItems, metaData);
-            final Long uidNext = uidNext(statusDataItems, metaData);
+            final MessageUid uidNext = uidNext(statusDataItems, metaData);
             final Long uidValidity = uidValidity(statusDataItems, metaData);
             final Long unseen = unseen(statusDataItems, metaData);
             final Long highestModSeq = highestModSeq(statusDataItems, metaData);
@@ -94,7 +98,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
         }
     }
 
-    private Long unseen(final StatusDataItems statusDataItems, final MessageManager.MetaData metaData) throws MailboxException {
+    private Long unseen(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
         final Long unseen;
         if (statusDataItems.isUnseen()) {
             unseen = metaData.getUnseenCount();
@@ -104,7 +108,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
         return unseen;
     }
 
-    private Long uidValidity(final StatusDataItems statusDataItems, final MessageManager.MetaData metaData) throws MailboxException {
+    private Long uidValidity(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
         final Long uidValidity;
         if (statusDataItems.isUidValidity()) {
             uidValidity = metaData.getUidValidity();
@@ -115,7 +119,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
     }
 
 
-    private Long highestModSeq(final StatusDataItems statusDataItems, final MessageManager.MetaData metaData) throws MailboxException {
+    private Long highestModSeq(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
         final Long highestModSeq;
         if (statusDataItems.isHighestModSeq()) {
             highestModSeq = metaData.getHighestModSeq();
@@ -126,8 +130,8 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
     }
 
     
-    private Long uidNext(final StatusDataItems statusDataItems, final MessageManager.MetaData metaData) throws MailboxException {
-        final Long uidNext;
+    private MessageUid uidNext(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
+        final MessageUid uidNext;
         if (statusDataItems.isUidNext()) {
             uidNext = metaData.getUidNext();
         } else {
@@ -136,7 +140,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
         return uidNext;
     }
 
-    private Long recent(final StatusDataItems statusDataItems, final MessageManager.MetaData metaData) throws MailboxException {
+    private Long recent(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
         final Long recent;
         if (statusDataItems.isRecent()) {
             recent = metaData.countRecent();
@@ -146,7 +150,7 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
         return recent;
     }
 
-    private Long messages(final StatusDataItems statusDataItems, final MessageManager.MetaData metaData) throws MailboxException {
+    private Long messages(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
         final Long messages;
         if (statusDataItems.isMessages()) {
             messages = metaData.getMessageCount();

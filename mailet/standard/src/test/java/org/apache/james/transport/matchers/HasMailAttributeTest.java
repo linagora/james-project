@@ -20,7 +20,6 @@
 
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.HasMailAttribute;
 import org.apache.mailet.base.GenericMatcher;
 
 public class HasMailAttributeTest extends AbstractHasMailAttributeTest {
@@ -37,8 +36,8 @@ public class HasMailAttributeTest extends AbstractHasMailAttributeTest {
         return MAIL_ATTRIBUTE_NAME;
     }
 
-    protected String getConfigOption() {
-        return "HasMailAttribute=";
+    protected String getMatcherName() {
+        return "HasMailAttribute";
     }
 
 }

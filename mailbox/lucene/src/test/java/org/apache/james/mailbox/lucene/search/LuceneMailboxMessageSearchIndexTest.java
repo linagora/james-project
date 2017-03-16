@@ -18,9 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.lucene.search;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -28,21 +26,30 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
+import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.DateResolution;
 import org.apache.james.mailbox.model.SearchQuery.Sort.SortClause;
+import org.apache.james.mailbox.model.SimpleMailboxACL;
+import org.apache.james.mailbox.model.TestId;
+import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.store.MessageBuilder;
 import org.apache.james.mailbox.store.SimpleMailboxMembership;
-import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.lucene.store.RAMDirectory;
 import org.junit.Before;
@@ -50,12 +57,13 @@ import org.junit.Test;
 
 public class LuceneMailboxMessageSearchIndexTest {
 
-	private LuceneMessageSearchIndex<TestId> index;
+    public static final long LIMIT = 100L;
+    private LuceneMessageSearchIndex index;
     
     private SimpleMailbox mailbox = new SimpleMailbox(0);
     private SimpleMailbox mailbox2 = new SimpleMailbox(1);
     private SimpleMailbox mailbox3 = new SimpleMailbox(2);
-
+    private MailboxSession session;
 
     private static final String FROM_ADDRESS = "Harry <harry@example.org>";
 
@@ -69,13 +77,30 @@ public class LuceneMailboxMessageSearchIndexTest {
             + "It has " + RHUBARD + ".\r\n" + "It has " + CUSTARD + ".\r\n"
             + "It needs naught else.\r\n";
 
+    private MessageUid uid1;
+    private MessageUid uid2;
+    private MessageUid uid3;
+    private MessageUid uid4;
+    private MessageUid uid5;
+    private MessageId id1;
+    private MessageId id2;
+    private MessageId id3;
+    private MessageId id4;
+    private MessageId id5;
+
     protected boolean useLenient() {
         return true;
     }
     
     @Before
     public void setUp() throws Exception {
-        index = new LuceneMessageSearchIndex<TestId>(null, new RAMDirectory(), true, useLenient());
+        TestMessageId.Factory factory = new TestMessageId.Factory();
+        id1 = factory.generate();
+        id2 = factory.generate();
+        id3 = factory.generate();
+        id4 = factory.generate();
+        id5 = factory.generate();
+        index = new LuceneMessageSearchIndex(null, new TestId.Factory(), new RAMDirectory(), true, useLenient(), factory);
         index.setEnableSuffixMatch(true);
         Map<String, String> headersSubject = new HashMap<String, String>();
         headersSubject.put("Subject", "test (fwd)");
@@ -95,618 +120,533 @@ public class LuceneMailboxMessageSearchIndexTest {
         headersTestSubject.put("From", "test12 <test12@localhost>");
         headersTestSubject.put("Cc", "test211 <test21@localhost>, test6 <test6@foobar>");
         
-        SimpleMailboxMembership m2 = new SimpleMailboxMembership(mailbox2.getMailboxId(),1, 0, new Date(), 20, new Flags(Flag.ANSWERED), "My Body".getBytes(), headersSubject);
-        index.add(null, mailbox2, m2);
-
-        SimpleMailboxMembership m = new SimpleMailboxMembership(mailbox.getMailboxId(),1, 0, new Date(), 200, new Flags(Flag.ANSWERED), "My Body".getBytes(), headersSubject);
+        uid1 = MessageUid.of(1);
+        SimpleMailboxMembership m = new SimpleMailboxMembership(id1, mailbox.getMailboxId(), uid1, 0, new Date(), 200, new Flags(Flag.ANSWERED), "My Body".getBytes(), headersSubject);
         index.add(null, mailbox, m);
+
+        uid2 = MessageUid.of(1);
+        SimpleMailboxMembership m2 = new SimpleMailboxMembership(id2, mailbox2.getMailboxId(), uid2, 0, new Date(), 20, new Flags(Flag.ANSWERED), "My Body".getBytes(), headersSubject);
+        index.add(null, mailbox2, m2);
         
+        uid3 = MessageUid.of(2);
         Calendar cal = Calendar.getInstance();
         cal.set(1980, 2, 10);
-        SimpleMailboxMembership m3 = new SimpleMailboxMembership(mailbox.getMailboxId(),2, 0, cal.getTime(), 20, new Flags(Flag.DELETED), "My Otherbody".getBytes(), headersTest);
+        SimpleMailboxMembership m3 = new SimpleMailboxMembership(id3, mailbox.getMailboxId(), uid3, 0, cal.getTime(), 20, new Flags(Flag.DELETED), "My Otherbody".getBytes(), headersTest);
         index.add(null, mailbox, m3);
+        
+        uid4 = MessageUid.of(3);
         Calendar cal2 = Calendar.getInstance();
         cal2.set(8000, 2, 10);
-        SimpleMailboxMembership m4 = new SimpleMailboxMembership(mailbox.getMailboxId(),3, 0, cal2.getTime(), 20, new Flags(Flag.DELETED), "My Otherbody2".getBytes(), headersTestSubject);
+        SimpleMailboxMembership m4 = new SimpleMailboxMembership(id4, mailbox.getMailboxId(), uid4, 0, cal2.getTime(), 20, new Flags(Flag.DELETED), "My Otherbody2".getBytes(), headersTestSubject);
         index.add(null, mailbox, m4);
         
+        uid5 = MessageUid.of(10);
         MessageBuilder builder = new MessageBuilder();
         builder.header("From", "test <user-from@domain.org>");
         builder.header("To", FROM_ADDRESS);
         builder.header("Subject", "A " + SUBJECT_PART + " Multipart Mail");
         builder.header("Date", "Thu, 14 Feb 2008 12:00:00 +0000 (GMT)");
         builder.body = Charset.forName("us-ascii").encode(BODY).array();
-        builder.uid = 10;
+        builder.uid = uid5;
         builder.mailboxId = mailbox3.getMailboxId();
         
-        index.add(null, mailbox3, builder.build());
-                
+        index.add(null, mailbox3, builder.build(id5));
+
+        session = new MockMailboxSession("username");
     }
     
 
 
     @Test
-    public void testBodyShouldMatchPhraseInBody() throws Exception {
+    public void bodySearchShouldMatchPhraseInBody() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.bodyContains(CUSTARD));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-        
-        query = new SearchQuery();
-        query.andCriteria(SearchQuery.bodyContains(CUSTARD + CUSTARD));
-        result = index.search(null, mailbox3, query);
-        assertFalse(result.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
     }
 
     @Test
-    public void testBodyMatchShouldBeCaseInsensitive() throws Exception {
+    public void bodySearchShouldNotMatchAbsentPhraseInBody() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.bodyContains(CUSTARD + CUSTARD));
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).isEmpty();
+    }
+    
+    @Test
+    public void bodySearchShouldBeCaseInsensitive() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.bodyContains(RHUBARD));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
     }
 
     @Test
-    public void testBodyShouldNotMatchPhraseOnlyInHeader() throws Exception {
+    public void bodySearchNotMatchPhraseOnlyInFrom() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.bodyContains(FROM_ADDRESS));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertFalse(result.hasNext());
-        
-        query = new SearchQuery();
-        query.andCriteria(SearchQuery.bodyContains(SUBJECT_PART));
-        result = index.search(null, mailbox3, query);
-        assertFalse(result.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).isEmpty();
     }
 
     @Test
-    public void testTextShouldMatchPhraseInBody() throws Exception {
+    public void bodySearchShouldNotMatchPhraseOnlyInSubject() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.bodyContains(SUBJECT_PART));
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    public void textSearchShouldMatchPhraseInBody() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.mailContains(CUSTARD));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-        query = new SearchQuery();
-        query.andCriteria(SearchQuery.mailContains(CUSTARD + CUSTARD));
-        result = index.search(null, mailbox3, query);
-        assertFalse(result.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
     }
 
     @Test
-    public void testTextMatchShouldBeCaseInsensitive() throws Exception {
+    public void textSearchShouldNotAbsentMatchPhraseInBody() throws Exception {
         SearchQuery query = new SearchQuery();
-        query.andCriteria(SearchQuery.mailContains(RHUBARD));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-        query.andCriteria(SearchQuery.mailContains(RHUBARD.toLowerCase(Locale.US)));
-        result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
+        query.andCriteria(SearchQuery.mailContains(CUSTARD + CUSTARD));
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).isEmpty();
     }
 
     @Test
-    public void testSearchAddress() throws Exception {
-        
+    public void textSearchMatchShouldBeCaseInsensitive() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.mailContains(RHUBARD.toLowerCase(Locale.US)));
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
+    }
+
+    @Test
+    public void addressSearchShouldMatchToFullAddress() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.address(AddressType.To,FROM_ADDRESS));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-        query = new SearchQuery();
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
+    }
+
+    @Test
+    public void addressSearchShouldMatchToDisplayName() throws Exception {
+        SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.address(AddressType.To,"Harry"));
-        result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-        query = new SearchQuery();
-        query.andCriteria(SearchQuery.address(AddressType.To,"Harry@example.org"));
-        result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
     }
     
     @Test
-    public void testSearchAddressFrom() throws Exception {
-        
+    public void addressSearchShouldMatchToEmail() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.address(AddressType.To,"Harry@example.org"));
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
+    }
+    
+    @Test
+    public void addressSearchShouldMatchFrom() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.address(AddressType.From,"ser-from@domain.or"));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-       
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
     }
+
     @Test
-    public void testBodyShouldMatchPhraseOnlyInHeader() throws Exception {
-        
+    public void textSearchShouldMatchPhraseOnlyInToHeader() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.mailContains(FROM_ADDRESS));
-        Iterator<Long> result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
-        
-        query.andCriteria(SearchQuery.mailContains(SUBJECT_PART));
-        result = index.search(null, mailbox3, query);
-        assertEquals(10L, result.next().longValue());
-        assertFalse(result.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
     }
     
     @Test
-    public void testSearchAll() throws Exception {
+    public void textSearchShouldMatchPhraseOnlyInSubjectHeader() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.mailContains(SUBJECT_PART));
+        Iterator<MessageUid> result = index.search(session, mailbox3, query);
+        assertThat(result).containsExactly(uid5);
+    }
+    
+    @Test
+    public void searchAllShouldMatchAllMailboxEmails() throws Exception {
         SearchQuery query = new SearchQuery();
         query.andCriteria(SearchQuery.all());
-        Iterator<Long> it2 = index.search(null, mailbox2, query);
-        assertTrue(it2.hasNext());
-        assertEquals(1L, it2.next().longValue());
-        assertFalse(it2.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox2, query);
+        assertThat(result).containsExactly(uid2);
     }
-    
-    @Test
-    public void testSearchFlag() throws Exception {
 
-        SearchQuery q = new SearchQuery();
-        q.andCriteria(SearchQuery.flagIsSet(Flag.DELETED));
-        Iterator<Long> it3 = index.search(null, mailbox, q);
-        assertEquals(2L, it3.next().longValue());
-        assertEquals(3L, it3.next().longValue());
-        assertFalse(it3.hasNext());
-    }
-    
     @Test
-    public void testSearchBody() throws Exception {    
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.bodyContains("body"));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
+    public void searchBodyInAllMailboxesShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.bodyContains("My Body"));
 
-        assertFalse(it4.hasNext());
-    }
-    
-    @Test
-    public void testSearchMail() throws Exception {    
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.mailContains("body"));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
+        List<MessageId> result = index.search(session, MultimailboxesSearchQuery.from(query).build(), LIMIT);
 
-        assertFalse(it4.hasNext());
+        assertThat(result).containsOnly(id1, id2);
     }
-    
-    @Test
-    public void testSearchHeaderContains() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.headerContains("Subject", "test"));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
 
-        assertFalse(it4.hasNext());
-    }
-    
     @Test
-    public void testSearchHeaderExists() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.headerExists("Subject"));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
+    public void searchBodyInSpecificMailboxesShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.bodyContains("My Body"));
 
-        assertFalse(it4.hasNext());
-    }
-    
-    @Test
-    public void testSearchFlagUnset() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.flagIsUnSet(Flag.DRAFT));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
+        List<MessageId> result = index.search(session,
+                MultimailboxesSearchQuery.from(query).inMailboxes(mailbox.id, mailbox3.id).build(),
+                LIMIT);
 
-        assertFalse(it4.hasNext());
+        assertThat(result).containsOnly(id1);
+    }
+
+    @Test
+    public void searchAllShouldMatchAllUserEmails() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+
+        List<MessageId> result = index.search(session, MultimailboxesSearchQuery.from(query).build(), LIMIT);
+
+        // The query is not limited to one mailbox and we have 5 indexed messages
+        assertThat(result).hasSize(5);
+    }
+
+    @Test
+    public void searchAllShouldLimitTheSize() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+
+        int limit = 1;
+        List<MessageId> result = index.search(session, MultimailboxesSearchQuery.from(query).build(), limit);
+
+        assertThat(result).hasSize(limit);
     }
     
+    @Test
+    public void flagSearchShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.flagIsSet(Flag.DELETED));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4);
+    }
     
     @Test
-    public void testSearchInternalDateBefore() throws Exception {
-        SearchQuery q2 = new SearchQuery();
+    public void bodySearchShouldMatchSeveralEmails() throws Exception {    
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.bodyContains("body"));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
+    }
+    
+    @Test
+    public void textSearchShouldMatchSeveralEmails() throws Exception {    
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.mailContains("body"));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
+    }
+    
+    @Test
+    public void headerSearchShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.headerContains("Subject", "test"));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid4);
+    }
+    
+    @Test
+    public void headerExistsShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.headerExists("Subject"));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid4);
+    }
+    
+    @Test
+    public void flagUnsetShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.flagIsUnSet(Flag.DRAFT));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
+    }
+    
+    @Test
+    public void internalDateBeforeShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
-        q2.andCriteria(SearchQuery.internalDateBefore(cal.getTime(), DateResolution.Day));
+        query.andCriteria(SearchQuery.internalDateBefore(cal.getTime(), DateResolution.Day));
         
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3);
     }
     
     
     @Test
-    public void testSearchInternalDateAfter() throws Exception {
-        SearchQuery q2 = new SearchQuery();
+    public void internalDateAfterShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
-        q2.andCriteria(SearchQuery.internalDateAfter(cal.getTime(), DateResolution.Day));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(3L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+        query.andCriteria(SearchQuery.internalDateAfter(cal.getTime(), DateResolution.Day));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid4);
     }
     
     
     
     @Test
-    public void testSearchInternalDateOn() throws Exception {
-        SearchQuery q2 = new SearchQuery();
+    public void internalDateOnShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
-        q2.andCriteria(SearchQuery.internalDateOn(cal.getTime(), DateResolution.Day));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+        query.andCriteria(SearchQuery.internalDateOn(cal.getTime(), DateResolution.Day));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1);
     }
     
     @Test
-    public void testSearchUidMatch() throws Exception {
-        SearchQuery q2 = new SearchQuery();
+    public void uidSearchShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
-        q2.andCriteria(SearchQuery.uid(new SearchQuery.NumericRange[] {new SearchQuery.NumericRange(1)}));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+        query.andCriteria(SearchQuery.uid(new SearchQuery.UidRange[] {new SearchQuery.UidRange(uid1)}));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1);
     }
     
-    
     @Test
-    public void testSearchUidRange() throws Exception {
-        SearchQuery q2 = new SearchQuery();
+    public void uidRangeSearchShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
-        q2.andCriteria(SearchQuery.uid(new SearchQuery.NumericRange[] {new SearchQuery.NumericRange(1), new SearchQuery.NumericRange(2,3)}));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
-    }
-    
-    
-    
-    @Test
-    public void testSearchSizeEquals() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.sizeEquals(200));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+        query.andCriteria(SearchQuery.uid(new SearchQuery.UidRange[] {new SearchQuery.UidRange(uid1), new SearchQuery.UidRange(uid3,uid4)}));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
     }
     
     @Test
-    public void testSearchSizeLessThan() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.sizeLessThan(200));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
-    }
-    
-    
-    @Test
-    public void testSearchSizeGreaterThan() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.sizeGreaterThan(6));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void sizeEqualsShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.sizeEquals(200));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1);
     }
     
     @Test
-    public void testSortUid() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+    public void sizeLessThanShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.sizeLessThan(200));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4);
     }
     
     @Test
-    public void testSortUidReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Uid, true)));
-        q2.andCriteria(SearchQuery.all());
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+    public void sizeGreaterThanShouldMatch() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.sizeGreaterThan(6));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
     }
     
     @Test
-    public void testSortSentDate() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.SentDate, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void uidShouldBeSorted() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
     }
     
     @Test
-    public void testSortSentDateReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.SentDate, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertFalse(it4.hasNext());
-    }
-    @Test
-    public void testSortBaseSubject() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.BaseSubject, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void uidReverseSortShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Uid, true)));
+        query.andCriteria(SearchQuery.all());
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid4, uid3, uid1);
     }
     
     @Test
-    public void testSortBaseSubjectReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.BaseSubject, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+    public void sortOnSentDateShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.SentDate, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4, uid1);
     }
     
     @Test
-    public void testSortMailboxFrom() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxFrom, false)));
+    public void reverseSortOnSentDateShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.SentDate, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid4, uid3);
+    }
 
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    @Test
+    public void sortOnSubjectShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.BaseSubject, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid1, uid4);
     }
     
     @Test
-    public void  testSortMailboxFromReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxFrom, true)));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
-    }
-    
-    
-    @Test
-    public void testSortMailboxCc() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxCc, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void reverseSortOnSubjectShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.BaseSubject, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid4, uid1, uid3);
     }
     
     @Test
-    public void  testSortMailboxCcReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxCc, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertEquals(1L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void sortOnMailboxFromShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxFrom, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4, uid1);
     }
     
     @Test
-    public void testSortMailboxTo() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxTo, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void reverseSortOnMailboxFromShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxFrom, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid4, uid3);
     }
     
     @Test
-    public void  testSortMailboxToReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxTo, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void sortOnMailboxCCShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxCc, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
     }
     
     @Test
-    public void testSortDisplayTo() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayTo, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void reverseSortOnMailboxCCShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxCc, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4, uid1);
     }
     
     @Test
-    public void  testSortDisplayToReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayTo, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
-    }
-    
-    
-    @Test
-    public void testSortDisplayFrom() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayFrom, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void sortOnMailboxToShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxTo, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid4, uid1, uid3);
     }
     
     @Test
-    public void  testSortDisplayFromReverse() throws Exception {
-       
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayFrom, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void reverseSortOnMailboxToShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.MailboxTo, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid1, uid4);
     }
     
     @Test
-    public void testSortArrival() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Arrival, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void sortOnDisplayToShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayTo, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid4, uid1, uid3);
     }
     
     @Test
-    public void testSortArrivalReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Arrival, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertFalse(it4.hasNext());
-    }
-    @Test
-    public void testSortSize() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Size, false)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertEquals(1L, it4.next().longValue());
-
-        assertFalse(it4.hasNext());
+    public void reverseSortOnDisplayToShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayTo, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid1, uid4);
     }
     
     @Test
-    public void testSortSizeReverse() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.all());
-        q2.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Size, true)));
-
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(1L, it4.next().longValue());
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+    public void sortOnDisplayFromShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayFrom, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4, uid1);
     }
     
     @Test
-    public void testNot() throws Exception {
-        SearchQuery q2 = new SearchQuery();
-        q2.andCriteria(SearchQuery.not(SearchQuery.uid(new SearchQuery.NumericRange[] { new SearchQuery.NumericRange(1)})));
-        Iterator<Long> it4 = index.search(null, mailbox, q2);
-        assertEquals(2L, it4.next().longValue());
-        assertEquals(3L, it4.next().longValue());
-        assertFalse(it4.hasNext());
+    public void reverseSortOnDisplayFromShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.DisplayFrom, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid4, uid3);
     }
     
-    private final class SimpleMailbox implements Mailbox<TestId> {
+    @Test
+    public void sortOnArrivalDateShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Arrival, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid1, uid4);
+    }
+    
+    @Test
+    public void reverseSortOnArrivalDateShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Arrival, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid4, uid1, uid3);
+    }
+    
+    @Test
+    public void sortOnSizeShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Size, false)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4, uid1);
+    }
+    
+    @Test
+    public void reverseSortOnSizeShouldReturnWellOrderedResults() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.all());
+        query.setSorts(Arrays.asList(new SearchQuery.Sort(SortClause.Size, true)));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid1, uid3, uid4);
+    }
+    
+    @Test
+    public void notOperatorShouldReverseMatching() throws Exception {
+        SearchQuery query = new SearchQuery();
+        query.andCriteria(SearchQuery.not(SearchQuery.uid(new SearchQuery.UidRange[] { new SearchQuery.UidRange(uid1)})));
+        Iterator<MessageUid> result = index.search(session, mailbox, query);
+        assertThat(result).containsExactly(uid3, uid4);
+    }
+    
+    private final class SimpleMailbox implements Mailbox {
         private final TestId id;
 
         public SimpleMailbox(long id) {
         	this.id = TestId.of(id);
+        }
+
+        public void setMailboxId(MailboxId id) {
+        }
+
+        @Override
+        public MailboxPath generateAssociatedPath() {
+            return new MailboxPath(getNamespace(), getUser(), getName());
         }
 
         public TestId getMailboxId() {
@@ -742,19 +682,19 @@ public class LuceneMailboxMessageSearchIndexTest {
             return 0;
         }
 
-        /* (non-Javadoc)
-         * @see org.apache.james.mailbox.store.mail.model.Mailbox#getACL()
-         */
         @Override
         public MailboxACL getACL() {
             return SimpleMailboxACL.OWNER_FULL_ACL;
         }
 
-        /* (non-Javadoc)
-         * @see org.apache.james.mailbox.store.mail.model.Mailbox#setACL(org.apache.james.mailbox.MailboxACL)
-         */
         @Override
         public void setACL(MailboxACL acl) {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+
+        @Override
+        public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
             throw new UnsupportedOperationException("Not supported");
         }
 

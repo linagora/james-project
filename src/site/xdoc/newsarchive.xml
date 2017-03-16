@@ -34,6 +34,66 @@
         </div>
       </div>
 
+   <subsection name='2016'>
+
+     <a name="20161101"><h4>Nov 2016 - Apache James Server 3.0</h4></a>
+     <p>James server 3.0.0-beta5 has been released.</p>
+     <p>Early adopters can <a href="http://james.apache.org/download.cgi#Apache_James_Server">download it</a>, any
+         issue can be reported on our issue <a href="https://issues.apache.org/jira/browse/JAMES">tracker</a></p>
+
+     <a name="20161001"><h4>Oct 2016 - Apache James Server 3.0</h4></a>
+     <p>We choosed a new logo! <img src='images/james-logo.png' alt='New James logo'/></p>
+
+     <a name="20160901"><h4>Sep 2016 - Apache James Server 3.0</h4></a>
+     <p>We are currently working on the release.</p>
+     <p>Keep an eye on the <a href="http://james.apache.org/newsarchive.html">news</a>, we are planning to release the next version in November.</p>
+
+     <a name="20160702"><h4>July 2016 - JMAP implementation</h4></a>
+     <p>Full text search via JMAP.</p>
+     <p>Full text search via the <i>getMessageList</i> JMAP command is now supported.</p>
+     <p>The JMAP search <b>filtering</b> parameter is converted to an internal <i>SearchQuery</i>; then this query is processed by your binded search backend.</p>
+
+     <a name="20160701"><h4>July 2016 - JMAP implementation</h4></a>
+     <p>Read and Send message with attachments.</p>
+     <p>You can now send and read messages with attachments through the JMAP commands <i>setMessages</i> and <i>getMessages</i>.</p>
+     <p>Those attachments are uploaded via the <i>/upload</i> and downloaded via the <i>/download</i> JMAP endpoints.</p>
+
+     <a name="20160501"><h4>May 2016 - JMAP implementation</h4></a>
+     <p>We are now supporting all basic operations on mailboxes:
+       <ul>
+         <li>creating: through the <i>setMailboxes</i> JMAP command</li>
+         <li>reading: through the <i>getMailboxes</i> JMAP command</li>
+         <li>updating: through the <i>setMailboxes</i> JMAP command</li>
+         <li>deleting: through the <i>setMailboxes</i> JMAP command</li>
+       </ul>
+     </p>
+
+     <a name="20160210"><h4>Feb 2016 - JMAP implementation</h4></a>
+     <p>We are actively working on implementing JMAP protocol into James.</p>
+     <p><a href="http://jmap.io">JMAP</a> is a transport-agnostic, stateless JSON-based API for synchronising a mail client with a mail server.</p>
+     <p>It allows to develop easily a mail client in a browser, without the pain of using a server to proxy IMAP commands.</p>
+     <p>Feel free to help us, you can see our advancement on the specification implementation into <a href="https://github.com/apache/james-project/tree/master/server/protocols/jmap/doc/specs">jmap/doc</a></p>
+     
+     <a name="20150208"><h4>Feb 2016 - Moving to GIT !</h4></a>
+     <p>All James projects has been migrated from SVN to GIT.</p>
+     <p>Here are the links to your favorite projects:
+       <ul>
+         <li><a href="https://git-wip-us.apache.org/repos/asf?p=james-project.git">james-project</a></li>
+         <li><a href="https://git-wip-us.apache.org/repos/asf?p=james-jdkim.git">james-jdkim</a></li>
+         <li><a href="https://git-wip-us.apache.org/repos/asf?p=james-jsieve.git">james-jsieve</a></li>
+         <li><a href="https://git-wip-us.apache.org/repos/asf?p=james-jspf.git">james-jspf</a></li>
+         <li><a href="https://git-wip-us.apache.org/repos/asf?p=james-mime4j.git">james-mime4j</a></li>
+         <li><a href="https://git-wip-us.apache.org/repos/asf?p=james-postage.git">james-postage</a></li>
+       </ul>
+     </p>
+
+     <a name="20160108"><h4>Jan 2016 - James modules merge into james-project</h4></a>
+     <p>Some of James modules were merged into <a href="https://git-wip-us.apache.org/repos/asf?p=james-project.git;a=tree">james-project</a>.</p>
+     <p>This change was done in order to speed up our development phase before the 3.0 release and as long as important changes are needed on the API.</p>
+     <p>The modules merged are: james-server, apache-james-mailbox, apache-mailet, apache-james-mpt,  protocols</p>
+
+   </subsection>
+
    <subsection name='2015'>
 
      <a name="20151026"><h4>Oct 2015 - Guice injection for Cassandra backend</h4></a>

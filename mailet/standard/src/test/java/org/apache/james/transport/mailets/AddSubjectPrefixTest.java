@@ -20,105 +20,109 @@
 
 package org.apache.james.transport.mailets;
 
-import junit.framework.TestCase;
-
-import org.apache.james.transport.mailets.AddSubjectPrefix;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMailetConfig;
-import org.apache.mailet.base.test.MailUtil;
-import org.apache.mailet.Mail;
-import org.apache.mailet.Mailet;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
-import javax.mail.internet.ParseException;
-import java.io.UnsupportedEncodingException;
 
-public class AddSubjectPrefixTest extends TestCase {
+import org.apache.mailet.Mailet;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMailetConfig;
+import org.apache.mailet.base.test.MailUtil;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-    private MimeMessage mockedMimeMessage;
+public class AddSubjectPrefixTest {
 
-    private Mail mockedMail;
-
+    @Rule public ExpectedException expectedException = ExpectedException.none();
+    
     private Mailet mailet;
 
-    private final String SUBJECT_PREFIX = "JUNIT";
-
-    private String subject = null;
-
-    public AddSubjectPrefixTest(String arg0)
-            throws UnsupportedEncodingException {
-        super(arg0);
-    }
-
-    private void setSubject(String subject) {
-        this.subject = subject;
-    }
-
-    private void setupMockedMimeMessage() throws MessagingException {
-        mockedMimeMessage = MailUtil.createMimeMessageWithSubject(subject);
-    }
-
-    private void setupMockedMail(MimeMessage m) throws ParseException {
-        mockedMail = MailUtil.createMockMail2Recipients(m);
-    }
-
-    private void setupMailet() throws MessagingException {
-        setupMockedMimeMessage();
+    @Before
+    public void setup() {
         mailet = new AddSubjectPrefix();
-        FakeMailetConfig mci = new FakeMailetConfig("Test", new FakeMailContext());
-        mci.setProperty("subjectPrefix", SUBJECT_PREFIX);
+    }
+    
+    @Test
+    public void shouldAddPrefixToSubject() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("subjectPrefix", "JUNIT")
+                .build();
+        mailet.init(mailetConfig);
 
-        mailet.init(mci);
+        MimeMessage mimeMessage = MailUtil.createMimeMessageWithSubject("test");
+        FakeMail mail = MailUtil.createMockMail2Recipients(mimeMessage);
+        
+        mailet.service(mail);
+
+        assertThat(mail.getMessage().getSubject()).isEqualTo("JUNIT test");
     }
 
-    private void setupInvalidMailet() throws MessagingException {
-        setupMockedMimeMessage();
-        mailet = new AddSubjectPrefix();
-        FakeMailetConfig mci = new FakeMailetConfig("Test", new FakeMailContext());
-        mci.setProperty("subjectPrefix", "");
+    
+    @Test
+    public void shouldAddPrefixToEncodedSubject() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("subjectPrefix", "Русский")
+                .build();
+        mailet.init(mailetConfig);
 
-        mailet.init(mci);
+        String subject = 
+                "=?iso8859-15?Q?Beno=EEt_TELLIER_vous_a_d=E9pos=E9_des_fichiers?=";
+        MimeMessage mimeMessage = MailUtil.createMimeMessageWithSubject(subject);
+        FakeMail mail = MailUtil.createMockMail2Recipients(mimeMessage);
+        
+        mailet.service(mail);
+
+        assertThat(mail.getMessage().getSubject()).startsWith("Русский").endsWith("Benoît TELLIER vous a déposé des fichiers");
     }
 
-    // test if prefix was added
-    public void testSubjectPrefixWasAdded() throws MessagingException {
-        setSubject("test");
-        setupMockedMimeMessage();
-        setupMockedMail(mockedMimeMessage);
-        setupMailet();
+    
+    @Test
+    public void shouldDefinePrefixAsSubjectWhenNoSubject() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("subjectPrefix", "JUNIT")
+                .build();
+        mailet.init(mailetConfig);
 
-        mailet.service(mockedMail);
+        String noSubject = null;
+        MimeMessage mimeMessage = MailUtil.createMimeMessageWithSubject(noSubject);
+        FakeMail mail = MailUtil.createMockMail2Recipients(mimeMessage);
 
-        assertEquals(SUBJECT_PREFIX + " " + subject, mockedMail.getMessage().getSubject());
+        mailet.service(mail);
 
+        assertThat(mail.getMessage().getSubject()).isEqualTo("JUNIT");
     }
 
-    // test if prefix was added to message without subject
-    public void testSubjectPrefixWasAddedWithoutSubject()
-            throws MessagingException {
-        setupMockedMimeMessage();
-        setupMockedMail(mockedMimeMessage);
-        setupMailet();
+    @Test
+    public void shouldDefinePrefixAsSubjectWhenEmptySubject() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("subjectPrefix", "JUNIT")
+                .build();
+        mailet.init(mailetConfig);
 
-        mailet.service(mockedMail);
+        MimeMessage mimeMessage = MailUtil.createMimeMessageWithSubject("");
+        FakeMail mail = MailUtil.createMockMail2Recipients(mimeMessage);
 
-        assertEquals(SUBJECT_PREFIX, mockedMail.getMessage().getSubject());
+        mailet.service(mail);
 
+        assertThat(mail.getMessage().getSubject()).isEqualTo("JUNIT");
     }
+    
+    @Test
+    public void shouldThrowWhenEmptyPrefix() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("subjectPrefix", "")
+                .build();
 
-    // test if exception was thrown cause missing configure value
-    public void testThrowException() throws MessagingException {
-        boolean exceptionThrown = false;
-        setupMockedMimeMessage();
-        setupMockedMail(mockedMimeMessage);
+        expectedException.expect(MessagingException.class);
 
-        try {
-            setupInvalidMailet();
-        } catch (MessagingException m) {
-            exceptionThrown = true;
-        }
-        assertTrue(exceptionThrown);
-
+        mailet.init(mailetConfig);
     }
 }

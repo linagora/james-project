@@ -20,6 +20,7 @@
 package org.apache.james.http.jetty;
 
 import java.io.Closeable;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.BiConsumer;
 
@@ -32,12 +33,17 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
 
 public class JettyHttpServer implements Closeable {
     
+    private static final int A_SINGLE_THREAD = 1;
+    private static final int MAX_THREAD = 200;
+
     public static JettyHttpServer create(Configuration configuration) {
         return new JettyHttpServer(configuration);
     }
@@ -48,7 +54,7 @@ public class JettyHttpServer implements Closeable {
 
     private JettyHttpServer(Configuration configuration) {
         this.configuration = configuration;
-        this.server = new Server();
+        this.server = new Server(new QueuedThreadPool(MAX_THREAD, A_SINGLE_THREAD));
         this.server.addConnector(buildServerConnector(configuration));
         this.server.setHandler(buildServletHandler(configuration));
     }
@@ -61,10 +67,14 @@ public class JettyHttpServer implements Closeable {
 
     private ServletHandler buildServletHandler(Configuration configuration) {
         ServletHandler servletHandler = new ServletHandler();
+        
         BiConsumer<String, ServletHolder> addServletMapping = (path, servletHolder) -> servletHandler.addServletWithMapping(servletHolder, path);
-        BiConsumer<String, FilterHolder> addFilterMapping = (path, filterHolder) -> servletHandler.addFilterWithMapping(filterHolder, path, EnumSet.of(DispatcherType.REQUEST));
+        BiConsumer<String, Collection<FilterHolder>> addFilterMappings = 
+                (path, filterHolders) -> filterHolders.stream().forEachOrdered(
+                        filterHolder -> servletHandler.addFilterWithMapping(filterHolder, path, EnumSet.of(DispatcherType.REQUEST)));
+                
         Maps.transformEntries(configuration.getMappings(), this::toServletHolder).forEach(addServletMapping);
-        Maps.transformEntries(configuration.getFilters(), this::toFilterHolder).forEach(addFilterMapping);
+        Multimaps.transformEntries(configuration.getFilters(), this::toFilterHolder).asMap().forEach(addFilterMappings);
         return servletHandler;
     }
 

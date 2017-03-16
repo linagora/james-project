@@ -17,30 +17,37 @@
  * under the License.                                           *
  ****************************************************************/
 
-
-
 package org.apache.james.transport.matchers;
 
-import org.apache.mailet.base.GenericMatcher;
+import java.util.Collection;
+import java.util.Set;
+
+import javax.mail.MessagingException;
+
+import org.apache.james.transport.matchers.utils.MailAddressCollectionReader;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.GenericMatcher;
 
-import java.util.Collection;
-import java.util.StringTokenizer;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
-/**
- * Matches mail where the sender is contained in a configurable list.
- * @version 1.0.0, 24/04/1999
- */
 public class SenderIs extends GenericMatcher {
 
-    private Collection<MailAddress> senders;
+    private Set<MailAddress> senders;
+
+    @VisibleForTesting
+    Set<MailAddress> getSenders() {
+        return senders;
+    }
 
     public void init() throws javax.mail.MessagingException {
-        StringTokenizer st = new StringTokenizer(getCondition(), ", \t", false);
-        senders = new java.util.HashSet<MailAddress>();
-        while (st.hasMoreTokens()) {
-            senders.add(new MailAddress(st.nextToken()));
+        if (Strings.isNullOrEmpty(getCondition())) {
+            throw new MessagingException("SenderIs should have at least one address as parameter");
+        }
+        senders = MailAddressCollectionReader.read(getCondition());
+        if (senders.size() < 1) {
+            throw new MessagingException("SenderIs should have at least one address as parameter");
         }
     }
 

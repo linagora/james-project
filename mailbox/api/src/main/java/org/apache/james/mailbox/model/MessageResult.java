@@ -21,7 +21,10 @@ package org.apache.james.mailbox.model;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+
+import javax.mail.MessagingException;
 
 import org.apache.james.mailbox.exception.MailboxException;
 
@@ -136,6 +139,8 @@ public interface MessageResult extends Comparable<MessageResult>, MessageMetaDat
 
     MimeDescriptor getMimeDescriptor() throws MailboxException;
 
+    MailboxId getMailboxId();
+
     /**
      * Iterates the message headers for the given part in a multipart message.
      * 
@@ -243,6 +248,8 @@ public interface MessageResult extends Comparable<MessageResult>, MessageMetaDat
     
     Headers getHeaders() throws MailboxException;
     
+    List<MessageAttachment> getAttachments() throws MailboxException;
+    
     /**
      * Describes a path within a multipart MIME message. All implementations
      * must implement equals. Two paths are equal if and only if each position
@@ -257,4 +264,6 @@ public interface MessageResult extends Comparable<MessageResult>, MessageMetaDat
          */
         int[] getPositions();
     }
+
+    MessageId getMessageId();
 }

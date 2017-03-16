@@ -48,6 +48,10 @@ public class AccessToken {
         return token.toString();
     }
 
+    public UUID asUUID() {
+        return token;
+    }
+
     @Override
     public boolean equals(Object o) {
         return o != null

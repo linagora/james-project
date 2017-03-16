@@ -19,8 +19,17 @@
 
 package org.apache.james.mailbox.store.json.event;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -33,27 +42,18 @@ import org.apache.james.mailbox.store.json.event.dto.MailboxSessionDataTransferO
 import org.apache.james.mailbox.store.json.event.dto.MessageMetaDataDataTransferObject;
 import org.apache.james.mailbox.store.json.event.dto.UpdatedFlagsDataTransferObject;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-public class EventConverter<Id extends MailboxId> {
+public class EventConverter {
 
     private static final Logger LOG = LoggerFactory.getLogger(EventConverter.class);
 
-    private final EventFactory<Id> eventFactory;
-    private final MailboxConverter<Id> mailboxConverter;
+    private final EventFactory eventFactory;
+    private final MailboxConverter mailboxConverter;
 
-    public EventConverter(MailboxConverter<Id> mailboxConverter) {
-        this.eventFactory = new EventFactory<Id>();
+    public EventConverter(MailboxConverter mailboxConverter) {
+        this.eventFactory = new EventFactory();
         this.mailboxConverter = mailboxConverter;
     }
 
@@ -93,7 +93,7 @@ public class EventConverter<Id extends MailboxId> {
     }
 
     public MailboxListener.Event retrieveEvent(EventDataTransferObject eventDataTransferObject) throws Exception {
-        Mailbox<Id> mailbox = mailboxConverter.retrieveMailbox(eventDataTransferObject.getMailbox());
+        Mailbox mailbox = mailboxConverter.retrieveMailbox(eventDataTransferObject.getMailbox());
         switch (eventDataTransferObject.getType()) {
             case ADDED:
                 return eventFactory.added(eventDataTransferObject.getSession().getMailboxSession(),
@@ -144,7 +144,7 @@ public class EventConverter<Id extends MailboxId> {
 
     private EventDataTransferObject constructFalgsUpdatedProxy(MailboxSession session,
                                                                MailboxDataTransferObject mailboxIntermediate,
-                                                               List<Long> uids,
+                                                               List<MessageUid> uids,
                                                                List<UpdatedFlags> updatedFlagsList) {
         ArrayList<UpdatedFlagsDataTransferObject> updatedFlagsDataTransferObjects = new ArrayList<UpdatedFlagsDataTransferObject>();
         for(UpdatedFlags updatedFlags : updatedFlagsList) {
@@ -162,10 +162,10 @@ public class EventConverter<Id extends MailboxId> {
     private EventDataTransferObject constructMeteDataHoldingEventProxy(EventType eventType,
                                                                        MailboxSession mailboxSession,
                                                                        MailboxDataTransferObject mailboxIntermediate,
-                                                                       List<Long> uids,
+                                                                       List<MessageUid> uids,
                                                                        MailboxListener.MetaDataHoldingEvent event) {
-        HashMap<Long, MessageMetaDataDataTransferObject> metaDataProxyMap = new HashMap<Long, MessageMetaDataDataTransferObject>();
-        for(Long uid : uids) {
+        HashMap<MessageUid, MessageMetaDataDataTransferObject> metaDataProxyMap = new HashMap<MessageUid, MessageMetaDataDataTransferObject>();
+        for(MessageUid uid : uids) {
             metaDataProxyMap.put(uid, new MessageMetaDataDataTransferObject(
                 event.getMetaData(uid)
             ));
@@ -179,11 +179,11 @@ public class EventConverter<Id extends MailboxId> {
             .build();
     }
 
-    private SortedMap<Long, MessageMetaData> retrieveMetadata(Map<Long, MessageMetaDataDataTransferObject> metaDataProxyMap) {
+    private SortedMap<MessageUid, MessageMetaData> retrieveMetadata(Map<MessageUid, MessageMetaDataDataTransferObject> metaDataProxyMap) {
         if(metaDataProxyMap != null) {
-            TreeMap<Long, MessageMetaData> result = new TreeMap<Long, MessageMetaData>();
-            Set<Map.Entry<Long, MessageMetaDataDataTransferObject>> entrySet = metaDataProxyMap.entrySet();
-            for (Map.Entry<Long, MessageMetaDataDataTransferObject> entry : entrySet) {
+            TreeMap<MessageUid, MessageMetaData> result = new TreeMap<MessageUid, MessageMetaData>();
+            Set<Map.Entry<MessageUid, MessageMetaDataDataTransferObject>> entrySet = metaDataProxyMap.entrySet();
+            for (Map.Entry<MessageUid, MessageMetaDataDataTransferObject> entry : entrySet) {
                 result.put(entry.getKey(), entry.getValue().getMetadata());
             }
             return result;

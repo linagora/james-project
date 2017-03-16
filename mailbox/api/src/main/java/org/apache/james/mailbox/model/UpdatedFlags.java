@@ -24,6 +24,13 @@ import java.util.Iterator;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+
 /**
  * Represent a Flag update for a message
  * 
@@ -31,13 +38,55 @@ import javax.mail.Flags;
  */
 public class UpdatedFlags {
 
-    private final long uid;
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private MessageUid uid;
+        private Flags oldFlags;
+        private Flags newFlags;
+        private Optional<Long> modSeq = Optional.absent();
+
+        private Builder() {
+        }
+
+        public Builder uid(MessageUid uid) {
+            this.uid = uid;
+            return this;
+        }
+
+        public Builder oldFlags(Flags oldFlags) {
+            this.oldFlags = oldFlags;
+            return this;
+        }
+
+        public Builder newFlags(Flags newFlags) {
+            this.newFlags = newFlags;
+            return this;
+        }
+
+        public Builder modSeq(long modSeq) {
+            this.modSeq = Optional.of(modSeq);
+            return this;
+        }
+
+        public UpdatedFlags build() {
+            Preconditions.checkState(uid != null);
+            Preconditions.checkState(newFlags != null);
+            Preconditions.checkState(oldFlags != null);
+            Preconditions.checkState(modSeq.isPresent());
+            return new UpdatedFlags(uid, modSeq.get(), oldFlags, newFlags);
+        }
+    }
+
+    private final MessageUid uid;
     private final Flags oldFlags;
     private final Flags newFlags;
     private final Flags modifiedFlags;
     private final long modSeq;
 
-    public UpdatedFlags(long uid, long modSeq, Flags oldFlags, Flags newFlags) {
+    private UpdatedFlags(MessageUid uid, long modSeq, Flags oldFlags, Flags newFlags) {
        this.uid = uid;
        this.modSeq = modSeq;
        this.oldFlags = oldFlags;
@@ -82,11 +131,11 @@ public class UpdatedFlags {
             }
         }
     }
-    private static boolean isChanged(final Flags original, final Flags updated, Flags.Flag flag) {
+    private static boolean isChanged(Flags original, Flags updated, Flags.Flag flag) {
         return original != null && updated != null && (original.contains(flag) ^ updated.contains(flag));
     }
 
-    private static boolean isChanged(final Flags original, final Flags updated, String userFlag) {
+    private static boolean isChanged(Flags original, Flags updated, String userFlag) {
         return original != null && updated != null && (original.contains(userFlag) ^ updated.contains(userFlag));
     }
 
@@ -99,7 +148,19 @@ public class UpdatedFlags {
     public Flags getOldFlags() {
         return oldFlags;
     }
-    
+
+    public boolean isModifiedToSet(Flags.Flag flag) {
+        return newFlags.contains(flag) && !oldFlags.contains(flag);
+    }
+
+    public boolean isModifiedToUnset(Flags.Flag flag) {
+        return !newFlags.contains(flag) && oldFlags.contains(flag);
+    }
+
+    public boolean isUnchanged(Flags.Flag flag) {
+        return !isModifiedToSet(flag) && !isModifiedToUnset(flag);
+    }
+
     /**
      * Return the new {@link Flags} for the message
      * 
@@ -114,7 +175,7 @@ public class UpdatedFlags {
      * 
      * @return uid
      */
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
     }
    
@@ -179,7 +240,7 @@ public class UpdatedFlags {
 
         UpdatedFlags that = (UpdatedFlags) other;
 
-        if (uid != that.uid) {
+        if (!uid.equals(that.uid)) {
             return false;
         }
         if (modSeq != that.modSeq) {
@@ -194,10 +255,16 @@ public class UpdatedFlags {
 
     @Override
     public int hashCode() {
-        int result = (int) (uid ^ (uid >>> 32));
-        result = 31 * result + (oldFlags != null ? oldFlags.hashCode() : 0);
-        result = 31 * result + (newFlags != null ? newFlags.hashCode() : 0);
-        result = 31 * result + (int) (modSeq ^ (modSeq >>> 32));
-        return result;
+        return Objects.hashCode(uid, oldFlags, newFlags, modSeq);
+    }
+    
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(UpdatedFlags.class)
+                .add("uid", uid)
+                .add("oldFlags", oldFlags)
+                .add("newFlags", newFlags)
+                .add("modSeq", modSeq)
+                .toString();
     }
 }

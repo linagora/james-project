@@ -75,6 +75,8 @@ public class HumanReadableText {
 
     public static final HumanReadableText ILLEGAL_ARGUMENTS = new HumanReadableText("org.apache.james.imap.ILLEGAL_ARGUMENTS", "failed. Illegal arguments.");
 
+    public static final HumanReadableText FAILURE_MAILBOX_NAME = new HumanReadableText("org.apache.james.imap.ILLEGAL_ARGUMENTS", "too long mailbox name. Illegal arguments.");
+
     public static final HumanReadableText FAILURE_MAIL_PARSE = new HumanReadableText("org.apache.james.imap.FAILURE_MAIL_PARSE", "failed. Mail cannot be parsed.");
 
     public static final HumanReadableText FAILURE_NO_SUCH_MAILBOX = new HumanReadableText("org.apache.james.imap.FAILURE_NO_SUCH_MAILBOX", "failed. No such mailbox.");
@@ -110,6 +112,10 @@ public class HumanReadableText {
     public static final HumanReadableText MAILBOX_DELETED = new HumanReadableText("org.apache.james.imap.MAILBOX_DELETED", "failed. Mailbox has been deleted.");
 
     public static final HumanReadableText COMSUME_UID_FAILED = new HumanReadableText("org.apache.james.imap.COMSUME_UID_FAILED", "failed. Failed to acquire UID.");
+
+    public static final HumanReadableText USER_DOES_NOT_EXIST = new HumanReadableText("org.apache.james.imap.GENERIC_FAILURE_DURING_PROCESSING", "User does not exist");
+
+    public static final HumanReadableText NOT_AN_ADMIN = new HumanReadableText("org.apache.james.imap.GENERIC_FAILURE_DURING_PROCESSING", "Not an admin");
 
     public static final HumanReadableText GENERIC_FAILURE_DURING_PROCESSING = new HumanReadableText("org.apache.james.imap.GENERIC_FAILURE_DURING_PROCESSING", "processing failed.");
 
@@ -158,6 +164,8 @@ public class HumanReadableText {
     public static final HumanReadableText QRESYNC_CLOSED = new HumanReadableText("org.apache.james.imap.QRESYNC_CLOSED", "");
     public static final HumanReadableText QRESYNC_VANISHED_WITHOUT_CHANGEDSINCE = new HumanReadableText("org.apache.james.imap.QRESYNC_VANISHED_WITHOUT_CHANGEDSINCE", "VANISHED used without CHANGEDSINCE");
 
+    public static final HumanReadableText DENIED_SHARED_MAILBOX = new HumanReadableText("org.apache.james.imap.DENIED_SHARED_MAILBOX", "You can not access a mailbox that does not belong to you");
+
     public static final String UNSUFFICIENT_RIGHTS_DEFAULT_VALUE = "You need the {0} right to perform command {1} on mailbox {2}.";
     public static final String UNSUFFICIENT_RIGHTS_KEY = "org.apache.james.imap.UNSUFFICIENT_RIGHTS";
 
@@ -167,17 +175,19 @@ public class HumanReadableText {
     public static final String UNDEFINED_QUOTA_ROOT_KEY = "org.apache.james.imap.UNDEFINED_QUOTA_ROOT_KEY";
     public static final String UNDEFINED_QUOTA_ROOT_DEFAULT_VALUE = "The Quota Root {0} does not exist.";
 
+    public static final String MAILBOX_ANNOTATION_KEY = "org.apache.james.imap.ANNOTATION_ERROR_KEY";
+
     private final String defaultValue;
 
     private final String key;
 
     private final Object[] parameters;
 
-    public HumanReadableText(final String key, final String defaultValue) {
+    public HumanReadableText(String key, String defaultValue) {
         this(key, defaultValue, (Object[]) null);
     }
 
-    public HumanReadableText(final String key, final String defaultValue, final Object... parameters) {
+    public HumanReadableText(String key, String defaultValue, Object... parameters) {
         super();
         this.defaultValue = defaultValue;
         this.key = key;

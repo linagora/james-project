@@ -162,14 +162,9 @@ Do not promote snapshots, See JAMES-1558
   </section>
 
   <section name='Apache James Server'>
-  
-    <subsection name="Apache James 3.0-beta4 is for early adopters">
-    
-      <p>This release is the first milestone based on 
-         release.  See the <a
-         href="http://james.apache.org/server/3/release-notes.html">Release Notes</a>
-         for a detailed list of changes.</p>
-      
+
+    <subsection name="Apache James 3.0-beta5 is for early adopters">
+
       <div class="ui-widget">
         <div class="ui-priority-secondary ui-corner-all apache-james-crypto-notice">
           <p>
@@ -185,27 +180,16 @@ Do not promote snapshots, See JAMES-1558
           </ul>
         </div>
       </div>
-      
+
       <ul>
-      
-        <li>Binary (Unix TAR): <a
-            href="[preferred]/james/apache-james/3.0beta4/apache-james-3.0-beta4-app.tar.gz">apache-james-3.0-beta4-app.tar.gz</a> [<a
-            href="http://www.apache.org/dist/james/apache-james/3.0beta4/apache-james-3.0-beta4-app.tar.gz.asc">PGP</a>]</li>
-      
+        <li>Source code <a href="https://github.com/apache/james-project/releases/tag/james-project-3.0-beta5">on GitHub</a></li>
+
         <li>Binary (ZIP Format): <a
-            href="[preferred]/james/apache-james/3.0beta4/apache-james-3.0-beta4-app.zip">apache-james-3.0-beta4-app.zip</a> [<a
-            href="http://www.apache.org/dist/james/apache-james/3.0beta4/apache-james-3.0-beta4-app.zip.asc">PGP</a>]</li>
-<!--       
-          <li>Source (Unix TAR): <a
-              href="[preferred]/james/apache-james/3.0beta4/apache-james-3.0-beta4-source-release.tar.gz">apache-james-3.0-beta4-source-release.tar.gz</a> [<a
-              href="http://www.apache.org/dist/james/apache-james/3.0beta4/apache-james-3.0-beta4-source-release.tar.gz.asc">PGP</a>]</li>
--->      
-          <li>Source (ZIP Format): <a
-              href="[preferred]/james/apache-james/3.0beta4/apache-james-3.0-beta4-source-release.zip">apache-james-3.0-beta4-source-release.zip</a> [<a
-              href="http://www.apache.org/dist/james/apache-james/3.0beta4/apache-james-3.0-beta4-source-release.zip.asc">PGP</a>]</li>
-      
+                href="http://www.apache.org/dist/james/server/james-server-app-3.0.0-beta5-app.zip">apache-james-3.0-beta5-app.zip</a> [<a
+                href="http://www.apache.org/dist/james/server/james-server-app-3.0.0-beta5-app.zip.asc">PGP</a>]</li>
+
       </ul>
-    
+
     </subsection>
     
     <subsection name="Apache James 2.3.2.1 is the stable version">

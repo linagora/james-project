@@ -25,26 +25,25 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
+import org.apache.james.jmap.json.ObjectMapperFactory;
 import org.apache.james.jmap.model.Property;
 import org.apache.james.jmap.model.ProtocolResponse;
-import org.apache.james.util.streams.Collectors;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.PropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import com.github.steveash.guavate.Guavate;
 
 public class JmapResponseWriterImpl implements JmapResponseWriter {
 
     public static final String PROPERTIES_FILTER = "propertiesFilter";
-    private final Set<Module> jacksonModules;
+    private final ObjectMapperFactory objectMapperFactory;
 
     @Inject
-    public JmapResponseWriterImpl(Set<Module> jacksonModules) {
-        this.jacksonModules = jacksonModules;
+    public JmapResponseWriterImpl(ObjectMapperFactory objectMapperFactory) {
+        this.objectMapperFactory = objectMapperFactory;
     }
 
     @Override
@@ -60,13 +59,12 @@ public class JmapResponseWriterImpl implements JmapResponseWriter {
     }
     
     private ObjectMapper newConfiguredObjectMapper(JmapResponse jmapResponse) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModules(jacksonModules)
-                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        ObjectMapper objectMapper = objectMapperFactory.forWriting();
         
         FilterProvider filterProvider = jmapResponse
                 .getFilterProvider()
                 .orElseGet(SimpleFilterProvider::new)
+                .setDefaultFilter(SimpleBeanPropertyFilter.serializeAll())
                 .addFilter(PROPERTIES_FILTER, getPropertiesFilter(jmapResponse.getProperties()));
         
         objectMapper.setFilterProvider(filterProvider);
@@ -84,6 +82,6 @@ public class JmapResponseWriterImpl implements JmapResponseWriter {
     private Set<String> toFieldNames(Set<? extends Property> properties) {
         return properties.stream()
             .map(Property::asFieldName)
-            .collect(Collectors.toImmutableSet());
+            .collect(Guavate.toImmutableSet());
     }
 }

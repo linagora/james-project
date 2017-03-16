@@ -36,6 +36,7 @@ import org.apache.james.imap.message.request.AuthenticateRequest;
 import org.apache.james.imap.message.request.IRAuthenticateRequest;
 import org.apache.james.imap.message.response.AuthenticateResponse;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.metrics.api.MetricFactory;
 
 /**
  * Processor which handles the AUTHENTICATE command. Only authtype of PLAIN is supported ATM.
@@ -45,8 +46,9 @@ import org.apache.james.mailbox.MailboxManager;
 public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateRequest> implements CapabilityImplementingProcessor{
     private final static String PLAIN = "PLAIN";
     
-    public AuthenticateProcessor(final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory factory) {
-        super(AuthenticateRequest.class, next, mailboxManager, factory);
+    public AuthenticateProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(AuthenticateRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     /**
@@ -101,16 +103,24 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
      * @param responder
      */
     protected void doPlainAuth(String initialClientResponse, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        String pass = null;
-        String user = null;
+        AuthenticationAttempt authenticationAttempt = parseDelegationAttempt(initialClientResponse);
+        if (authenticationAttempt.isDelegation()) {
+            doAuthWithDelegation(authenticationAttempt, session, tag, command, responder, HumanReadableText.AUTHENTICATION_FAILED);
+        } else {
+            doAuth(authenticationAttempt, session, tag, command, responder, HumanReadableText.AUTHENTICATION_FAILED);
+        }
+    }
+
+    private AuthenticationAttempt parseDelegationAttempt(String initialClientResponse) {
+        String token2;
         try {
 
             String userpass = new String(Base64.decodeBase64(initialClientResponse));
             StringTokenizer authTokenizer = new StringTokenizer(userpass, "\0");
-            String authorize_id = authTokenizer.nextToken();  // Authorization Identity
-            user = authTokenizer.nextToken();                 // Authentication Identity
+            String token1 = authTokenizer.nextToken();  // Authorization Identity
+            token2 = authTokenizer.nextToken();                 // Authentication Identity
             try {
-                pass = authTokenizer.nextToken();             // Password
+                return delegation(token1, token2, authTokenizer.nextToken());
             } catch (java.util.NoSuchElementException _) {
                 // If we got here, this is what happened.  RFC 2595
                 // says that "the client may leave the authorization
@@ -127,19 +137,17 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
                 // elements, leading to the exception we just
                 // caught.  So we need to move the user to the
                 // password, and the authorize_id to the user.
-                pass = user;
-                user = authorize_id;
-            }   
-
-            authTokenizer = null;
+                return noDelegation(token1, token2);
+            } finally {
+                authTokenizer = null;
+            }
         } catch (Exception e) {
             // Ignored - this exception in parsing will be dealt
             // with in the if clause below
+            return noDelegation(null, null);
         }
-        // Authenticate user
-        doAuth(user, pass, session, tag, command, responder, HumanReadableText.AUTHENTICATION_FAILED);
     }
-    
+
     /**
      * @see org.apache.james.imap.processor.CapabilityImplementingProcessor
      * #getImplementedCapabilities(org.apache.james.imap.api.process.ImapSession)

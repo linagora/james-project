@@ -24,13 +24,14 @@ import java.io.IOException;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.maildir.MaildirFolder;
 import org.apache.james.mailbox.maildir.MaildirId;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
-public class MaildirMailboxMessage extends DelegatingMailboxMessage<MaildirId> {
+public class MaildirMailboxMessage extends DelegatingMailboxMessage {
 
     private boolean answered;
     private boolean deleted;
@@ -38,16 +39,16 @@ public class MaildirMailboxMessage extends DelegatingMailboxMessage<MaildirId> {
     private boolean flagged;
     private boolean recent;
     private boolean seen;
-    private final Mailbox<MaildirId> mailbox;
-    private long uid;
+    private final Mailbox mailbox;
+    private MessageUid uid;
     protected boolean newMessage;
     private long modSeq;
     
-    public MaildirMailboxMessage(Mailbox<MaildirId> mailbox, long uid, MaildirMessageName messageName) throws IOException {
+    public MaildirMailboxMessage(Mailbox mailbox, MessageUid messageUid, MaildirMessageName messageName) throws IOException {
         super(new MaildirMessage(messageName));
 
         this.mailbox = mailbox;
-        setUid(uid);
+        setUid(messageUid);
         setModSeq(messageName.getFile().lastModified());
         Flags flags = messageName.getFlags();
         
@@ -70,16 +71,16 @@ public class MaildirMailboxMessage extends DelegatingMailboxMessage<MaildirId> {
     
     @Override
     public MaildirId getMailboxId() {
-        return mailbox.getMailboxId();
+        return (MaildirId) mailbox.getMailboxId();
     }
 
     @Override
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
     }
 
     @Override
-    public void setUid(long uid) {
+    public void setUid(MessageUid uid) {
         this.uid = uid;
     }
 

@@ -34,12 +34,31 @@ import java.util.Map;
 
 public class MemoryUsersRepository extends AbstractUsersRepository {
 
+    public static MemoryUsersRepository withVirtualHosting() {
+        return new MemoryUsersRepository(true);
+    }
+
+    public static MemoryUsersRepository withoutVirtualHosting() {
+        return new MemoryUsersRepository(false);
+    }
+    
     private final Map<String, User> userByName;
+    private final boolean supportVirtualHosting;
     private String algo;
 
-    public MemoryUsersRepository() {
+    private MemoryUsersRepository(boolean supportVirtualHosting) {
         this.userByName = new HashMap<String, User>();
         this.algo = "MD5";
+        this.supportVirtualHosting = supportVirtualHosting;
+    }
+
+    public void clear() {
+        userByName.clear();
+    }
+
+    @Override
+    public boolean supportVirtualHosting() {
+        return supportVirtualHosting;
     }
 
     @Override

@@ -20,12 +20,12 @@
 
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.HasMailAttributeWithValueRegex;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.base.GenericMatcher;
+import java.util.Collection;
 
 import javax.mail.MessagingException;
-import java.util.Collection;
+
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.GenericMatcher;
 
 import junit.framework.AssertionFailedError;
 
@@ -81,7 +81,7 @@ public class HasMailAttributeWithValueRegexTest extends
         String exception = "Malformed pattern: " + invalidRegex;
 
         setRegex(invalidRegex);
-        setupMockedMail(mockedMimeMessage);
+        setupMockedMail();
 
         try {
             setupMatcher();
@@ -102,7 +102,7 @@ public class HasMailAttributeWithValueRegexTest extends
         }
     }
 
-    protected String getConfigOption() {
-        return "HasMailAttributeWithValueRegex=";
+    protected String getMatcherName() {
+        return "HasMailAttributeWithValueRegex";
     }
 }

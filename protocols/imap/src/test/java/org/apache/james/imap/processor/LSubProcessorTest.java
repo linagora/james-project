@@ -37,6 +37,7 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.model.MailboxMetaData;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -108,7 +109,7 @@ public class LSubProcessorTest {
         responderImpl = responder;
         manager = mockery. mock(SubscriptionManager.class);
         mailboxSession = mockery.mock(MailboxSession.class);
-        processor = new LSubProcessor(next, mockery.mock(MailboxManager.class), manager, serverResponseFactory);
+        processor = new LSubProcessor(next, mockery.mock(MailboxManager.class), manager, serverResponseFactory, new NoopMetricFactory());
     }
 
     @Test
@@ -262,6 +263,11 @@ public class LSubProcessorTest {
                  */
                 public String getUserName() {
                     return "test";
+                }
+
+                @Override
+                public boolean isSameUser(String username) {
+                    return "test".equalsIgnoreCase(username);
                 }
                 
             }));     

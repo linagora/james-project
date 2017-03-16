@@ -24,12 +24,16 @@ import java.util.Map;
 
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.TestId;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 public class MessageBuilder {
     
     public TestId mailboxId = TestId.of(113);
-    public long uid = 776;
+    public MessageUid uid = MessageUid.of(776);
     public Date internalDate = new Date();
     public int size = 8867;
     public Flags flags = new Flags();
@@ -37,15 +41,19 @@ public class MessageBuilder {
     public final Map<String, String> headers = new HashMap<String, String>();
     public int lineNumber = 0;
     
-    public MailboxMessage<TestId> build() throws Exception {
-        return new SimpleMailboxMembership(mailboxId, uid, -1,  internalDate, size, flags, body, headers);
+    public MailboxMessage build() throws Exception {
+        return build(new DefaultMessageId());
+    }
+
+    public MailboxMessage build(MessageId messageId) throws Exception {
+        return new SimpleMailboxMembership(messageId, mailboxId, uid, -1,  internalDate, size, flags, body, headers);
     }
     
     public void header(String field, String value) {
         headers.put(field, value);
     }
 
-    public void setKey(int mailboxId, int uid) {
+    public void setKey(int mailboxId, MessageUid uid) {
         this.uid = uid;
         this.mailboxId = TestId.of(mailboxId);
     }

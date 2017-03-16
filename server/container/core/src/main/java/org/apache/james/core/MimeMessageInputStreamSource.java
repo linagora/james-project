@@ -77,20 +77,19 @@ public class MimeMessageInputStreamSource extends MimeMessageSource implements D
         // We want to immediately read this into a temporary file
         // Create a temp file and channel the input stream into it
         try {
-            out = new DeferredFileOutputStream(THRESHOLD, key, ".m64", TMPDIR);
+            out = new DeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
             IOUtils.copy(in, out);
             sourceId = key;
         } catch (IOException ioe) {
+            File file = out.getFile();
+            if (file != null) {
+                FileUtils.deleteQuietly(file);
+            }
             throw new MessagingException("Unable to retrieve the data: " + ioe.getMessage(), ioe);
         } finally {
             try {
                 if (out != null) {
                     out.close();
-
-                    File file = out.getFile();
-                    if (file != null) {
-                        FileUtils.forceDelete(file);
-                    }
                 }
             } catch (IOException ioe) {
                 // Ignored - logging unavailable to log this non-fatal error.

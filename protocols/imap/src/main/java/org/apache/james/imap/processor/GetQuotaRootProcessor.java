@@ -19,6 +19,9 @@
 
 package org.apache.james.imap.processor;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapSessionUtils;
@@ -26,9 +29,10 @@ import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.GetQuotaRootRequest;
-import org.apache.james.imap.message.response.QuotaRootResponse;
 import org.apache.james.imap.message.response.QuotaResponse;
+import org.apache.james.imap.message.response.QuotaRootResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -38,9 +42,7 @@ import org.apache.james.mailbox.model.QuotaRoot;
 import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
-
-import java.util.Collections;
-import java.util.List;
+import org.apache.james.metrics.api.MetricFactory;
 
 /**
  * GETQUOTAROOT Processor
@@ -51,8 +53,9 @@ public class GetQuotaRootProcessor extends AbstractMailboxProcessor<GetQuotaRoot
     private final QuotaRootResolver quotaRootResolver;
     private final QuotaManager quotaManager;
 
-    public GetQuotaRootProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory, QuotaRootResolver quotaRootResolver, QuotaManager quotaManager) {
-        super(GetQuotaRootRequest.class, next, mailboxManager, factory);
+    public GetQuotaRootProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory, QuotaRootResolver quotaRootResolver, QuotaManager quotaManager,
+            MetricFactory metricFactory) {
+        super(GetQuotaRootRequest.class, next, mailboxManager, factory, metricFactory);
         this.quotaRootResolver = quotaRootResolver;
         this.quotaManager = quotaManager;
     }
@@ -66,7 +69,7 @@ public class GetQuotaRootProcessor extends AbstractMailboxProcessor<GetQuotaRoot
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
         final MailboxManager mailboxManager = getMailboxManager();
 
-        final MailboxPath mailboxPath = buildFullPath(session, message.getMailboxName());
+        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(message.getMailboxName());
 
         // First check mailbox exists
         try {

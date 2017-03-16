@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.apache.james.mailbox.MailboxSession;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * The path to a mailbox.
  */
@@ -32,8 +34,6 @@ public class MailboxPath {
     private String namespace;
     private String user;
     private String name;
-
-
     
     public MailboxPath(String namespace, String user, String name) {
         if (namespace == null || namespace.equals("")) {
@@ -118,6 +118,9 @@ public class MailboxPath {
      * @return list of hierarchy levels
      */
     public List<MailboxPath> getHierarchyLevels(char delimiter) {
+        if (name == null) {
+            return ImmutableList.of(this);
+        }
         ArrayList<MailboxPath> levels = new ArrayList<MailboxPath>();
         int index = name.indexOf(delimiter);
         while (index >= 0) {
@@ -129,14 +132,13 @@ public class MailboxPath {
         return levels;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
+    public String asString() {
+        return namespace + ":" + user + ":" + name;
+    }
+
     @Override
     public String toString() {
-        return namespace + ":" + user + ":" + name;
+        return asString();
     }
 
     /*

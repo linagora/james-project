@@ -23,20 +23,23 @@ import javax.jcr.RepositoryException;
 
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.util.Text;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.jcr.JCRId;
 import org.apache.james.mailbox.jcr.JCRImapConstants;
 import org.apache.james.mailbox.jcr.Persistent;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxUtil;
 import org.slf4j.Logger;
 
 
 /**
  * JCR implementation of a {@link Mailbox}
  */
-public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
+public class JCRMailbox implements Mailbox, JCRImapConstants, Persistent{
 
     private static final String TAB = " ";
 
@@ -60,7 +63,7 @@ public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
     private long highestKnownModSeq;
     
     
-    public JCRMailbox( final MailboxPath path, final long uidValidity, Logger logger) {
+    public JCRMailbox( final MailboxPath path, long uidValidity, Logger logger) {
         this.name = path.getName();
         this.namespace = path.getNamespace();
         this.user = path.getUser();
@@ -68,7 +71,7 @@ public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
         this.logger = logger;
     }
     
-    public JCRMailbox( final Node node, final Logger logger) {
+    public JCRMailbox( final Node node, Logger logger) {
         this.node = node;
         this.logger = logger;
     }
@@ -77,6 +80,10 @@ public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
         return logger;
     }
 
+    @Override
+    public MailboxPath generateAssociatedPath() {
+        return new MailboxPath(getNamespace(), getUser(), getName());
+    }
    
     /*
      * (non-Javadoc)
@@ -198,10 +205,7 @@ public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
         return true;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getMailboxId()
-     */
+    @Override
     public JCRId getMailboxId() {
         if (isPersistent()) {
             try {
@@ -213,6 +217,10 @@ public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
         return null;      
     }
 
+    @Override
+    public void setMailboxId(MailboxId mailboxId) {
+        
+    }
     /*
      * (non-Javadoc)
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getNamespace()
@@ -321,6 +329,11 @@ public class JCRMailbox implements Mailbox<JCRId>, JCRImapConstants, Persistent{
     @Override
     public void setACL(MailboxACL acl) {
         // TODO ACL support
+    }
+
+    @Override
+    public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
+        return MailboxUtil.isMailboxChildOf(this, potentialParent, mailboxSession);
     }
     
 }

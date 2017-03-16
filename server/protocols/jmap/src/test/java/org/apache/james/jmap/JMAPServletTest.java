@@ -26,13 +26,16 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.stream.Stream;
+
 import org.apache.james.http.jetty.Configuration;
 import org.apache.james.http.jetty.JettyHttpServer;
-import org.apache.james.jmap.methods.JmapResponse;
+import org.apache.james.jmap.methods.ErrorResponse;
 import org.apache.james.jmap.methods.Method;
 import org.apache.james.jmap.methods.RequestHandler;
 import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.ProtocolResponse;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,9 +45,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.builder.RequestSpecBuilder;
 import com.jayway.restassured.http.ContentType;
-
-import java.util.stream.Stream;
 
 public class JMAPServletTest {
 
@@ -54,7 +56,7 @@ public class JMAPServletTest {
     @Before
     public void setup() throws Exception {
         requestHandler = mock(RequestHandler.class);
-        JMAPServlet jmapServlet = new JMAPServlet(requestHandler);
+        JMAPServlet jmapServlet = new JMAPServlet(requestHandler, new NoopMetricFactory());
 
         server = JettyHttpServer.create(
                 Configuration.builder()
@@ -65,8 +67,12 @@ public class JMAPServletTest {
 
         server.start();
 
-        RestAssured.port = server.getPort();
-        RestAssured.config = newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8));
+        RestAssured.requestSpecification = new RequestSpecBuilder()
+        		.setContentType(ContentType.JSON)
+        		.setAccept(ContentType.JSON)
+        		.setConfig(newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8)))
+        		.setPort(server.getPort())
+        		.build();
     }
 
     @After
@@ -79,8 +85,6 @@ public class JMAPServletTest {
         String missingAnOpeningBracket = "[\"getAccounts\", {\"state\":false}, \"#0\"]]";
 
         given()
-            .accept(ContentType.JSON)
-            .contentType(ContentType.JSON)
             .body(missingAnOpeningBracket)
         .when()
             .post("/")
@@ -94,11 +98,9 @@ public class JMAPServletTest {
         json.put("type", "invalidArgument");
 
         when(requestHandler.handle(any()))
-            .thenReturn(Stream.of(new ProtocolResponse(JmapResponse.ERROR_METHOD, json, ClientId.of("#0"))));
+            .thenReturn(Stream.of(new ProtocolResponse(ErrorResponse.ERROR_METHOD, json, ClientId.of("#0"))));
 
         given()
-            .accept(ContentType.JSON)
-            .contentType(ContentType.JSON)
             .body("[[\"getAccounts\", {\"state\":false}, \"#0\"]]")
         .when()
             .post("/")
@@ -121,8 +123,6 @@ public class JMAPServletTest {
             .thenReturn(Stream.of(new ProtocolResponse(Method.Response.name("accounts"), json, ClientId.of("#0"))));
 
         given()
-            .accept(ContentType.JSON)
-            .contentType(ContentType.JSON)
             .body("[[\"getAccounts\", {}, \"#0\"]]")
         .when()
             .post("/")

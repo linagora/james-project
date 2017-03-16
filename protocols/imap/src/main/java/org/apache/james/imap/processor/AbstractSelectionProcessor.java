@@ -30,6 +30,7 @@ import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.ImapSessionUtils;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.IdRange;
+import org.apache.james.imap.api.message.UidRange;
 import org.apache.james.imap.api.message.response.StatusResponse;
 import org.apache.james.imap.api.message.response.StatusResponse.ResponseCode;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
@@ -37,6 +38,7 @@ import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SearchResUtil;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.AbstractMailboxSelectionRequest;
 import org.apache.james.imap.message.response.ExistsResponse;
 import org.apache.james.imap.message.response.RecentResponse;
@@ -46,12 +48,14 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.metrics.api.MetricFactory;
 
 abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequest> extends AbstractMailboxProcessor<M> implements PermitEnableCapabilityProcessor {
 
@@ -61,8 +65,9 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
     private final static List<String> CAPS = Collections.unmodifiableList(Arrays.asList(ImapConstants.SUPPORTS_QRESYNC, ImapConstants.SUPPORTS_CONDSTORE));
 
     
-    public AbstractSelectionProcessor(final Class<M> acceptableClass, final ImapProcessor next, final MailboxManager mailboxManager, final StatusResponseFactory statusResponseFactory, final boolean openReadOnly) {
-        super(acceptableClass, next, mailboxManager, statusResponseFactory);
+    public AbstractSelectionProcessor(Class<M> acceptableClass, ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory, boolean openReadOnly,
+            MetricFactory metricFactory) {
+        super(acceptableClass, next, mailboxManager, statusResponseFactory, metricFactory);
         this.statusResponseFactory = statusResponseFactory;
         this.openReadOnly = openReadOnly;
 
@@ -78,7 +83,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
     protected void doProcess(M request, ImapSession session, String tag, ImapCommand command, Responder responder) {
         final String mailboxName = request.getMailboxName();
         try {
-            final MailboxPath fullMailboxPath = buildFullPath(session, mailboxName);
+            final MailboxPath fullMailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
 
             respond(tag, command, session, fullMailboxPath, request, responder);
            
@@ -97,7 +102,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         Long lastKnownUidValidity = request.getLastKnownUidValidity();
         Long modSeq = request.getKnownModSeq();
         IdRange[] knownSequences = request.getKnownSequenceSet();
-        IdRange[] knownUids = request.getKnownUidSet();
+        UidRange[] knownUids = request.getKnownUidSet();
 
         // Check if a QRESYNC parameter was used and if so if QRESYNC was enabled before.
         // If it was not enabled before its needed to return a BAD response
@@ -117,7 +122,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         
         final MessageManager.MetaData metaData = selectMailbox(fullMailboxPath, session);
         final SelectedMailbox selected = session.getSelected();
-        Long firstUnseen = metaData.getFirstUnseen();
+        MessageUid firstUnseen = metaData.getFirstUnseen();
         
         flags(responder, selected);
         exists(responder, metaData);
@@ -171,14 +176,14 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
                 SearchQuery sq = new SearchQuery();
                 sq.andCriteria(SearchQuery.modSeqGreaterThan(request.getKnownModSeq()));
                 
-                IdRange[] uidSet = request.getUidSet();
+                UidRange[] uidSet = request.getUidSet();
 
                 if (uidSet == null) {
                     // See mailbox had some messages stored before, if not we don't need to query at all
-                    long uidNext = metaData.getUidNext();
-                    if ( uidNext != 1) {
+                    MessageUid uidNext = metaData.getUidNext();
+                    if (!uidNext.isFirst()) {
                         // Use UIDNEXT -1 as max uid as stated in the QRESYNC RFC
-                        uidSet = new IdRange[] {new IdRange(1, uidNext -1)};
+                        uidSet = new UidRange[] {new UidRange(MessageUid.MIN_VALUE, uidNext.previous())};
                     }
                 }
                 
@@ -212,9 +217,9 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
                     if (knownSequences != null && knownUids != null) {
                         
                         // Add all uids which are contained in the knownuidsset to a List so we can later access them via the index
-                        List<Long> knownUidsList = new ArrayList<Long>();
-                        for (IdRange range : knownUids) {
-                            for (Long uid : range) {
+                        List<MessageUid> knownUidsList = new ArrayList<MessageUid>();
+                        for (UidRange range : knownUids) {
+                            for (MessageUid uid : range) {
                                 knownUidsList.add(uid);
                             }
                         }
@@ -222,7 +227,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
                         
                         
                         // loop over the known sequences and check the UID for MSN X again the known UID X 
-                        long firstUid = 1;
+                        MessageUid firstUid = MessageUid.MIN_VALUE;
                         int index = 0;
                         for (IdRange knownSequence : knownSequences) {
                             boolean done = false;
@@ -231,10 +236,10 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
                                 // Check if we have uids left to check against
                                 if (knownUidsList.size() > index++) {
                                     int msn = uid.intValue();
-                                    long knownUid = knownUidsList.get(index);
+                                    MessageUid knownUid = knownUidsList.get(index);
 
                                     // Check if the uid mathc if not we are done here
-                                    if (selected.uid(msn) != knownUid) {
+                                    if (selected.uid(msn).asSet().contains(knownUid)) {
                                         done = true;
                                         break;
                                     } else {
@@ -250,21 +255,20 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
 
                             // We found the first uid to start with 
                             if (done) {
-                                firstUid++;
+                                firstUid = firstUid.next();
 
                                 // Ok now its time to filter out the IdRanges which we are not interested in
-                                List<IdRange> filteredUidSet = new ArrayList<IdRange>();
-                                for (IdRange r : uidSet) {
-                                    if (r.getLowVal() < firstUid) {
-                                        if (r.getHighVal() > firstUid) {
-                                            r.setLowVal(firstUid);
-                                            filteredUidSet.add(r);
+                                List<UidRange> filteredUidSet = new ArrayList<UidRange>();
+                                for (UidRange r : uidSet) {
+                                    if (r.getLowVal().compareTo(firstUid) < 0) {
+                                        if (r.getHighVal().compareTo(firstUid) > 0) {
+                                            filteredUidSet.add(new UidRange(firstUid, r.getHighVal()));
                                         }
                                     } else {
                                         filteredUidSet.add(r);
                                     }
                                 }
-                                uidSet = filteredUidSet.toArray(new IdRange[0]);
+                                uidSet = filteredUidSet.toArray(new UidRange[0]);
 
                                 break;
                             }
@@ -274,8 +278,8 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
                     }
                     
                     List<MessageRange> ranges = new ArrayList<MessageRange>();
-                    for (IdRange range : uidSet) {
-                        MessageRange messageSet = messageRange(session.getSelected(), range, true);
+                    for (UidRange range : uidSet) {
+                        MessageRange messageSet = range.toMessageRange();
                         if (messageSet != null) {
                             MessageRange normalizedMessageSet = normalizeMessageRange(session.getSelected(), messageSet);
                             ranges.add(normalizedMessageSet);
@@ -335,13 +339,13 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         responder.respond(untaggedOk);        
     }
 
-    private void uidNext(final Responder responder, final MessageManager.MetaData metaData) throws MailboxException {
-        final long uid = metaData.getUidNext();
+    private void uidNext(Responder responder, MessageManager.MetaData metaData) throws MailboxException {
+        final MessageUid uid = metaData.getUidNext();
         final StatusResponse untaggedOk = statusResponseFactory.untaggedOk(HumanReadableText.UIDNEXT, ResponseCode.uidNext(uid));
         responder.respond(untaggedOk);
     }
 
-    private void taggedOk(final Responder responder, final String tag, final ImapCommand command, final MetaData metaData, HumanReadableText text) {
+    private void taggedOk(Responder responder, String tag, ImapCommand command, MetaData metaData, HumanReadableText text) {
         final boolean writeable = metaData.isWriteable() && !openReadOnly;
         final ResponseCode code;
         if (writeable) {
@@ -353,9 +357,9 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         responder.respond(taggedOk);
     }
 
-    private boolean unseen(Responder responder, Long firstUnseen, final SelectedMailbox selected, MailboxSession session) throws MailboxException {
+    private boolean unseen(Responder responder, MessageUid firstUnseen, SelectedMailbox selected, MailboxSession session) throws MailboxException {
         if (firstUnseen != null) {
-            final long unseenUid = firstUnseen;
+            final MessageUid unseenUid = firstUnseen;
             int msn = selected.msn(unseenUid);
 
             if (msn == SelectedMailbox.NO_SUCH_MESSAGE) {
@@ -379,7 +383,7 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
         responder.respond(untaggedOk);
     }
 
-    private void recent(Responder responder, final SelectedMailbox selected) {
+    private void recent(Responder responder, SelectedMailbox selected) {
         final int recentCount = selected.recentCount();
         final RecentResponse recentResponse = new RecentResponse(recentCount);
         responder.respond(recentResponse);
@@ -422,9 +426,9 @@ abstract class AbstractSelectionProcessor<M extends AbstractMailboxSelectionRequ
     }
 
 
-    private void addRecent(final MessageManager.MetaData metaData, SelectedMailbox sessionMailbox) throws MailboxException {
-        final List<Long> recentUids = metaData.getRecent();
-        for (Long uid : recentUids) {
+    private void addRecent(MessageManager.MetaData metaData, SelectedMailbox sessionMailbox) throws MailboxException {
+        final List<MessageUid> recentUids = metaData.getRecent();
+        for (MessageUid uid : recentUids) {
             sessionMailbox.addRecent(uid);
         }
     }

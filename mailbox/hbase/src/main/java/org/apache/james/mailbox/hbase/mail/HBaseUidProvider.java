@@ -30,15 +30,19 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.HBaseId;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.base.Optional;
 /**
  * Message UidProvider for HBase.
  * 
  */
-public class HBaseUidProvider implements UidProvider<HBaseId> {
+public class HBaseUidProvider implements UidProvider {
 
     /** Link to the HBase Configuration object and specific mailbox names */
     private final Configuration conf;
@@ -52,14 +56,14 @@ public class HBaseUidProvider implements UidProvider<HBaseId> {
      * @param session the session
      * @param mailbox the mailbox for which to get the last uid
      * @return the last uid used
-     * @throws MailboxException 
      */
     @Override
-    public long lastUid(MailboxSession session, Mailbox<HBaseId> mailbox) throws MailboxException {
+    public Optional<MessageUid> lastUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
         HTable mailboxes = null;
+        HBaseId mailboxId = (HBaseId) mailbox.getMailboxId();
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
-            Get get = new Get(mailbox.getMailboxId().toBytes());
+            Get get = new Get(mailboxId.toBytes());
             get.addColumn(MAILBOX_CF, MAILBOX_LASTUID);
             get.setMaxVersions(1);
             Result result = mailboxes.get(get);
@@ -67,8 +71,11 @@ public class HBaseUidProvider implements UidProvider<HBaseId> {
             if (result == null) {
                 throw new MailboxException("Row or column not found!");
             }
-            long uid = Bytes.toLong(result.getValue(MAILBOX_CF, MAILBOX_LASTUID));
-            return uid;
+            long rawUid = Bytes.toLong(result.getValue(MAILBOX_CF, MAILBOX_LASTUID));
+            if (rawUid == 0) {
+                return Optional.absent();
+            }
+            return Optional.of(MessageUid.of(rawUid));
         } catch (IOException e) {
             throw new MailboxException("lastUid", e);
         } finally {
@@ -91,11 +98,17 @@ public class HBaseUidProvider implements UidProvider<HBaseId> {
      * @throws MailboxException 
      */
     @Override
-    public long nextUid(MailboxSession session, Mailbox<HBaseId> mailbox) throws MailboxException {
+    public MessageUid nextUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        return nextUid(session, mailbox.getMailboxId());
+    }
+
+    @Override
+    public MessageUid nextUid(MailboxSession session, MailboxId mailboxId) throws MailboxException {
+        HBaseId hbaseId = (HBaseId) mailboxId;
         HTable mailboxes = null;
         try {
             mailboxes = new HTable(conf, MAILBOXES_TABLE);
-            long newValue = mailboxes.incrementColumnValue(mailbox.getMailboxId().toBytes(), MAILBOX_CF, MAILBOX_LASTUID, 1);
+            MessageUid newValue = MessageUid.of(mailboxes.incrementColumnValue(hbaseId.toBytes(), MAILBOX_CF, MAILBOX_LASTUID, 1));
             mailboxes.close();
             return newValue;
         } catch (IOException e) {
@@ -110,4 +123,6 @@ public class HBaseUidProvider implements UidProvider<HBaseId> {
             }
         }
     }
+
+
 }

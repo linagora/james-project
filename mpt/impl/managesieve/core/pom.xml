@@ -17,13 +17,11 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>apache-james-mpt-managesieve</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>0.2-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -39,12 +37,10 @@
         <dependency>
             <groupId>org.apache.james</groupId>
             <artifactId>james-server-data-api</artifactId>
-            <version>${james.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.james.protocols</groupId>
             <artifactId>protocols-managesieve</artifactId>
-            <version>1.6.4-SNAPSHOT</version>
         </dependency>
 
 
@@ -57,8 +53,8 @@
             <artifactId>junit</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.onami</groupId>
-            <artifactId>org.apache.onami.test</artifactId>
+            <groupId>org.apache.james</groupId>
+            <artifactId>apache-james-mpt-onami-test</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

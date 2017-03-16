@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.RequestAware;
 import org.apache.james.mailbox.SubscriptionManager;
@@ -41,8 +43,9 @@ public class StoreSubscriptionManager implements SubscriptionManager {
     private static final int INITIAL_SIZE = 32;
     
     protected SubscriptionMapperFactory mapperFactory;
-    
-    public StoreSubscriptionManager(final SubscriptionMapperFactory mapperFactory) {
+
+    @Inject
+    public StoreSubscriptionManager(SubscriptionMapperFactory mapperFactory) {
         this.mapperFactory = mapperFactory;
     }
 
@@ -77,14 +80,14 @@ public class StoreSubscriptionManager implements SubscriptionManager {
      * @param mailbox
      * @return subscription 
      */
-    protected Subscription createSubscription(final MailboxSession session, final String mailbox) {
+    protected Subscription createSubscription(MailboxSession session, String mailbox) {
         return new SimpleSubscription(session.getUser().getUserName(), mailbox);
     }
 
     /**
      * @see org.apache.james.mailbox.SubscriptionManager#subscriptions(org.apache.james.mailbox.MailboxSession)
      */
-    public Collection<String> subscriptions(final MailboxSession session) throws SubscriptionException {
+    public Collection<String> subscriptions(MailboxSession session) throws SubscriptionException {
         final SubscriptionMapper mapper = mapperFactory.getSubscriptionMapper(session);
         final List<Subscription> subscriptions = mapper.findSubscriptionsForUser(session.getUser().getUserName());
         final Collection<String> results = new HashSet<String>(INITIAL_SIZE);

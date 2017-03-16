@@ -20,12 +20,12 @@
 
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.HasMailAttributeWithValue;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.base.GenericMatcher;
+import java.util.Collection;
 
 import javax.mail.MessagingException;
-import java.util.Collection;
+
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.GenericMatcher;
 
 public class HasMailAttributeWithValueTest extends AbstractHasMailAttributeTest {
 
@@ -44,7 +44,7 @@ public class HasMailAttributeWithValueTest extends AbstractHasMailAttributeTest 
     // test if the mail attribute was not matched cause diffrent value
     public void testAttributeIsNotMatchedCauseValue() throws MessagingException {
         setMailAttributeName(MAIL_ATTRIBUTE_NAME);
-        setupMockedMail(mockedMimeMessage);
+        setupMockedMail();
         setupMatcher();
 
         Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
@@ -52,7 +52,7 @@ public class HasMailAttributeWithValueTest extends AbstractHasMailAttributeTest 
         assertNull(matchedRecipients);
     }
 
-    protected String getConfigOption() {
-        return "HasMailAttributeWithValue=";
+    protected String getMatcherName() {
+        return "HasMailAttributeWithValue";
     }
 }

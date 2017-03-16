@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Reader;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -46,15 +47,17 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.Authenticator;
+import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.StoreMailboxManager;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.pop3server.netty.POP3Server;
+import org.apache.james.protocols.api.utils.ProtocolServerUtils;
 import org.apache.james.protocols.lib.POP3BeforeSMTPHelper;
-import org.apache.james.protocols.lib.PortUtil;
 import org.apache.james.protocols.lib.mock.MockProtocolHandlerLoader;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
@@ -68,13 +71,12 @@ import org.slf4j.LoggerFactory;
 
 public class POP3ServerTest {
 
-    private final int pop3Port = PortUtil.getNonPrivilegedPort();
     private POP3TestConfiguration pop3Configuration;
     private final InMemoryUsersRepository usersRepository = new InMemoryUsersRepository();
     private POP3Client pop3Client = null;
     protected MockFileSystem fileSystem;
     protected MockProtocolHandlerLoader protocolHandlerChain;
-    private StoreMailboxManager<InMemoryId> mailboxManager;
+    private StoreMailboxManager mailboxManager;
     private final byte[] content = ("Return-path: return@test.com\r\n"
             + "Content-Transfer-Encoding: plain\r\n"
             + "Subject: test\r\n\r\n"
@@ -85,7 +87,7 @@ public class POP3ServerTest {
     public void setUp() throws Exception {
         setUpServiceManager();
         setUpPOP3Server();
-        pop3Configuration = new POP3TestConfiguration(pop3Port);
+        pop3Configuration = new POP3TestConfiguration();
     }
 
     @After
@@ -109,7 +111,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("known", "test2");
 
@@ -123,7 +126,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         pop3Client.login("unknown", "test");
         assertEquals(0, pop3Client.getState());
@@ -135,7 +139,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("foo", "bar");
 
@@ -183,7 +188,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         pop3Client.sendCommand("unkn");
         assertEquals(0, pop3Client.getState());
@@ -198,7 +204,8 @@ public class POP3ServerTest {
         usersRepository.addUser("foo", "bar");
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         pop3Client.sendCommand("uidl");
         assertEquals(0, pop3Client.getState());
@@ -216,7 +223,7 @@ public class POP3ServerTest {
         }
         setupTestMails(session, mailboxManager.getMailbox(mailboxPath, session));
 
-        pop3Client.connect("127.0.0.1", pop3Port);
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
         pop3Client.login("foo", "bar");
 
         list = pop3Client.listUniqueIdentifiers();
@@ -236,7 +243,8 @@ public class POP3ServerTest {
         usersRepository.addUser("foo", "bar");
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         pop3Client.sendCommand("noop");
         assertEquals(0, pop3Client.getState());
@@ -288,7 +296,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("foo2", "bar2");
 
@@ -341,7 +350,7 @@ public class POP3ServerTest {
         pop3Client.logout();
         //m_pop3Protocol.disconnect();
 
-        pop3Client.connect("127.0.0.1", pop3Port);
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         pop3Client.login("foo2", "bar2");
         assertEquals(1, pop3Client.getState());
@@ -376,7 +385,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("foo2", "bar2");
 
@@ -406,7 +416,7 @@ public class POP3ServerTest {
         pop3Client.sendCommand("quit");
         pop3Client.disconnect();
 
-        pop3Client.connect("127.0.0.1", pop3Port);
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         pop3Client.login("foo2", "bar2");
         assertEquals(1, pop3Client.getState());
@@ -425,7 +435,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("foo2", "bar2");
 
@@ -453,7 +464,7 @@ public class POP3ServerTest {
         assertEquals(msgCount, statInfo.number);
 
         POP3Client m_pop3Protocol2 = new POP3Client();
-        m_pop3Protocol2.connect("127.0.0.1", pop3Port);
+        m_pop3Protocol2.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
         m_pop3Protocol2.login("foo2", "bar2");
         assertEquals(1, m_pop3Protocol2.getState());
 
@@ -546,7 +557,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         String pass = "password";
         usersRepository.addUser("foo", pass);
@@ -562,7 +574,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         String pass = "password";
         usersRepository.addUser("foo", pass);
@@ -630,7 +643,8 @@ public class POP3ServerTest {
         finishSetUp(pop3Configuration);
 
         pop3Client = new POP3Client();
-        pop3Client.connect("127.0.0.1", pop3Port);
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("foo6", "bar6");
         MailboxSession session = mailboxManager.login("foo6", "bar6", LoggerFactory.getLogger("Test"));
@@ -713,7 +727,8 @@ public class POP3ServerTest {
         InMemoryMailboxSessionMapperFactory factory = new InMemoryMailboxSessionMapperFactory();
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
-        mailboxManager = new StoreMailboxManager<InMemoryId>(factory, new Authenticator() {
+        MessageParser messageParser = new MessageParser();
+        mailboxManager = new StoreMailboxManager(factory, new Authenticator() {
     
             @Override
             public boolean isAuthentic(String userid, CharSequence passwd) {
@@ -724,7 +739,12 @@ public class POP3ServerTest {
                     return false;
                 }
             }
-        }, aclResolver, groupMembershipResolver);
+        }, new Authorizator() {
+            @Override
+            public AuthorizationState canLoginAsOtherUser(String userId, String otherUserId) {
+                return AuthorizationState.NOT_ADMIN;
+            }
+        }, aclResolver, groupMembershipResolver, messageParser, new DefaultMessageId.Factory(), MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX, MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE);
         mailboxManager.init();
 
         protocolHandlerChain.put("mailboxmanager", MailboxManager.class, mailboxManager);

@@ -20,19 +20,17 @@
 
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.SMTPIsAuthNetwork;
+import java.util.Collection;
+
+import javax.mail.MessagingException;
+
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.Matcher;
 import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMatcherConfig;
 import org.apache.mailet.base.test.MailUtil;
 import org.junit.Assert;
 import org.junit.Test;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.ParseException;
-import java.util.Collection;
 
 public class SMTPIsAuthNetworkTest {
 
@@ -46,8 +44,8 @@ public class SMTPIsAuthNetworkTest {
         this.isAuthorized = isAuthorized;
     }
 
-    private void setupMockedMail() throws ParseException {
-        mockedMail = MailUtil.createMockMail2Recipients(null);
+    private void setupMockedMail() throws MessagingException {
+        mockedMail = MailUtil.createMockMail2Recipients();
         if (isAuthorized) {
             String MAIL_ATTRIBUTE_NAME = "org.apache.james.SMTPIsAuthNetwork";
             mockedMail.setAttribute(MAIL_ATTRIBUTE_NAME, "true");
@@ -56,8 +54,10 @@ public class SMTPIsAuthNetworkTest {
 
     private void setupMatcher() throws MessagingException {
         matcher = new SMTPIsAuthNetwork();
-        FakeMatcherConfig mci = new FakeMatcherConfig("SMTPIsAuthNetwork",
-                new FakeMailContext());
+        FakeMatcherConfig mci = FakeMatcherConfig.builder()
+                .matcherName("SMTPIsAuthNetwork")
+                .build();
+
         matcher.init(mci);
     }
 

@@ -27,15 +27,21 @@ import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.domainlist.api.DomainListException;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
+import org.apache.james.user.api.AlreadyExistInUsersRepositoryException;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
+import org.apache.mailet.MailAddress;
 import org.slf4j.Logger;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 
 public abstract class AbstractUsersRepository implements UsersRepository, LogEnabled, Configurable {
 
     private DomainList domainList;
     private boolean virtualHosting;
     private Logger logger;
+    private Optional<String> administratorId;
 
     protected Logger getLogger() {
         return logger;
@@ -54,9 +60,14 @@ public abstract class AbstractUsersRepository implements UsersRepository, LogEna
      */
     public void configure(HierarchicalConfiguration configuration) throws ConfigurationException {
 
-        virtualHosting = configuration.getBoolean("enableVirtualHosting", false);
+        virtualHosting = configuration.getBoolean("enableVirtualHosting", getDefaultVirtualHostingValue());
+        administratorId = Optional.fromNullable(configuration.getString("administratorId"));
 
         doConfigure(configuration);
+    }
+
+    protected boolean getDefaultVirtualHostingValue() {
+        return false;
     }
 
     protected void doConfigure(HierarchicalConfiguration config) throws ConfigurationException {
@@ -106,7 +117,7 @@ public abstract class AbstractUsersRepository implements UsersRepository, LogEna
             isValidUsername(username);
             doAddUser(username, password);
         } else {
-            throw new UsersRepositoryException("User with username " + username + " already exist!");
+            throw new AlreadyExistInUsersRepositoryException("User with username " + username + " already exists!");
         }
 
     }
@@ -127,4 +138,25 @@ public abstract class AbstractUsersRepository implements UsersRepository, LogEna
      *           If an error occurred
      */
     protected abstract void doAddUser(String username, String password) throws UsersRepositoryException;
+
+    @Override
+    public String getUser(MailAddress mailAddress) throws UsersRepositoryException {
+        if (supportVirtualHosting()) {
+            return mailAddress.asString();
+        } else {
+            return mailAddress.getLocalPart();
+        }
+    }
+
+    @VisibleForTesting void setAdministratorId(Optional<String> username) {
+        this.administratorId = username;
+    }
+
+    @Override
+    public boolean isAdministrator(String username) throws UsersRepositoryException {
+        if (administratorId.isPresent()) {
+            return administratorId.get().equals(username);
+        }
+        return false;
+    }
 }

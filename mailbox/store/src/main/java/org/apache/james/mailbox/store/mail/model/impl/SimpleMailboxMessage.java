@@ -21,33 +21,44 @@ package org.apache.james.mailbox.store.mail.model.impl;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
 import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
-public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailboxMessage<Id> {
+public class SimpleMailboxMessage extends DelegatingMailboxMessage {
 
-    public static <Id extends MailboxId> SimpleMailboxMessage<Id> copy(Id mailboxId, MailboxMessage<Id> original) throws MailboxException {
+    public static SimpleMailboxMessage copy(MailboxId mailboxId, MailboxMessage original) throws MailboxException {
+        return copy(mailboxId, original, original.getAttachments());
+    }
+
+    private static SimpleMailboxMessage copy(MailboxId mailboxId, MailboxMessage original, List<MessageAttachment> attachments) throws MailboxException {
         Date internalDate = original.getInternalDate();
         long size = original.getFullContentOctets();
         Flags flags = original.createFlags();
         SharedByteArrayInputStream content = copyFullContent(original);
         int bodyStartOctet = Ints.checkedCast(original.getFullContentOctets() - original.getBodyOctets());
         PropertyBuilder pBuilder = new PropertyBuilder(original.getProperties());
-        return new SimpleMailboxMessage<Id>(internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId);
+        pBuilder.setTextualLineCount(original.getTextualLineCount());
+        return new SimpleMailboxMessage(original.getMessageId(), internalDate, size, bodyStartOctet, content, flags, pBuilder, mailboxId, attachments);
     }
 
-    private static <Id extends MailboxId> SharedByteArrayInputStream copyFullContent(MailboxMessage<Id> original) throws MailboxException {
+    private static SharedByteArrayInputStream copyFullContent(MailboxMessage original) throws MailboxException {
         try {
             return new SharedByteArrayInputStream(IOUtils.toByteArray(original.getFullContent()));
         } catch (IOException e) {
@@ -55,8 +66,8 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
         }
     }
 
-    private long uid;
-    private final Id mailboxId;
+    private MessageUid uid;
+    private final MailboxId mailboxId;
     private boolean answered;
     private boolean deleted;
     private boolean draft;
@@ -66,20 +77,30 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
     private String[] userFlags;
     private long modSeq;
 
-    public SimpleMailboxMessage(Date internalDate, long size, int bodyStartOctet,
-                                SharedInputStream content, Flags flags,
-                                PropertyBuilder propertyBuilder, final Id mailboxId) {
+    public SimpleMailboxMessage(MessageId messageId, Date internalDate, long size, int bodyStartOctet,
+            SharedInputStream content, Flags flags,
+            PropertyBuilder propertyBuilder, MailboxId mailboxId, List<MessageAttachment> attachments) {
         super(new SimpleMessage(
-            content, size, internalDate, propertyBuilder.getSubType(),
-            propertyBuilder.getMediaType(),
-            bodyStartOctet,
-            propertyBuilder.getTextualLineCount(),
-            propertyBuilder.toProperties()
-            ));
+                messageId,
+                content, size, internalDate, propertyBuilder.getSubType(),
+                propertyBuilder.getMediaType(),
+                bodyStartOctet,
+                propertyBuilder.getTextualLineCount(),
+                propertyBuilder.toProperties(),
+                attachments
+                ));
 
-        setFlags(flags);
-        this.mailboxId = mailboxId;
-        this.userFlags = flags.getUserFlags();
+            setFlags(flags);
+            this.mailboxId = mailboxId;
+            this.userFlags = flags.getUserFlags();
+    }
+
+    public SimpleMailboxMessage(MessageId messageId, Date internalDate, long size, int bodyStartOctet,
+                                SharedInputStream content, Flags flags,
+                                PropertyBuilder propertyBuilder, MailboxId mailboxId) {
+        this(messageId, internalDate, size, bodyStartOctet,
+                content, flags,
+                propertyBuilder, mailboxId, ImmutableList.<MessageAttachment>of());
     }
 
     @Override
@@ -87,11 +108,11 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
         return userFlags.clone();
     }
 
-    public Id getMailboxId() {
+    public MailboxId getMailboxId() {
         return mailboxId;
     }
 
-    public long getUid() {
+    public MessageUid getUid() {
         return uid;
     }
 
@@ -127,7 +148,7 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
         this.modSeq = modSeq;
     }
 
-    public void setUid(long uid) {
+    public void setUid(MessageUid uid) {
         this.uid = uid;
     }
 
@@ -143,29 +164,20 @@ public class SimpleMailboxMessage<Id extends MailboxId> extends DelegatingMailbo
 
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + (int) (uid ^ (uid >>> 32));
-        return result;
+        return Objects.hashCode(uid);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final SimpleMailboxMessage<Id> other = (SimpleMailboxMessage<Id>) obj;
-        if (uid != other.uid)
-            return false;
-        return true;
+        if (obj instanceof SimpleMailboxMessage) {
+            SimpleMailboxMessage other = (SimpleMailboxMessage) obj;
+            return Objects.equal(this.uid, other.uid);
+        }
+        return false;
     }
 
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
             .add("uid", this.uid)
             .add("mailboxId", this.mailboxId)
             .add("answered", this.answered)

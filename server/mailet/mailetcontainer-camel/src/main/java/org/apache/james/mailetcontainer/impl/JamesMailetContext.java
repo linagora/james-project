@@ -19,36 +19,6 @@
 
 package org.apache.james.mailetcontainer.impl;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.james.core.MailImpl;
-import org.apache.james.dnsservice.api.DNSService;
-import org.apache.james.dnsservice.api.TemporaryResolutionException;
-import org.apache.james.dnsservice.library.MXHostAddressIterator;
-import org.apache.james.domainlist.api.DomainList;
-import org.apache.james.domainlist.api.DomainListException;
-import org.apache.james.lifecycle.api.Configurable;
-import org.apache.james.lifecycle.api.LifecycleUtil;
-import org.apache.james.lifecycle.api.LogEnabled;
-import org.apache.james.mailetcontainer.api.MailProcessor;
-import org.apache.james.user.api.UsersRepository;
-import org.apache.james.user.api.UsersRepositoryException;
-import org.apache.mailet.HostAddress;
-import org.apache.mailet.LookupException;
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.MailetContext;
-import org.apache.mailet.base.RFC2822Headers;
-import org.slf4j.Logger;
-
-import javax.inject.Inject;
-import javax.mail.Address;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,6 +30,38 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Vector;
+
+import javax.inject.Inject;
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.ParseException;
+
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.core.MailImpl;
+import org.apache.james.dnsservice.api.DNSService;
+import org.apache.james.dnsservice.api.TemporaryResolutionException;
+import org.apache.james.dnsservice.library.MXHostAddressIterator;
+import org.apache.james.domainlist.api.DomainList;
+import org.apache.james.domainlist.api.DomainListException;
+import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.james.lifecycle.api.LogEnabled;
+import org.apache.james.queue.api.MailQueue;
+import org.apache.james.queue.api.MailQueueFactory;
+import org.apache.james.user.api.UsersRepository;
+import org.apache.james.user.api.UsersRepositoryException;
+import org.apache.mailet.HostAddress;
+import org.apache.mailet.LookupException;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.MailetContext;
+import org.apache.mailet.base.RFC2822Headers;
+import org.slf4j.Logger;
 
 @SuppressWarnings("deprecation")
 public class JamesMailetContext implements MailetContext, LogEnabled, Configurable {
@@ -74,15 +76,15 @@ public class JamesMailetContext implements MailetContext, LogEnabled, Configurab
 
     private UsersRepository localusers;
 
-    private MailProcessor processorList;
+    private MailQueue rootMailQueue;
 
     private DomainList domains;
 
     private MailAddress postmaster;
 
     @Inject
-    public void setMailProcessor(MailProcessor processorList) {
-        this.processorList = processorList;
+    public void retrieveRootMailQueue(MailQueueFactory mailQueueFactory) {
+        this.rootMailQueue = mailQueueFactory.getQueue(MailQueueFactory.SPOOL);
     }
 
     @Inject
@@ -256,16 +258,11 @@ public class JamesMailetContext implements MailetContext, LogEnabled, Configurab
     @Override
     public boolean isLocalEmail(MailAddress mailAddress) {
         if (mailAddress != null) {
-            String userName = mailAddress.toString().toLowerCase();
             if (!isLocalServer(mailAddress.getDomain().toLowerCase())) {
                 return false;
             }
             try {
-                if (!localusers.supportVirtualHosting()) {
-                    userName = mailAddress.getLocalPart().toLowerCase();
-                }
-                return localusers.contains(userName);
-
+                return localusers.contains(localusers.getUser(mailAddress));
             } catch (UsersRepositoryException e) {
                 log("Unable to access UsersRepository", e);
             }
@@ -401,12 +398,9 @@ public class JamesMailetContext implements MailetContext, LogEnabled, Configurab
         sendMail(sender, recipients, message, Mail.DEFAULT);
     }
 
-    /**
-     * TODO: Should we use the MailProcessorList or the MailQueue here ?
-     */
     @Override
     public void sendMail(Mail mail) throws MessagingException {
-        processorList.service(mail);
+        rootMailQueue.enQueue(mail);
     }
 
     public void sendMail(MailAddress sender, Collection<MailAddress> recipients, MimeMessage message, String state) throws MessagingException {
@@ -456,17 +450,14 @@ public class JamesMailetContext implements MailetContext, LogEnabled, Configurab
                 // loop through candidate domains until we find one or exhaust
                 // the
                 // list
-                String[] doms = domains.getDomains();
-                if (doms != null) {
-                    for (String dom : doms) {
-                        String serverName = dom.toLowerCase(Locale.US);
-                        if (!("localhost".equals(serverName))) {
-                            domainName = serverName; // ok, not localhost, so
-                            // use it
-                        }
+                for (String dom : domains.getDomains()) {
+                    String serverName = dom.toLowerCase(Locale.US);
+                    if (!("localhost".equals(serverName))) {
+                        domainName = serverName; // ok, not localhost, so
+                        // use it
                     }
-
                 }
+
                 // if we found a suitable domain, use it. Otherwise fallback to
                 // the
                 // host name.
@@ -487,5 +478,10 @@ public class JamesMailetContext implements MailetContext, LogEnabled, Configurab
         } catch (DomainListException e) {
             throw new ConfigurationException("Unable to access DomainList", e);
         }
+    }
+
+    @Override
+    public Logger getLogger() {
+        return log;
     }
 }

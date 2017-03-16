@@ -20,6 +20,7 @@
 package org.apache.james.mailetcontainer.impl.camel;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
 import org.apache.camel.CamelContext;
@@ -29,6 +30,7 @@ import org.apache.james.mailetcontainer.api.MailProcessor;
 import org.apache.james.mailetcontainer.api.MailetLoader;
 import org.apache.james.mailetcontainer.api.MatcherLoader;
 import org.apache.james.mailetcontainer.lib.AbstractStateCompositeProcessor;
+import org.apache.james.metrics.api.MetricFactory;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailetContext;
 
@@ -41,10 +43,16 @@ import org.apache.mailet.MailetContext;
  */
 public class CamelCompositeProcessor extends AbstractStateCompositeProcessor implements CamelContextAware {
 
+    private final MetricFactory metricFactory;
     private CamelContext camelContext;
     private MailetContext mailetContext;
     private MatcherLoader matcherLoader;
     private MailetLoader mailetLoader;
+
+    @Inject
+    public CamelCompositeProcessor(MetricFactory metricFactory) {
+        this.metricFactory = metricFactory;
+    }
 
     @Inject
     public void setMatcherLoader(MatcherLoader matcherLoader) {
@@ -73,6 +81,13 @@ public class CamelCompositeProcessor extends AbstractStateCompositeProcessor imp
 
     }
 
+    @PreDestroy
+    public void destroy() throws Exception {
+        if (getCamelContext().getStatus().isStarted()) {
+            getCamelContext().stop();
+        }
+    }
+
     /**
      * @see org.apache.camel.CamelContextAware#getCamelContext()
      */
@@ -92,7 +107,7 @@ public class CamelCompositeProcessor extends AbstractStateCompositeProcessor imp
      * #createMailProcessor(java.lang.String, org.apache.commons.configuration.HierarchicalConfiguration)
      */
     protected MailProcessor createMailProcessor(String name, HierarchicalConfiguration config) throws Exception {
-        CamelMailetProcessor processor = new CamelMailetProcessor();
+        CamelMailetProcessor processor = new CamelMailetProcessor(metricFactory);
         try {
             processor.setLog(logger);
             processor.setCamelContext(camelContext);
@@ -100,6 +115,7 @@ public class CamelCompositeProcessor extends AbstractStateCompositeProcessor imp
             processor.setMailetLoader(mailetLoader);
             processor.setMatcherLoader(matcherLoader);
             processor.configure(config);
+            processor.setRootMailProcessor(this);
             processor.init();
             return processor;
         } catch (Exception e) {

@@ -21,14 +21,14 @@ package org.apache.james.jmap;
 import java.io.IOException;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.james.jmap.api.AccessTokenManager;
-import org.apache.james.jmap.api.ContinuationTokenManager;
+import org.apache.james.jmap.api.SimpleTokenFactory;
+import org.apache.james.jmap.api.SimpleTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.exceptions.BadRequestException;
 import org.apache.james.jmap.exceptions.InternalErrorException;
@@ -38,6 +38,8 @@ import org.apache.james.jmap.model.AccessTokenResponse;
 import org.apache.james.jmap.model.ContinuationTokenRequest;
 import org.apache.james.jmap.model.ContinuationTokenResponse;
 import org.apache.james.jmap.model.EndPointsResponse;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.slf4j.Logger;
@@ -46,7 +48,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 
-@Singleton
 public class AuthenticationServlet extends HttpServlet {
 
     public static final String JSON_CONTENT_TYPE = "application/json";
@@ -56,14 +57,18 @@ public class AuthenticationServlet extends HttpServlet {
 
     private final ObjectMapper mapper;
     private final UsersRepository usersRepository;
-    private final ContinuationTokenManager continuationTokenManager;
+    private final SimpleTokenManager simpleTokenManager;
     private final AccessTokenManager accessTokenManager;
+    private final SimpleTokenFactory simpleTokenFactory;
+    private final MetricFactory metricFactory;
     
     @Inject
-    @VisibleForTesting AuthenticationServlet(UsersRepository usersRepository, ContinuationTokenManager continuationTokenManager, AccessTokenManager accessTokenManager) {
+    @VisibleForTesting AuthenticationServlet(UsersRepository usersRepository, SimpleTokenManager simpleTokenManager, SimpleTokenFactory simpleTokenFactory, AccessTokenManager accessTokenManager, MetricFactory metricFactory) {
         this.usersRepository = usersRepository;
-        this.continuationTokenManager = continuationTokenManager;
+        this.simpleTokenManager = simpleTokenManager;
+        this.simpleTokenFactory = simpleTokenFactory;
         this.accessTokenManager = accessTokenManager;
+        this.metricFactory = metricFactory;
         this.mapper = new MultipleObjectMapperBuilder()
             .registerClass(ContinuationTokenRequest.UNIQUE_JSON_PATH, ContinuationTokenRequest.class)
             .registerClass(AccessTokenRequest.UNIQUE_JSON_PATH, AccessTokenRequest.class)
@@ -72,6 +77,7 @@ public class AuthenticationServlet extends HttpServlet {
     
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        TimeMetric timeMetric = metricFactory.timer("JMAP-authentication-post");
         try {
             assertJsonContentType(req);
             assertAcceptJsonOnly(req);
@@ -89,6 +95,8 @@ public class AuthenticationServlet extends HttpServlet {
         } catch (InternalErrorException e) {
             LOG.error("Internal error", e);
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        } finally {
+            timeMetric.stopAndPublish();
         }
     }
     
@@ -131,7 +139,7 @@ public class AuthenticationServlet extends HttpServlet {
         try {
             ContinuationTokenResponse continuationTokenResponse = ContinuationTokenResponse
                 .builder()
-                .continuationToken(continuationTokenManager.generateToken(request.getUsername()))
+                .continuationToken(simpleTokenFactory.generateContinuationToken(request.getUsername()))
                 .methods(ContinuationTokenResponse.AuthenticationMethod.PASSWORD)
                 .build();
             mapper.writeValue(resp.getOutputStream(), continuationTokenResponse);
@@ -141,7 +149,7 @@ public class AuthenticationServlet extends HttpServlet {
     }
 
     private void handleAccessTokenRequest(AccessTokenRequest request, HttpServletResponse resp) throws IOException {
-        switch (continuationTokenManager.getValidity(request.getToken())) {
+        switch (simpleTokenManager.getValidity(request.getToken())) {
         case EXPIRED:
             returnRestartAuthentication(resp);
             break;
@@ -181,10 +189,10 @@ public class AuthenticationServlet extends HttpServlet {
         AccessTokenResponse response = AccessTokenResponse
             .builder()
             .accessToken(accessTokenManager.grantAccessToken(username))
-            .api("/jmap")
+            .api(JMAPUrls.JMAP)
             .eventSource("/notImplemented")
-            .upload("/notImplemented")
-            .download("/notImplemented")
+            .upload(JMAPUrls.UPLOAD)
+            .download(JMAPUrls.DOWNLOAD)
             .build();
         mapper.writeValue(resp.getOutputStream(), response);
     }
@@ -194,10 +202,10 @@ public class AuthenticationServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
         EndPointsResponse response = EndPointsResponse
             .builder()
-            .api("/jmap")
+            .api(JMAPUrls.JMAP)
             .eventSource("/notImplemented")
-            .upload("/notImplemented")
-            .download("/notImplemented")
+            .upload(JMAPUrls.UPLOAD)
+            .download(JMAPUrls.DOWNLOAD)
             .build();
         mapper.writeValue(resp.getOutputStream(), response);
     }

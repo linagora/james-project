@@ -18,13 +18,11 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import java.util.stream.Stream;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.james.mailbox.MailboxSession;
 
 public interface AuthenticationStrategy {
 
-    MailboxSession createMailboxSession(Stream<String> requestHeaders);
-
-    boolean checkAuthorizationHeader(Stream<String> requestHeaders);
+    MailboxSession createMailboxSession(HttpServletRequest httpRequest);
 }

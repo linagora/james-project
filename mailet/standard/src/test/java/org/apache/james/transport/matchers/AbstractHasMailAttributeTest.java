@@ -23,21 +23,17 @@ package org.apache.james.transport.matchers;
 import java.util.Collection;
 
 import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.ParseException;
+
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.Matcher;
+import org.apache.mailet.base.GenericMatcher;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.apache.mailet.base.test.MailUtil;
 
 import junit.framework.TestCase;
 
-import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMatcherConfig;
-import org.apache.mailet.base.test.MailUtil;
-import org.apache.mailet.base.GenericMatcher;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.Matcher;
-
 public abstract class AbstractHasMailAttributeTest extends TestCase {
-    protected MimeMessage mockedMimeMessage;
 
     protected FakeMail mockedMail;
 
@@ -63,17 +59,21 @@ public abstract class AbstractHasMailAttributeTest extends TestCase {
         this.mailAttributeValue = mailAttributeValue;
     }
 
-    protected void setupMockedMail(MimeMessage m) throws ParseException {
-        mockedMail = MailUtil.createMockMail2Recipients(m);
+    protected void setupMockedMail() throws MessagingException {
+        mockedMail = MailUtil.createMockMail2Recipients();
         mockedMail.setAttribute(mailAttributeName,
                 mailAttributeValue);
     }
 
     protected void setupMatcher() throws MessagingException {
         matcher = createMatcher();
-        FakeMatcherConfig mci = new FakeMatcherConfig(getConfigOption()
-                + getHasMailAttribute(), new FakeMailContext());
+        FakeMatcherConfig mci = FakeMatcherConfig.builder()
+                .matcherName(getMatcherName())
+                .condition(getHasMailAttribute())
+                .build();
+
         matcher.init(mci);
+
     }
 
     // test if the mail attribute was matched
@@ -95,7 +95,7 @@ public abstract class AbstractHasMailAttributeTest extends TestCase {
     }
 
     protected void setupAll() throws MessagingException {
-        setupMockedMail(mockedMimeMessage);
+        setupMockedMail();
         setupMatcher();
     }
 
@@ -112,5 +112,5 @@ public abstract class AbstractHasMailAttributeTest extends TestCase {
 
     protected abstract GenericMatcher createMatcher();
 
-    protected abstract String getConfigOption();
+    protected abstract String getMatcherName();
 }

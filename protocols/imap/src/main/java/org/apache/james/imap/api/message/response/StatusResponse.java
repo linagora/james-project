@@ -29,6 +29,8 @@ import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.api.message.MessageFlags;
+import org.apache.james.imap.api.message.UidRange;
+import org.apache.james.mailbox.MessageUid;
 
 /**
  * <p>
@@ -94,7 +96,7 @@ public interface StatusResponse extends ImapResponseMessage {
 
         private final String code;
 
-        Type(final String code) {
+        Type(String code) {
             this.code = code;
         }
 
@@ -132,7 +134,7 @@ public interface StatusResponse extends ImapResponseMessage {
 
         
         /** RFC4315 <code>APPENDUID</code> response code */
-        public static ResponseCode appendUid(long uidValidity, IdRange[] uids) {
+        public static ResponseCode appendUid(long uidValidity, UidRange[] uids) {
             String uidParam = formatRanges(uids);
             return new ResponseCode("APPENDUID", Arrays.asList(uidParam), uidValidity, false);
         }
@@ -152,6 +154,13 @@ public interface StatusResponse extends ImapResponseMessage {
             return new ResponseCode("MODIFIED", Arrays.asList(new String[] { failed}), 0, false);
         }
         
+        /** RFC4551 <code>Conditional STORE</code> response code */
+        public static ResponseCode condStore(UidRange[] failedRanges) {
+            String failed = formatRanges(failedRanges);
+
+            return new ResponseCode("MODIFIED", Arrays.asList(new String[] { failed}), 0, false);
+        }
+        
         private static String formatRanges(IdRange[] ranges) {
             if (ranges == null || ranges.length == 0)
                 return "*";
@@ -165,6 +174,21 @@ public interface StatusResponse extends ImapResponseMessage {
             return rangeBuilder.toString();
         }
 
+        private static String formatRanges(UidRange[] ranges) {
+            if (ranges == null || ranges.length == 0) {
+                return "*";
+            }
+            StringBuilder rangeBuilder = new StringBuilder();
+            for (int i = 0; i < ranges.length; i++) {
+                rangeBuilder.append(ranges[i].getFormattedString());
+                if (i + 1 < ranges.length) {
+                    rangeBuilder.append(",");
+                }
+            }
+            return rangeBuilder.toString();
+        }
+
+        
         /**
          * Create a RFC5162 (QRESYNC) <code>CLOSED</code> response code
          * 
@@ -270,8 +294,8 @@ public interface StatusResponse extends ImapResponseMessage {
          *            positive non-zero integer
          * @return <code>ResponseCode</code>, not null
          */
-        public static ResponseCode uidNext(long uid) {
-            return new ResponseCode("UIDNEXT", uid);
+        public static ResponseCode uidNext(MessageUid uid) {
+            return new ResponseCode("UIDNEXT", uid.asLong());
         }
 
         
@@ -285,6 +309,14 @@ public interface StatusResponse extends ImapResponseMessage {
             return new ResponseCode("HIGHESTMODSEQ", modSeq);
         }
         
+        /**
+         * Create a RFC5464 getMetadata which support MAXSIZE
+         * @param entryLong positive non-zero long
+         * @return <code>ResponseCode</code>
+         */
+        public static ResponseCode longestMetadataEntry(long entryLong) {
+            return new ResponseCode("METADATA LONGENTRIES", entryLong);
+        }
         /**
          * Create a RFC4551 <code>NOMODSEQ</code> response code
          * 
@@ -324,20 +356,20 @@ public interface StatusResponse extends ImapResponseMessage {
         private final boolean useParens;
 
         @SuppressWarnings("unchecked")
-        private ResponseCode(final String code) {
+        private ResponseCode(String code) {
             this(code, Collections.EMPTY_LIST, NO_NUMBER, true);
         }
 
         @SuppressWarnings("unchecked")
-        private ResponseCode(final String code, final long number) {
+        private ResponseCode(String code, long number) {
             this(code, Collections.EMPTY_LIST, number, true);
         }
 
-        private ResponseCode(final String code, final Collection<String> parameters) {
+        private ResponseCode(String code, Collection<String> parameters) {
             this(code, parameters, NO_NUMBER, true);
         }
 
-        private ResponseCode(final String code, final Collection<String> parameters, final long number, final boolean useParens) {
+        private ResponseCode(String code, Collection<String> parameters, long number, boolean useParens) {
             super();
             this.useParens = useParens;
             this.code = code;

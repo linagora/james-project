@@ -19,51 +19,36 @@
 
 package org.apache.james.mailbox.cassandra.table;
 
-import javax.mail.Flags;
-
-import com.google.common.collect.ImmutableMap;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 
 public interface CassandraMessageTable {
 
     String TABLE_NAME = "message";
-    String MAILBOX_ID = "mailboxId";
-    String IMAP_UID = "uid";
     String INTERNAL_DATE = "internalDate";
     String BODY_START_OCTET = "bodyStartOctet";
-    String MOD_SEQ = "modSeq";
     String FULL_CONTENT_OCTETS = "fullContentOctets";
     String BODY_OCTECTS = "bodyOctets";
     String TEXTUAL_LINE_COUNT = "textualLineCount";
     String BODY_CONTENT = "bodyContent";
     String HEADER_CONTENT = "headerContent";
     String PROPERTIES = "properties";
-    String[] FIELDS = { MAILBOX_ID, IMAP_UID, INTERNAL_DATE, MOD_SEQ, BODY_START_OCTET, FULL_CONTENT_OCTETS, BODY_OCTECTS, Flag.ANSWERED, Flag.DELETED, Flag.DRAFT, Flag.FLAGGED, Flag.RECENT, Flag.SEEN, Flag.USER, Flag.USER_FLAGS, BODY_CONTENT, HEADER_CONTENT, TEXTUAL_LINE_COUNT, PROPERTIES };
+    String ATTACHMENTS = "attachments";
 
-    interface Flag {
-        String ANSWERED = "flagAnswered";
-        String DELETED = "flagDeleted";
-        String DRAFT = "flagDraft";
-        String RECENT = "flagRecent";
-        String SEEN = "flagSeen";
-        String FLAGGED = "flagFlagged";
-        String USER = "flagUser";
-        String USER_FLAGS = "userFlags";
-        String[] ALL = { ANSWERED, DELETED, DRAFT, RECENT, SEEN, FLAGGED, USER };
-
-        ImmutableMap<String, Flags.Flag> JAVAX_MAIL_FLAG = ImmutableMap.<String, Flags.Flag>builder()
-            .put(ANSWERED, Flags.Flag.ANSWERED)
-            .put(DELETED, Flags.Flag.DELETED)
-            .put(DRAFT, Flags.Flag.DRAFT)
-            .put(RECENT, Flags.Flag.RECENT)
-            .put(SEEN, Flags.Flag.SEEN)
-            .put(FLAGGED, Flags.Flag.FLAGGED)
-            .put(USER, Flags.Flag.USER)
-            .build();
-    }
+    String[] FIELDS = { MESSAGE_ID, INTERNAL_DATE, BODY_START_OCTET, FULL_CONTENT_OCTETS, BODY_OCTECTS, BODY_CONTENT, HEADER_CONTENT, TEXTUAL_LINE_COUNT, PROPERTIES, ATTACHMENTS };
+    String[] METADATA = { MESSAGE_ID, INTERNAL_DATE, BODY_START_OCTET, FULL_CONTENT_OCTETS, BODY_OCTECTS, TEXTUAL_LINE_COUNT, PROPERTIES };
+    String[] HEADERS = { MESSAGE_ID, INTERNAL_DATE, BODY_START_OCTET, FULL_CONTENT_OCTETS, BODY_OCTECTS, HEADER_CONTENT, TEXTUAL_LINE_COUNT, PROPERTIES };
+    String[] BODY = { MESSAGE_ID, INTERNAL_DATE, BODY_START_OCTET, FULL_CONTENT_OCTETS, BODY_OCTECTS, BODY_CONTENT, TEXTUAL_LINE_COUNT, PROPERTIES, ATTACHMENTS };
 
     interface Properties {
         String NAMESPACE = "namespace";
         String NAME = "name";
         String VALUE = "value";
+    }
+
+    interface Attachments {
+        String ID = "id";
+        String NAME = "name";
+        String CID = "cid";
+        String IS_INLINE = "isInline";
     }
 }

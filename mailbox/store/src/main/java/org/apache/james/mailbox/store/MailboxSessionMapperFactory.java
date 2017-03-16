@@ -22,11 +22,16 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.RequestAware;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.store.mail.AnnotationMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
+import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.store.mail.ModSeqProvider;
+import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.transaction.Mapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapperFactory;
@@ -35,26 +40,56 @@ import org.apache.james.mailbox.store.user.SubscriptionMapperFactory;
  * Maintain mapper instances by {@link MailboxSession}. So only one mapper instance is used
  * in a {@link MailboxSession}
  */
-public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implements RequestAware, MailboxMapperFactory<Id>, MessageMapperFactory<Id>, SubscriptionMapperFactory{
+public abstract class MailboxSessionMapperFactory implements RequestAware, MailboxMapperFactory, MessageMapperFactory, AttachmentMapperFactory, SubscriptionMapperFactory {
 
+    protected final static String ATTACHMENTMAPPER = "ATTACHMENTMAPPER";
     protected final static String MESSAGEMAPPER ="MESSAGEMAPPER";
+    protected final static String MESSAGEIDMAPPER ="MESSAGEIDMAPPER";
     protected final static String MAILBOXMAPPER ="MAILBOXMAPPER";
     protected final static String SUBSCRIPTIONMAPPER ="SUBSCRIPTIONMAPPER";
-    
+    protected final static String ANNOTATIONMAPPER = "ANNOTATIONMAPPER";
     
     
     /**
      * @see org.apache.james.mailbox.store.mail.MessageMapperFactory#getMessageMapper(MailboxSession)
      */
-    @SuppressWarnings("unchecked")
-    public MessageMapper<Id> getMessageMapper(MailboxSession session) throws MailboxException {
-        MessageMapper<Id> mapper = (MessageMapper<Id>) session.getAttributes().get(MESSAGEMAPPER);
+    public MessageMapper getMessageMapper(MailboxSession session) throws MailboxException {
+        MessageMapper mapper = (MessageMapper) session.getAttributes().get(MESSAGEMAPPER);
         if (mapper == null) {
             mapper = createMessageMapper(session);
             session.getAttributes().put(MESSAGEMAPPER, mapper);
         }
         return mapper;
     }
+
+    public MessageIdMapper getMessageIdMapper(MailboxSession session) throws MailboxException {
+        MessageIdMapper mapper = (MessageIdMapper) session.getAttributes().get(MESSAGEIDMAPPER);
+        if (mapper == null) {
+            mapper = createMessageIdMapper(session);
+            session.getAttributes().put(MESSAGEIDMAPPER, mapper);
+        }
+        return mapper;
+    }
+
+    public AttachmentMapper getAttachmentMapper(MailboxSession session) throws MailboxException {
+        AttachmentMapper mapper = (AttachmentMapper) session.getAttributes().get(ATTACHMENTMAPPER);
+        if (mapper == null) {
+            mapper = createAttachmentMapper(session);
+            session.getAttributes().put(ATTACHMENTMAPPER, mapper);
+        }
+        return mapper;
+    }
+
+    public AnnotationMapper getAnnotationMapper(MailboxSession session) throws MailboxException {
+        AnnotationMapper mapper = (AnnotationMapper)session.getAttributes().get(ANNOTATIONMAPPER);
+        if (mapper == null) {
+            mapper = createAnnotationMapper(session);
+            session.getAttributes().put(ANNOTATIONMAPPER, mapper);
+        }
+        return mapper;
+    }
+
+    public abstract AnnotationMapper createAnnotationMapper(MailboxSession session) throws MailboxException;
 
     /**
      * Create a {@link MessageMapper} instance which will get reused during the whole {@link MailboxSession}
@@ -63,15 +98,19 @@ public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implemen
      * @return messageMapper
      * @throws MailboxException
      */
-    public abstract MessageMapper<Id> createMessageMapper(MailboxSession session) throws MailboxException;
+    public abstract MessageMapper createMessageMapper(MailboxSession session) throws MailboxException;
+
+
+    public abstract MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException;
+
+    public abstract AttachmentMapper createAttachmentMapper(MailboxSession session) throws MailboxException;
 
 
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapperFactory#getMailboxMapper(MailboxSession)
      */
-    @SuppressWarnings("unchecked")
-    public MailboxMapper<Id> getMailboxMapper(MailboxSession session) throws MailboxException {
-        MailboxMapper<Id> mapper = (MailboxMapper<Id>) session.getAttributes().get(MAILBOXMAPPER);
+    public MailboxMapper getMailboxMapper(MailboxSession session) throws MailboxException {
+        MailboxMapper mapper = (MailboxMapper) session.getAttributes().get(MAILBOXMAPPER);
         if (mapper == null) {
             mapper = createMailboxMapper(session);
             session.getAttributes().put(MAILBOXMAPPER, mapper);
@@ -86,7 +125,7 @@ public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implemen
      * @return mailboxMapper
      * @throws MailboxException
      */
-    public abstract MailboxMapper<Id> createMailboxMapper(MailboxSession session) throws MailboxException;
+    public abstract MailboxMapper createMailboxMapper(MailboxSession session) throws MailboxException;
 
     /**
      * Create a {@link SubscriptionMapper} instance or return the one which exists for the {@link MailboxSession} already
@@ -111,16 +150,19 @@ public abstract class MailboxSessionMapperFactory<Id extends MailboxId> implemen
      */
     public abstract SubscriptionMapper createSubscriptionMapper(MailboxSession session) throws SubscriptionException;
 
+    public abstract UidProvider getUidProvider();
+
+    public abstract ModSeqProvider getModSeqProvider();
+
     /**
      * Call endRequest on {@link Mapper} instances
      * 
      * @param session
      */
-    @SuppressWarnings("unchecked")
     public void endProcessingRequest(MailboxSession session) {
         if (session == null) return;
-        MessageMapper<Id> messageMapper = (MessageMapper<Id>) session.getAttributes().get(MESSAGEMAPPER);
-        MailboxMapper<Id> mailboxMapper = (MailboxMapper<Id>) session.getAttributes().get(MAILBOXMAPPER);
+        MessageMapper messageMapper = (MessageMapper) session.getAttributes().get(MESSAGEMAPPER);
+        MailboxMapper mailboxMapper = (MailboxMapper) session.getAttributes().get(MAILBOXMAPPER);
         SubscriptionMapper subscriptionMapper = (SubscriptionMapper) session.getAttributes().get(SUBSCRIPTIONMAPPER);
         if (messageMapper != null)
             messageMapper.endRequest();

@@ -36,11 +36,14 @@ import org.apache.camel.processor.aggregate.UseLatestAggregationStrategy;
 import org.apache.james.mailetcontainer.impl.MailetConfigImpl;
 import org.apache.james.mailetcontainer.impl.MatcherMailetPair;
 import org.apache.james.mailetcontainer.lib.AbstractStateMailetProcessor;
+import org.apache.james.metrics.api.MetricFactory;
 import org.apache.mailet.Mail;
 import org.apache.mailet.Mailet;
 import org.apache.mailet.MailetConfig;
 import org.apache.mailet.Matcher;
 import org.slf4j.Logger;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * {@link org.apache.james.mailetcontainer.lib.AbstractStateMailetProcessor} implementation which use Camel DSL for
@@ -53,6 +56,12 @@ public class CamelMailetProcessor extends AbstractStateMailetProcessor implement
     private ProducerTemplate producerTemplate;
 
     private final UseLatestAggregationStrategy aggr = new UseLatestAggregationStrategy();
+    private final MetricFactory metricFactory;
+    private List<MatcherMailetPair> pairs;
+
+    public CamelMailetProcessor(MetricFactory metricFactory) {
+        this.metricFactory = metricFactory;
+    }
 
     /**
      * @see
@@ -79,6 +88,10 @@ public class CamelMailetProcessor extends AbstractStateMailetProcessor implement
      */
     public void setCamelContext(CamelContext context) {
         this.context = context;
+    }
+
+    public List<MatcherMailetPair> getPairs() {
+        return ImmutableList.copyOf(pairs);
     }
 
     /**
@@ -109,6 +122,7 @@ public class CamelMailetProcessor extends AbstractStateMailetProcessor implement
      */
     protected void setupRouting(List<MatcherMailetPair> pairs) throws MessagingException {
         try {
+            this.pairs = pairs;
             context.addRoutes(new MailetContainerRouteBuilder(pairs));
         } catch (Exception e) {
             throw new MessagingException("Unable to setup routing for MailetMatcherPairs", e);
@@ -139,7 +153,8 @@ public class CamelMailetProcessor extends AbstractStateMailetProcessor implement
 
             RouteDefinition processorDef = from(getEndpoint()).routeId(state).setExchangePattern(ExchangePattern.InOnly)
             // store the logger in properties
-                    .setProperty(MatcherSplitter.LOGGER_PROPERTY, constant(getLogger()));
+                    .setProperty(MatcherSplitter.LOGGER_PROPERTY, constant(getLogger()))
+                    .setProperty(MatcherSplitter.METRIC_FACTORY, constant(metricFactory));
 
             for (MatcherMailetPair pair : pairs) {
                 Matcher matcher = pair.getMatcher();
@@ -152,7 +167,7 @@ public class CamelMailetProcessor extends AbstractStateMailetProcessor implement
                     onMatchException = ((MailetConfigImpl) mailetConfig).getInitAttribute("onMatchException");
                 }
 
-                CamelProcessor mailetProccessor = new CamelProcessor(mailet, logger, CamelMailetProcessor.this);
+                CamelProcessor mailetProccessor = new CamelProcessor(metricFactory, mailet, logger, CamelMailetProcessor.this);
                 // Store the matcher to use for splitter in properties
                 processorDef.setProperty(MatcherSplitter.MATCHER_PROPERTY, constant(matcher)).setProperty(MatcherSplitter.ON_MATCH_EXCEPTION_PROPERTY, constant(onMatchException)).setProperty(MatcherSplitter.MAILETCONTAINER_PROPERTY, constant(CamelMailetProcessor.this))
 
@@ -166,7 +181,7 @@ public class CamelMailetProcessor extends AbstractStateMailetProcessor implement
                         .choice().when(new MailStateNotEquals(state)).process(stateChangedProcessor).process(completeProcessor).stop().end();
             }
 
-            Processor terminatingMailetProcessor = new CamelProcessor(new TerminatingMailet(), getLogger(), CamelMailetProcessor.this);
+            Processor terminatingMailetProcessor = new CamelProcessor(metricFactory, new TerminatingMailet(), getLogger(), CamelMailetProcessor.this);
 
             processorDef
             // start choice

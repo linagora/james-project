@@ -20,20 +20,18 @@
 
 package org.apache.james.transport.matchers;
 
-import org.apache.james.transport.matchers.All;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.Matcher;
-import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMatcherConfig;
-import org.apache.mailet.base.test.MailUtil;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import org.junit.Before;
-import org.junit.Test;
+import static org.apache.mailet.base.MailAddressFixture.ANY_AT_JAMES;
+import static org.apache.mailet.base.MailAddressFixture.OTHER_AT_JAMES;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
-import java.util.Collection;
+
+import org.apache.mailet.Mail;
+import org.apache.mailet.Matcher;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.junit.Before;
+import org.junit.Test;
 
 public class AllTest {
 
@@ -42,20 +40,20 @@ public class AllTest {
     @Before
     public void setupMatcher() throws MessagingException {
         matcher = new All();
-        FakeMatcherConfig mci = new FakeMatcherConfig("All",
-                new FakeMailContext());
+        FakeMatcherConfig mci = FakeMatcherConfig.builder()
+                .matcherName("All")
+                .build();
+
         matcher.init(mci);
     }
 
-    // test if all recipients was returned
     @Test
     public void testAllRecipientsReturned() throws MessagingException {
-        FakeMail mockedMail = MailUtil.createMockMail2Recipients(null);
+        Mail mail = FakeMail.builder()
+            .recipients(ANY_AT_JAMES, OTHER_AT_JAMES)
+            .build();
 
-        Collection<MailAddress> matchedRecipients = matcher.match(mockedMail);
-
-        assertNotNull(matchedRecipients);
-        assertEquals(matchedRecipients.size(), mockedMail.getRecipients().size());
+        assertThat(matcher.match(mail)).containsOnly(ANY_AT_JAMES, OTHER_AT_JAMES);
     }
 
 }

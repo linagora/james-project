@@ -24,8 +24,10 @@ public interface JsonMessageConstants {
     /*
     Properties defined by JMAP
      */
-    String ID = "id";
+    String MESSAGE_ID = "messageId";
+    String UID = "uid";
     String MAILBOX_ID = "mailboxId";
+    String USERS = "users";
     String IS_UNREAD = "isUnread";
     String IS_FLAGGED = "isFlagged";
     String IS_ANSWERED = "isAnswered";
@@ -40,8 +42,10 @@ public interface JsonMessageConstants {
     String DATE = "date";
     String SIZE = "size";
     String TEXT_BODY = "textBody";
+    String HTML_BODY = "htmlBody";
     String SENT_DATE = "sentDate";
     String ATTACHMENTS = "attachments";
+    String TEXT = "text";
 
     /*
     James properties we can easily get

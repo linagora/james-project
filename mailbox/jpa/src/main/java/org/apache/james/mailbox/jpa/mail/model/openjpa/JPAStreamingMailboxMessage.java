@@ -31,6 +31,7 @@ import javax.persistence.FetchType;
 import javax.persistence.Table;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -53,15 +54,15 @@ public class JPAStreamingMailboxMessage extends AbstractJPAMailboxMessage {
 
     @Persistent(optional = false, fetch = FetchType.LAZY)
     @Column(name = "MAIL_BYTES", length = 1048576000, nullable = false)
-    private final InputStream body;
+    private InputStream body;
 
     @Persistent(optional = false, fetch = FetchType.LAZY)
     @Column(name = "HEADER_BYTES", length = 10485760, nullable = false)
-    private final InputStream header;
+    private InputStream header;
 
     private final SharedInputStream content;
 
-    public JPAStreamingMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, final PropertyBuilder propertyBuilder) throws MailboxException {
+    public JPAStreamingMailboxMessage(JPAMailbox mailbox, Date internalDate, int size, Flags flags, SharedInputStream content, int bodyStartOctet, PropertyBuilder propertyBuilder) throws MailboxException {
         super(mailbox, internalDate, flags, size ,bodyStartOctet, propertyBuilder);
         this.content = content;
 
@@ -77,7 +78,7 @@ public class JPAStreamingMailboxMessage extends AbstractJPAMailboxMessage {
     /**
      * Create a copy of the given message
      */
-    public JPAStreamingMailboxMessage(JPAMailbox mailbox, long uid, long modSeq, MailboxMessage<?> message) throws MailboxException {
+    public JPAStreamingMailboxMessage(JPAMailbox mailbox, MessageUid uid, long modSeq, MailboxMessage message) throws MailboxException {
         super(mailbox, uid, modSeq, message);
         try {
             this.content = new SharedByteArrayInputStream(IOUtils.toByteArray(message.getFullContent()));

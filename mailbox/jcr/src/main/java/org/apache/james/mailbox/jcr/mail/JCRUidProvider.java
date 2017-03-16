@@ -24,14 +24,16 @@ import javax.jcr.Session;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.jcr.JCRId;
 import org.apache.james.mailbox.jcr.MailboxSessionJCRRepository;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailbox;
 import org.apache.james.mailbox.store.mail.AbstractLockingUidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
-public class JCRUidProvider extends AbstractLockingUidProvider<JCRId> {
+import com.google.common.base.Optional;
+
+public class JCRUidProvider extends AbstractLockingUidProvider {
 
     private final MailboxSessionJCRRepository repository;
 
@@ -41,11 +43,15 @@ public class JCRUidProvider extends AbstractLockingUidProvider<JCRId> {
     }
 
     @Override
-    public long lastUid(MailboxSession mailboxSession, Mailbox<JCRId> mailbox) throws MailboxException {
+    public Optional<MessageUid> lastUid(MailboxSession mailboxSession, Mailbox mailbox) throws MailboxException {
         try {
             Session s = repository.login(mailboxSession);
             Node node = s.getNodeByIdentifier(mailbox.getMailboxId().serialize());
-            return node.getProperty(JCRMailbox.LASTUID_PROPERTY).getLong();
+            long rawUid = node.getProperty(JCRMailbox.LASTUID_PROPERTY).getLong();
+            if (rawUid == 0) {
+                return Optional.absent();
+            }
+            return Optional.of(MessageUid.of(rawUid));
         } catch (RepositoryException e) {
             throw new MailboxException("Unable to get last uid for mailbox " + mailbox, e);
         }
@@ -53,15 +59,15 @@ public class JCRUidProvider extends AbstractLockingUidProvider<JCRId> {
     }
 
     @Override
-    protected long lockedNextUid(MailboxSession session, Mailbox<JCRId> mailbox) throws MailboxException {
+    protected MessageUid lockedNextUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
         try {
             Session s = repository.login(session);
             Node node = s.getNodeByIdentifier(mailbox.getMailboxId().serialize());
-            long uid = node.getProperty(JCRMailbox.LASTUID_PROPERTY).getLong();
-            uid++;
-            node.setProperty(JCRMailbox.LASTUID_PROPERTY, uid);
+            MessageUid uid = MessageUid.of(node.getProperty(JCRMailbox.LASTUID_PROPERTY).getLong());
+            MessageUid nextUid = uid.next();
+            node.setProperty(JCRMailbox.LASTUID_PROPERTY, nextUid.asLong());
             s.save();
-            return uid;
+            return nextUid;
         } catch (RepositoryException e) {
             throw new MailboxException("Unable to consume next uid for mailbox " + mailbox, e);
         }

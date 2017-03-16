@@ -26,7 +26,8 @@ import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.Property;
 
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
 public class JmapResponse {
@@ -76,12 +77,20 @@ public class JmapResponse {
         }
 
         public Builder error() {
-            return error(DEFAULT_ERROR_MESSAGE);
+            this.response = ErrorResponse.builder().build();
+            this.responseName = ErrorResponse.ERROR_METHOD;
+            return this;
         }
 
         public Builder error(String message) {
-            this.response = new ErrorResponse(message);
-            this.responseName = ERROR_METHOD;
+            this.response = ErrorResponse.builder().type(message).build();
+            this.responseName = ErrorResponse.ERROR_METHOD;
+            return this;
+        }
+        
+        public Builder error(ErrorResponse error) {
+            this.response = error;
+            this.responseName = ErrorResponse.ERROR_METHOD;
             return this;
         }
 
@@ -91,23 +100,6 @@ public class JmapResponse {
         }
     }
 
-    public static class ErrorResponse implements Method.Response {
-        
-        private final String type;
-
-        public ErrorResponse(String type) {
-            this.type = type;
-        }
-        
-        public String getType() {
-            return type;
-        }
-    }
-    
-    @VisibleForTesting static final String DEFAULT_ERROR_MESSAGE = "Error while processing";
-    public static final Method.Response.Name ERROR_METHOD = Method.Response.name("error");
-
-    
     private final Method.Response.Name method;
     private final ClientId clientId;
     private final Method.Response response;
@@ -126,7 +118,7 @@ public class JmapResponse {
         return method;
     }
     
-    public Object getResponse() {
+    public Method.Response getResponse() {
         return response;
     }
     
@@ -140,5 +132,34 @@ public class JmapResponse {
 
     public Optional<SimpleFilterProvider> getFilterProvider() {
         return filterProvider;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(method, clientId, response, properties, filterProvider);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object instanceof JmapResponse) {
+            JmapResponse that = (JmapResponse) object;
+            return Objects.equal(this.method, that.method)
+                    && Objects.equal(this.clientId, that.clientId)
+                    && Objects.equal(this.response, that.response)
+                    && Objects.equal(this.properties, that.properties)
+                    && Objects.equal(this.filterProvider, that.filterProvider);
+        }
+        return false;
+    }
+    
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(getClass())
+                .add("method", method)
+                .add("response", response)
+                .add("clientId", clientId)
+                .add("properties", properties)
+                .add("filterProvider", filterProvider)
+                .toString();
     }
 }

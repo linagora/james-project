@@ -44,7 +44,6 @@ import org.xbill.DNS.TextParseException;
 import org.xbill.DNS.Type;
 
 import javax.annotation.PostConstruct;
-import javax.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -57,7 +56,6 @@ import java.util.List;
 /**
  * Provides DNS client functionality to services running inside James
  */
-@Singleton
 public class DNSJavaService implements DNSService, DNSServiceMBean, LogEnabled, Configurable {
 
     /**
@@ -118,7 +116,7 @@ public class DNSJavaService implements DNSService, DNSServiceMBean, LogEnabled, 
     @Override
     public void configure(HierarchicalConfiguration configuration) throws ConfigurationException {
 
-        final boolean autodiscover = configuration.getBoolean("autodiscover", true);
+        boolean autodiscover = configuration.getBoolean("autodiscover", true);
 
         List<Name> sPaths = new ArrayList<Name>();
         if (autodiscover) {
@@ -164,7 +162,7 @@ public class DNSJavaService implements DNSService, DNSServiceMBean, LogEnabled, 
             dnsServers.add("127.0.0.1");
         }
 
-        final boolean authoritative = configuration.getBoolean("authoritative", false);
+        boolean authoritative = configuration.getBoolean("authoritative", false);
         // TODO: Check to see if the credibility field is being used correctly.
         // From the
         // docs I don't think so

@@ -17,20 +17,17 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <artifactId>james-server</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>3.0.0-beta5-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>james-server-util-java8</artifactId>
-    <packaging>bundle</packaging>
-
     <name>Apache James :: Server :: Common Utilities :: Java 8</name>
 
     <profiles>
@@ -130,8 +127,16 @@
             </activation>
             <dependencies>
                 <dependency>
+                    <groupId>com.github.steveash.guavate</groupId>
+                    <artifactId>guavate</artifactId>
+                </dependency>
+                <dependency>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>javax.inject</groupId>
+                    <artifactId>javax.inject</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>junit</groupId>
@@ -143,6 +148,17 @@
                     <artifactId>assertj-core</artifactId>
                     <version>3.2.0</version>
                     <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>testcontainers</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>nl.jqno.equalsverifier</groupId>
+                    <artifactId>equalsverifier</artifactId>
+                    <scope>test</scope>
+                    <version>1.7.6</version>
                 </dependency>
             </dependencies>
             <build>
@@ -159,19 +175,29 @@
             </build>
         </profile>
         <profile>
-            <id>disable-animal-sniffer</id>
+            <id>animal-sniffer-java-8</id>
             <activation>
-                <jdk>[1.6,)</jdk>
+                <jdk>[1.8,)</jdk>
             </activation>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>animal-sniffer-maven-plugin</artifactId>
+                        <configuration>
+                            <signature>
+                                <groupId>org.codehaus.mojo.signature</groupId>
+                                <artifactId>java18</artifactId>
+                                <version>1.0</version>
+                            </signature>
+                        </configuration>
                         <executions>
                             <execution>
-                                <id>check_java_6</id>
-                                <phase>none</phase>
+                                <id>check_java_8</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>

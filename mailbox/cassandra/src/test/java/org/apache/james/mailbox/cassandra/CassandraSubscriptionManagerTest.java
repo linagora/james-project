@@ -20,28 +20,64 @@
 package org.apache.james.mailbox.cassandra;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.AbstractSubscriptionManagerTest;
 import org.apache.james.mailbox.SubscriptionManager;
+import org.apache.james.mailbox.cassandra.mail.CassandraDeletedMessageDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraFirstUnseenDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxCounterDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxPathDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxRecentsDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdToImapUidDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
+import org.apache.james.mailbox.cassandra.modules.CassandraMailboxCounterModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraModSeqModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraSubscriptionModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraUidModule;
 
 /**
  * Test Cassandra subscription against some general purpose written code.
  */
 public class CassandraSubscriptionManagerTest extends AbstractSubscriptionManagerTest {
 
-    private static final CassandraCluster cassandra = CassandraCluster.create(new CassandraSubscriptionModule());
+    private static final CassandraCluster cassandra = CassandraCluster.create(
+        new CassandraModuleComposite(
+            new CassandraSubscriptionModule(),
+            new CassandraMailboxCounterModule(),
+            new CassandraUidModule(),
+            new CassandraModSeqModule()));
     
     @Override
     public SubscriptionManager createSubscriptionManager() {
+        CassandraMessageIdToImapUidDAO imapUidDAO = null;
+        CassandraMessageDAO messageDAO = null;
+        CassandraMessageIdDAO messageIdDAO = null;
+        CassandraMailboxCounterDAO mailboxCounterDAO = null;
+        CassandraMailboxRecentsDAO mailboxRecentsDAO = null;
+        CassandraMailboxDAO mailboxDAO = null;
+        CassandraMailboxPathDAO mailboxPathDAO = null;
+        CassandraFirstUnseenDAO firstUnseenDAO = null;
+        CassandraApplicableFlagDAO applicableFlagDAO = null;
+        CassandraDeletedMessageDAO deletedMessageDAO = null;
         return new CassandraSubscriptionManager(
             new CassandraMailboxSessionMapperFactory(
                 new CassandraUidProvider(cassandra.getConf()),
                 new CassandraModSeqProvider(cassandra.getConf()),
                 cassandra.getConf(),
-                cassandra.getTypesProvider()
-            )
-        );
+                messageDAO,
+                messageIdDAO,
+                imapUidDAO,
+                mailboxCounterDAO,
+                mailboxRecentsDAO,
+                mailboxDAO,
+                mailboxPathDAO,
+                firstUnseenDAO,
+                applicableFlagDAO,
+                deletedMessageDAO));
     }
 }

@@ -45,6 +45,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -111,7 +112,7 @@ public class SetACLProcessorTest {
         path = new MailboxPath("#private", USER_1, MAILBOX_NAME);
         statusResponseFactory = new UnpooledStatusResponseFactory();
         mailboxManagerStub = mockery.mock(MailboxManager.class);
-        subject = new SetACLProcessor(mockery.mock(ImapProcessor.class), mailboxManagerStub, statusResponseFactory);
+        subject = new SetACLProcessor(mockery.mock(ImapProcessor.class), mailboxManagerStub, statusResponseFactory, new NoopMetricFactory());
         imapSessionStub = mockery.mock(ImapSession.class);
         mailboxSessionStub = mockery.mock(MailboxSession.class);
         user1Stub = mockery.mock(User.class);

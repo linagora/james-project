@@ -19,8 +19,11 @@
 
 package org.apache.james.mailbox.elasticsearch.json;
 
-import com.google.common.base.Preconditions;
-import org.apache.james.mailbox.store.extractor.TextExtractor;
+import java.io.IOException;
+import java.util.Deque;
+import java.util.LinkedList;
+
+import org.apache.james.mailbox.extractor.TextExtractor;
 import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mime4j.MimeException;
 import org.apache.james.mime4j.message.DefaultBodyDescriptorBuilder;
@@ -29,11 +32,17 @@ import org.apache.james.mime4j.stream.EntityState;
 import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.james.mime4j.stream.MimeTokenStream;
 
-import java.io.IOException;
-import java.util.Deque;
-import java.util.LinkedList;
+import com.google.common.base.Preconditions;
 
 public class MimePartParser {
+
+    private static final MimeConfig MIME_ENTITY_CONFIG = MimeConfig.custom()
+        .setMaxContentLen(-1)
+        .setMaxHeaderCount(-1)
+        .setMaxHeaderLen(-1)
+        .setMaxHeaderCount(-1)
+        .setMaxLineLen(-1)
+        .build();
 
     private final Message message;
     private final TextExtractor textExtractor;
@@ -48,7 +57,7 @@ public class MimePartParser {
         this.builderStack = new LinkedList<>();
         this.currentlyBuildMimePart = new RootMimePartContainerBuilder();
         this.stream = new MimeTokenStream(
-            MimeConfig.custom().setMaxLineLen(-1).setMaxHeaderLen(-1).build(),
+            MIME_ENTITY_CONFIG,
             new DefaultBodyDescriptorBuilder());
     }
 

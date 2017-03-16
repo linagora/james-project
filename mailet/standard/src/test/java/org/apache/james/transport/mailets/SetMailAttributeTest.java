@@ -20,49 +20,81 @@
 
 package org.apache.james.transport.mailets;
 
-import org.apache.james.transport.mailets.SetMailAttribute;
-import org.apache.mailet.Mail;
-import org.apache.mailet.Mailet;
-import org.apache.mailet.base.test.FakeMailContext;
-import org.apache.mailet.base.test.FakeMailetConfig;
-import org.apache.mailet.base.test.MailUtil;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import org.junit.Before;
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Properties;
 
 import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.MimeMessage;
+
+import org.apache.mailet.Mail;
+import org.apache.mailet.Mailet;
+import org.apache.mailet.base.test.FakeMailetConfig;
+import org.apache.mailet.base.test.MailUtil;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class SetMailAttributeTest {
 
+    @Rule public ExpectedException expectedException = ExpectedException.none();
+    
     private Mailet mailet;
-
-    private final String ATTRIBUTE_NAME1 = "org.apache.james.junit1";
-
-    private final String ATTRIBUTE_NAME2 = "org.apache.james.junit2";
-
-    private Mail mockedMail;
 
     @Before
     public void setupMailet() throws MessagingException {
-        mockedMail = MailUtil.createMockMail2Recipients(null);
         mailet = new SetMailAttribute();
-        FakeMailetConfig mci = new FakeMailetConfig("Test",
-                new FakeMailContext());
-        mci.setProperty(ATTRIBUTE_NAME1, "true");
-        mci.setProperty(ATTRIBUTE_NAME2, "true");
-
-        mailet.init(mci);
     }
 
-    // test if the Header was add
     @Test
-    public void testMailAttributeAdded() throws MessagingException {
-        assertNull(mockedMail.getAttribute(ATTRIBUTE_NAME1));
-        assertNull(mockedMail.getAttribute(ATTRIBUTE_NAME2));
-        mailet.service(mockedMail);
+    public void shouldAddConfiguredAttributes() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("org.apache.james.junit1", "true")
+                .setProperty("org.apache.james.junit2", "happy")
+                .build();
 
-        assertEquals("true", mockedMail.getAttribute(ATTRIBUTE_NAME1));
-        assertEquals("true", mockedMail.getAttribute(ATTRIBUTE_NAME2));
+        mailet.init(mailetConfig);
+
+        Mail mail = MailUtil.createMockMail2Recipients(new MimeMessage(Session.getDefaultInstance(new Properties())));
+        
+        mailet.service(mail);
+
+        assertThat(mail.getAttribute("org.apache.james.junit1")).isEqualTo("true");
+        assertThat(mail.getAttribute("org.apache.james.junit2")).isEqualTo("happy");
+    }
+    
+    @Test
+    public void shouldAddNothingWhenNoConfiguredAttribute() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .build();
+     
+        mailet.init(mailetConfig);
+
+        Mail mail = MailUtil.createMockMail2Recipients(new MimeMessage(Session.getDefaultInstance(new Properties())));
+        
+        mailet.service(mail);
+
+        assertThat(mail.getAttributeNames()).isEmpty();
+    }
+    
+    @Test
+    public void shouldOverwriteAttributeWhenAttributeAlreadyPresent() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .mailetName("Test")
+                .setProperty("org.apache.james.junit1", "bar")
+                .build();
+        
+        mailet.init(mailetConfig);
+        
+        Mail mail = MailUtil.createMockMail2Recipients(new MimeMessage(Session.getDefaultInstance(new Properties())));
+        mail.setAttribute("org.apache.james.junit1", "foo");
+        
+        mailet.service(mail);
+
+        assertThat(mail.getAttribute("org.apache.james.junit1")).isEqualTo("bar");
     }
 }

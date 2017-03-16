@@ -29,6 +29,7 @@ import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.imap.main.PathConverter;
 import org.apache.james.imap.message.request.MyRightsRequest;
 import org.apache.james.imap.message.response.MyRightsResponse;
 import org.apache.james.mailbox.MailboxManager;
@@ -38,6 +39,7 @@ import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.metrics.api.MetricFactory;
 import org.slf4j.Logger;
 
 /**
@@ -49,8 +51,9 @@ public class MyRightsProcessor extends AbstractMailboxProcessor<MyRightsRequest>
 
     private static final List<String> CAPABILITIES = Collections.singletonList(ImapConstants.SUPPORTS_ACL);
 
-    public MyRightsProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory) {
-        super(MyRightsRequest.class, next, mailboxManager, factory);
+    public MyRightsProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+            MetricFactory metricFactory) {
+        super(MyRightsRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     @Override
@@ -61,7 +64,7 @@ public class MyRightsProcessor extends AbstractMailboxProcessor<MyRightsRequest>
         final String mailboxName = message.getMailboxName();
         try {
 
-            MailboxPath mailboxPath = buildFullPath(session, mailboxName);
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
             // Check that mailbox exists
             mailboxManager.getMailbox(mailboxPath, mailboxSession);
             MailboxACLRights myRights = mailboxManager.myRights(mailboxPath, mailboxSession);

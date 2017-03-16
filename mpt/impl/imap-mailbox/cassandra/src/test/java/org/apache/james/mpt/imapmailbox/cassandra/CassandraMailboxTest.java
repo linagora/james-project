@@ -19,6 +19,8 @@
 
 package org.apache.james.mpt.imapmailbox.cassandra;
 
+import org.apache.james.mpt.imapmailbox.AbstractMailboxTest;
+import org.apache.james.mpt.imapmailbox.suite.AuthenticatePlain;
 import org.apache.james.mpt.imapmailbox.suite.AuthenticatedState;
 import org.apache.james.mpt.imapmailbox.suite.ConcurrentSessions;
 import org.apache.james.mpt.imapmailbox.suite.Events;
@@ -28,6 +30,9 @@ import org.apache.james.mpt.imapmailbox.suite.FetchBodySection;
 import org.apache.james.mpt.imapmailbox.suite.FetchBodyStructure;
 import org.apache.james.mpt.imapmailbox.suite.FetchHeaders;
 import org.apache.james.mpt.imapmailbox.suite.Listing;
+import org.apache.james.mpt.imapmailbox.suite.MailboxAnnotation;
+import org.apache.james.mpt.imapmailbox.suite.MailboxWithLongNameError;
+import org.apache.james.mpt.imapmailbox.suite.Move;
 import org.apache.james.mpt.imapmailbox.suite.NonAuthenticatedState;
 import org.apache.james.mpt.imapmailbox.suite.PartialFetch;
 import org.apache.james.mpt.imapmailbox.suite.QuotaTest;
@@ -39,14 +44,13 @@ import org.apache.james.mpt.imapmailbox.suite.SelectedInbox;
 import org.apache.james.mpt.imapmailbox.suite.SelectedState;
 import org.apache.james.mpt.imapmailbox.suite.UidSearch;
 import org.apache.james.mpt.imapmailbox.suite.UserFlagsSupport;
-import org.apache.onami.test.OnamiSuite;
-import org.apache.onami.test.annotation.GuiceModules;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.james.mpt.onami.test.annotation.GuiceModules;
+import org.junit.runners.Suite.SuiteClasses;
 
-@RunWith(OnamiSuite.class)
-@Suite.SuiteClasses({
+@GuiceModules({ CassandraMailboxTestModule.class })
+@SuiteClasses({
     AuthenticatedState.class,
+    AuthenticatePlain.class,
     ConcurrentSessions.class,
     Events.class,
     Expunge.class,
@@ -61,13 +65,15 @@ import org.junit.runners.Suite;
     Search.class,
     Security.class,
     Select.class,
+    QuotaTest.class,
+    UserFlagsSupport.class,
+    Move.class,
     SelectedInbox.class,
     SelectedState.class,
     UidSearch.class,
-    UserFlagsSupport.class,
-    QuotaTest.class
+    MailboxAnnotation.class,
+    MailboxWithLongNameError.class
 })
-@GuiceModules({ CassandraMailboxTestModule.class })
-public class CassandraMailboxTest {
+public class CassandraMailboxTest extends AbstractMailboxTest {
 
 }

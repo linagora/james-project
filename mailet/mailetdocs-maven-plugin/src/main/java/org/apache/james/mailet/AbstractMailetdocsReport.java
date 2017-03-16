@@ -27,9 +27,13 @@ import java.util.Locale;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.maven.doxia.siterenderer.Renderer;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
+
+import com.google.common.base.Strings;
 
 /**
  * <p>
@@ -38,27 +42,21 @@ import org.apache.maven.reporting.MavenReportException;
  */
 public abstract class AbstractMailetdocsReport extends AbstractMavenReport {
     
+    private static final String EXPERIMENTAL = " (Experimental)";
+
     /**
      * Directory where reports will go.
-     * 
-     * @parameter expression="${project.reporting.outputDirectory}"
-     * @required
-     * @readonly
      */
+    @Parameter(defaultValue = "${project.reporting.outputDirectory}",
+            required = true)
     private String outputDirectory;
 
-    /**
-     * @parameter default-value="${project}"
-     * @required
-     * @readonly
-     */
+    @Parameter(defaultValue = "${project}", 
+            required = true, 
+            readonly = true)
     private MavenProject project;
 
-    /**
-     * @component
-     * @required
-     * @readonly
-     */
+    @Component
     private Renderer siteRenderer;
 
     /**
@@ -93,6 +91,7 @@ public abstract class AbstractMailetdocsReport extends AbstractMavenReport {
         getSink().sectionTitle1();
         getSink().text("Mailets and Matchers Reference");
         getSink().sectionTitle1_();
+        getSink().text("Items marked as Experimental are not yet supported by James; however, you can try them.");
         getSink().section1_();
         
         writeDescriptions();
@@ -181,6 +180,9 @@ public abstract class AbstractMailetdocsReport extends AbstractMavenReport {
             getSink().listItem();
             getSink().link("#" + descriptor.getName());
             getSink().text(descriptor.getName());
+            if (descriptor.isExperimental()) {
+                getSink().text(EXPERIMENTAL);
+            }
             getSink().link_();
             getSink().listItem_();
         }
@@ -203,6 +205,9 @@ public abstract class AbstractMailetdocsReport extends AbstractMavenReport {
             getSink().sectionTitle2();
             getSink().anchor(descriptor.getName());
             getSink().text(descriptor.getName());
+            if (descriptor.isExperimental()) {
+                getSink().text(EXPERIMENTAL);
+            }
             getSink().anchor_();
             getSink().sectionTitle2_();
 
@@ -223,7 +228,10 @@ public abstract class AbstractMailetdocsReport extends AbstractMavenReport {
             }
 
             getSink().paragraph();
-            getSink().rawText(descriptor.getClassDocs());
+            String classDocs = descriptor.getClassDocs();
+            if (!Strings.isNullOrEmpty(classDocs)) {
+                getSink().rawText(classDocs);
+            }
             getSink().paragraph_();
 
             getSink().section2_();

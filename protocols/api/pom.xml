@@ -23,7 +23,7 @@
     <parent>
         <artifactId>protocols</artifactId>
         <groupId>org.apache.james</groupId>
-        <version>1.6.4-SNAPSHOT</version>
+        <version>3.0.0-beta6-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -34,6 +34,10 @@
     <name>Apache James :: Protocols :: API</name>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
         <dependency>
             <groupId>commons-configuration</groupId>
             <artifactId>commons-configuration</artifactId>

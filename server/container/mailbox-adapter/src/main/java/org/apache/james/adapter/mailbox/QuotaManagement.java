@@ -24,6 +24,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
+import org.apache.james.mailbox.store.mail.model.SerializableQuota;
 
 public class QuotaManagement implements QuotaManagementMBean {
 

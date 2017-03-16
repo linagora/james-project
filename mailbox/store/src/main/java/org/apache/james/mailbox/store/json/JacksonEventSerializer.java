@@ -19,19 +19,33 @@
 
 package org.apache.james.mailbox.store.json;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+
 import org.apache.james.mailbox.MailboxListener;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.store.event.EventSerializer;
 import org.apache.james.mailbox.store.json.event.EventConverter;
 import org.apache.james.mailbox.store.json.event.dto.EventDataTransferObject;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 
-public class JacksonEventSerializer<Id extends MailboxId> implements EventSerializer {
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.KeyDeserializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
-    private final EventConverter<Id> eventConverter;
+public class JacksonEventSerializer implements EventSerializer {
+
+    private final EventConverter eventConverter;
     private final ObjectMapper objectMapper;
 
-    public JacksonEventSerializer(EventConverter<Id> eventConverter, ObjectMapper objectMapper) {
+    public JacksonEventSerializer(EventConverter eventConverter, ObjectMapper objectMapper) {
         this.eventConverter = eventConverter;
         this.objectMapper = objectMapper;
     }
@@ -44,4 +58,76 @@ public class JacksonEventSerializer<Id extends MailboxId> implements EventSerial
         EventDataTransferObject eventDataTransferObject = objectMapper.readValue(serializedEvent, EventDataTransferObject.class);
         return eventConverter.retrieveEvent(eventDataTransferObject);
     }
+
+    public static ObjectMapper configureObjectMapper(ObjectMapper objectMapper, MessageId.Factory messageIdFactory) {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(MessageUid.class, new MessageUidDeserializer());
+        module.addKeyDeserializer(MessageUid.class, new MessageUidKeyDeserializer());
+        module.addSerializer(MessageUid.class, new MessageUidSerializer());
+        module.addKeySerializer(MessageUid.class, new MessageUidKeySerializer());
+        module.addSerializer(MessageId.class, new MessageIdSerializer());
+        module.addDeserializer(MessageId.class, new MessageIdDeserializer(messageIdFactory));
+        objectMapper.registerModule(module);
+        return objectMapper;
+    }
+
+    public static class MessageUidDeserializer extends JsonDeserializer<MessageUid> {
+
+        @Override
+        public MessageUid deserialize(JsonParser parser, DeserializationContext context) throws IOException, JsonProcessingException {
+            return MessageUid.of(Long.parseLong(parser.getValueAsString()));
+        }
+        
+    }
+
+    public static class MessageUidSerializer extends JsonSerializer<MessageUid> {
+
+        @Override
+        public void serialize(MessageUid value, JsonGenerator generator, SerializerProvider serializers) throws IOException, JsonProcessingException {
+            generator.writeString(String.valueOf(value.asLong()));
+        }
+        
+    }
+
+    public static class MessageUidKeyDeserializer extends KeyDeserializer {
+
+        @Override
+        public Object deserializeKey(String key, DeserializationContext context) throws IOException, JsonProcessingException {
+            return MessageUid.of(Long.parseLong(key));
+        }
+        
+    }
+
+    public static class MessageUidKeySerializer extends JsonSerializer<MessageUid> {
+
+        @Override
+        public void serialize(MessageUid value, JsonGenerator generator, SerializerProvider serializers) throws IOException, JsonProcessingException {
+            generator.writeFieldName(String.valueOf(value.asLong()));
+        }
+        
+    }
+
+    public static class MessageIdSerializer extends JsonSerializer<MessageId> {
+
+        @Override
+        public void serialize(MessageId value, JsonGenerator generator, SerializerProvider serializers) throws IOException, JsonProcessingException {
+            generator.writeString(String.valueOf(value.serialize()));
+        }
+        
+    }
+
+    public static class MessageIdDeserializer extends JsonDeserializer<MessageId> {
+        private final Factory factory;
+
+        public MessageIdDeserializer(MessageId.Factory factory) {
+            this.factory = factory;
+        }
+
+        @Override
+        public MessageId deserialize(JsonParser p, DeserializationContext context) throws IOException, JsonProcessingException {
+            return factory.fromString(p.getValueAsString());
+        }
+        
+    }
+
 }

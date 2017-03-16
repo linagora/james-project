@@ -19,19 +19,19 @@
 
 package org.apache.james.mailbox.store;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.search.MessageSearches;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class SearchUtilsRFC822Test {
 
@@ -47,14 +47,13 @@ public class SearchUtilsRFC822Test {
             + "It has " + RHUBARD + ".\r\n" + "It has " + CUSTARD + ".\r\n"
             + "It needs naught else.\r\n";
 
-    MailboxMessage<TestId> row;
+    MailboxMessage row;
 
-    private Logger log = LoggerFactory.getLogger(getClass());
-    Collection<Long> recent;
+    Collection<MessageUid> recent;
 
     @Before
     public void setUp() throws Exception {
-        recent = new ArrayList<Long>();
+        recent = new ArrayList<MessageUid>();
         MessageBuilder builder = new MessageBuilder();
         builder.header("From", "Alex <alex@example.org");
         builder.header("To", FROM_ADDRESS);
@@ -68,52 +67,52 @@ public class SearchUtilsRFC822Test {
     @Test
     public void testBodyShouldMatchPhraseInBody() throws Exception {
         assertTrue(new MessageSearches().isMatch(SearchQuery.bodyContains(CUSTARD), row,
-                recent, log));
+                recent));
         assertFalse(new MessageSearches().isMatch(SearchQuery
-                .bodyContains(CUSTARD + CUSTARD), row, recent, log));
+                .bodyContains(CUSTARD + CUSTARD), row, recent));
     }
 
     @Test
     public void testBodyMatchShouldBeCaseInsensitive() throws Exception {
         assertTrue(new MessageSearches().isMatch(SearchQuery.bodyContains(RHUBARD), row,
-                recent, log));
+                recent));
         assertTrue(new MessageSearches().isMatch(SearchQuery.bodyContains(RHUBARD
-                .toLowerCase()), row, recent, log));
+                .toLowerCase()), row, recent));
         assertTrue(new MessageSearches().isMatch(SearchQuery.bodyContains(RHUBARD
-                .toLowerCase()), row, recent, log));
+                .toLowerCase()), row, recent));
     }
 
     @Test
     public void testBodyShouldNotMatchPhraseOnlyInHeader() throws Exception {
         assertFalse(new MessageSearches().isMatch(SearchQuery.bodyContains(FROM_ADDRESS),
-                row, recent, log));
+                row, recent));
         assertFalse(new MessageSearches().isMatch(SearchQuery.bodyContains(SUBJECT_PART),
-                row, recent, log));
+                row, recent));
     }
 
     @Test
     public void testTextShouldMatchPhraseInBody() throws Exception {
         assertTrue(new MessageSearches().isMatch(SearchQuery.mailContains(CUSTARD), row,
-                recent, log));
+                recent));
         assertFalse(new MessageSearches().isMatch(SearchQuery
-                .mailContains(CUSTARD + CUSTARD), row, recent, log));
+                .mailContains(CUSTARD + CUSTARD), row, recent));
     }
 
     @Test
     public void testTextMatchShouldBeCaseInsensitive() throws Exception {
         assertTrue(new MessageSearches().isMatch(SearchQuery.mailContains(RHUBARD), row,
-                recent, log));
+                recent));
         assertTrue(new MessageSearches().isMatch(SearchQuery.mailContains(RHUBARD
-                .toLowerCase()), row, recent, log));
+                .toLowerCase()), row, recent));
         assertTrue(new MessageSearches().isMatch(SearchQuery.mailContains(RHUBARD
-                .toLowerCase()), row, recent, log));
+                .toLowerCase()), row, recent));
     }
 
     @Test
     public void testBodyShouldMatchPhraseOnlyInHeader() throws Exception {
         assertTrue(new MessageSearches().isMatch(SearchQuery.mailContains(FROM_ADDRESS),
-                row, recent, log));
+                row, recent));
         assertTrue(new MessageSearches().isMatch(SearchQuery.mailContains(SUBJECT_PART),
-                row, recent, log));
+                row, recent));
     }
 }

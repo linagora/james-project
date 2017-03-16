@@ -18,10 +18,22 @@
  ****************************************************************/
 package org.apache.james.mailbox.maildir.mail.model;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
+import java.util.Date;
+import java.util.List;
+
+import javax.mail.util.SharedFileInputStream;
+
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Message;
-import org.apache.james.mailbox.store.mail.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.streaming.CountingInputStream;
@@ -33,15 +45,6 @@ import org.apache.james.mime4j.stream.EntityState;
 import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.james.mime4j.stream.MimeTokenStream;
 import org.apache.james.mime4j.stream.RecursionMode;
-
-import javax.mail.util.SharedFileInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
-import java.util.Date;
-import java.util.List;
 
 public class MaildirMessage implements Message {
 
@@ -272,6 +275,11 @@ public class MaildirMessage implements Message {
             limit = 0;
         }
         return new LimitingFileInputStream(messageName.getFile(), limit);
+    }
+
+    @Override
+    public List<MessageAttachment> getAttachments() {
+        throw new NotImplementedException("Attachments are not implemented");
     }
 
 }

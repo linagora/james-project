@@ -27,10 +27,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.james.jmap.json.ObjectMapperFactory;
 import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.Property;
 import org.apache.james.jmap.model.ProtocolRequest;
 import org.apache.james.jmap.model.ProtocolResponse;
+import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.inmemory.InMemoryMessageId;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -38,12 +42,17 @@ import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 public class JmapResponseWriterImplTest {
+    private JmapResponseWriterImpl testee;
+
+    @Before
+    public void setup() {
+        testee = new JmapResponseWriterImpl(new ObjectMapperFactory(new InMemoryId.Factory(), new InMemoryMessageId.Factory()));
+    }
 
     @Ignore
     @Test(expected=IllegalStateException.class)
@@ -52,8 +61,7 @@ public class JmapResponseWriterImplTest {
         String expectedClientId = "#1";
         String expectedId = "myId";
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
-        Stream<ProtocolResponse> response = jmapResponseWriterImpl.formatMethodResponse(Stream.of(JmapResponse
+        Stream<ProtocolResponse> response = testee.formatMethodResponse(Stream.of(JmapResponse
                 .builder()
                 .clientId(ClientId.of(expectedClientId))
                 .response(null)
@@ -73,8 +81,7 @@ public class JmapResponseWriterImplTest {
         ResponseClass responseClass = new ResponseClass();
         responseClass.id = expectedId;
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
-        List<ProtocolResponse> response = jmapResponseWriterImpl.formatMethodResponse(
+        List<ProtocolResponse> response = testee.formatMethodResponse(
                 Stream.of(JmapResponse
                 .builder()
                 .responseName(Method.Response.name("unknownMethod"))
@@ -101,8 +108,7 @@ public class JmapResponseWriterImplTest {
         responseClass.list = ImmutableList.of(new ObjectResponseClass.Foo("id", "name"));
         Property property = () -> "id";
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
-        List<ProtocolResponse> response = jmapResponseWriterImpl.formatMethodResponse(
+        List<ProtocolResponse> response = testee.formatMethodResponse(
                 Stream.of(JmapResponse
                 .builder()
                 .responseName(Method.Response.name("unknownMethod"))
@@ -126,9 +132,8 @@ public class JmapResponseWriterImplTest {
         responseClass.list = ImmutableList.of(new ObjectResponseClass.Foo("id", "name"));
         Property property = () -> "id";
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
         @SuppressWarnings("unused")
-        Stream<ProtocolResponse> ignoredResponse = jmapResponseWriterImpl.formatMethodResponse(
+        Stream<ProtocolResponse> ignoredResponse = testee.formatMethodResponse(
                 Stream.of(JmapResponse
                         .builder()
                         .responseName(Method.Response.name("unknownMethod"))
@@ -137,7 +142,7 @@ public class JmapResponseWriterImplTest {
                         .response(responseClass)
                         .build()));
 
-        List<ProtocolResponse> response = jmapResponseWriterImpl.formatMethodResponse(
+        List<ProtocolResponse> response = testee.formatMethodResponse(
                 Stream.of(JmapResponse
                 .builder()
                 .responseName(Method.Response.name("unknownMethod"))
@@ -159,9 +164,7 @@ public class JmapResponseWriterImplTest {
         Property idProperty = () -> "id";
         Property nameProperty = () -> "name";
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
-
-        List<ProtocolResponse> response = jmapResponseWriterImpl.formatMethodResponse(
+        List<ProtocolResponse> response = testee.formatMethodResponse(
                 Stream.of(JmapResponse
                             .builder()
                             .responseName(Method.Response.name("unknownMethod"))
@@ -210,8 +213,7 @@ public class JmapResponseWriterImplTest {
                 parameters,
                 new ObjectNode(new JsonNodeFactory(false)).textNode(expectedClientId)} ;
 
-        JmapResponseWriterImpl jmapResponseWriterImpl = new JmapResponseWriterImpl(ImmutableSet.of(new Jdk8Module()));
-        List<ProtocolResponse> response = jmapResponseWriterImpl.formatMethodResponse(
+        List<ProtocolResponse> response = testee.formatMethodResponse(
                 Stream.of(JmapResponse
                     .builder()
                     .clientId(ProtocolRequest.deserialize(nodes).getClientId())
@@ -221,7 +223,34 @@ public class JmapResponseWriterImplTest {
 
         assertThat(response).hasSize(1)
                 .extracting(ProtocolResponse::getResponseName, x -> x.getResults().get("type").asText(), ProtocolResponse::getClientId)
-                .containsExactly(tuple(JmapResponse.ERROR_METHOD, JmapResponse.DEFAULT_ERROR_MESSAGE, ClientId.of(expectedClientId)));
+                .containsExactly(tuple(ErrorResponse.ERROR_METHOD, ErrorResponse.DEFAULT_ERROR_MESSAGE, ClientId.of(expectedClientId)));
+    }
+
+    @Test
+    public void formatErrorResponseShouldWorkWithTypeAndDescription() {
+        String expectedClientId = "#1";
+
+        ObjectNode parameters = new ObjectNode(new JsonNodeFactory(false));
+        parameters.put("id", "myId");
+        JsonNode[] nodes = new JsonNode[] { new ObjectNode(new JsonNodeFactory(false)).textNode("unknwonMethod"),
+                parameters,
+                new ObjectNode(new JsonNodeFactory(false)).textNode(expectedClientId)} ;
+
+        List<ProtocolResponse> response = testee.formatMethodResponse(
+                Stream.of(JmapResponse
+                    .builder()
+                    .clientId(ProtocolRequest.deserialize(nodes).getClientId())
+                    .error(ErrorResponse
+                            .builder()
+                            .type("errorType")
+                            .description("complete description")
+                            .build())
+                    .build()))
+                .collect(Collectors.toList());
+
+        assertThat(response).hasSize(1)
+                .extracting(ProtocolResponse::getResponseName, x -> x.getResults().get("type").asText(), x -> x.getResults().get("description").asText(), ProtocolResponse::getClientId)
+                .containsExactly(tuple(ErrorResponse.ERROR_METHOD, "errorType", "complete description", ClientId.of(expectedClientId)));
     }
 
 }

@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.mailbox.hbase;
 
+import java.util.EnumSet;
+
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
@@ -26,29 +28,36 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.mail.HBaseMailboxMapper;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.Authenticator;
+import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.StoreMessageManager;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 
 /**
  * HBase implementation of {@link StoreMailboxManager}
  * 
  */
-public class HBaseMailboxManager extends StoreMailboxManager<HBaseId> {
+public class HBaseMailboxManager extends StoreMailboxManager {
 
-    public HBaseMailboxManager(HBaseMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver) {
-        super(mapperFactory, authenticator, locker, aclResolver, groupMembershipResolver);
+    public HBaseMailboxManager(HBaseMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
+            MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
+            MessageParser messageParser, MessageId.Factory messageIdFactory) {
+        super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory);
     }
 
-    public HBaseMailboxManager(HBaseMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver) {
-        super(mapperFactory, authenticator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver);
+    public HBaseMailboxManager(HBaseMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
+            MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
+            MessageParser messageParser, MessageId.Factory messageIdFactory) {
+        super(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory);
     }
 
     @Override
-    protected Mailbox<HBaseId> doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+    protected Mailbox doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
         return new HBaseMailbox(mailboxPath, randomUidValidity());
     }
 
@@ -79,7 +88,12 @@ public class HBaseMailboxManager extends StoreMailboxManager<HBaseId> {
     }
 
     @Override
-    protected StoreMessageManager<HBaseId> createMessageManager(Mailbox<HBaseId> mailboxRow, MailboxSession session) throws MailboxException {
+    public EnumSet<MailboxCapabilities> getSupportedMailboxCapabilities() {
+        return EnumSet.of(MailboxCapabilities.Namespace);
+    }
+
+    @Override
+    protected StoreMessageManager createMessageManager(Mailbox mailboxRow, MailboxSession session) throws MailboxException {
         return new HBaseMessageManager(getMapperFactory(),
             getMessageSearchIndex(),
             getEventDispatcher(),
@@ -88,6 +102,8 @@ public class HBaseMailboxManager extends StoreMailboxManager<HBaseId> {
             getAclResolver(),
             getGroupMembershipResolver(),
             getQuotaManager(),
-            getQuotaRootResolver());
+            getQuotaRootResolver(),
+            getMessageParser(),
+            getMessageIdFactory());
     }
 }

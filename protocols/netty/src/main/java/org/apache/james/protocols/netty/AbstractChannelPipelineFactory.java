@@ -24,8 +24,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.ExternalResourceReleasable;
@@ -37,27 +35,28 @@ import org.jboss.netty.util.HashedWheelTimer;
  *
  */
 public abstract class AbstractChannelPipelineFactory implements ChannelPipelineFactory, ExternalResourceReleasable{
-
     public final static int MAX_LINE_LENGTH = 8192;
+
     protected final ConnectionLimitUpstreamHandler connectionLimitHandler;
     protected final ConnectionPerIpLimitUpstreamHandler connectionPerIpLimitHandler;
     private final HashedWheelTimer timer = new HashedWheelTimer();
     private final ChannelGroupHandler groupHandler;
 	private final int timeout;
     private final ExecutionHandler eHandler;
+    private final ChannelHandlerFactory frameHandlerFactory;
     public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels) {
-        this(timeout, maxConnections, maxConnectsPerIp, channels, null);
+        this(timeout, maxConnections, maxConnectsPerIp, channels, null, new LineDelimiterBasedChannelHandlerFactory(MAX_LINE_LENGTH));
     }
     
-    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels, ExecutionHandler eHandler) {
+    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels, ExecutionHandler eHandler,
+            ChannelHandlerFactory frameHandlerFactory) {
         this.connectionLimitHandler = new ConnectionLimitUpstreamHandler(maxConnections);
         this.connectionPerIpLimitHandler = new ConnectionPerIpLimitUpstreamHandler(maxConnectsPerIp);
         this.groupHandler = new ChannelGroupHandler(channels);
         this.timeout = timeout;
         this.eHandler = eHandler;
+        this.frameHandlerFactory = frameHandlerFactory;
     }
-    
-    
     
     
     /**
@@ -74,7 +73,7 @@ public abstract class AbstractChannelPipelineFactory implements ChannelPipelineF
 
         
         // Add the text line decoder which limit the max line length, don't strip the delimiter and use CRLF as delimiter
-        pipeline.addLast(HandlerConstants.FRAMER, new DelimiterBasedFrameDecoder(MAX_LINE_LENGTH, false, Delimiters.lineDelimiter()));
+        pipeline.addLast(HandlerConstants.FRAMER, frameHandlerFactory.create(pipeline));
        
         // Add the ChunkedWriteHandler to be able to write ChunkInput
         pipeline.addLast(HandlerConstants.CHUNK_HANDLER, new ChunkedWriteHandler());
@@ -89,8 +88,6 @@ public abstract class AbstractChannelPipelineFactory implements ChannelPipelineF
 
         return pipeline;
     }
-
-
 
     
     /**

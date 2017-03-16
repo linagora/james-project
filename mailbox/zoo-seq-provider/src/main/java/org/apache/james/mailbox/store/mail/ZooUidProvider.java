@@ -18,6 +18,14 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail;
 
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.netflix.curator.RetryPolicy;
 import com.netflix.curator.framework.CuratorFramework;
@@ -26,15 +34,10 @@ import com.netflix.curator.framework.recipes.atomic.AtomicValue;
 import com.netflix.curator.framework.recipes.atomic.DistributedAtomicLong;
 import com.netflix.curator.retry.RetryOneTime;
 
-import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-
 /**
  * ZooKeeper based implementation of a distributed sequential UID generator.
  */
-public class ZooUidProvider<E extends MailboxId> implements UidProvider<E> {
+public class ZooUidProvider implements UidProvider {
     // TODO: use ZK paths to store uid and modSeq, etc.
 
     public static final String UID_PATH_SUFFIX = "-uid";
@@ -53,14 +56,14 @@ public class ZooUidProvider<E extends MailboxId> implements UidProvider<E> {
     }
 
     @Override
-    public long nextUid(MailboxSession session, Mailbox<E> mailbox) throws MailboxException {
+    public MessageUid nextUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
         if (client.getState() == CuratorFrameworkState.STARTED) {
             DistributedAtomicLong uid = new DistributedAtomicLong(client, pathForMailbox(mailbox), retryPolicy);
             try {
                 uid.increment();
                 AtomicValue<Long> value = uid.get();
                 if (value.succeeded()) {
-                    return value.postValue();
+                    return MessageUid.of(value.postValue());
                 }
             } catch (Exception e) {
                 throw new MailboxException("Exception incrementing UID for session " + session, e);
@@ -70,13 +73,17 @@ public class ZooUidProvider<E extends MailboxId> implements UidProvider<E> {
     }
 
     @Override
-    public long lastUid(MailboxSession session, Mailbox<E> mailbox) throws MailboxException {
+    public Optional<MessageUid> lastUid(MailboxSession session, Mailbox mailbox) throws MailboxException {
         if (client.getState() == CuratorFrameworkState.STARTED) {
             DistributedAtomicLong uid = new DistributedAtomicLong(client, pathForMailbox(mailbox), retryPolicy);
             try {
                 AtomicValue<Long> value = uid.get();
                 if (value.succeeded()) {
-                    return value.postValue();
+                    Long postValue = value.postValue();
+                    if (postValue == 0) {
+                        return Optional.absent();
+                    }
+                    return Optional.of(MessageUid.of(value.postValue()));
                 }
             } catch (Exception e) {
                 throw new MailboxException("Exception getting last UID for session " + session, e);
@@ -85,7 +92,12 @@ public class ZooUidProvider<E extends MailboxId> implements UidProvider<E> {
         throw new MailboxException("Curator client is closed.");
     }
 
-    public static <E extends MailboxId> String pathForMailbox(Mailbox<E> mailbox) {
+    @Override
+    public MessageUid nextUid(MailboxSession session, MailboxId mailboxId) throws MailboxException {
+        throw new NotImplementedException();
+    }
+
+    public static <E extends MailboxId> String pathForMailbox(Mailbox mailbox) {
         return mailbox.getMailboxId().serialize() + UID_PATH_SUFFIX;
     }
 }

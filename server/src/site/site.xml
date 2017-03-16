@@ -27,9 +27,9 @@
 
   <bannerLeft>
     <name>Apache James Server 3.0</name>
-    <src>images/logos/james-server-logo.gif</src>
+    <src>images/logos/james-logo.png</src>
     <href>http://james.apache.org/server/index.html</href>
-    <alt>james-server-logo.gif</alt>
+    <alt>james-logo.png</alt>
   </bannerLeft>
   
   <body>
@@ -79,6 +79,7 @@ Removed from trunk for now.
         <item name="Domains" href="/manage-domains.html" />
         <item name="Users" href="/manage-users.html" />
         <item name="Recipient Rewrite" href="/manage-recipientrewrite.html" />
+        <item name="Metrics" href="/metrics.html" />
       </item>
       <item name="5. Monitor" href="/monitor.html" collapse="true" >
         <item name="Logging" href="/monitor-logging.html" />

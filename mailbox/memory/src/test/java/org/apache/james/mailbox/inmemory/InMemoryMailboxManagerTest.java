@@ -16,96 +16,62 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.mailbox.inmemory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.apache.james.mailbox.AbstractMailboxManagerTest;
-import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
-import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
-import org.apache.james.mailbox.store.MockAuthenticator;
-import org.apache.james.mailbox.store.StoreMailboxManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.slf4j.LoggerFactory;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.store.FakeAuthenticator;
+import org.apache.james.mailbox.store.FakeAuthorizator;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
+import org.junit.runner.RunWith;
+import org.xenei.junit.contract.Contract;
+import org.xenei.junit.contract.ContractImpl;
+import org.xenei.junit.contract.ContractSuite;
+import org.xenei.junit.contract.IProducer;
 
-import java.util.List;
+import com.google.common.base.Throwables;
 
-/**
- * InMemoryMailboxManagerTest that extends the MailboxManagerTest.
- */
-public class InMemoryMailboxManagerTest extends AbstractMailboxManagerTest {
+@RunWith(ContractSuite.class)
+@ContractImpl(InMemoryMailboxManager.class)
+public class InMemoryMailboxManagerTest {
+    private static final int LIMIT_ANNOTATIONS = 3;
+    private static final int LIMIT_ANNOTATION_SIZE = 30;
 
-    private MailboxSession session;
+    private IProducer<InMemoryMailboxManager> producer = new IProducer<InMemoryMailboxManager>() {
 
-    /**
-     * Setup the mailboxManager.
-     * 
-     * @throws Exception
-     */
-    @Before
-    public void setup() throws Exception {
-        createMailboxManager();
+        @Override
+        public InMemoryMailboxManager newInstance() {
+            MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+            GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
+            MessageParser messageParser = new MessageParser();
 
-        session = getMailboxManager().createSystemSession(USER_1, LoggerFactory.getLogger("Test"));
-        getMailboxManager().startProcessingRequest(session);
-    }
-    
-    /**
-     * Close the system session and entityManagerFactory
-     * 
-     * @throws MailboxException 
-     * @throws BadCredentialsException 
-     */
-    @After
-    public void tearDown() throws BadCredentialsException, MailboxException {
-        getMailboxManager().logout(session, true);
-        getMailboxManager().endProcessingRequest(session);
-        getMailboxManager().createSystemSession("test", LoggerFactory.getLogger("Test")).close();
-    }
+            InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
+            MessageId.Factory messageIdFactory = new InMemoryMessageId.Factory();
+            InMemoryMailboxManager mailboxManager = new InMemoryMailboxManager(mailboxSessionMapperFactory, new FakeAuthenticator(), FakeAuthorizator.defaultReject(),
+                    aclResolver, groupMembershipResolver, messageParser, messageIdFactory, LIMIT_ANNOTATIONS, LIMIT_ANNOTATION_SIZE);
 
-    /* (non-Javadoc)
-     * @see org.apache.james.mailbox.MailboxManagerTest#createMailboxManager()
-     */
-    @Override
-    protected void createMailboxManager() throws MailboxException {
-        
-        InMemoryMailboxSessionMapperFactory factory = new InMemoryMailboxSessionMapperFactory();
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
-        GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
+            try {
+                mailboxManager.init();
+            } catch (MailboxException e) {
+                throw Throwables.propagate(e);
+            }
 
-        StoreMailboxManager<InMemoryId> mailboxManager = new StoreMailboxManager<InMemoryId>(factory, new MockAuthenticator(), aclResolver, groupMembershipResolver);
-        mailboxManager.init();
-        
-        setMailboxManager(mailboxManager);
+            return mailboxManager;
+        }
 
-    }
+        @Override
+        public void cleanUp() {
+        }
+    };
 
-    @Test
-    public void searchShouldNotReturnResultsFromOtherNamespaces() throws Exception {
-        getMailboxManager().createMailbox(new MailboxPath("#namespace", USER_1, "Other"), session);
-        getMailboxManager().createMailbox(MailboxPath.inbox(session), session);
-        List<MailboxMetaData> metaDatas = getMailboxManager().search(new MailboxQuery(new MailboxPath("#private", USER_1, ""), "*", '.'), session);
-        assertThat(metaDatas).hasSize(1);
-        assertThat(metaDatas.get(0).getPath()).isEqualTo(MailboxPath.inbox(session));
-    }
-
-    @Test
-    public void searchShouldNotReturnResultsFromOtherUsers() throws Exception {
-        getMailboxManager().createMailbox(new MailboxPath("#namespace", USER_2, "Other"), session);
-        getMailboxManager().createMailbox(MailboxPath.inbox(session), session);
-        List<MailboxMetaData> metaDatas = getMailboxManager().search(new MailboxQuery(new MailboxPath("#private", USER_1, ""), "*", '.'), session);
-        assertThat(metaDatas).hasSize(1);
-        assertThat(metaDatas.get(0).getPath()).isEqualTo(MailboxPath.inbox(session));
+    @Contract.Inject
+    public IProducer<InMemoryMailboxManager> getProducer() {
+        return producer;
     }
     
 }

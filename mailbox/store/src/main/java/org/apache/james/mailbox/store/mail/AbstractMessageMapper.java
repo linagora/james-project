@@ -25,53 +25,57 @@ import java.util.List;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxCounters;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
+
+import com.google.common.base.Optional;
 
 /**
  * Abstract base class for {@link MessageMapper} implementation
  * which already takes care of most uid / mod-seq handling.
  *
- * @param <Id>
  */
-public abstract class AbstractMessageMapper<Id extends MailboxId> extends TransactionalMapper implements MessageMapper<Id> {
+public abstract class AbstractMessageMapper extends TransactionalMapper implements MessageMapper {
     protected final MailboxSession mailboxSession;
-    private final UidProvider<Id> uidProvider;
-    private final ModSeqProvider<Id> modSeqProvider;
+    private final UidProvider uidProvider;
+    private final ModSeqProvider modSeqProvider;
 
-    public AbstractMessageMapper(MailboxSession mailboxSession, UidProvider<Id> uidProvider, ModSeqProvider<Id> modSeqProvider) {
+    public AbstractMessageMapper(MailboxSession mailboxSession, UidProvider uidProvider, ModSeqProvider modSeqProvider) {
         this.mailboxSession = mailboxSession;
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
     }
     
-    /**
-     * @see org.apache.james.mailbox.store.mail.MessageMapper#getHighestModSeq(org.apache.james.mailbox.store.mail.model.Mailbox)
-     */
-    public long getHighestModSeq(Mailbox<Id> mailbox) throws MailboxException {
+    @Override
+    public long getHighestModSeq(Mailbox mailbox) throws MailboxException {
         return modSeqProvider.highestModSeq(mailboxSession, mailbox);
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.MessageMapper#getLastUid(org.apache.james.mailbox.store.mail.model.Mailbox)
-     */
-    public long getLastUid(Mailbox<Id> mailbox) throws MailboxException {
+    @Override
+    public Optional<MessageUid> getLastUid(Mailbox mailbox) throws MailboxException {
         return uidProvider.lastUid(mailboxSession, mailbox);
     }
-    
-    /**
-     * @see org.apache.james.mailbox.store.mail.MessageMapper#updateFlags(org.apache.james.mailbox.store.mail.model.Mailbox, javax.mail.Flags, boolean, boolean, org.apache.james.mailbox.model.MessageRange)
-     */
-    public Iterator<UpdatedFlags> updateFlags(final Mailbox<Id> mailbox, final FlagsUpdateCalculator flagsUpdateCalculator, final MessageRange set) throws MailboxException {
+
+    @Override
+    public MailboxCounters getMailboxCounters(Mailbox mailbox) throws MailboxException {
+        return MailboxCounters.builder()
+            .count(countMessagesInMailbox(mailbox))
+            .unseen(countUnseenMessagesInMailbox(mailbox))
+            .build();
+    }
+
+    @Override
+    public Iterator<UpdatedFlags> updateFlags(Mailbox mailbox, FlagsUpdateCalculator flagsUpdateCalculator, MessageRange set) throws MailboxException {
         final List<UpdatedFlags> updatedFlags = new ArrayList<UpdatedFlags>();
-        Iterator<MailboxMessage<Id>> messages = findInMailbox(mailbox, set, FetchType.Metadata, -1);
+        Iterator<MailboxMessage> messages = findInMailbox(mailbox, set, FetchType.Metadata, -1);
         
         long modSeq = -1;
         if (messages.hasNext()) {
@@ -81,7 +85,7 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
             }
         }
         while(messages.hasNext()) {
-        	final MailboxMessage<Id> member = messages.next();
+        	final MailboxMessage member = messages.next();
             Flags originalFlags = member.createFlags();
             member.setFlags(flagsUpdateCalculator.buildNewFlags(originalFlags));
             Flags newFlags = member.createFlags();
@@ -90,11 +94,13 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
                 member.setModSeq(modSeq);
                 save(mailbox, member);
             }
-
             
-            UpdatedFlags uFlags = new UpdatedFlags(member.getUid(), member.getModSeq(), originalFlags, newFlags);
-            
-            updatedFlags.add(uFlags);
+            updatedFlags.add(UpdatedFlags.builder()
+                .uid(member.getUid())
+                .modSeq(member.getModSeq())
+                .newFlags(newFlags)
+                .oldFlags(originalFlags)
+                .build());
             
         }
 
@@ -102,10 +108,8 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
 
     }
 
-    /**
-     * @see org.apache.james.mailbox.store.mail.MessageMapper#add(org.apache.james.mailbox.store.mail.model.Mailbox, MailboxMessage)
-     */
-    public MessageMetaData add(final Mailbox<Id> mailbox, MailboxMessage<Id> message) throws MailboxException {
+    @Override
+    public MessageMetaData add(Mailbox mailbox, MailboxMessage message) throws MailboxException {
         message.setUid(uidProvider.nextUid(mailboxSession, mailbox));
         
         // if a mailbox does not support mod-sequences the provider may be null
@@ -119,11 +123,9 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
     }
 
     
-    /**
-     * @see org.apache.james.mailbox.store.mail.MessageMapper#copy(org.apache.james.mailbox.store.mail.model.Mailbox, MailboxMessage)
-     */
-    public MessageMetaData copy(final Mailbox<Id> mailbox, final MailboxMessage<Id> original) throws MailboxException {
-        long uid = uidProvider.nextUid(mailboxSession, mailbox);
+    @Override
+    public MessageMetaData copy(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+        MessageUid uid = uidProvider.nextUid(mailboxSession, mailbox);
         long modSeq = -1;
         if (modSeqProvider != null) {
             modSeq = modSeqProvider.nextModSeq(mailboxSession, mailbox);
@@ -133,30 +135,15 @@ public abstract class AbstractMessageMapper<Id extends MailboxId> extends Transa
         return metaData;
     }
 
-   
-    
-    
     /**
      * Save the {@link MailboxMessage} for the given {@link Mailbox} and return the {@link MessageMetaData}
-     * 
-     * @param mailbox
-     * @param message
-     * @return metaData
-     * @throws MailboxException
      */
-    protected abstract MessageMetaData save(Mailbox<Id> mailbox, MailboxMessage<Id> message) throws MailboxException;
+    protected abstract MessageMetaData save(Mailbox mailbox, MailboxMessage message) throws MailboxException;
 
     
     /**
      * Copy the MailboxMessage to the Mailbox, using the given uid and modSeq for the new MailboxMessage
-     * 
-     * @param mailbox
-     * @param uid
-     * @param modSeq
-     * @param original
-     * @return metaData
-     * @throws MailboxException
      */
-    protected abstract MessageMetaData copy(Mailbox<Id> mailbox, long uid, long modSeq, MailboxMessage<Id> original) throws MailboxException;
+    protected abstract MessageMetaData copy(Mailbox mailbox, MessageUid uid, long modSeq, MailboxMessage original) throws MailboxException;
     
 }

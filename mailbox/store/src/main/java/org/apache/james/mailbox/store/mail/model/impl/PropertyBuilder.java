@@ -49,20 +49,35 @@ import java.util.TreeMap;
 
 import org.apache.james.mailbox.store.mail.model.Property;
 
+import com.google.common.base.Predicate;
+
 /**
  * Builds properties
  */
 public class PropertyBuilder {
-    
+
     private static final int INITIAL_CAPACITY = 32;
+    public static final String JAMES_INTERNALS = "JAMES_INTERNALS";
+    public static final String HAS_ATTACHMENT = "HAS_ATTACHMENT";
+
+    public static Predicate<Property> isHasAttachmentProperty() {
+        return new Predicate<Property>() {
+            @Override
+            public boolean apply(Property input) {
+                return input.getNamespace().equals(PropertyBuilder.JAMES_INTERNALS)
+                    && input.getLocalName().equals(PropertyBuilder.HAS_ATTACHMENT)
+                    && input.getValue().equals("true");
+            }
+        };
+    }
 
     private Long textualLineCount;
     private final List<SimpleProperty> properties;
 
-    public PropertyBuilder(final List<Property> props) {
+    public PropertyBuilder(List<Property> props) {
         textualLineCount = null;
         properties = new ArrayList<SimpleProperty>(props.size());
-        for (final Property property:props) {
+        for (Property property:props) {
             properties.add(new SimpleProperty(property));
         }
     }
@@ -98,7 +113,7 @@ public class PropertyBuilder {
      * @return value, 
      * or null when no property has the given name and namespace
      */
-    public String getFirstValue(final String namespace, final String localName) {
+    public String getFirstValue(String namespace, String localName) {
         String result = null;
         for (SimpleProperty property: properties) {
             if (property.isNamed(namespace, localName)) {
@@ -115,7 +130,7 @@ public class PropertyBuilder {
      * @param localName not null
      * @return not null
      */
-    public List<String> getValues(final String namespace, final String localName) {
+    public List<String> getValues(String namespace, String localName) {
         List<String> results = new ArrayList<String>();
         for (SimpleProperty property: properties) {
             if (property.isNamed(namespace, localName)) {
@@ -131,7 +146,7 @@ public class PropertyBuilder {
      * @param localName not null
      * @param value null to remove property
      */
-    public void setProperty(final String namespace, final String localName, final String value)
+    public void setProperty(String namespace, String localName, String value)
     {
         for (Iterator<SimpleProperty> it= properties.iterator();it.hasNext();) {
             final SimpleProperty property = it.next();
@@ -151,7 +166,7 @@ public class PropertyBuilder {
      * @param localName not null
      * @param values null to remove property
      */
-    public void setProperty(final String namespace, final String localName, final List<String> values)
+    public void setProperty(String namespace, String localName, List<String> values)
     {
         for (Iterator<SimpleProperty> it= properties.iterator();it.hasNext();) {
             final SimpleProperty property = it.next();
@@ -160,7 +175,7 @@ public class PropertyBuilder {
             }
         }
         if (values !=null) {
-            for(final String value:values) {
+            for(String value:values) {
                 properties.add(new SimpleProperty(namespace, localName, value));
             }
         }
@@ -171,9 +186,9 @@ public class PropertyBuilder {
      * @param namespace not null
      * @return values indexed by local name
      */
-    public SortedMap<String,String> getProperties(final String namespace) {
+    public SortedMap<String,String> getProperties(String namespace) {
         final SortedMap<String, String> parameters = new TreeMap<String, String>();
-        for (final SimpleProperty property : properties) {
+        for (SimpleProperty property : properties) {
             if (property.isInSpace(namespace)) {
                 parameters.put(property.getLocalName(), property.getValue());
             }
@@ -188,14 +203,14 @@ public class PropertyBuilder {
      * @param namespace not null
      * @param valuesByLocalName not null
      */
-    public void setProperties(final String namespace, final Map<String,String> valuesByLocalName) {
+    public void setProperties(String namespace, Map<String,String> valuesByLocalName) {
         for (Iterator<SimpleProperty> it= properties.iterator();it.hasNext();) {
             final SimpleProperty property = it.next();
             if (property.isInSpace(namespace)) {
                 it.remove();
             }
         }
-        for (final Map.Entry<String, String> valueByLocalName:valuesByLocalName.entrySet()) {
+        for (Map.Entry<String, String> valueByLocalName:valuesByLocalName.entrySet()) {
             properties.add(new SimpleProperty(namespace, valueByLocalName.getKey().toLowerCase(), valueByLocalName.getValue()));
         }
     }
@@ -218,7 +233,11 @@ public class PropertyBuilder {
     public void setMediaType(String value) {
         setProperty(MIME_MIME_TYPE_SPACE, MIME_MEDIA_TYPE_NAME, value);
     }
-    
+
+    public void setHasAttachment(boolean value) {
+        setProperty(JAMES_INTERNALS, HAS_ATTACHMENT, Boolean.toString(value));
+    }
+
     /**
      * Gets the MIME content subtype.
      * 
@@ -350,7 +369,7 @@ public class PropertyBuilder {
      * Parameter names will be normalised to lower case.
      * @param valuesByParameterName values indexed by parameter name
      */
-    public void setContentDispositionParameters(final Map<String,String> valuesByParameterName) {
+    public void setContentDispositionParameters(Map<String,String> valuesByParameterName) {
         setProperties(MIME_CONTENT_DISPOSITION_PARAMETER_SPACE, valuesByParameterName);
     }
     
@@ -367,7 +386,7 @@ public class PropertyBuilder {
      * Parameter names will be normalised to lower case.
      * @param valuesByParameterName values indexed by parameter name
      */
-    public void setContentTypeParameters(final Map<String,String> valuesByParameterName) {
+    public void setContentTypeParameters(Map<String,String> valuesByParameterName) {
         setProperties(MIME_CONTENT_TYPE_PARAMETER_SPACE, valuesByParameterName);
     }
     

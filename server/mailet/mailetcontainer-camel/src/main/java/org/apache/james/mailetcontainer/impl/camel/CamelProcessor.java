@@ -28,9 +28,12 @@ import org.apache.camel.Processor;
 import org.apache.james.mailetcontainer.impl.MailetConfigImpl;
 import org.apache.james.mailetcontainer.impl.ProcessorUtil;
 import org.apache.james.mailetcontainer.lib.AbstractStateMailetProcessor.MailetProcessorListener;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
 import org.apache.mailet.Mail;
 import org.apache.mailet.Mailet;
 import org.apache.mailet.MailetConfig;
+import org.apache.mailet.base.MailetPipelineLogging;
 import org.slf4j.Logger;
 
 /**
@@ -38,16 +41,19 @@ import org.slf4j.Logger;
  */
 public class CamelProcessor implements Processor {
 
+    private final MetricFactory metricFactory;
     private final Mailet mailet;
     private final Logger logger;
     private final CamelMailetProcessor processor;
 
     /**
      * Mailet to call on process
-     * 
+     *
+     * @param metricFactory
      * @param mailet
      */
-    public CamelProcessor(Mailet mailet, Logger logger, CamelMailetProcessor processor) {
+    public CamelProcessor(MetricFactory metricFactory, Mailet mailet, Logger logger, CamelMailetProcessor processor) {
+        this.metricFactory = metricFactory;
         this.mailet = mailet;
         this.logger = logger;
         this.processor = processor;
@@ -59,8 +65,10 @@ public class CamelProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         Mail mail = exchange.getIn().getBody(Mail.class);
         long start = System.currentTimeMillis();
+        TimeMetric timeMetric = metricFactory.timer(mailet.getClass().getSimpleName());
         MessagingException ex = null;
         try {
+            MailetPipelineLogging.logBeginOfMailetProcess(mailet, mail);
             mailet.service(mail);
         } catch (MessagingException me) {
             ex = me;
@@ -85,8 +93,13 @@ public class CamelProcessor implements Processor {
             }
 
         } finally {
+            timeMetric.stopAndPublish();
+            MailetPipelineLogging.logEndOfMailetProcess(mailet, mail);
             List<MailetProcessorListener> listeners = processor.getListeners();
             long complete = System.currentTimeMillis() - start;
+            if (mail.getRecipients().isEmpty()) {
+                mail.setState(Mail.GHOST);
+            }
             for (MailetProcessorListener listener : listeners) {
                 listener.afterMailet(mailet, mail.getName(), mail.getState(), complete, ex);
             }

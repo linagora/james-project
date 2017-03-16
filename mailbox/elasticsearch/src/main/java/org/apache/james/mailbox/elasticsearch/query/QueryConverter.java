@@ -19,21 +19,27 @@
 
 package org.apache.james.mailbox.elasticsearch.query;
 
-import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
-import org.apache.james.mailbox.model.SearchQuery;
-import org.elasticsearch.common.lang3.tuple.Pair;
-import org.elasticsearch.index.query.QueryBuilder;
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 import javax.inject.Inject;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
-import static org.elasticsearch.index.query.FilterBuilders.termFilter;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
+import org.apache.james.mailbox.MailboxSession.User;
+import org.apache.james.mailbox.elasticsearch.json.JsonMessageConstants;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
+import org.apache.james.mailbox.model.SearchQuery;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 
-public class QueryConverter implements Function<Pair<SearchQuery, String>, QueryBuilder> {
+import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
+
+public class QueryConverter {
 
 
     private final CriterionConverter criterionConverter;
@@ -43,20 +49,16 @@ public class QueryConverter implements Function<Pair<SearchQuery, String>, Query
         this.criterionConverter = criterionConverter;
     }
 
-    @Override
-    public QueryBuilder apply(Pair<SearchQuery, String> pair) {
-        return from(pair.getLeft(), pair.getRight());
+    public QueryBuilder from(List<User> users, MultimailboxesSearchQuery query) {
+        BoolQueryBuilder boolQueryBuilder = boolQuery()
+            .must(generateQueryBuilder(query.getSearchQuery()))
+            .filter(usersQuery(users));
+        mailboxesQuery(query.getInMailboxes()).map(boolQueryBuilder::filter);
+        mailboxesQuery(query.getNotInMailboxes()).map(boolQueryBuilder::mustNot);
+        return boolQueryBuilder;
     }
 
-    public QueryBuilder from(SearchQuery searchQuery, String mailboxUUID) {
-        return Stream.of(generateQueryBuilder(searchQuery))
-            .map((rep) -> addMailboxFilters(rep, mailboxUUID))
-            .map(this::getFinalQuery)
-            .findAny()
-            .get();
-    }
-
-    private FilteredQueryRepresentation generateQueryBuilder(SearchQuery searchQuery) {
+    private QueryBuilder generateQueryBuilder(SearchQuery searchQuery) {
         List<SearchQuery.Criterion> criteria = searchQuery.getCriterias();
         if (criteria.isEmpty()) {
             return criterionConverter.convertCriterion(SearchQuery.all());
@@ -67,18 +69,21 @@ public class QueryConverter implements Function<Pair<SearchQuery, String>, Query
         }
     }
 
-    private FilteredQueryRepresentation addMailboxFilters(FilteredQueryRepresentation elasticsearchQueryRepresentation, String mailboxUUID) {
-        return Stream.of(elasticsearchQueryRepresentation,
-            FilteredQueryRepresentation.fromFilter(termFilter(JsonMessageConstants.MAILBOX_ID, mailboxUUID)))
-            .collect(FilteredQueryCollector.collector(SearchQuery.Conjunction.AND));
+    private QueryBuilder usersQuery(List<User> users) {
+        ImmutableList<String> usernames = users.stream()
+                .map(User::getUserName)
+                .collect(Guavate.toImmutableList());
+        return termsQuery(JsonMessageConstants.USERS, usernames);
     }
 
-    private QueryBuilder getFinalQuery(FilteredQueryRepresentation filteredQueryRepresentation) {
-        QueryBuilder query = filteredQueryRepresentation.getQuery().orElse(matchAllQuery());
-        if (!filteredQueryRepresentation.getFilter().isPresent()) {
-            return query;
+    private Optional<QueryBuilder> mailboxesQuery(Collection<MailboxId> mailboxIds) {
+        if (mailboxIds.isEmpty()) {
+            return Optional.empty();
         }
-        return filteredQuery(query, filteredQueryRepresentation.getFilter().get());
+        ImmutableList<String> ids = mailboxIds.stream()
+                .map(MailboxId::serialize)
+                .collect(Guavate.toImmutableList());
+        return Optional.of(termsQuery(JsonMessageConstants.MAILBOX_ID, ids));
     }
 
 }

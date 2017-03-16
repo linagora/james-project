@@ -19,6 +19,7 @@
 package org.apache.james.mailbox.jpa;
 
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
@@ -30,34 +31,37 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
 import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMailboxMessage;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
-import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
 /**
  * Abstract base class which should be used from JPA implementations.
  */
-public class JPAMessageManager extends StoreMessageManager<JPAId> {
+public class JPAMessageManager extends StoreMessageManager {
     
-    public JPAMessageManager(MailboxSessionMapperFactory<JPAId> mapperFactory, final MessageSearchIndex<JPAId> index, 
-    			final MailboxEventDispatcher<JPAId> dispatcher, final MailboxPathLocker locker, 
-    			final Mailbox<JPAId> mailbox, MailboxACLResolver aclResolver, 
+    public JPAMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, 
+    			final MailboxEventDispatcher dispatcher, MailboxPathLocker locker, 
+    			final Mailbox mailbox, MailboxACLResolver aclResolver, 
     			GroupMembershipResolver groupMembershipResolver, QuotaManager quotaManager,
-                QuotaRootResolver quotaRootResolver) throws MailboxException {
+                QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory) throws MailboxException {
     	
         super(mapperFactory, index, dispatcher, locker, mailbox, aclResolver, groupMembershipResolver,
-            quotaManager, quotaRootResolver);
+            quotaManager, quotaRootResolver, messageParser, messageIdFactory);
     }
     
     @Override
-    protected MailboxMessage<JPAId> createMessage(Date internalDate, final int size, int bodyStartOctet, final SharedInputStream content,
-                                                  final Flags flags, PropertyBuilder propertyBuilder) throws MailboxException{
+    protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content,
+                                                  final Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException{
 
         return new JPAMailboxMessage((JPAMailbox) getMailboxEntity(), internalDate, size, flags, content,  bodyStartOctet,  propertyBuilder);
     }

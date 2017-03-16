@@ -38,7 +38,7 @@ public class ImapParserFactory implements ImapCommandParserFactory {
 
     private final StatusResponseFactory statusResponseFactory;
 
-    public ImapParserFactory(final StatusResponseFactory statusResponseFactory) {
+    public ImapParserFactory(StatusResponseFactory statusResponseFactory) {
         this.statusResponseFactory = statusResponseFactory;
         _imapCommands = new HashMap<String, Class<?>>();
 
@@ -107,6 +107,10 @@ public class ImapParserFactory implements ImapCommandParserFactory {
         _imapCommands.put(ImapConstants.GETQUOTA_COMMAND_NAME, GetQuotaCommandParser.class);
         _imapCommands.put(ImapConstants.SETQUOTA_COMMAND_NAME, SetQuotaCommandParser.class);
 
+        //RFC5464
+        //SETMETADATA, GETMETADATA
+        _imapCommands.put(ImapConstants.SETANNOTATION_COMMAND_NAME, SetAnnotationCommandParser.class);
+        _imapCommands.put(ImapConstants.GETANNOTATION_COMMAND_NAME, GetAnnotationCommandParser.class);
     }
 
     /**

@@ -19,35 +19,38 @@
 
 package org.apache.james.mailbox.store.mail.model;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.mail.Flags;
+import javax.mail.util.SharedByteArrayInputStream;
+
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
-import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.mail.Flags;
-import javax.mail.util.SharedByteArrayInputStream;
-
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
 public class MetadataMapAssertTest {
 
-    private static final Long UID = 18L;
+    private static final MessageUid UID = MessageUid.of(18);
+    private static final MessageId MESSAGE_ID = new DefaultMessageId();
     private static final Long MODSEQ = 24L;
     private static final Date DATE = new Date();
     private static final String HEADER_STRING = "name: headerName\n\n";
     private static final String BODY_STRING = "body\\n.\\n";
     private static final TestId MAILBOX_ID = TestId.of(12L);
 
-    private SimpleMailboxMessage<TestId> message1;
+    private SimpleMailboxMessage message1;
 
     @Before
     public void setUp() {
-        message1 = new SimpleMailboxMessage<TestId>(DATE, HEADER_STRING.length() + BODY_STRING.length(),
+        message1 = new SimpleMailboxMessage(MESSAGE_ID, DATE, HEADER_STRING.length() + BODY_STRING.length(),
             HEADER_STRING.length(), new SharedByteArrayInputStream((HEADER_STRING + BODY_STRING).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
         message1.setUid(UID);
         message1.setModSeq(MODSEQ);
@@ -55,31 +58,31 @@ public class MetadataMapAssertTest {
 
     @Test
     public void metadataMapAssertShouldSucceedWhenContainingRightMetadata() {
-        Map<Long, MessageMetaData> metaDataMap = new HashMap<Long, MessageMetaData>();
-        metaDataMap.put(18L, new SimpleMessageMetaData(UID, MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length(), DATE));
+        Map<MessageUid, MessageMetaData> metaDataMap = new HashMap<MessageUid, MessageMetaData>();
+        metaDataMap.put(UID, new SimpleMessageMetaData(UID, MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length(), DATE, MESSAGE_ID));
         MetadataMapAssert.assertThat(metaDataMap).containsMetadataForMessages(message1);
     }
 
     @Test(expected = AssertionError.class)
     public void metadataMapAssertShouldFailWhenUidMismatch() {
-        Map<Long, MessageMetaData> metaDataMap = new HashMap<Long, MessageMetaData>();
-        metaDataMap.put(18L, new SimpleMessageMetaData(UID + 1, MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length(), DATE));
+        Map<MessageUid, MessageMetaData> metaDataMap = new HashMap<MessageUid, MessageMetaData>();
+        metaDataMap.put(UID, new SimpleMessageMetaData(UID.next(), MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length(), DATE, MESSAGE_ID));
         MetadataMapAssert.assertThat(metaDataMap).containsMetadataForMessages(message1);
     }
 
     @Test(expected = AssertionError.class)
     public void metadataMapAssertShouldFailWhenDateMismatch() {
-        Map<Long, MessageMetaData> metaDataMap = new HashMap<Long, MessageMetaData>();
+        Map<MessageUid, MessageMetaData> metaDataMap = new HashMap<MessageUid, MessageMetaData>();
         Date date = new Date();
         date.setTime(DATE.getTime() + 100L);
-        metaDataMap.put(18L, new SimpleMessageMetaData(UID, MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length(), date));
+        metaDataMap.put(UID, new SimpleMessageMetaData(UID, MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length(), date, MESSAGE_ID));
         MetadataMapAssert.assertThat(metaDataMap).containsMetadataForMessages(message1);
     }
 
     @Test(expected = AssertionError.class)
     public void metadataMapAssertShouldFailWhenSizeMismatch() {
-        Map<Long, MessageMetaData> metaDataMap = new HashMap<Long, MessageMetaData>();
-        metaDataMap.put(18L, new SimpleMessageMetaData(UID , MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length() + 1, DATE));
+        Map<MessageUid, MessageMetaData> metaDataMap = new HashMap<MessageUid, MessageMetaData>();
+        metaDataMap.put(UID, new SimpleMessageMetaData(UID , MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length() + 1, DATE, MESSAGE_ID));
         MetadataMapAssert.assertThat(metaDataMap).containsMetadataForMessages(message1);
     }
 

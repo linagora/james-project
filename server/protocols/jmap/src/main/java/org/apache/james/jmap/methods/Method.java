@@ -19,7 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
-import static com.google.common.base.Objects.toStringHelper;
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -31,6 +31,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 
 public interface Method {
+
+    String JMAP_PREFIX = "JMAP-";
 
     interface Request {
 

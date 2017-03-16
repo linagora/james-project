@@ -19,13 +19,17 @@
 
 package org.apache.james.mailetcontainer.impl.camel;
 
+import static org.mockito.Mockito.mock;
+
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.mailetcontainer.api.MailProcessor;
 import org.apache.james.mailetcontainer.api.mock.MockMailetContext;
 import org.apache.james.mailetcontainer.api.mock.MockMailetLoader;
 import org.apache.james.mailetcontainer.api.mock.MockMatcherLoader;
 import org.apache.james.mailetcontainer.lib.AbstractStateMailetProcessor;
 import org.apache.james.mailetcontainer.lib.AbstractStateMailetProcessorTest;
+import org.apache.james.metrics.api.NoopMetricFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +39,7 @@ public class CamelMailetProcessorTest extends AbstractStateMailetProcessorTest {
     protected AbstractStateMailetProcessor createProcessor(HierarchicalConfiguration configuration) throws Exception {
         CamelMailetProcessor processor = null;
         try {
-            processor = new CamelMailetProcessor();
+            processor = new CamelMailetProcessor(new NoopMetricFactory());
             Logger log = LoggerFactory.getLogger("MockLog");
             // slf4j can't set programmatically any log level. It's just a
             // facade
@@ -45,6 +49,7 @@ public class CamelMailetProcessorTest extends AbstractStateMailetProcessorTest {
             processor.setMailetContext(new MockMailetContext());
             processor.setMailetLoader(new MockMailetLoader());
             processor.setMatcherLoader(new MockMatcherLoader());
+            processor.setRootMailProcessor(mock(MailProcessor.class));
             processor.configure(configuration);
             processor.init();
             return processor;

@@ -19,6 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -26,46 +27,43 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.GetMailboxesRequest;
 import org.apache.james.jmap.model.GetMailboxesResponse;
+import org.apache.james.jmap.model.MailboxFactory;
 import org.apache.james.jmap.model.MailboxProperty;
 import org.apache.james.jmap.model.mailbox.Mailbox;
-import org.apache.james.jmap.model.mailbox.Role;
-import org.apache.james.jmap.model.mailbox.SortOrder;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
-import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.metrics.api.TimeMetric;
+import org.apache.james.util.OptionalConverter;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
-public class GetMailboxesMethod<Id extends MailboxId> implements Method {
+public class GetMailboxesMethod implements Method {
 
-    private static final boolean DONT_RESET_RECENT = false;
-    private static final Logger LOGGER = LoggerFactory.getLogger(GetMailboxesMethod.class);
     private static final Method.Request.Name METHOD_NAME = Method.Request.name("getMailboxes");
     private static final Method.Response.Name RESPONSE_NAME = Method.Response.name("mailboxes");
 
     private final MailboxManager mailboxManager; 
-    private final MailboxMapperFactory<Id> mailboxMapperFactory;
+    private final MailboxFactory mailboxFactory;
+    private final MetricFactory metricFactory;
 
     @Inject
-    @VisibleForTesting public GetMailboxesMethod(MailboxManager mailboxManager, MailboxMapperFactory<Id> mailboxMapperFactory) {
+    @VisibleForTesting public GetMailboxesMethod(MailboxManager mailboxManager, MailboxFactory mailboxFactory, MetricFactory metricFactory) {
         this.mailboxManager = mailboxManager;
-        this.mailboxMapperFactory = mailboxMapperFactory;
+        this.mailboxFactory = mailboxFactory;
+        this.metricFactory = metricFactory;
     }
 
     @Override
@@ -81,69 +79,58 @@ public class GetMailboxesMethod<Id extends MailboxId> implements Method {
     public Stream<JmapResponse> process(JmapRequest request, ClientId clientId, MailboxSession mailboxSession) {
         Preconditions.checkArgument(request instanceof GetMailboxesRequest);
         GetMailboxesRequest mailboxesRequest = (GetMailboxesRequest) request;
-        return Stream.of(
-                JmapResponse.builder().clientId(clientId)
-                .response(getMailboxesResponse(mailboxSession))
-                .properties(mailboxesRequest.getProperties().map(this::ensureContainsId))
-                .responseName(RESPONSE_NAME)
-                .build());
+        TimeMetric timeMetric = metricFactory.timer(JMAP_PREFIX + METHOD_NAME.getName());
+        try {
+            return Stream.of(
+                    JmapResponse.builder().clientId(clientId)
+                    .response(getMailboxesResponse(mailboxesRequest, mailboxSession))
+                    .properties(mailboxesRequest.getProperties().map(this::ensureContainsId))
+                    .responseName(RESPONSE_NAME)
+                    .build());
+        } finally {
+            timeMetric.stopAndPublish();
+        }
     }
 
     private Set<MailboxProperty> ensureContainsId(Set<MailboxProperty> input) {
         return Sets.union(input, ImmutableSet.of(MailboxProperty.ID)).immutableCopy();
     }
 
-    private GetMailboxesResponse getMailboxesResponse(MailboxSession mailboxSession) {
+    private GetMailboxesResponse getMailboxesResponse(GetMailboxesRequest mailboxesRequest, MailboxSession mailboxSession) {
         GetMailboxesResponse.Builder builder = GetMailboxesResponse.builder();
         try {
-            retrieveUserMailboxes(mailboxSession)
-                .stream()
-                .map(MailboxMetaData::getPath)
-                .map(mailboxPath -> mailboxFromMailboxPath(mailboxPath, mailboxSession))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .sorted((m1, m2) -> Integer.compare(m1.getSortOrder(), m2.getSortOrder()))
-                .forEach(mailbox -> builder.add(mailbox));
+            Optional<ImmutableList<MailboxId>> mailboxIds = mailboxesRequest.getIds();
+            retrieveMailboxes(mailboxIds, mailboxSession)
+                .sorted(Comparator.comparing(Mailbox::getSortOrder))
+                .forEach(builder::add);
             return builder.build();
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
         }
     }
-    
-    private List<MailboxMetaData> retrieveUserMailboxes(MailboxSession session) throws MailboxException {
-        return mailboxManager.search(
-                MailboxQuery.builder(session).privateUserMailboxes().build(),
-                session);
-    }
 
-    private Optional<Mailbox> mailboxFromMailboxPath(MailboxPath mailboxPath, MailboxSession mailboxSession) {
-        try {
-            Optional<Role> role = Role.from(mailboxPath.getName());
-            MessageManager.MetaData mailboxMetaData = getMailboxMetaData(mailboxPath, mailboxSession);
-            return Optional.ofNullable(Mailbox.builder()
-                    .id(getMailboxId(mailboxPath, mailboxSession))
-                    .name(mailboxPath.getName())
-                    .role(role)
-                    .unreadMessages(mailboxMetaData.getUnseenCount())
-                    .totalMessages(mailboxMetaData.getMessageCount())
-                    .sortOrder(SortOrder.getSortOrder(role))
-                    .build());
-        } catch (MailboxException e) {
-            LOGGER.warn("Cannot find mailbox for :" + mailboxPath.getName(), e);
-            return Optional.empty();
+    private Stream<Mailbox> retrieveMailboxes(Optional<ImmutableList<MailboxId>> mailboxIds, MailboxSession mailboxSession) throws MailboxException {
+        if (mailboxIds.isPresent()) {
+            return mailboxIds.get()
+                .stream()
+                .map(mailboxId -> mailboxFactory.builder()
+                        .id(mailboxId)
+                        .session(mailboxSession)
+                        .build())
+                .flatMap(OptionalConverter::toStream);
+        } else {
+            List<MailboxMetaData> userMailboxes = mailboxManager.search(
+                MailboxQuery.builder(mailboxSession).privateUserMailboxes().build(),
+                mailboxSession);
+            return userMailboxes
+                .stream()
+                .map(MailboxMetaData::getId)
+                .map(mailboxId -> mailboxFactory.builder()
+                        .id(mailboxId)
+                        .session(mailboxSession)
+                        .usingPreloadedMailboxesMetadata(userMailboxes)
+                        .build())
+                .flatMap(OptionalConverter::toStream);
         }
     }
-
-    private String getMailboxId(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
-        return mailboxMapperFactory.getMailboxMapper(mailboxSession)
-                .findMailboxByPath(mailboxPath)
-                .getMailboxId()
-                .serialize();
-    }
-
-    private MessageManager.MetaData getMailboxMetaData(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
-        return mailboxManager.getMailbox(mailboxPath, mailboxSession)
-                .getMetaData(DONT_RESET_RECENT, mailboxSession, FetchGroup.UNSEEN_COUNT);
-    }
-
 }

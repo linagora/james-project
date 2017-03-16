@@ -45,6 +45,7 @@ import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.protocols.api.Encryption;
 import org.apache.james.protocols.lib.jmx.ServerMBean;
 import org.apache.james.protocols.netty.AbstractAsyncServer;
+import org.apache.james.protocols.netty.ChannelHandlerFactory;
 import org.apache.james.util.concurrent.JMXEnabledThreadPoolExecutor;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -110,10 +111,12 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     private final ConnectionCountHandler countHandler = new ConnectionCountHandler();
 
     private ExecutionHandler executionHandler = null;
+    private ChannelHandlerFactory frameHandlerFactory;
 
     private int maxExecutorThreads;
 
     private MBeanServer mbeanServer;
+
 
     @Inject
     public final void setFileSystem(FileSystem filesystem) {
@@ -176,7 +179,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
             if (!ip.equals("0.0.0.0")) {
                 try {
                     ip = InetAddress.getByName(ip).getHostName();
-                } catch (final UnknownHostException unhe) {
+                } catch (UnknownHostException unhe) {
                     throw new ConfigurationException("Malformed bind parameter in configuration of service " + getServiceType(), unhe);
                 }
             }
@@ -268,6 +271,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
             buildSSLContext();
             preInit();
             executionHandler = createExecutionHander();
+            frameHandlerFactory = createFrameHandlerFactory();
             bind();
 
             mbeanServer = ManagementFactory.getPlatformMBeanServer();
@@ -466,12 +470,12 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     
     @Override
     protected Executor createBossExecutor() {
-        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), "boss");
+        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), getDefaultJMXName() + "-boss");
     }
 
     @Override
     protected Executor createWorkerExecutor() {
-        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), "worker");
+        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), getDefaultJMXName() + "-worker");
     }
 
     /**
@@ -561,8 +565,10 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
      * @return ehandler
      */
     protected ExecutionHandler createExecutionHander() {
-        return new ExecutionHandler(new JMXEnabledOrderedMemoryAwareThreadPoolExecutor(maxExecutorThreads, 0, 0, getThreadPoolJMXPath(), "executor"));
+        return new ExecutionHandler(new JMXEnabledOrderedMemoryAwareThreadPoolExecutor(maxExecutorThreads, 0, 0, getThreadPoolJMXPath(), getDefaultJMXName() + "-executor"));
     }
+
+    protected abstract ChannelHandlerFactory createFrameHandlerFactory();
 
     /**
      * Return the {@link ExecutionHandler} or null if non should be used. Be sure you call {@link #createExecutionHander()} before
@@ -573,11 +579,15 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         return executionHandler;
     }
     
+    protected ChannelHandlerFactory getFrameHandlerFactory() {
+        return frameHandlerFactory;
+    }
+
     protected abstract ChannelUpstreamHandler createCoreHandler();
     
     @Override
     protected ChannelPipelineFactory createPipelineFactory(ChannelGroup group) {
-        return new AbstractExecutorAwareChannelPipelineFactory(getTimeout(), connectionLimit, connPerIP, group, enabledCipherSuites, getExecutionHandler()) {
+        return new AbstractExecutorAwareChannelPipelineFactory(getTimeout(), connectionLimit, connPerIP, group, enabledCipherSuites, getExecutionHandler(), getFrameHandlerFactory()) {
             @Override
             protected SSLContext getSSLContext() {
                 if (encryption == null) {

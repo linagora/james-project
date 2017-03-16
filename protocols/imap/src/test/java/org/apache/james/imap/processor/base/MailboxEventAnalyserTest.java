@@ -26,12 +26,13 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.mail.Flags;
 
@@ -45,26 +46,40 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.Headers;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLCommand;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLEntryKey;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRight;
 import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
+import org.apache.james.mailbox.model.MailboxAnnotation;
+import org.apache.james.mailbox.model.MailboxAnnotationKey;
+import org.apache.james.mailbox.model.MailboxCounters;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.MessageAttachment;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
 import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.MimeDescriptor;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.junit.Test;
 import org.slf4j.Logger;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 
 public class MailboxEventAnalyserTest {
 
@@ -73,8 +88,26 @@ public class MailboxEventAnalyserTest {
     
     private MailboxPath mailboxPath = new MailboxPath("namespace", "user", "name");
     private final MailboxManager mockManager = new MailboxManager() {
+
+        @Override
+        public EnumSet<MailboxCapabilities> getSupportedMailboxCapabilities() {
+            return EnumSet.noneOf(MailboxCapabilities.class);
+        }
+
+        @Override
+        public EnumSet<MessageCapabilities> getSupportedMessageCapabilities() {
+            return EnumSet.noneOf(MessageCapabilities.class);
+        }
         
+        @Override
+        public EnumSet<SearchCapabilities> getSupportedSearchCapabilities() {
+            return EnumSet.noneOf(SearchCapabilities.class);
+        }
         
+        public boolean hasCapability(MailboxCapabilities capability) {
+            return false;
+        }
+
         public void removeListener(MailboxPath mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException {
             
         }
@@ -129,7 +162,7 @@ public class MailboxEventAnalyserTest {
         }
         
         
-        public MailboxSession login(String userid, String passwd, Logger log) throws BadCredentialsException, MailboxException {
+        public MailboxSession login(String userid, String passwd, Logger log) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
 
         }
@@ -143,46 +176,42 @@ public class MailboxEventAnalyserTest {
         public MessageManager getMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
             return new MessageManager() {
 
-                
                 public long getMessageCount(MailboxSession mailboxSession) throws MailboxException {
                     return 1;
                 }
 
-                
+                @Override
+                public MailboxCounters getMailboxCounters(MailboxSession mailboxSession) throws MailboxException {
+                    throw new UnsupportedOperationException("Not implemented");
+                }
+
                 public boolean isWriteable(MailboxSession session) {
                     return false;
                 }
 
-                
                 public boolean isModSeqPermanent(MailboxSession session) {
                     return false;
                 }
 
-                
-                public Iterator<Long> search(SearchQuery searchQuery, MailboxSession mailboxSession) throws MailboxException {
+                @Override
+                public Iterator<MessageUid> search(SearchQuery searchQuery, MailboxSession mailboxSession) throws MailboxException {
                     throw new UnsupportedOperationException("Not implemented");
-
                 }
 
-                
-                public Iterator<Long> expunge(MessageRange set, MailboxSession mailboxSession) throws MailboxException {
+                @Override
+                public Iterator<MessageUid> expunge(MessageRange set, MailboxSession mailboxSession) throws MailboxException {
                     throw new UnsupportedOperationException("Not implemented");
-
                 }
 
-                
-                public Map<Long, Flags> setFlags(Flags flags, FlagsUpdateMode mode, MessageRange set, MailboxSession mailboxSession) throws MailboxException {
+                @Override
+                public Map<MessageUid, Flags> setFlags(Flags flags, FlagsUpdateMode mode, MessageRange set, MailboxSession mailboxSession) throws MailboxException {
                     throw new UnsupportedOperationException("Not implemented");
-
+                }
+                
+                public ComposedMessageId appendMessage(InputStream msgIn, Date internalDate, MailboxSession mailboxSession, boolean isRecent, Flags flags) throws MailboxException {
+                    throw new UnsupportedOperationException("Not implemented");
                 }
 
-                
-                public long appendMessage(InputStream msgIn, Date internalDate, MailboxSession mailboxSession, boolean isRecent, Flags flags) throws MailboxException {
-                    throw new UnsupportedOperationException("Not implemented");
-
-                }
-
-                
                 public MessageResultIterator getMessages(MessageRange set, FetchGroup fetchGroup, MailboxSession mailboxSession) throws MailboxException {
                     return new MessageResultIterator() {
                         boolean done = false;
@@ -190,148 +219,147 @@ public class MailboxEventAnalyserTest {
                         public void remove() {
                             throw new UnsupportedOperationException("Not implemented");
                         }
-                        
-                        
+
                         public MessageResult next() {
                             done = true;
                             return new MessageResult() {
 
-                                
+                                @Override
+                                public MailboxId getMailboxId() {
+                                    return TestId.of(36);
+                                }
+
                                 public int compareTo(MessageResult o) {
                                     return 0;
                                 }
 
-                                
-                                public long getUid() {
-                                    return 1;
+                                @Override
+                                public MessageUid getUid() {
+                                    return MessageUid.of(1);
                                 }
 
+                                @Override
+                                public MessageId getMessageId() {
+                                    return new DefaultMessageId();
+                                };
                                 
                                 public long getModSeq() {
                                     return 0;
                                 }
-
                                 
                                 public Flags getFlags() {
                                     return new Flags();
                                 }
 
-                                
                                 public long getSize() {
                                     return 0;
                                 }
-
                                 
                                 public Date getInternalDate() {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
 
-                                
                                 public MimeDescriptor getMimeDescriptor() throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
                                 }
-
                                 
                                 public Iterator<Header> iterateHeaders(MimePath path) throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
-
                                 
                                 public Iterator<Header> iterateMimeHeaders(MimePath path) throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
                                 }
-
                                 
                                 public Content getFullContent() throws MailboxException, IOException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
-
                                 
                                 public Content getFullContent(MimePath path) throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
 
-                                
                                 public Content getBody() throws MailboxException, IOException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
 
-                                
                                 public Content getBody(MimePath path) throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
 
-                                
                                 public Content getMimeBody(MimePath path) throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
 
-                                
                                 public Headers getHeaders() throws MailboxException {
                                     throw new UnsupportedOperationException("Not implemented");
-
                                 }
                                 
+                                public List<MessageAttachment> getAttachments() {
+                                    throw new UnsupportedOperationException("Not implemented");
+                                }
                             };
                         }
-                        
                         
                         public boolean hasNext() {
                             return !done;
                         }
-                        
-                        
+
                         public MailboxException getException() {
                             return null;
                         }
                     };
                 }
-
                 
                 public MetaData getMetaData(boolean resetRecent, MailboxSession mailboxSession, org.apache.james.mailbox.MessageManager.MetaData.FetchGroup fetchGroup) throws MailboxException {
                     throw new UnsupportedOperationException("Not implemented");
+                }
+                
+                public MailboxId getId() {
+                    return null;
+                }
+                
+                public MailboxPath getMailboxPath() {
+                    return null;
+                }
 
+                @Override
+                public Flags getApplicableFlag(MailboxSession session) throws MailboxException {
+                    throw new NotImplementedException();
                 }
             };
         }
-        
+
+        public MessageManager getMailbox(MailboxId mailboxId, MailboxSession session) throws MailboxException {
+            return getMailbox((MailboxPath)null, session);
+        }
         
         public char getDelimiter() {
             return '.';
         }
-        
-        
+
         public void deleteMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
-
         }
         
-        
-        public MailboxSession createSystemSession(String userName, Logger log) throws BadCredentialsException, MailboxException {
+        public MailboxSession createSystemSession(String userName, Logger log) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
         }
         
-        
-        public void createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
+        public Optional<MailboxId> createMailbox(MailboxPath mailboxPath, MailboxSession mailboxSession) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
-            
         }
-        
         
         public List<MessageRange> copyMessages(MessageRange set, MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
-
         }
+
+        public java.util.List<MessageRange> copyMessages(MessageRange set, MailboxId from, MailboxId to, MailboxSession session) throws MailboxException {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+        
         public List<MessageRange> moveMessages(MessageRange set, MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException {
             throw new UnsupportedOperationException("Not implemented");
-
         }
 
         public boolean hasRight(MailboxPath mailboxPath, MailboxACLRight mailboxACLRight, MailboxSession mailboxSession) throws MailboxException {
@@ -350,6 +378,50 @@ public class MailboxEventAnalyserTest {
                 MailboxACLCommand mailboxACLCommand, MailboxSession session)
                 throws MailboxException {
             throw new NotImplementedException("Not implemented");
+        }
+
+        @Override
+        public List<MailboxAnnotation> getAllAnnotations(MailboxPath mailboxPath, MailboxSession session)
+                throws MailboxException {
+            return null;
+        }
+
+        @Override
+        public List<MailboxAnnotation> getAnnotationsByKeys(MailboxPath mailboxPath, MailboxSession session,
+                Set<MailboxAnnotationKey> keys) throws MailboxException {
+            return null;
+        }
+
+        @Override
+        public void updateAnnotations(MailboxPath mailboxPath, MailboxSession session,
+                List<MailboxAnnotation> mailboxAnnotations) throws MailboxException {
+        }
+
+        @Override
+        public List<MessageId> search(MultimailboxesSearchQuery expression, MailboxSession session, long limit) throws MailboxException {
+            return null;
+        }
+
+        @Override
+        public List<MailboxAnnotation> getAnnotationsByKeysWithOneDepth(MailboxPath mailboxPath, MailboxSession session,
+                Set<MailboxAnnotationKey> keys) throws MailboxException {
+            return null;
+        }
+
+        @Override
+        public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxPath mailboxPath, MailboxSession session,
+                Set<MailboxAnnotationKey> keys) throws MailboxException {
+            return null;
+        }
+
+        @Override
+        public boolean hasChildren(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+            return false;
+        }
+
+        @Override
+        public MailboxSession loginAsOtherUser(String adminUserId, String passwd, String realUserId, Logger log) throws BadCredentialsException, MailboxException {
+            throw new UnsupportedOperationException("Not implemented");
         }
     };
     
@@ -518,7 +590,7 @@ public class MailboxEventAnalyserTest {
         
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
-        analyser.event(new FakeMailboxListenerAdded(mSession, Arrays.asList(11L), mailboxPath));
+        analyser.event(new FakeMailboxListenerAdded(mSession, ImmutableList.of(MessageUid.of(11)), mailboxPath));
         assertTrue(analyser.isSizeChanged());
     }
 
@@ -530,7 +602,7 @@ public class MailboxEventAnalyserTest {
         
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
-        analyser.event(new FakeMailboxListenerAdded(mSession,  Arrays.asList(11L), mailboxPath));
+        analyser.event(new FakeMailboxListenerAdded(mSession,  ImmutableList.of(MessageUid.of(11)), mailboxPath));
         analyser.resetEvents();
         assertFalse(analyser.isSizeChanged());
     }
@@ -543,8 +615,15 @@ public class MailboxEventAnalyserTest {
         
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
-        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(
-                mSession,  Arrays.asList(90L),  Arrays.asList(new UpdatedFlags(90, -1, new Flags(), new Flags())), mailboxPath);
+        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(mSession,
+            ImmutableList.of(MessageUid.of(90L)),
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(MessageUid.of(90))
+                .modSeq(-1)
+                .oldFlags(new Flags())
+                .newFlags(new Flags())
+                .build()),
+            mailboxPath);
         analyser.event(update);
         assertNotNull(analyser.flagUpdateUids());
         assertFalse(analyser.flagUpdateUids().iterator().hasNext());
@@ -552,32 +631,46 @@ public class MailboxEventAnalyserTest {
 
     @Test
     public void testShouldSetUidWhenSystemFlagChange() throws Exception {
-        final long uid = 900L;
+        final MessageUid uid = MessageUid.of(900);
         MyMailboxSession mSession = new MyMailboxSession(11);
         
         MyImapSession imapsession = new MyImapSession(mSession);
         
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
-        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(
-                new MyMailboxSession(41), Arrays.asList(uid), Arrays.asList(new UpdatedFlags(uid, -1, new Flags(), new Flags(Flags.Flag.ANSWERED))), mailboxPath);
+        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(new MyMailboxSession(41),
+            ImmutableList.of(uid),
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(uid)
+                .modSeq(-1)
+                .oldFlags(new Flags())
+                .newFlags(new Flags(Flags.Flag.ANSWERED))
+                .build()),
+            mailboxPath);
         analyser.event(update);
-        final Iterator<Long> iterator = analyser.flagUpdateUids().iterator();
+        final Iterator<MessageUid> iterator = analyser.flagUpdateUids().iterator();
         assertNotNull(iterator);
         assertTrue(iterator.hasNext());
-        assertEquals(new Long(uid), iterator.next());
+        assertEquals(uid, iterator.next());
         assertFalse(iterator.hasNext());
     }
 
     @Test
     public void testShouldClearFlagUidsUponReset() throws Exception {
-        final long uid = 900L;
+        final MessageUid uid = MessageUid.of(900);
         MyMailboxSession mSession = new MyMailboxSession(11);
         MyImapSession imapsession = new MyImapSession(mSession);
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
-        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(
-                mSession, Arrays.asList(uid), Arrays.asList(new UpdatedFlags(uid, -1, new Flags(), new Flags(Flags.Flag.ANSWERED))), mailboxPath);
+        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(mSession,
+            ImmutableList.of(uid),
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(uid)
+                .modSeq(-1)
+                .oldFlags(new Flags())
+                .newFlags(new Flags(Flags.Flag.ANSWERED))
+                .build()),
+            mailboxPath);
         analyser.event(update);
         analyser.event(update);
         analyser.deselect();
@@ -588,21 +681,28 @@ public class MailboxEventAnalyserTest {
     @Test
     public void testShouldSetUidWhenSystemFlagChangeDifferentSessionInSilentMode()
             throws Exception {
-        final long uid = 900L;
+        final MessageUid uid = MessageUid.of(900);
         
         MyMailboxSession mSession = new MyMailboxSession(11);
         MyImapSession imapsession = new MyImapSession(mSession);
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
-        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(
-                new MyMailboxSession(BASE_SESSION_ID), Arrays.asList(uid), Arrays.asList(new UpdatedFlags(uid, -1, new Flags(), new Flags(Flags.Flag.ANSWERED))), mailboxPath);
+        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(new MyMailboxSession(BASE_SESSION_ID),
+            ImmutableList.of(uid),
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(uid)
+                .modSeq(-1)
+                .oldFlags(new Flags())
+                .newFlags(new Flags(Flags.Flag.ANSWERED))
+                .build()),
+            mailboxPath);
         analyser.event(update);
         analyser.setSilentFlagChanges(true);
         analyser.event(update);
-        final Iterator<Long> iterator = analyser.flagUpdateUids().iterator();
+        final Iterator<MessageUid> iterator = analyser.flagUpdateUids().iterator();
         assertNotNull(iterator);
         assertTrue(iterator.hasNext());
-        assertEquals(new Long(uid), iterator.next());
+        assertEquals(uid, iterator.next());
         assertFalse(iterator.hasNext());
     }
 
@@ -614,12 +714,19 @@ public class MailboxEventAnalyserTest {
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
         
         
-        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(
-                mSession, Arrays.asList(345L), Arrays.asList(new UpdatedFlags(345, -1, new Flags(), new Flags())), mailboxPath);
+        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(mSession,
+            ImmutableList.of(MessageUid.of(345)),
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(MessageUid.of(345))
+                .modSeq(-1)
+                .oldFlags(new Flags())
+                .newFlags(new Flags())
+                .build()),
+            mailboxPath);
         analyser.event(update);
         analyser.setSilentFlagChanges(true);
         analyser.event(update);
-        final Iterator<Long> iterator = analyser.flagUpdateUids().iterator();
+        final Iterator<MessageUid> iterator = analyser.flagUpdateUids().iterator();
         assertNotNull(iterator);
         assertFalse(iterator.hasNext());
     }
@@ -629,20 +736,20 @@ public class MailboxEventAnalyserTest {
         MyMailboxSession mSession = new MyMailboxSession(BASE_SESSION_ID);
         MyImapSession imapsession = new MyImapSession(mSession);
         SelectedMailboxImpl analyser = new SelectedMailboxImpl(mockManager, imapsession, mailboxPath);
-        
-        
-        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(
-                mSession, Arrays.asList(886L), Arrays.asList(new UpdatedFlags(886, -1, new Flags(), new Flags(Flags.Flag.RECENT))), mailboxPath);
+
+
+        final FakeMailboxListenerFlagsUpdate update = new FakeMailboxListenerFlagsUpdate(mSession,
+            ImmutableList.of(MessageUid.of(886)),
+            ImmutableList.of(UpdatedFlags.builder()
+                .uid(MessageUid.of(886))
+                .modSeq(-1)
+                .oldFlags(new Flags())
+                .newFlags(new Flags(Flags.Flag.RECENT))
+                .build()),
+            mailboxPath);
         analyser.event(update);
-        final Iterator<Long> iterator = analyser.flagUpdateUids().iterator();
+        final Iterator<MessageUid> iterator = analyser.flagUpdateUids().iterator();
         assertNotNull(iterator);
         assertFalse(iterator.hasNext());
-    }
-
-    /**
-     * @see org.apache.james.mailbox.MessageManager#myRights(org.apache.james.mailbox.MailboxSession)
-     */
-    public MailboxACLRights myRights(MailboxSession session) throws MailboxException {
-        return null;
     }
 }

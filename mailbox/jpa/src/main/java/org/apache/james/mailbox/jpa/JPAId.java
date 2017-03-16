@@ -18,9 +18,16 @@
  ****************************************************************/
 package org.apache.james.mailbox.jpa;
 
-import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.model.MailboxId;
 
 public class JPAId implements MailboxId {
+
+    public static class Factory implements MailboxId.Factory {
+        @Override
+        public JPAId fromString(String serialized) {
+            return of(Long.valueOf(serialized));
+        }
+    }
 
     public static JPAId of(long value) {
         return new JPAId(value);

@@ -25,11 +25,16 @@ import java.util.Iterator;
 
 import org.apache.james.domainlist.api.mock.SimpleDomainList;
 import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.james.user.api.AlreadyExistInUsersRepositoryException;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.api.model.User;
+import org.apache.mailet.MailAddress;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 
 public abstract class AbstractUsersRepositoryTest {
@@ -49,6 +54,7 @@ public abstract class AbstractUsersRepositoryTest {
     private String user1;
     private String user2;
     private String user3;
+    private String admin;
     
     @Before 
     public void setUp() throws Exception { 
@@ -59,6 +65,7 @@ public abstract class AbstractUsersRepositoryTest {
         user1 = login("username");
         user2 = login("username2");
         user3 = login("username3");
+        admin = login("admin");
     }
 
     @After
@@ -142,7 +149,7 @@ public abstract class AbstractUsersRepositoryTest {
         assertThat(usersRepository.contains(user3)).isTrue();
     }
     
-    @Test(expected = UsersRepositoryException.class)
+    @Test(expected = AlreadyExistInUsersRepositoryException.class)
     public void addUserShouldThrowWhenSameUsernameWithDifferentCase() throws UsersRepositoryException {
         //Given
         usersRepository.addUser(login("myUsername"), "password");
@@ -150,7 +157,7 @@ public abstract class AbstractUsersRepositoryTest {
         usersRepository.addUser(login("MyUsername"), "password"); 
     }
     
-    @Test(expected = UsersRepositoryException.class)
+    @Test(expected = AlreadyExistInUsersRepositoryException.class)
     public void addUserShouldThrowWhenUserAlreadyPresentInRepository() throws UsersRepositoryException {
         //Given
         usersRepository.addUser(user1, "password");
@@ -298,8 +305,48 @@ public abstract class AbstractUsersRepositoryTest {
         usersRepository.updateUser(user);
     }
 
+    @Test
+    public void virtualHostedUsersRepositoryShouldUseFullMailAddressAsUsername() throws Exception {
+        usersRepository.setEnableVirtualHosting(true);
+
+        // Some implementations do not support changing virtual hosting value
+        Assume.assumeTrue(usersRepository.supportVirtualHosting());
+
+        assertThat(usersRepository.getUser(new MailAddress("local@domain"))).isEqualTo("local@domain");
+    }
+
+    @Test
+    public void nonVirtualHostedUsersRepositoryShouldUseLocalPartAsUsername() throws Exception {
+        usersRepository.setEnableVirtualHosting(false);
+
+        // Some implementations do not support changing virtual hosting value
+        Assume.assumeFalse(usersRepository.supportVirtualHosting());
+
+        assertThat(usersRepository.getUser(new MailAddress("local@domain"))).isEqualTo("local");
+    }
 
     protected void disposeUsersRepository() throws UsersRepositoryException {
         LifecycleUtil.dispose(this.usersRepository);
+    }
+
+    @Test
+    public void isAdministratorShouldReturnFalseWhenNotConfigured() throws Exception {
+        usersRepository.setAdministratorId(Optional.<String>absent());
+
+        assertThat(usersRepository.isAdministrator(admin)).isFalse();
+    }
+
+    @Test
+    public void isAdministratorShouldReturnTrueWhenConfiguredAndUserIsAdmin() throws Exception {
+        usersRepository.setAdministratorId(Optional.of(admin));
+
+        assertThat(usersRepository.isAdministrator(admin)).isTrue();
+    }
+
+    @Test
+    public void isAdministratorShouldReturnFalseWhenConfiguredAndUserIsNotAdmin() throws Exception {
+        usersRepository.setAdministratorId(Optional.of(admin));
+
+        assertThat(usersRepository.isAdministrator(user1)).isFalse();
     }
 }

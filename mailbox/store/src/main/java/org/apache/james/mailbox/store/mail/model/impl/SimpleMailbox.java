@@ -18,29 +18,39 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model.impl;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxUtil;
 
-public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
-    private Id id = null;
+public class SimpleMailbox implements Mailbox {
+
+    private MailboxId id = null;
     private String namespace;
     private String user;
     private String name;
     private final long uidValidity;
     private MailboxACL acl = SimpleMailboxACL.EMPTY;
 
-    public SimpleMailbox(MailboxPath path, long uidValidity) {
+    public SimpleMailbox(MailboxPath path, long uidValidity, MailboxId mailboxId) {
+        this.id = mailboxId;
         this.namespace = path.getNamespace();
         this.user = path.getUser();
         this.name = path.getName();
         this.uidValidity = uidValidity;
     }
-    
-    public SimpleMailbox(Mailbox<Id> mailbox) {
+
+    public SimpleMailbox(MailboxPath path, long uidValidity) {
+        this(path, uidValidity, null);
+    }
+
+    public SimpleMailbox(Mailbox mailbox) {
         this.id = mailbox.getMailboxId();
         this.namespace = mailbox.getNamespace();
         this.user = mailbox.getUser();
@@ -51,7 +61,7 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
     /**
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getMailboxId()
      */
-    public Id getMailboxId() {
+    public MailboxId getMailboxId() {
         return id;
     }
 
@@ -106,22 +116,18 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
         return uidValidity;
     }
 
+    @Override
+    public MailboxPath generateAssociatedPath() {
+        return new MailboxPath(getNamespace(), getUser(), getName());
+    }
+
     /**
      * @see java.lang.Object#equals(java.lang.Object)
      */
-    @SuppressWarnings("unchecked")
     public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
-        }
         if (obj instanceof SimpleMailbox) {
-            if (id != null) {
-                if (id.equals(((SimpleMailbox<Id>) obj).getMailboxId()))
-                    return true;
-            } else {
-                if (((SimpleMailbox<Id>) obj).getMailboxId() == null)
-                    return true;
-            }
+            SimpleMailbox o = (SimpleMailbox)obj;
+            return Objects.equal(id, o.getMailboxId());
         }
         return false;
     }
@@ -131,12 +137,7 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
      */
     @Override
     public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + namespace.hashCode();
-        result = PRIME * result + user.hashCode();
-        result = PRIME * result + name.hashCode();
-        return result;
+        return Objects.hashCode(namespace, user, name);
     }
 
     /**
@@ -144,28 +145,30 @@ public class SimpleMailbox<Id extends MailboxId> implements Mailbox<Id> {
      */
     @Override
     public String toString() {
-        return namespace + ":" + user + ":" + name;
+        return MoreObjects.toStringHelper(this)
+            .add("namespace", namespace)
+            .add("user", user)
+            .add("name", name)
+            .toString();
     }
 
-
-    public void setMailboxId(Id id) {
+    @Override
+    public void setMailboxId(MailboxId id) {
         this.id = id;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#getACL()
-     */
     @Override
     public MailboxACL getACL() {
         return acl;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setACL(org.apache.james.mailbox.MailboxACL)
-     */
     @Override
     public void setACL(MailboxACL acl) {
         this.acl = acl;
     }
 
+    @Override
+    public boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession) {
+        return MailboxUtil.isMailboxChildOf(this, potentialParent, mailboxSession);
+    }
 }

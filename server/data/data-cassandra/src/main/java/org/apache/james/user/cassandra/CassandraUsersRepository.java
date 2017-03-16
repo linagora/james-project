@@ -32,6 +32,7 @@ import static org.apache.james.user.cassandra.tables.CassandraUserTable.REALNAME
 import static org.apache.james.user.cassandra.tables.CassandraUserTable.TABLE_NAME;
 
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Optional;
 
 import javax.annotation.Resource;
@@ -39,6 +40,7 @@ import javax.inject.Inject;
 
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
+import org.apache.james.user.api.AlreadyExistInUsersRepositoryException;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.api.model.User;
 import org.apache.james.user.lib.AbstractUsersRepository;
@@ -60,20 +62,16 @@ public class CassandraUsersRepository extends AbstractUsersRepository {
     public void setSession(Session session) {
         this.session = session;
     }
-
-    @Override
-    public boolean supportVirtualHosting() {
-        return true;
-    }
     
     @Override
     public User getUserByName(String name){
         ResultSet result = session.execute(
                 select(REALNAME, PASSWORD, ALGORITHM)
                 .from(TABLE_NAME)
-                .where(eq(REALNAME, name)));
+                .where(eq(NAME, name.toLowerCase(Locale.US))));
         return Optional.ofNullable(result.one())
             .map(row -> new DefaultUser(row.getString(REALNAME), row.getString(PASSWORD), row.getString(ALGORITHM)))
+            .filter(user -> user.getUserName().equals(name))
             .orElse(null);
     }
 
@@ -86,7 +84,7 @@ public class CassandraUsersRepository extends AbstractUsersRepository {
                     .with(set(REALNAME, defaultUser.getUserName()))
                     .and(set(PASSWORD, defaultUser.getHashedPassword()))
                     .and(set(ALGORITHM, defaultUser.getHashAlgorithm()))
-                    .where(eq(NAME, defaultUser.getUserName().toLowerCase()))
+                    .where(eq(NAME, defaultUser.getUserName().toLowerCase(Locale.US)))
                     .ifExists())
                 .one()
                 .getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED);
@@ -151,7 +149,7 @@ public class CassandraUsersRepository extends AbstractUsersRepository {
         user.setPassword(password);
         boolean executed = session.execute(
             insertInto(TABLE_NAME)
-                .value(NAME, user.getUserName().toLowerCase())
+                .value(NAME, user.getUserName().toLowerCase(Locale.US))
                 .value(REALNAME, user.getUserName())
                 .value(PASSWORD, user.getHashedPassword())
                 .value(ALGORITHM, user.getHashAlgorithm())
@@ -160,7 +158,12 @@ public class CassandraUsersRepository extends AbstractUsersRepository {
             .getBool(CassandraConstants.LIGHTWEIGHT_TRANSACTION_APPLIED);
 
         if (!executed) {
-            throw new UsersRepositoryException("User with username " + username + " already exist!");
+            throw new AlreadyExistInUsersRepositoryException("User with username " + username + " already exist!");
         }
+    }
+
+    @Override
+    protected boolean getDefaultVirtualHostingValue() {
+        return true;
     }
 }

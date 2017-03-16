@@ -19,15 +19,25 @@
 
 package org.apache.james.backends.cassandra.utils;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+
 public class CassandraUtils {
 
+    private static final int FETCH_NEXT_PAGE_ADVANCE_IN_ROW = 100;
+
     public static Stream<Row> convertToStream(ResultSet resultSet) {
-        return StreamSupport.stream(resultSet.spliterator(), true);
+        return StreamSupport.stream(resultSet.spliterator(), true)
+            .peek(row -> ensureFetchedNextPage(resultSet));
+    }
+
+    private static void ensureFetchedNextPage(ResultSet resultSet) {
+        if (resultSet.getAvailableWithoutFetching() == FETCH_NEXT_PAGE_ADVANCE_IN_ROW && !resultSet.isFullyFetched()) {
+            resultSet.fetchMoreResults();
+        }
     }
 
 }
