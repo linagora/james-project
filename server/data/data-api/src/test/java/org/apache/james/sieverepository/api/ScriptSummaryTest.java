@@ -26,7 +26,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 
 public class ScriptSummaryTest {
     @Test
-    public void shouldMathBeanContract() {
+    public void shouldRespectBeanContract() {
         EqualsVerifier.forClass(ScriptSummary.class).verify();
     }
 }
