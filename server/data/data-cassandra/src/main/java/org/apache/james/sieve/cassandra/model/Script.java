@@ -68,7 +68,7 @@ public class Script {
     private final boolean isActive;
     private final long size;
 
-    public Script(String name, String content, boolean isActive, long size) {
+    private Script(String name, String content, boolean isActive, long size) {
         this.name = name;
         this.content = content;
         this.isActive = isActive;
