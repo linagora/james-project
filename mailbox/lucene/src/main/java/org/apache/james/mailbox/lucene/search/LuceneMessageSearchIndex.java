@@ -555,13 +555,13 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
     private Document createMessageDocument(final MailboxSession session, final MailboxMessage membership) throws MailboxException{
         final Document doc = new Document();
         // TODO: Better handling
-        doc.add(new Field(MAILBOX_ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(MAILBOX_ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.US), Store.YES, Index.NOT_ANALYZED));
         doc.add(new NumericField(UID_FIELD,Store.YES, true).setLongValue(membership.getUid().asLong()));
         doc.add(new Field(HAS_ATTACHMENT_FIELD, Boolean.toString(hasAttachment(membership)), Store.YES, Index.NOT_ANALYZED));
         doc.add(new Field(MESSAGE_ID_FIELD, SearchUtil.getSerializedMessageIdIfSupportedByUnderlyingStorageOrNull(membership), Store.YES, Index.NOT_ANALYZED));
 
         // create an unqiue key for the document which can be used later on updates to find the document
-        doc.add(new Field(ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.ENGLISH) +"-" + Long.toString(membership.getUid().asLong()), Store.YES, Index.NOT_ANALYZED));
+        doc.add(new Field(ID_FIELD, membership.getMailboxId().serialize().toUpperCase(Locale.US) +"-" + Long.toString(membership.getUid().asLong()), Store.YES, Index.NOT_ANALYZED));
 
         doc.add(new Field(INTERNAL_DATE_FIELD_YEAR_RESOLUTION, DateTools.dateToString(membership.getInternalDate(), DateTools.Resolution.YEAR), Store.NO, Index.NOT_ANALYZED));
         doc.add(new Field(INTERNAL_DATE_FIELD_MONTH_RESOLUTION, DateTools.dateToString(membership.getInternalDate(), DateTools.Resolution.MONTH), Store.NO, Index.NOT_ANALYZED));
@@ -590,9 +590,9 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
                 Iterator<org.apache.james.mime4j.stream.Field> fields = header.iterator();
                 while(fields.hasNext()) {
                     org.apache.james.mime4j.stream.Field f = fields.next();
-                    String headerName = f.getName().toUpperCase(Locale.ENGLISH);
-                    String headerValue = f.getBody().toUpperCase(Locale.ENGLISH);
-                    String fullValue =  f.toString().toUpperCase(Locale.ENGLISH);
+                    String headerName = f.getName().toUpperCase(Locale.US);
+                    String headerValue = f.getBody().toUpperCase(Locale.US);
+                    String fullValue =  f.toString().toUpperCase(Locale.US);
                     doc.add(new Field(HEADERS_FIELD, fullValue, Store.NO, Index.ANALYZED));
                     doc.add(new Field(PREFIX_HEADER_FIELD + headerName, headerValue, Store.NO, Index.ANALYZED));
                     
@@ -633,7 +633,7 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
                                     Address address = aList.get(i);
                                     if (address instanceof org.apache.james.mime4j.dom.address.Mailbox) {
                                         org.apache.james.mime4j.dom.address.Mailbox mailbox = (org.apache.james.mime4j.dom.address.Mailbox) address;
-                                        String value = AddressFormatter.DEFAULT.encode(mailbox).toUpperCase(Locale.ENGLISH);
+                                        String value = AddressFormatter.DEFAULT.encode(mailbox).toUpperCase(Locale.US);
                                         doc.add(new Field(field, value, Store.NO, Index.ANALYZED));
                                         if (i == 0) {
                                             String mailboxAddress = SearchUtil.getMailboxAddress(mailbox);
@@ -655,7 +655,7 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
                                         MailboxList mList = ((Group) address).getMailboxes();
                                         for (int a = 0; a < mList.size(); a++) {
                                             org.apache.james.mime4j.dom.address.Mailbox mailbox = mList.get(a);
-                                            String value = AddressFormatter.DEFAULT.encode(mailbox).toUpperCase(Locale.ENGLISH);
+                                            String value = AddressFormatter.DEFAULT.encode(mailbox).toUpperCase(Locale.US);
                                             doc.add(new Field(field, value, Store.NO, Index.ANALYZED));
 
                                             if (i == 0 && a == 0) {
@@ -727,7 +727,7 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
                     BufferedReader bodyReader = new BufferedReader(new InputStreamReader(in, charset));
                     String line = null;
                     while((line = bodyReader.readLine()) != null) {
-                        doc.add(new Field(BODY_FIELD,  line.toUpperCase(Locale.ENGLISH),Store.NO, Index.ANALYZED));
+                        doc.add(new Field(BODY_FIELD,  line.toUpperCase(Locale.US),Store.NO, Index.ANALYZED));
                     }
                     
                 }
@@ -794,7 +794,7 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
 
 
     private static Calendar getGMT() {
-        return Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ENGLISH);
+        return Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.US);
     }
 
     
@@ -884,11 +884,11 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
      */
     private Query createHeaderQuery(SearchQuery.HeaderCriterion crit) throws UnsupportedSearchException {
         HeaderOperator op = crit.getOperator();
-        String name = crit.getHeaderName().toUpperCase(Locale.ENGLISH);
+        String name = crit.getHeaderName().toUpperCase(Locale.US);
         String fieldName = PREFIX_HEADER_FIELD + name;
         if (op instanceof SearchQuery.ContainsOperator) {
             ContainsOperator cop = (ContainsOperator) op;
-            return createTermQuery(fieldName, cop.getValue().toUpperCase(Locale.ENGLISH));
+            return createTermQuery(fieldName, cop.getValue().toUpperCase(Locale.US));
         } else if (op instanceof SearchQuery.ExistsOperator){
             return new PrefixQuery(new Term(fieldName, ""));
         } else if (op instanceof SearchQuery.DateOperator) {
@@ -896,8 +896,8 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
                 String field = toSentDateField(dop.getDateResultion());
                 return createQuery(field, dop);
         } else if (op instanceof SearchQuery.AddressOperator) {
-            String field = name.toLowerCase(Locale.ENGLISH);
-            return createTermQuery(field, ((SearchQuery.AddressOperator) op).getAddress().toUpperCase(Locale.ENGLISH));
+            String field = name.toLowerCase(Locale.US);
+            return createTermQuery(field, ((SearchQuery.AddressOperator) op).getAddress().toUpperCase(Locale.US));
         } else {
             // Operator not supported
             throw new UnsupportedSearchException();
@@ -1184,7 +1184,7 @@ public class LuceneMessageSearchIndex extends ListeningMessageSearchIndex {
      * @throws UnsupportedSearchException
      */
     private Query createTextQuery(SearchQuery.TextCriterion crit) throws UnsupportedSearchException {
-        String value = crit.getOperator().getValue().toUpperCase(Locale.ENGLISH);
+        String value = crit.getOperator().getValue().toUpperCase(Locale.US);
         switch(crit.getType()) {
         case BODY:
             return createTermQuery(BODY_FIELD, value);

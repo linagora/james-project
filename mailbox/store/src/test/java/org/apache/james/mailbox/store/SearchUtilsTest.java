@@ -188,7 +188,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchCapsHeaderDateAfter() throws Exception {
-        builder.header(DATE_FIELD.toUpperCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toUpperCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertTrue(new MessageSearches().isMatch(SearchQuery.headerDateAfter(DATE_FIELD, getDate(9,
                 9, 2000), DateResolution.Day), row, recent));
@@ -206,7 +206,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchLowersHeaderDateAfter() throws Exception {
-        builder.header(DATE_FIELD.toLowerCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toLowerCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertTrue(new MessageSearches().isMatch(SearchQuery.headerDateAfter(DATE_FIELD, getDate(9,
                 9, 2000), DateResolution.Day), row, recent));
@@ -242,7 +242,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchCapsHeaderDateOn() throws Exception {
-        builder.header(DATE_FIELD.toUpperCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toUpperCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerDateOn(DATE_FIELD, getDate(9, 9,
                 2000), DateResolution.Day),row, recent));
@@ -260,7 +260,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchLowersHeaderDateOn() throws Exception {
-        builder.header(DATE_FIELD.toLowerCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toLowerCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerDateOn(DATE_FIELD, getDate(9, 9,
                 2000), DateResolution.Day),row, recent));
@@ -278,7 +278,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testMatchHeaderDateBefore() throws Exception {
-        builder.header(DATE_FIELD.toLowerCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toLowerCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerDateBefore(DATE_FIELD,
                 getDate(9, 9, 2000), DateResolution.Day),row, recent));
@@ -296,7 +296,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchCapsHeaderDateBefore() throws Exception {
-        builder.header(DATE_FIELD.toLowerCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toLowerCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerDateBefore(DATE_FIELD,
                 getDate(9, 9, 2000), DateResolution.Day),row, recent));
@@ -314,7 +314,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchLowersHeaderDateBefore() throws Exception {
-        builder.header(DATE_FIELD.toLowerCase(), RFC822_SUN_SEP_9TH_2001);
+        builder.header(DATE_FIELD.toLowerCase(Locale.US), RFC822_SUN_SEP_9TH_2001);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerDateBefore(DATE_FIELD,
                 getDate(9, 9, 2000), DateResolution.Day),row, recent));
@@ -332,7 +332,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testMatchHeaderContainsCaps() throws Exception {
-        builder.header(SUBJECT_FIELD, TEXT.toUpperCase());
+        builder.header(SUBJECT_FIELD, TEXT.toUpperCase(Locale.US));
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerContains(DATE_FIELD,
                 CUSTARD), row, recent));
@@ -348,7 +348,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testMatchHeaderContainsLowers() throws Exception {
-        builder.header(SUBJECT_FIELD, TEXT.toUpperCase());
+        builder.header(SUBJECT_FIELD, TEXT.toUpperCase(Locale.US));
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerContains(DATE_FIELD,
                 CUSTARD), row, recent));
@@ -364,7 +364,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testMatchHeaderContains() throws Exception {
-        builder.header(SUBJECT_FIELD, TEXT.toUpperCase());
+        builder.header(SUBJECT_FIELD, TEXT.toUpperCase(Locale.US));
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerContains(DATE_FIELD,
                 CUSTARD), row, recent));
@@ -380,7 +380,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchLowerHeaderContains() throws Exception {
-        builder.header(SUBJECT_FIELD.toLowerCase(), TEXT);
+        builder.header(SUBJECT_FIELD.toLowerCase(Locale.US), TEXT);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerContains(DATE_FIELD,
                 CUSTARD), row, recent));
@@ -396,7 +396,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchCapsHeaderContains() throws Exception {
-        builder.header(SUBJECT_FIELD.toUpperCase(), TEXT);
+        builder.header(SUBJECT_FIELD.toUpperCase(Locale.US), TEXT);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerContains(DATE_FIELD,
                 CUSTARD), row, recent));
@@ -422,7 +422,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchLowersHeaderExists() throws Exception {
-        builder.header(SUBJECT_FIELD.toLowerCase(), TEXT);
+        builder.header(SUBJECT_FIELD.toLowerCase(Locale.US), TEXT);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerExists(DATE_FIELD), row,
                 recent));
@@ -432,7 +432,7 @@ public class SearchUtilsTest {
 
     @Test
     public void testShouldMatchUppersHeaderExists() throws Exception {
-        builder.header(SUBJECT_FIELD.toLowerCase(), TEXT);
+        builder.header(SUBJECT_FIELD.toLowerCase(Locale.US), TEXT);
         MailboxMessage row = builder.build();
         assertFalse(new MessageSearches().isMatch(SearchQuery.headerExists(DATE_FIELD), row,
                 recent));
