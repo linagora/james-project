@@ -17,22 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.backends.cassandra.components;
+package org.apache.james.sieve.cassandra.tables;
 
-import com.datastax.driver.core.schemabuilder.SchemaStatement;
+public interface CassandraSieveActiveTable {
 
-public class CassandraIndex {
+    String TABLE_NAME = "sieve_active";
 
-    public final static String INDEX_PREFIX = "INDEX_";
-
-    private final SchemaStatement createIndexStatement;
-
-    public CassandraIndex(SchemaStatement createIndexStatement) {
-        this.createIndexStatement = createIndexStatement;
-    }
-
-    public SchemaStatement getCreateIndexStatement() {
-        return createIndexStatement;
-    }
+    String USER_NAME = "user_name";
+    String SCRIPT_NAME = "script_name";
+    String DATE = "date";
 
 }

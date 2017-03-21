@@ -19,63 +19,23 @@
 
 package org.apache.james.sieve.cassandra;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.Date;
-
 import org.apache.james.backends.cassandra.CassandraCluster;
-import org.apache.james.sieve.cassandra.tables.CassandraSieveTable;
 import org.apache.james.sieverepository.api.SieveRepository;
-import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.lib.AbstractSieveRepositoryTest;
-import org.joda.time.DateTime;
-import org.junit.Test;
 
 public class CassandraSieveRepositoryTest extends AbstractSieveRepositoryTest {
-    public static final int DATE_TIMESTAMP = 123456141;
-    private CassandraCluster cassandra;
-
-    public CassandraSieveRepositoryTest() {
-        cassandra = CassandraCluster.create(new CassandraSieveRepositoryModule());
-    }
+    private CassandraCluster cassandra = CassandraCluster.create(new CassandraSieveRepositoryModule());
 
     @Override
     protected SieveRepository createSieveRepository() throws Exception {
-        return new CassandraSieveRepository(new CassandraSieveDAO(cassandra.getConf()));
+        return new CassandraSieveRepository(
+            new CassandraSieveDAO(cassandra.getConf()),
+            new CassandraSieveQuotaDAO(cassandra.getConf()),
+            new CassandraActiveScriptDAO(cassandra.getConf()));
     }
 
     @Override
     protected void cleanUp() throws Exception {
         cassandra.clearAllTables();
-    }
-
-    @Test
-    public void getActivationDateForActiveScriptShouldWork() throws Exception {
-        cassandra.getConf().execute(
-            insertInto(CassandraSieveTable.TABLE_NAME)
-                .value(CassandraSieveTable.USER_NAME, USER)
-                .value(CassandraSieveTable.SCRIPT_NAME, SCRIPT_NAME)
-                .value(CassandraSieveTable.SCRIPT_CONTENT, SCRIPT_CONTENT)
-                .value(CassandraSieveTable.IS_ACTIVE, true)
-                .value(CassandraSieveTable.SIZE, SCRIPT_CONTENT.length())
-                .value(CassandraSieveTable.DATE, new Date(DATE_TIMESTAMP))
-        );
-        assertThat(sieveRepository.getActivationDateForActiveScript(USER)).isEqualTo(new DateTime(DATE_TIMESTAMP));
-    }
-
-
-    @Test(expected = ScriptNotFoundException.class)
-    public void getActivationDateForActiveScriptShouldThrowOnMissingActiveScript() throws Exception {
-        cassandra.getConf().execute(
-            insertInto(CassandraSieveTable.TABLE_NAME)
-                .value(CassandraSieveTable.USER_NAME, USER)
-                .value(CassandraSieveTable.SCRIPT_NAME, SCRIPT_NAME)
-                .value(CassandraSieveTable.SCRIPT_CONTENT, SCRIPT_CONTENT)
-                .value(CassandraSieveTable.IS_ACTIVE, false)
-                .value(CassandraSieveTable.SIZE, SCRIPT_CONTENT.length())
-                .value(CassandraSieveTable.DATE, DATE_TIMESTAMP)
-        );
-        sieveRepository.getActivationDateForActiveScript(USER);
     }
 }

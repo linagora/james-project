@@ -27,9 +27,10 @@ import java.util.concurrent.CompletableFuture;
 import javax.inject.Inject;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.james.sieve.cassandra.model.ScriptContentAndActivation;
-import org.apache.james.sieverepository.api.ScriptSummary;
+import org.apache.james.sieve.cassandra.model.ActiveScriptInfo;
+import org.apache.james.sieve.cassandra.model.Script;
 import org.apache.james.sieve.cassandra.model.SieveQuota;
+import org.apache.james.sieverepository.api.ScriptSummary;
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.api.exception.DuplicateException;
 import org.apache.james.sieverepository.api.exception.IsActiveException;
@@ -37,22 +38,28 @@ import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
+import org.apache.james.util.CompletableFutureUtil;
+import org.apache.james.util.FluentFutureStream;
 import org.joda.time.DateTime;
 
 public class CassandraSieveRepository implements SieveRepository {
 
     private final CassandraSieveDAO cassandraSieveDAO;
+    private final CassandraSieveQuotaDAO cassandraSieveQuotaDAO;
+    private final CassandraActiveScriptDAO cassandraActiveScriptDAO;
 
     @Inject
-    public CassandraSieveRepository(CassandraSieveDAO cassandraSieveDAO) {
+    public CassandraSieveRepository(CassandraSieveDAO cassandraSieveDAO, CassandraSieveQuotaDAO cassandraSieveQuotaDAO, CassandraActiveScriptDAO cassandraActiveScriptDAO) {
         this.cassandraSieveDAO = cassandraSieveDAO;
+        this.cassandraSieveQuotaDAO = cassandraSieveQuotaDAO;
+        this.cassandraActiveScriptDAO = cassandraActiveScriptDAO;
     }
 
     @Override
     public DateTime getActivationDateForActiveScript(String user) throws StorageException, ScriptNotFoundException {
-        return cassandraSieveDAO.getActiveScriptActivationDate(user)
-            .join()
-            .orElseThrow(ScriptNotFoundException::new);
+        return cassandraActiveScriptDAO.getActiveSctiptInfo(user).join()
+            .orElseThrow(ScriptNotFoundException::new)
+            .getActivationDate();
     }
 
     @Override
@@ -61,16 +68,17 @@ public class CassandraSieveRepository implements SieveRepository {
     }
 
     private void throwOnOverQuota(String user, CompletableFuture<Long> sizeDifference) throws QuotaExceededException, StorageException {
-        CompletableFuture<Optional<Long>> userQuotaFuture = cassandraSieveDAO.getQuota(user);
-        CompletableFuture<Optional<Long>> globalQuotaFuture = cassandraSieveDAO.getQuota();
-        CompletableFuture<Long> spaceUsedFuture = cassandraSieveDAO.spaceUsedBy(user);
+        CompletableFuture<Optional<Long>> userQuotaFuture = cassandraSieveQuotaDAO.getQuota(user);
+        CompletableFuture<Optional<Long>> globalQuotaFuture = cassandraSieveQuotaDAO.getQuota();
+        CompletableFuture<Long> spaceUsedFuture = cassandraSieveQuotaDAO.spaceUsedBy(user);
 
         new SieveQuota(spaceUsedFuture.join(), limitToUse(userQuotaFuture, globalQuotaFuture)).checkOverQuotaUponModification(sizeDifference.join());
     }
 
     public CompletableFuture<Long> spaceThatWillBeUsedByNewScript(String user, String name, long scriptSize) {
-        return cassandraSieveDAO.getScriptSize(user, name)
-            .thenApply(sizeOfStoredScript -> scriptSize - sizeOfStoredScript.orElse(0L));
+        return cassandraSieveDAO.getScript(user, name)
+            .thenApply(optional -> optional.map(Script::getSize).orElse(0L))
+            .thenApply(sizeOfStoredScript -> scriptSize - sizeOfStoredScript);
     }
 
     private Optional<Long> limitToUse(CompletableFuture<Optional<Long>> userQuota, CompletableFuture<Optional<Long>> globalQuota) {
@@ -87,7 +95,12 @@ public class CassandraSieveRepository implements SieveRepository {
 
         CompletableFuture.allOf(
             updateSpaceUsed(user, spaceUsed.join()),
-            cassandraSieveDAO.insertScript(user, name, content, false))
+            cassandraSieveDAO.insertScript(user,
+                Script.builder()
+                    .name(name)
+                    .content(content)
+                    .isActive(false)
+                    .build()))
             .join();
     }
 
@@ -95,7 +108,7 @@ public class CassandraSieveRepository implements SieveRepository {
         if (spaceUsed == 0) {
             return CompletableFuture.completedFuture(null);
         }
-        return cassandraSieveDAO.updateSpaceUsed(user, spaceUsed);
+        return cassandraSieveQuotaDAO.updateSpaceUsed(user, spaceUsed);
     }
 
     @Override
@@ -106,15 +119,21 @@ public class CassandraSieveRepository implements SieveRepository {
     @Override
     public InputStream getActive(String user) throws ScriptNotFoundException {
         return IOUtils.toInputStream(
-            cassandraSieveDAO.getActive(user)
+            cassandraActiveScriptDAO.getActiveSctiptInfo(user)
+                .thenCompose(optionalActiveName -> optionalActiveName
+                    .map(activeScriptInfo -> cassandraSieveDAO.getScript(user, activeScriptInfo.getName()))
+                    .orElse(CompletableFuture.completedFuture(Optional.empty())))
                 .join()
-                .orElseThrow(ScriptNotFoundException::new));
+                .orElseThrow(ScriptNotFoundException::new)
+                .getContent());
     }
 
     @Override
     public void setActive(String user, String name) throws ScriptNotFoundException {
         CompletableFuture<Void> unactivateOldScriptFuture = unactivateOldScript(user);
-        CompletableFuture<Boolean> activateNewScript = updateScriptActivation(user, name, true);
+        CompletableFuture<Boolean> activateNewScript = updateScriptActivation(user, name, true)
+            .thenCompose(CompletableFutureUtil.composeIfTrue(
+                () -> cassandraActiveScriptDAO.activate(user, name)));
 
         unactivateOldScriptFuture.join();
         if (!activateNewScript.join()) {
@@ -123,9 +142,9 @@ public class CassandraSieveRepository implements SieveRepository {
     }
 
     private CompletableFuture<Void> unactivateOldScript(String user) {
-        return cassandraSieveDAO.getActiveName(user)
+        return cassandraActiveScriptDAO.getActiveSctiptInfo(user)
             .thenCompose(scriptNameOptional -> scriptNameOptional
-                .map(scriptName -> updateScriptActivation(user, scriptName, false)
+                .map(activeScriptInfo -> updateScriptActivation(user, activeScriptInfo.getName(), false)
                     .<Void>thenApply(any -> null))
                 .orElse(CompletableFuture.completedFuture(null)));
     }
@@ -134,13 +153,14 @@ public class CassandraSieveRepository implements SieveRepository {
         if (!scriptName.equals(SieveRepository.NO_SCRIPT_NAME)) {
             return cassandraSieveDAO.updateScriptActivation(user, scriptName, active);
         }
-        return CompletableFuture.completedFuture(true);
+        return cassandraActiveScriptDAO.unactivate(user).thenApply(any -> true);
     }
 
     @Override
     public InputStream getScript(String user, String name) throws ScriptNotFoundException {
-        return  cassandraSieveDAO.getScriptContent(user, name)
+        return  cassandraSieveDAO.getScript(user, name)
             .join()
+            .map(Script::getContent)
             .map(IOUtils::toInputStream)
             .orElseThrow(ScriptNotFoundException::new);
     }
@@ -154,7 +174,7 @@ public class CassandraSieveRepository implements SieveRepository {
     }
 
     private void ensureIsNotActive(String user, String name) throws IsActiveException {
-        Optional<String> activeName = cassandraSieveDAO.getActiveName(user).join();
+        Optional<String> activeName = cassandraActiveScriptDAO.getActiveSctiptInfo(user).join().map(ActiveScriptInfo::getName);
         if (activeName.isPresent() && name.equals(activeName.get())) {
             throw new IsActiveException();
         }
@@ -162,8 +182,9 @@ public class CassandraSieveRepository implements SieveRepository {
 
     @Override
     public void renameScript(String user, String oldName, String newName) throws ScriptNotFoundException, DuplicateException {
-        CompletableFuture<Boolean> scriptExistsFuture = cassandraSieveDAO.scriptExists(user, newName);
-        CompletableFuture<Optional<ScriptContentAndActivation>> oldScriptFuture = cassandraSieveDAO.getScriptContentAndActivation(user, oldName);
+        CompletableFuture<Boolean> scriptExistsFuture = cassandraSieveDAO.getScript(user, newName)
+            .thenApply(Optional::isPresent);
+        CompletableFuture<Optional<Script>> oldScriptFuture = cassandraSieveDAO.getScript(user, oldName);
 
         oldScriptFuture.join();
         if (scriptExistsFuture.join()) {
@@ -171,68 +192,81 @@ public class CassandraSieveRepository implements SieveRepository {
         }
 
         performScriptRename(user,
-            oldName,
             newName,
             oldScriptFuture.join().orElseThrow(ScriptNotFoundException::new));
     }
 
-    private void performScriptRename(String user, String oldName, String newName, ScriptContentAndActivation oldScript) {
+    private void performScriptRename(String user, String newName, Script oldScript) {
         CompletableFuture.allOf(
-            cassandraSieveDAO.insertScript(user, newName, oldScript.getContent(), oldScript.isActive()),
-            cassandraSieveDAO.deleteScriptInCassandra(user, oldName))
+            cassandraSieveDAO.insertScript(user,
+                Script.builder()
+                    .copyOf(oldScript)
+                    .name(newName)
+                    .build()),
+            cassandraSieveDAO.deleteScriptInCassandra(user, oldScript.getName()),
+            performActiveScriptRename(user, oldScript.getName(), newName))
             .join();
+    }
+
+    private CompletableFuture<Void> performActiveScriptRename(String user, String oldName, String newName) {
+        return cassandraActiveScriptDAO.getActiveSctiptInfo(user)
+            .thenCompose(optionalActivationInfo -> optionalActivationInfo
+                .filter(activeScriptInfo -> activeScriptInfo.getName().equals(oldName))
+                .map(name -> cassandraActiveScriptDAO.activate(user, newName))
+                .orElse(CompletableFuture.completedFuture(null)));
     }
 
     @Override
     public boolean hasQuota() {
-        return cassandraSieveDAO.getQuota()
+        return cassandraSieveQuotaDAO.getQuota()
             .join()
             .isPresent();
     }
 
     @Override
     public long getQuota() throws QuotaNotFoundException {
-        return cassandraSieveDAO.getQuota()
+        return cassandraSieveQuotaDAO.getQuota()
             .join()
             .orElseThrow(QuotaNotFoundException::new);
     }
 
     @Override
     public void setQuota(long quota) {
-        cassandraSieveDAO.setQuota(quota).join();
+        cassandraSieveQuotaDAO.setQuota(quota).join();
     }
 
     @Override
     public void removeQuota() throws QuotaNotFoundException {
-        if (!cassandraSieveDAO.removeQuota().join()) {
+        if (!cassandraSieveQuotaDAO.removeQuota().join()) {
             throw new QuotaNotFoundException();
         }
     }
 
     @Override
     public boolean hasQuota(String user) {
-        CompletableFuture<Boolean> userQuotaIsPresent = cassandraSieveDAO.getQuota(user).thenApply(Optional::isPresent);
-        CompletableFuture<Boolean> globalQuotaIsPresent = cassandraSieveDAO.getQuota().thenApply(Optional::isPresent);
-        CompletableFuture.allOf(userQuotaIsPresent, globalQuotaIsPresent).join();
-
-        return userQuotaIsPresent.join() || globalQuotaIsPresent.join();
+        return FluentFutureStream.ofFutures(
+                cassandraSieveQuotaDAO.getQuota(user).thenApply(Optional::isPresent),
+                cassandraSieveQuotaDAO.getQuota().thenApply(Optional::isPresent))
+            .reduce((b1, b2) -> b1 || b2)
+            .thenApply(Optional::get)
+            .join();
     }
 
     @Override
     public long getQuota(String user) throws QuotaNotFoundException {
-        return cassandraSieveDAO.getQuota(user)
+        return cassandraSieveQuotaDAO.getQuota(user)
             .join()
             .orElseThrow(QuotaNotFoundException::new);
     }
 
     @Override
     public void setQuota(String user, long quota) {
-        cassandraSieveDAO.setQuota(user, quota).join();
+        cassandraSieveQuotaDAO.setQuota(user, quota).join();
     }
 
     @Override
     public void removeQuota(String user) throws QuotaNotFoundException {
-        if (!cassandraSieveDAO.removeQuota(user).join()) {
+        if (!cassandraSieveQuotaDAO.removeQuota(user).join()) {
             throw new QuotaNotFoundException();
         }
     }

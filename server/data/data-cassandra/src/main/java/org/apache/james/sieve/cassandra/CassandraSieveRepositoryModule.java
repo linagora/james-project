@@ -27,10 +27,10 @@ import static com.datastax.driver.core.DataType.timestamp;
 
 import java.util.List;
 
-import org.apache.james.backends.cassandra.components.CassandraIndex;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.components.CassandraTable;
 import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.sieve.cassandra.tables.CassandraSieveActiveTable;
 import org.apache.james.sieve.cassandra.tables.CassandraSieveClusterQuotaTable;
 import org.apache.james.sieve.cassandra.tables.CassandraSieveQuotaTable;
 import org.apache.james.sieve.cassandra.tables.CassandraSieveSpaceTable;
@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableList;
 public class CassandraSieveRepositoryModule implements CassandraModule {
 
     private final List<CassandraTable> tables;
-    private final List<CassandraIndex> index;
     private final List<CassandraType> types;
 
     public CassandraSieveRepositoryModule() {
@@ -54,7 +53,6 @@ public class CassandraSieveRepositoryModule implements CassandraModule {
                     .addClusteringColumn(CassandraSieveTable.SCRIPT_NAME, text())
                     .addColumn(CassandraSieveTable.SCRIPT_CONTENT, text())
                     .addColumn(CassandraSieveTable.IS_ACTIVE, cboolean())
-                    .addColumn(CassandraSieveTable.DATE, timestamp())
                     .addColumn(CassandraSieveTable.SIZE, bigint())),
             new CassandraTable(CassandraSieveSpaceTable.TABLE_NAME,
                 SchemaBuilder.createTable(CassandraSieveSpaceTable.TABLE_NAME)
@@ -70,24 +68,19 @@ public class CassandraSieveRepositoryModule implements CassandraModule {
                 SchemaBuilder.createTable(CassandraSieveClusterQuotaTable.TABLE_NAME)
                     .ifNotExists()
                     .addPartitionKey(CassandraSieveClusterQuotaTable.NAME, text())
-                    .addColumn(CassandraSieveClusterQuotaTable.VALUE, bigint())));
-        index = ImmutableList.of(
-            new CassandraIndex(
-                SchemaBuilder.createIndex(CassandraIndex.INDEX_PREFIX + CassandraSieveTable.TABLE_NAME + CassandraSieveTable.IS_ACTIVE)
+                    .addColumn(CassandraSieveClusterQuotaTable.VALUE, bigint())),
+            new CassandraTable(CassandraSieveActiveTable.TABLE_NAME,
+                SchemaBuilder.createTable(CassandraSieveActiveTable.TABLE_NAME)
                     .ifNotExists()
-                    .onTable(CassandraSieveTable.TABLE_NAME)
-                    .andColumn(CassandraSieveTable.IS_ACTIVE)));
+                    .addPartitionKey(CassandraSieveActiveTable.USER_NAME, text())
+                    .addColumn(CassandraSieveActiveTable.SCRIPT_NAME, text())
+                    .addColumn(CassandraSieveActiveTable.DATE, timestamp())));
         types = ImmutableList.of();
     }
 
     @Override
     public List<CassandraTable> moduleTables() {
         return tables;
-    }
-
-    @Override
-    public List<CassandraIndex> moduleIndex() {
-        return index;
     }
 
     @Override
