@@ -27,27 +27,29 @@ import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.base.GenericMatcher;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+
 public class LimitRecipients extends GenericMatcher {
 
     private int maximumRecipientCount;
 
     @Override
     public void init() throws MessagingException {
-        /*
-        Question 1:
-
-        Read maximumRecipientCount from condition.
-         */
+        try {
+            maximumRecipientCount = Integer.parseInt(getCondition());
+            if (maximumRecipientCount <= 0) {
+                throw new MessagingException("Condition can not be less than or equal to zero");
+            }
+        } catch (Exception e){
+            throw new MessagingException("Can not parse condition to positive non zero integer");
+        }
     }
 
     @Override
     public Collection<MailAddress> match(Mail mail) throws MessagingException {
-        /*
-        Question 2:
-
-        If a mail have too much recipients, we return the first maximumRecipientCount recipients.
-        Else we return all the mail recipients.
-         */
-        return null;
+        Collection <MailAddress> collections = mail.getRecipients();
+        Iterable<MailAddress> limit = Iterables.limit(collections, maximumRecipientCount);
+        return ImmutableList.copyOf(limit);
     }
 }
