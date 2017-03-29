@@ -393,7 +393,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
             .contains(PRIVATE_ANNOTATION, PRIVATE_CHILD_ANNOTATION, PRIVATE_GRANDCHILD_ANNOTATION);
     }
 
-    @ContractTest
+
     public void updateAnnotationsShouldThrowExceptionIfAnnotationDataIsOverLimitation() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         expected.expect(AnnotationException.class);
@@ -419,7 +419,7 @@ public class MailboxManagerTest<T extends MailboxManager> {
         mailboxManager.updateAnnotations(inbox, session, builder.build());
     }
 
-    @ContractTest
+
     public void updateAnnotationsShouldThrowExceptionIfRequestCreateNewButMailboxIsOverLimit() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         expected.expect(MailboxException.class);

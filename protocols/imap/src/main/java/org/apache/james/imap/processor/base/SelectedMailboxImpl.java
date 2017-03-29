@@ -25,8 +25,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.mail.Flags;
@@ -38,6 +36,7 @@ import org.apache.james.imap.api.process.SelectedMailbox;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
@@ -48,6 +47,9 @@ import org.apache.james.mailbox.model.MessageResultIterator;
 import org.apache.james.mailbox.model.UpdatedFlags;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 
 /**
  * Default implementation of {@link SelectedMailbox}
@@ -55,6 +57,8 @@ import com.google.common.base.Optional;
 public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
     private final Set<MessageUid> recentUids = new TreeSet<MessageUid>();
+    private final MessageManager messageManager;
+    private final MailboxSession mailboxSession;
 
     private boolean recentUidRemoved = false;
 
@@ -63,37 +67,20 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
     private MailboxPath path;
 
     private final ImapSession session;
-    
 
-    private final static Flags FLAGS = new Flags();
-    static {
-        FLAGS.add(Flags.Flag.ANSWERED);
-        FLAGS.add(Flags.Flag.DELETED);
-        FLAGS.add(Flags.Flag.DRAFT);
-        FLAGS.add(Flags.Flag.FLAGGED);
-        FLAGS.add(Flags.Flag.SEEN);
-    }
-    
     private final long sessionId;
     private final Set<MessageUid> flagUpdateUids = new TreeSet<MessageUid>();
     private final Flags.Flag uninterestingFlag = Flags.Flag.RECENT;
     private final Set<MessageUid> expungedUids = new TreeSet<MessageUid>();
+    private final Supplier<UidMsnMapper> uidMsnMapper;
 
     private boolean isDeletedByOtherSession = false;
     private boolean sizeChanged = false;
     private boolean silentFlagChanges = false;
-    private final Flags applicableFlags = new Flags(FLAGS);
+    private final Flags applicableFlags;
 
     private boolean applicableFlagsChanged;
-    
-    private final SortedMap<Integer, MessageUid> msnToUid =new TreeMap<Integer, MessageUid>();
 
-    private final SortedMap<MessageUid, Integer> uidToMsn = new TreeMap<MessageUid, Integer>();
-
-    private MessageUid highestUid = MessageUid.MIN_VALUE;
-
-    private int highestMsn = 0;
-    
     public SelectedMailboxImpl(MailboxManager mailboxManager, ImapSession session, MailboxPath path) throws MailboxException {
         this.session = session;
         this.sessionId = ImapSessionUtils.getMailboxSession(session).getSessionId();
@@ -102,7 +89,37 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
         // Ignore events from our session
         setSilentFlagChanges(true);
         this.path = path;
-        init();
+
+        mailboxSession = ImapSessionUtils.getMailboxSession(session);
+
+        mailboxManager.addListener(path, this, mailboxSession);
+
+        messageManager = mailboxManager.getMailbox(path, mailboxSession);
+        applicableFlags = messageManager.getApplicableFlags(mailboxSession);
+        uidMsnMapper = memoizedUIdMsnMapper(mailboxSession, messageManager);
+    }
+
+    private Supplier<UidMsnMapper> memoizedUIdMsnMapper(final MailboxSession mailboxSession, final MessageManager messageManager) {
+        return Suppliers.memoize(new Supplier<UidMsnMapper>() {
+            @Override
+            public UidMsnMapper get() {
+                UidMsnMapper uidMsnMapper = new UidMsnMapper();
+                try {
+                    MessageResultIterator messages = messageManager.getMessages(MessageRange.all(), FetchGroupImpl.MINIMAL, mailboxSession);
+
+                    synchronized (SelectedMailboxImpl.this) {
+                        while(messages.hasNext()) {
+                            MessageResult mr = messages.next();
+                            uidMsnMapper.addUid(mr.getUid());
+                        }
+                    }
+                } catch (MailboxException e) {
+                    throw Throwables.propagate(e);
+                }
+
+                return uidMsnMapper;
+            }
+        });
     }
 
     @Override
@@ -115,89 +132,16 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
         return ExecutionMode.SYNCHRONOUS;
     }
 
-    private void init() throws MailboxException {
-        MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        
-        mailboxManager.addListener(path, this, mailboxSession);
-
-        MessageResultIterator messages = mailboxManager.getMailbox(path, mailboxSession).getMessages(MessageRange.all(), FetchGroupImpl.MINIMAL, mailboxSession);
-        synchronized (this) {
-            while(messages.hasNext()) {
-                MessageResult mr = messages.next();
-                applicableFlags.add(mr.getFlags());
-                add(mr.getUid());
-            }
-            
-          
-            // \RECENT is not a applicable flag in imap so remove it from the list
-            applicableFlags.remove(Flags.Flag.RECENT);
-        }
-       
-    }
-
-    private void add(int msn, MessageUid uid) {
-        if (uid.compareTo(highestUid) > 0) {
-            highestUid = uid;
-        }
-        msnToUid.put(msn, uid);
-        uidToMsn.put(uid, msn);
-    }
-
-    /**
-     * Expunge the message with the given uid
-     */
-    private void expunge(MessageUid uid) {
-        final int msn = msn(uid);
-        remove(msn, uid);
-        final List<Integer> renumberMsns = new ArrayList<Integer>(msnToUid.tailMap(msn + 1).keySet());
-        for (Integer msnInteger : renumberMsns) {
-            int aMsn = msnInteger.intValue();
-            Optional<MessageUid> aUid = uid(aMsn);
-            if (aUid.isPresent()) {
-                remove(aMsn, aUid.get());
-                add(aMsn - 1, aUid.get());
-            }
-        }
-        highestMsn--;
-    }
-
-    private void remove(int msn, MessageUid uid) {
-        uidToMsn.remove(uid);
-        msnToUid.remove(msn);
-    }
-
-    /**
-     * Add the give uid
-     * 
-     * @param uid
-     */
-    private void add(MessageUid uid) {
-        if (!uidToMsn.containsKey(uid)) {
-            highestMsn++;
-            add(highestMsn, uid);
-        }
-    }
-
     @Override
     public synchronized Optional<MessageUid> getFirstUid() {
-        if (uidToMsn.isEmpty()) {
-            return Optional.absent();
-        } else {
-            return Optional.of(uidToMsn.firstKey());
-        }
+        return uidMsnMapper.get().getFirstUid();
     }
 
     @Override
     public synchronized Optional<MessageUid> getLastUid() {
-        if (uidToMsn.isEmpty()) {
-            return Optional.absent();
-        } else {
-            return Optional.of(uidToMsn.lastKey());
-        }
+        return uidMsnMapper.get().getLastUid();
     }
 
-
-    
     public synchronized void deselect() {
         MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
 
@@ -209,14 +153,11 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
             }
         }
         
-        uidToMsn.clear();
-        msnToUid.clear();
+        uidMsnMapper.get().clear();
         flagUpdateUids.clear();
 
         expungedUids.clear();
         recentUids.clear();
- 
-
     }
 
     @Override
@@ -282,27 +223,21 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
     @Override
     public synchronized  int remove(MessageUid uid) {
         final int result = msn(uid);
-        expunge(uid);
+        uidMsnMapper.get().remove(uid);
         return result;
     }
-
-
 
     private boolean interestingFlags(UpdatedFlags updated) {
         boolean result;
         final Iterator<Flags.Flag> it = updated.systemFlagIterator();
         if (it.hasNext()) {
             final Flags.Flag flag = it.next();
-            if (flag.equals(uninterestingFlag)) {
-                result = false;
-            } else {
-                result = true;
-            }
+            result = !flag.equals(uninterestingFlag);
         } else {
             result = false;
         }
         // See if we need to check the user flags
-        if (result == false) {
+        if (!result) {
             final Iterator<String> userIt = updated.userFlagIterator();
             result = userIt.hasNext();
         }
@@ -378,25 +313,18 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
         
     }
 
-
-
-
-    
-    public synchronized Flags getApplicableFlags() {
-        return applicableFlags;
+    public Flags getApplicableFlags() {
+        return new Flags(applicableFlags);
     }
 
-    
-    public synchronized boolean hasNewApplicableFlags() {
+    public boolean hasNewApplicableFlags() {
         return applicableFlagsChanged;
     }
 
-    
-    public synchronized void resetNewApplicableFlags() {
+    public void resetNewApplicableFlags() {
         applicableFlagsChanged = false;
     }
 
-    
     public synchronized void event(Event event) {
 
         // Check if the event was for the mailbox we are observing
@@ -409,7 +337,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
                     final List<MessageUid> uids = ((Added) event).getUids();
                     SelectedMailbox sm = session.getSelected();
                     for (MessageUid uid : uids) {
-                        add(uid);
+                        uidMsnMapper.get().addUid(uid);
                         if (sm != null) {
                             sm.addRecent(uid);
                         }
@@ -484,31 +412,24 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
     @Override
     public synchronized int msn(MessageUid uid) {
-        Integer msn = uidToMsn.get(uid);
-        if (msn != null) {
-            return msn.intValue();
-        } else {
-            return SelectedMailbox.NO_SUCH_MESSAGE;
-        }
+        return uidMsnMapper.get().getMsn(uid).or(NO_SUCH_MESSAGE);
     }
 
     @Override
     public synchronized Optional<MessageUid> uid(int msn) {
-        if (msn == -1) {
+        if (msn == NO_SUCH_MESSAGE) {
             return Optional.absent();
         }
-        MessageUid uid = msnToUid.get(msn);
-        if (uid != null) {
-            return Optional.of(uid);
-        } else {
-            return Optional.absent();
-        }
+
+        return uidMsnMapper.get().getUid(msn);
     }
 
     
     public synchronized long existsCount() {
-        return uidToMsn.size();
+        try {
+            return messageManager.getMessageCount(mailboxSession);
+        } catch (MailboxException e) {
+            throw Throwables.propagate(e);
+        }
     }
-    
-
 }

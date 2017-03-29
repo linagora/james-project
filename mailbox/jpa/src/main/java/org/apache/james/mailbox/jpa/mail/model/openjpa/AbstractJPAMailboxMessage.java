@@ -28,18 +28,7 @@ import java.util.Date;
 import java.util.List;
 
 import javax.mail.Flags;
-import javax.persistence.Basic;
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
-import javax.persistence.OneToMany;
-import javax.persistence.OrderBy;
+import javax.persistence.*;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MessageUid;
@@ -98,6 +87,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     private static final String TOSTRING_SEPARATOR = " ";
 
     /** Identifies composite key */
+    @Embeddable
     public static class MailboxIdUidKey implements Serializable {
 
         private static final long serialVersionUID = 7847632032426660997L;

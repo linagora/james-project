@@ -16,28 +16,53 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox;
 
-package org.apache.james.mailbox.jpa;
+import com.google.common.collect.ImmutableList;
 
-import org.apache.james.mailbox.jpa.mail.model.*;
-import org.apache.james.mailbox.jpa.mail.model.openjpa.AbstractJPAMailboxMessage;
-import org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMailboxMessage;
-import org.apache.james.mailbox.jpa.user.model.JPASubscription;
+import javax.mail.Flags;
+import java.util.List;
 
-public interface JPAMailboxFixture {
+public class ApplicableFlagBuilder {
 
-    Class<?>[] MAILBOX_PERSISTANCE_CLASSES = new Class[] {JPAMailbox.class,
-        AbstractJPAMailboxMessage.class,
-        JPAMailboxMessage.class,
-        JPAProperty.class,
-        JPAUserFlag.class,
-        JPAMailboxAnnotation.class,
-        JPASubscription.class,
-        JPAMailboxAnnotationId.class};
+    private final List<Flags.Flag> DEFAULT_APPLICABLE_FLAGS = ImmutableList.of(
+        Flags.Flag.ANSWERED,
+        Flags.Flag.DELETED,
+        Flags.Flag.DRAFT,
+        Flags.Flag.FLAGGED,
+        Flags.Flag.SEEN);
 
-    String[] MAILBOX_TABLE_NAMES = new String[] {"JAMES_MAIL_USERFLAG",
-        "JAMES_MAIL_PROPERTY",
-        "JAMES_MAILBOX_ANNOTATION",
-        "JAMES_MAILBOX",
-        "JAMES_MAIL"};
+    private final FlagsBuilder builder;
+
+    public static ApplicableFlagBuilder builder() {
+        return new ApplicableFlagBuilder();
+    }
+
+    private ApplicableFlagBuilder() {
+        builder = FlagsBuilder.builder();
+
+        for (Flags.Flag flag: DEFAULT_APPLICABLE_FLAGS) {
+            builder.add(flag);
+        }
+    }
+
+    public ApplicableFlagBuilder add(String... flags) {
+        builder.add(flags);
+
+        return this;
+    }
+
+    public ApplicableFlagBuilder add(Flags flags) {
+        builder.add(flags);
+
+        return this;
+    }
+
+    public Flags build() {
+        Flags flags = builder.build();
+        flags.remove(Flags.Flag.RECENT);
+        flags.remove(Flags.Flag.USER);
+
+        return flags;
+    }
 }

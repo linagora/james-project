@@ -34,6 +34,7 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import org.apache.james.mailbox.ApplicableFlagBuilder;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageManager.FlagsUpdateMode;
 import org.apache.james.mailbox.MessageUid;
@@ -832,9 +833,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         saveMessages();
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -850,8 +849,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         saveMessages();
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED)
+            .isEqualTo(ApplicableFlagBuilder.builder()
                 .add(CUSTOMS_USER_FLAGS_VALUE)
                 .build());
     }
@@ -866,9 +864,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED, Flag.SEEN)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -882,9 +878,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED, Flag.SEEN)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -898,9 +892,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.DELETED, Flag.SEEN)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -914,9 +906,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED, Flag.SEEN)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -930,9 +920,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -946,9 +934,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.DELETED)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest
@@ -962,9 +948,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.updateFlags(benwaInboxMailbox, newFlags, message1.getUid().toRange());
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
 
@@ -978,9 +962,7 @@ public class MessageMapperTest<T extends MapperProvider> {
         messageMapper.delete(benwaInboxMailbox, message1);
 
         assertThat(messageMapper.getApplicableFlag(benwaInboxMailbox))
-            .isEqualTo(new FlagsBuilder()
-                .add(Flag.ANSWERED, Flag.DELETED)
-                .build());
+            .isEqualTo(ApplicableFlagBuilder.builder().build());
     }
 
     @ContractTest

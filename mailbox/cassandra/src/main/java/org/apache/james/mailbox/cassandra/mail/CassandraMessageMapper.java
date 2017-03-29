@@ -33,6 +33,7 @@ import javax.mail.Flags.Flag;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
+import org.apache.james.mailbox.ApplicableFlagBuilder;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
@@ -299,11 +300,17 @@ public class CassandraMessageMapper implements MessageMapper {
         return uidProvider.lastUid(mailboxSession, mailbox);
     }
 
+
+
     @Override
     public Flags getApplicableFlag(Mailbox mailbox) throws MailboxException {
-        return applicableFlagDAO.retrieveApplicableFlag((CassandraId) mailbox.getMailboxId())
-            .join()
-            .orElse(new Flags());
+        ApplicableFlagBuilder flagsBuilder = ApplicableFlagBuilder.builder();
+
+        return ApplicableFlagBuilder.builder()
+            .add(applicableFlagDAO.retrieveApplicableFlag((CassandraId) mailbox.getMailboxId())
+                .join()
+                .orElse(new Flags()))
+            .build();
     }
 
     private CompletableFuture<Void> save(Mailbox mailbox, MailboxMessage message) throws MailboxException {

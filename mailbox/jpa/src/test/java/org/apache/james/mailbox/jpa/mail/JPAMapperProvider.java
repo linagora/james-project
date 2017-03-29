@@ -22,8 +22,10 @@ package org.apache.james.mailbox.jpa.mail;
 import java.util.List;
 import java.util.Random;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.mailbox.MessageUid;
@@ -47,16 +49,27 @@ import com.google.common.collect.ImmutableList;
 
 public class JPAMapperProvider implements MapperProvider {
 
-    private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPAMailboxFixture.MAILBOX_PERSISTANCE_CLASSES);
+    private JpaTestCluster persistence;
+    private Exception e;
+
+    private JpaTestCluster createPersistence() {
+        //Preconditions.checkState(persistence == null);
+        if (persistence != null) {
+            return persistence;
+        }
+        persistence = JpaTestCluster.create(JPAMailboxFixture.MAILBOX_PERSISTANCE_CLASSES);
+        e = new Exception();
+        return persistence;
+    }
 
     @Override
     public MailboxMapper createMailboxMapper() throws MailboxException {
-        return new TransactionalMailboxMapper(new JPAMailboxMapper(JPA_TEST_CLUSTER.getEntityManagerFactory()));
+        return new TransactionalMailboxMapper(new JPAMailboxMapper(createPersistence().getEntityManagerFactory()));
     }
 
     @Override
     public MessageMapper createMessageMapper() throws MailboxException {
-        EntityManagerFactory entityManagerFactory = JPA_TEST_CLUSTER.getEntityManagerFactory();
+        EntityManagerFactory entityManagerFactory = createPersistence().getEntityManagerFactory();
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
 
         JPAMessageMapper messageMapper = new JPAMessageMapper(new MockMailboxSession("benwa"), 
@@ -74,7 +87,7 @@ public class JPAMapperProvider implements MapperProvider {
 
     @Override
     public AnnotationMapper createAnnotationMapper() throws MailboxException {
-        return new TransactionalAnnotationMapper(new JPAAnnotationMapper(JPA_TEST_CLUSTER.getEntityManagerFactory()));
+        return new TransactionalAnnotationMapper(new JPAAnnotationMapper(createPersistence().getEntityManagerFactory()));
     }
 
     @Override
@@ -89,7 +102,15 @@ public class JPAMapperProvider implements MapperProvider {
 
     @Override
     public void clearMapper() throws MailboxException {
-        JPA_TEST_CLUSTER.clear(JPAMailboxFixture.MAILBOX_TABLE_NAMES);
+        persistence.clear();
+        try {
+            persistence.getEntityManagerFactory().close();
+        } catch (Throwable e) {
+
+        }
+        persistence = null;
+        e = null;
+
     }
 
     @Override
