@@ -59,7 +59,7 @@ import cucumber.runtime.java.guice.ScenarioScoped;
 @ScenarioScoped
 public class DownloadStepdefs {
 
-    private static final String ONE_ATTACHMENT_EML_ATTACHEMENT_BLOB_ID = "4000c5145f633410b80be368c44e1c394bff9437";
+    private static final String ONE_ATTACHMENT_EML_ATTACHMENT_BLOB_ID = "4000c5145f633410b80be368c44e1c394bff9437";
     private static final String EXPIRED_ATTACHMENT_TOKEN = "usera@domain.tld_"
             + "2016-06-29T13:41:22.124Z_"
             + "DiZa0O14MjLWrAA8P6MG35Gt5CBp7mt5U1EH/M++rIoZK7nlGJ4dPW0dvZD7h4m3o5b/Yd8DXU5x2x4+s0HOOKzD7X0RMlsU7JHJMNLvTvRGWF/C+MUyC8Zce7DtnRVPEQX2uAZhL2PBABV07Vpa8kH+NxoS9CL955Bc1Obr4G+KN2JorADlocFQA6ElXryF5YS/HPZSvq1MTC6aJIP0ku8WRpRnbwgwJnn26YpcHXcJjbkCBtd9/BhlMV6xNd2hTBkfZmYdoNo+UKBaXWzLxAlbLuxjpxwvDNJfOEyWFPgHDoRvzP+G7KzhVWjanHAHrhF0GilEa/MKpOI1qHBSwA==";
@@ -92,7 +92,7 @@ public class DownloadStepdefs {
                 ClassLoader.getSystemResourceAsStream("eml/oneAttachment.eml"), new Date(), false, new Flags());
         
         attachmentsByMessageId.put(messageId, attachmentId);
-        blobIdByAttachmentId.put(attachmentId, "4000c5145f633410b80be368c44e1c394bff9437");
+        blobIdByAttachmentId.put(attachmentId, ONE_ATTACHMENT_EML_ATTACHMENT_BLOB_ID);
     }
 
     @Given("^\"([^\"]*)\" mailbox \"([^\"]*)\" contains a message \"([^\"]*)\" with an inlined attachment \"([^\"]*)\"$")
@@ -107,10 +107,22 @@ public class DownloadStepdefs {
         //blobIdByAttachmentId.put(attachmentId, "<correctComputedBlobId>");
     }
 
+    @Given("^\"([^\"]*)\" mailbox \"([^\"]*)\" contains a message \"([^\"]*)\" with multiple same inlined attachments \"([^\"]*)\"$")
+    public void appendMessageWithSameInlinedAttachmentsToMailbox(String user, String mailbox, String messageName, String attachmentId) throws Throwable {
+        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, user, mailbox);
+
+        mainStepdefs.jmapServer.getProbe(MailboxProbeImpl.class).appendMessage(user, mailboxPath,
+            ClassLoader.getSystemResourceAsStream("eml/sameInlinedImages.eml"), new Date(), false, new Flags());
+
+        attachmentsByMessageId.put(messageName, attachmentId);
+
+        blobIdByAttachmentId.put(attachmentId, ONE_ATTACHMENT_EML_ATTACHMENT_BLOB_ID);
+    }
+
     @When("^\"([^\"]*)\" checks for the availability of the attachment endpoint$")
     public void optionDownload(String username) throws Throwable {
         AccessToken accessToken = userStepdefs.tokenByUser.get(username);
-        URI target = mainStepdefs.baseUri().setPath("/download/" + ONE_ATTACHMENT_EML_ATTACHEMENT_BLOB_ID).build();
+        URI target = mainStepdefs.baseUri().setPath("/download/" + ONE_ATTACHMENT_EML_ATTACHMENT_BLOB_ID).build();
         Request request = Request.Options(target);
         if (accessToken != null) {
             request.addHeader("Authorization", accessToken.serialize());
