@@ -30,6 +30,8 @@
         <class>org.apache.james.mailbox.jpa.mail.model.openjpa.JPAMailboxMessage</class>
         <class>org.apache.james.mailbox.jpa.mail.model.JPAProperty</class>
         <class>org.apache.james.mailbox.jpa.user.model.JPASubscription</class>
+        <class>org.apache.james.mailbox.jpa.mail.model.JPAMailboxAnnotation</class>
+        <class>org.apache.james.mailbox.jpa.mail.model.JPAMailboxAnnotationId</class>
         <properties>
             <property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
             <property name="openjpa.jdbc.MappingDefaults" value="ForeignKeyDeleteAction=cascade, JoinForeignKeyDeleteAction=cascade"/>
