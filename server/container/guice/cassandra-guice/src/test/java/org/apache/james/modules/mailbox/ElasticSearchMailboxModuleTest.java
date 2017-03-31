@@ -19,9 +19,9 @@
 
 package org.apache.james.modules.mailbox;
 
-import static org.apache.james.modules.mailbox.ElasticSearchMailboxModule.ELASTICSEARCH_HOSTS;
-import static org.apache.james.modules.mailbox.ElasticSearchMailboxModule.ELASTICSEARCH_MASTER_HOST;
-import static org.apache.james.modules.mailbox.ElasticSearchMailboxModule.ELASTICSEARCH_PORT;
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ELASTICSEARCH_HOSTS;
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ELASTICSEARCH_MASTER_HOST;
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ELASTICSEARCH_PORT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;

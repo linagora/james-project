@@ -19,6 +19,11 @@
 
 package org.apache.james.modules.mailbox;
 
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ELASTICSEARCH_HOSTS;
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ELASTICSEARCH_MASTER_HOST;
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ELASTICSEARCH_PORT;
+import static org.apache.james.modules.server.ElasticSearchConfigurationKeys.ES_CONFIG_FILE;
+
 import java.io.FileNotFoundException;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -53,10 +58,6 @@ import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class ElasticSearchMailboxModule extends AbstractModule {
 
-    public static final String ES_CONFIG_FILE = FileSystem.FILE_PROTOCOL_AND_CONF + "elasticsearch.properties";
-    public static final String ELASTICSEARCH_HOSTS = "elasticsearch.hosts";
-    public static final String ELASTICSEARCH_MASTER_HOST = "elasticsearch.masterHost";
-    public static final String ELASTICSEARCH_PORT = "elasticsearch.port";
     private static final int DEFAULT_CONNECTION_MAX_RETRIES = 7;
     private static final int DEFAULT_CONNECTION_MIN_DELAY = 3000;
     private static final boolean DEFAULT_INDEX_ATTACHMENTS = true;

@@ -31,6 +31,7 @@ import org.apache.james.modules.protocols.POP3ServerModule;
 import org.apache.james.modules.protocols.ProtocolHandlerModule;
 import org.apache.james.modules.protocols.SMTPServerModule;
 import org.apache.james.modules.server.ActiveMQQueueModule;
+import org.apache.james.modules.server.ESMetricReporterModule;
 import org.apache.james.modules.server.JMXServerModule;
 import org.apache.james.modules.server.NoJwtModule;
 import org.apache.james.modules.server.RawPostDequeueDecoratorModule;
@@ -57,6 +58,7 @@ public class JPAJamesServerMain {
         new ActiveMQQueueModule(),
         new RawPostDequeueDecoratorModule(),
         new MailboxModule(),
+        new ESMetricReporterModule(),
         new NoJwtModule());
 
     public static void main(String[] args) throws Exception {

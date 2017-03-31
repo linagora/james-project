@@ -30,7 +30,6 @@ import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.metrics.es.ESMetricReporter;
 import org.apache.james.metrics.es.ESReporterConfiguration;
-import org.apache.james.modules.mailbox.ElasticSearchMailboxModule;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +67,7 @@ public class ESMetricReporterModule extends AbstractModule {
                     .build();
             }
         } catch (FileNotFoundException e) {
-            LOGGER.info("Can not locate " + ElasticSearchMailboxModule.ES_CONFIG_FILE);
+            LOGGER.info("Can not locate " + ElasticSearchConfigurationKeys.ES_CONFIG_FILE);
         }
         return ESReporterConfiguration.builder()
             .disabled()
@@ -77,7 +76,7 @@ public class ESMetricReporterModule extends AbstractModule {
 
     private String locateHost(PropertiesConfiguration propertiesReader) {
         return propertiesReader.getString("elasticsearch.http.host",
-            propertiesReader.getString(ElasticSearchMailboxModule.ELASTICSEARCH_MASTER_HOST));
+            propertiesReader.getString(ElasticSearchConfigurationKeys.ELASTICSEARCH_MASTER_HOST));
     }
 
     private boolean isMetricEnable(PropertiesConfiguration propertiesReader) {
@@ -86,7 +85,7 @@ public class ESMetricReporterModule extends AbstractModule {
 
     private PropertiesConfiguration getPropertiesConfiguration(FileSystem fileSystem) throws ConfigurationException, FileNotFoundException {
         return new PropertiesConfiguration(
-                    fileSystem.getFile(ElasticSearchMailboxModule.ES_CONFIG_FILE));
+                    fileSystem.getFile(ElasticSearchConfigurationKeys.ES_CONFIG_FILE));
     }
 
     @Singleton
