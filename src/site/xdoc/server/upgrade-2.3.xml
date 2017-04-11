@@ -65,6 +65,9 @@
      
      <p>The migration will be provided and fully supported in next release.</p>
      
+     <p>We advise you to use external mail migration tools such as 
+       <a href="https://github.com/imapsync/imapsync">imapsync</a>
+       or <a href="http://www.linux-france.org/prj/pop2imap/pop2imap">popsync</a></p>
     </subsection>
 
   </section>
