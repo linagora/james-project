@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.    
+-->
+<document>
+
+ <properties>
+  <title>Apache James Server 3 - Mailet Container Configuration</title>
+ </properties>
+
+<body>
+
+  <section name="Mailet Container Configuration">
+
+      <p>This documents explains how to configure Mail processing. Mails pass through the MailetContainer. The
+          MailetContainer is a Matchers (condition for executing a mailet) and Mailets (execution units that perform
+          actions based on incoming mail) pipeline arranged into processors (List of mailet/matcher pairs allowing
+          better logical organisation).</p>
+
+      <p>Apache James Server includes a number of pre-packaged <a href="dev-provided-mailets.html">Mailets</a> and
+        <a href="dev-provided-matchers.html">Matchers</a>.</p>
+
+      <p>Consult <a href="https://github.com/apache/james-project/tree/master/server/app/src/main/resources/mailetcontainer-template.xml">mailetcontainer-template.xml</a> in GIT to get some examples and hints.</p>
+
+      <p>This configuration block is defined by the <strong>mailserver</strong> tag.  All administrators 
+      need to adjust the <strong>mailserver</strong> block upon installation.</p>
+
+      <dl>
+        <dt><strong>context.postmaster</strong></dt>
+        <dd>The body of this element is the address that the server 
+            will consider its postmaster address.  This address will be listed as the sender address 
+            of all error messages that originate from James.  Also, all messages addressed to 
+            postmaster@&lt;servername&gt;, where &lt;servername&gt; is one of the domain names whose 
+            mail is being handled by James, will be redirected to this email address.
+            Set this to the appropriate email address for error reports 
+            If this is set to a non-local email address, the mail server
+            will still function, but will generate a warning on startup.</dd>
+      <dt><strong>spooler.threads</strong></dt>
+      <dd>Number of simultaneous threads used to spool the mails.</dd>
+      </dl>
+
+    <subsection name="The Mailet Tag">
+    
+      <p>Consider the following simple <strong>mailet</strong> tag:</p>
+      &lt;mailet match="RemoteAddrNotInNetwork=127.0.0.1" class="ToProcessor"&gt;<br/>
+      &lt;processor&gt;spam&lt;/processor&gt;<br/>
+      &lt;/mailet&gt;<br/>
+      
+      <p>The mailet tag has two required attributes, <strong>match</strong> and <strong>class</strong>.</p>
+      
+      <p>The <strong>match</strong> attribute is set to the value of the specific Matcher class to be instantiated with a an 
+      optional argument.  If present, the argument is separated from the Matcher class name by an '='.  Semantic 
+      interpretation of the argument is left to the particular mailet.</p>
+      
+      <p>The <strong>class</strong> attribute is set to the value of the Mailet class that is to be instantiated.</p>
+      
+      <p>Finally, the children of the <strong>mailet</strong> tag define the configuration that is passed to the Mailet.  The 
+      tags used in this section should have no attributes or children.  The names and bodies of the elements will be passed to 
+      the mailet as (name, value) pairs.</p>
+      
+      <p>So in the example above, a Matcher instance of RemoteAddrNotInNetwork would be instantiated, and the value "127.0.0.1" 
+      would be passed to the matcher.  The Mailet of the pair will be an instance of ToProcessor, and it will be passed the (name, value) 
+      pair of ("processor", "spam").</p>
+    
+    </subsection>
+  
+  </section>
+
+</body>
+</document>

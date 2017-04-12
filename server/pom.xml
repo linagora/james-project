@@ -34,7 +34,7 @@
 
     <name>Apache James :: Server</name>
     <description>Apache James Mail Server</description>
-    <url>http://james.apache.org/server/head/</url>
+    <url>http://james.apache.org/server/</url>
     <inceptionYear>2002</inceptionYear>
 
     <repositories>
@@ -114,13 +114,6 @@
 
         <module>testing</module>
     </modules>
-
-    <distributionManagement>
-        <site>
-            <id>server-trunk-website</id>
-            <url>scpexe://people.apache.org/www/james.apache.org/server/3/</url>
-        </site>
-    </distributionManagement>
 
     <properties>
         <productName>Apache-James Mail Server</productName>
