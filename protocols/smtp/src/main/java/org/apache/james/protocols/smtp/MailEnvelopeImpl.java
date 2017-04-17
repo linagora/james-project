@@ -20,82 +20,73 @@
 
 package org.apache.james.protocols.smtp;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
+import com.google.common.base.Throwables;
+import com.google.common.io.FileBackedOutputStream;
+
 /**
- * MailEnvelope implementation which stores everything in memory
- * 
- *
+ * MailEnvelope implementation which stores everything in memory, backed in files
  */
-public class MailEnvelopeImpl implements MailEnvelope{
+public class MailEnvelopeImpl implements MailEnvelope {
 
-    private List<MailAddress> recipients;
+    public static final int FILE_THRESHOLD = 100 * 1024;
 
-    private MailAddress sender;
+    private final List<MailAddress> recipients;
+    private final MailAddress sender;
 
-    private ByteArrayOutputStream outputStream;
+    private FileBackedOutputStream outputStream;
 
-    /**
-     * @see org.apache.james.protocols.smtp.MailEnvelope#getSize()
-     */
+    public MailEnvelopeImpl(List<MailAddress> recipients, MailAddress sender) {
+        this.recipients = recipients;
+        this.sender = sender;
+    }
+
+    @Override
     public long getSize() {
         if (outputStream == null)
             return -1;
-        return outputStream.size();
+        try {
+            return outputStream.asByteSource().size();
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
-    /**
-     * @see org.apache.james.protocols.smtp.MailEnvelope#getRecipients()
-     */
+    @Override
     public List<MailAddress> getRecipients() {
         return recipients;
     }
 
-    /**
-     * @see org.apache.james.protocols.smtp.MailEnvelope#getSender()
-     */
+    @Override
     public MailAddress getSender() {
         return sender;
     }
 
-    /**
-     * Set the recipients of the mail
-     * 
-     * @param recipientCollection
-     */
-    public void setRecipients(List<MailAddress> recipientCollection) {
-        this.recipients = recipientCollection;
-    }
-
-    /**
-     * Set the sender of the mail
-     * 
-     * @param sender
-     */
-    public void setSender(MailAddress sender) {
-        this.sender = sender;
-    }
-
-    /**
-     * @see org.apache.james.protocols.smtp.MailEnvelope#getMessageOutputStream()
-     */
+    @Override
     public OutputStream getMessageOutputStream() {
         if (outputStream == null) {
-            // use 100kb as default which should be enough for most emails
-            this.outputStream = new ByteArrayOutputStream(100 * 1024);
+            this.outputStream = new FileBackedOutputStream(FILE_THRESHOLD);
         }
         return outputStream;
     }
 
-    /**
-     * @see org.apache.james.protocols.smtp.MailEnvelope#getMessageInputStream()
-     */
+    @Override
     public InputStream getMessageInputStream() {
-        return new ByteArrayInputStream(outputStream.toByteArray());
+        try {
+            return outputStream.asByteSource().openStream();
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    public void close() throws IOException {
+        if (outputStream != null) {
+            outputStream.close();
+        }
     }
 }
 

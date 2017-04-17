@@ -19,6 +19,7 @@
 
 package org.apache.james.protocols.api;
 
+import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -31,7 +32,7 @@ import org.apache.james.protocols.api.logger.Logger;
  * 
  *
  */
-public interface ProtocolSession {
+public interface ProtocolSession extends Closeable {
    
     enum State {
         Connection,

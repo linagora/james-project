@@ -19,6 +19,7 @@
 
 package org.apache.james.protocols.smtp;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,7 +30,7 @@ import java.util.List;
  * 
  * 
  */
-public interface MailEnvelope {
+public interface MailEnvelope extends Closeable {
 
     /**
      * Return the size of the message. If the message is "empty" it will return

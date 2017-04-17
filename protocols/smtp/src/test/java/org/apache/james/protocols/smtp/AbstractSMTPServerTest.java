@@ -56,6 +56,7 @@ import org.apache.james.util.concurrency.ConcurrentTestRunner;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.common.io.CharStreams;
 
 public abstract class AbstractSMTPServerTest {
@@ -1068,6 +1069,11 @@ public abstract class AbstractSMTPServerTest {
 
             public void onDisconnect(SMTPSession session) {
                 called.set(true);
+                try {
+                    session.close();
+                } catch (IOException e) {
+                    throw Throwables.propagate(e);
+                }
             }
         };
         

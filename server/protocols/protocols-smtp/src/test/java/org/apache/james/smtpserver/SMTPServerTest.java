@@ -479,6 +479,42 @@ public class SMTPServerTest {
     }
 
     @Test
+    public void testLongMailSendWithEHLO() throws Exception {
+        init(smtpConfiguration);
+
+        SMTPClient smtpProtocol = new SMTPClient();
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(smtpServer).retrieveBindedAddress();
+        smtpProtocol.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
+
+        // no message there, yet
+        assertThat(queue.getLastMail())
+            .as("no mail received by mail server")
+            .isNull();
+
+        smtpProtocol.sendCommand("EHLO " + InetAddress.getLocalHost());
+        smtpProtocol.setSender("mail@localhost");
+        smtpProtocol.addRecipient("mail@localhost");
+
+        // Create a 60 MB message
+        StringBuilder stringBuilder = new StringBuilder(64 * 1024 * 1024);
+        stringBuilder.append("Subject: test\r\n\r\n");
+        String repeatedString = "This is the repeated body...\r\n";
+        for (int i = 0; i < 2000000; i++) {
+            stringBuilder.append(repeatedString);
+        }
+        stringBuilder.append("\r\n\r\n.\r\n");
+
+        smtpProtocol.sendShortMessageData(stringBuilder.toString());
+        smtpProtocol.quit();
+        smtpProtocol.disconnect();
+
+        // mail was propagated by SMTPServer
+        assertThat(queue.getLastMail())
+            .as("mail received by mail server")
+            .isNotNull();
+    }
+
+    @Test
     public void testStartTLSInEHLO() throws Exception {
         smtpConfiguration.setStartTLS();
         init(smtpConfiguration);

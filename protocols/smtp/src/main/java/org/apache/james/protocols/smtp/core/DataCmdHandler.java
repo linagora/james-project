@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.protocols.smtp.core;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -165,20 +167,26 @@ public class DataCmdHandler implements CommandHandler<SMTPSession>, ExtensibleHa
      */
     @SuppressWarnings("unchecked")
     protected Response doDATA(SMTPSession session, String argument) {
-        MailEnvelope env = createEnvelope(session, (MailAddress) session.getAttachment(SMTPSession.SENDER,ProtocolSession.State.Transaction), new ArrayList<MailAddress>((Collection<MailAddress>)session.getAttachment(SMTPSession.RCPT_LIST,ProtocolSession.State.Transaction)));
-        session.setAttachment(MAILENV, env,ProtocolSession.State.Transaction);
+        MailEnvelope env = new MailEnvelopeImpl(
+            new ArrayList<MailAddress>((Collection<MailAddress>)
+                session.getAttachment(SMTPSession.RCPT_LIST, ProtocolSession.State.Transaction)),
+            (MailAddress) session.getAttachment(SMTPSession.SENDER, ProtocolSession.State.Transaction));
+        Object previous = session.setAttachment(MAILENV, env, ProtocolSession.State.Transaction);
+        close(previous, session);
         session.pushLineHandler(lineHandler);
-        
+
         return DATA_READY;
     }
-    
-    protected MailEnvelope createEnvelope(SMTPSession session, MailAddress sender, List<MailAddress> recipients) {
-        MailEnvelopeImpl env = new MailEnvelopeImpl();
-        env.setRecipients(recipients);
-        env.setSender(sender);
-        return env;
+
+    public void close (Object previousEnvelope, SMTPSession smtpSession) {
+        if (previousEnvelope instanceof Closeable) {
+            try {
+                ((Closeable) previousEnvelope).close();
+            } catch (IOException e) {
+                smtpSession.getLogger().error("Error while closing mail envelope for " + smtpSession.getSessionID(), e);
+            }
+        }
     }
-    
     
     /**
      * @see org.apache.james.protocols.api.handler.CommandHandler#getImplCommands()

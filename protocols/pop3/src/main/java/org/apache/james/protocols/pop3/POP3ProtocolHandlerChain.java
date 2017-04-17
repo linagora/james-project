@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.james.protocols.api.handler.CommandDispatcher;
 import org.apache.james.protocols.api.handler.CommandHandlerResultLogger;
+import org.apache.james.protocols.api.handler.DefaultDisconnectHandler;
 import org.apache.james.protocols.api.handler.ProtocolHandler;
 import org.apache.james.protocols.api.handler.ProtocolHandlerChainImpl;
 import org.apache.james.protocols.api.handler.WiringException;
@@ -90,6 +91,7 @@ public class POP3ProtocolHandlerChain extends ProtocolHandlerChainImpl{
         handlers.add(new StlsCmdHandler());
         handlers.add(new CommandDispatcher<POP3Session>());
         handlers.add(new CommandHandlerResultLogger());
+        handlers.add(new DefaultDisconnectHandler());
        
         return handlers;
     }

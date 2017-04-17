@@ -301,5 +301,9 @@ public class DataLineJamesMessageHookHandler implements DataLineFilter, Extensib
             }
         }
 
+        @Override
+        public void close() throws IOException {
+            out.close();
+        }
     }
 }

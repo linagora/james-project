@@ -18,8 +18,6 @@
  ****************************************************************/
 package org.apache.james.queue.api.mock;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
@@ -27,16 +25,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import javax.mail.MessagingException;
+
 import org.apache.james.core.MailImpl;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.io.FileBackedOutputStream;
+
 public class MockMailQueue implements MailQueue {
 
     private static final Logger log = LoggerFactory.getLogger(MockMailQueue.class.getName());
+    public static final int FILE_THRESHOLD = 1024 * 100;
 
     private final LinkedBlockingQueue<Mail> queue = new LinkedBlockingQueue<Mail>();
     private boolean throwException;
@@ -78,15 +81,11 @@ public class MockMailQueue implements MailQueue {
     }
 
     private Mail cloneMail(Mail mail) {
-        ByteArrayOutputStream baos = null;
-        ByteArrayInputStream bais = null;
+        FileBackedOutputStream outputStream = new FileBackedOutputStream(FILE_THRESHOLD);
         try {
-            baos = new ByteArrayOutputStream();
-            ((MailImpl) mail).writeMessageTo(baos);
-            log.trace("mimemessage stream: >>>" + new String(baos.toByteArray()) + "<<<");
-            bais = new ByteArrayInputStream(baos.toByteArray());
+            ((MailImpl) mail).writeMessageTo(outputStream);
             return new MailImpl("MockMailCopy" + new Random().nextLong(),
-                    mail.getSender(), mail.getRecipients(), bais);
+                    mail.getSender(), mail.getRecipients(), outputStream.asByteSource().openStream());
         } catch (MessagingException ex) {
             log.error("", ex);
             throw new RuntimeException(ex);
@@ -95,15 +94,7 @@ public class MockMailQueue implements MailQueue {
             throw new RuntimeException(ex);
         } finally {
             try {
-                if (bais != null) {
-                    bais.close();
-                }
-            } catch (IOException ex) {
-            }
-            try {
-                if (baos != null) {
-                    baos.close();
-                }
+                outputStream.close();
             } catch (IOException ex) {
             }
         }

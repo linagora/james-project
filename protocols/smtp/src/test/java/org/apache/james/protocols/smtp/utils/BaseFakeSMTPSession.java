@@ -20,6 +20,7 @@
 
 package org.apache.james.protocols.smtp.utils;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -203,4 +204,8 @@ public class BaseFakeSMTPSession implements SMTPSession {
         throw new UnsupportedOperationException("Unimplemented Stub Method");
     }
 
+    @Override
+    public void close() throws IOException {
+
+    }
 }

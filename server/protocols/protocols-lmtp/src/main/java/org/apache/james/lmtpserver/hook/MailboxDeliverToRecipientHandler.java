@@ -20,6 +20,7 @@
 package org.apache.james.lmtpserver.hook;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Date;
 
 import javax.inject.Inject;
@@ -42,6 +43,8 @@ import org.apache.james.protocols.smtp.hook.HookResult;
 import org.apache.james.protocols.smtp.hook.HookReturnCode;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
+
+import com.google.common.base.Throwables;
 
 /**
  * {@link DeliverToRecipientHook} which deliver the message directly to the recipients mailbox.
@@ -67,6 +70,7 @@ public class MailboxDeliverToRecipientHandler implements DeliverToRecipientHook 
     public HookResult deliver(SMTPSession session, MailAddress recipient, MailEnvelope envelope) {
         String username;
         HookResult result;
+        InputStream messageInputStream = null;
 
         try {
 
@@ -85,7 +89,8 @@ public class MailboxDeliverToRecipientHandler implements DeliverToRecipientHook 
             if (!mailboxManager.mailboxExists(inbox, mailboxSession)) {
                 mailboxManager.createMailbox(inbox, mailboxSession);
             }
-            mailboxManager.getMailbox(MailboxPath.inbox(mailboxSession), mailboxSession).appendMessage(envelope.getMessageInputStream(), new Date(), mailboxSession, true, null);
+            messageInputStream = envelope.getMessageInputStream();
+            mailboxManager.getMailbox(MailboxPath.inbox(mailboxSession), mailboxSession).appendMessage(messageInputStream, new Date(), mailboxSession, true, null);
             mailboxManager.endProcessingRequest(mailboxSession);
             result = new HookResult(HookReturnCode.OK, SMTPRetCode.MAIL_OK, DSNStatus.getStatus(DSNStatus.SUCCESS, DSNStatus.CONTENT_OTHER) + " Message received");
 
@@ -98,6 +103,14 @@ public class MailboxDeliverToRecipientHandler implements DeliverToRecipientHook 
         } catch (UsersRepositoryException e) {
             session.getLogger().info("Unexpected error handling DATA stream", e);
             result = new HookResult(HookReturnCode.DENYSOFT, " Temporary error deliver message to " + recipient);
+        } finally {
+            if (messageInputStream != null){
+                try {
+                    messageInputStream.close();
+                } catch (IOException e) {
+                    session.getLogger().error("Could not close resource for " + session.getSessionID(), e);
+                }
+            }
         }
         return result;
     }

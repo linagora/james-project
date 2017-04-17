@@ -19,6 +19,8 @@
 
 package org.apache.james.protocols.api;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -238,6 +240,25 @@ public class ProtocolSessionImpl implements ProtocolSession {
      */
     public <T extends ProtocolSession> void pushLineHandler(LineHandler<T> overrideCommandHandler) {
         transport.pushLineHandler(overrideCommandHandler, this);
+    }
+
+    public void close() {
+        for (Object o: sessionState.values()) {
+            close(o);
+        }
+        for (Object o: connectionState.values()) {
+            close(o);
+        }
+    }
+
+    private void close(Object o) {
+        if (o instanceof Closeable) {
+            try {
+                ((Closeable) o).close();
+            } catch (IOException e) {
+                getLogger().error("Could not close resource", e);
+            }
+        }
     }
 
 }
