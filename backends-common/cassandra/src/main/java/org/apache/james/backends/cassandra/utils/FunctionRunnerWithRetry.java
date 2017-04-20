@@ -32,8 +32,97 @@ public class FunctionRunnerWithRetry {
     public static class RelayingException extends RuntimeException {}
 
     @FunctionalInterface
-    public interface OptionalSupplier<T> {
-        Optional<T> getAsOptional();
+    public interface ExecutionResultSupplier<T> extends Supplier<ExecutionResult<T>> {}
+
+    public interface ExecutionResult<T> {
+        boolean failed();
+        boolean canceled();
+        boolean succeeded();
+        Optional<T> value();
+    }
+
+    public static class FailedResult<T> implements ExecutionResult<T> {
+        @Override
+        public boolean failed() {
+            return true;
+        }
+
+        @Override
+        public boolean canceled() {
+            return false;
+        }
+
+        @Override
+        public boolean succeeded() {
+            return false;
+        }
+
+        @Override
+        public Optional<T> value() {
+            return Optional.empty();
+        }
+    }
+
+    public static class CanceledResult<T> implements ExecutionResult<T> {
+        @Override
+        public boolean failed() {
+            return false;
+        }
+
+        @Override
+        public boolean canceled() {
+            return true;
+        }
+
+        @Override
+        public boolean succeeded() {
+            return false;
+        }
+
+        @Override
+        public Optional<T> value() {
+            return Optional.empty();
+        }
+    }
+
+    public static class SuccessfulResult<T> implements ExecutionResult<T> {
+        private final T value;
+
+        public SuccessfulResult(T value) {
+            this.value = value;
+        }
+
+        @Override
+        public boolean failed() {
+            return false;
+        }
+
+        @Override
+        public boolean canceled() {
+            return false;
+        }
+
+        @Override
+        public boolean succeeded() {
+            return true;
+        }
+
+        @Override
+        public Optional<T> value() {
+            return Optional.of(value);
+        }
+    }
+
+    public static <T> ExecutionResult<T> failed() {
+        return new FailedResult<>();
+    }
+
+    public static <T> ExecutionResult<T> canceled() {
+        return new CanceledResult<>();
+    }
+
+    public static <T> ExecutionResult<T> success(T value) {
+        return new SuccessfulResult<>(value);
     }
 
     private final int maxRetry;
@@ -50,13 +139,13 @@ public class FunctionRunnerWithRetry {
             .orElseThrow(() -> new LightweightTransactionException(maxRetry));
     }
 
-    public <T> T executeAndRetrieveObject(OptionalSupplier<T> functionNotifyingSuccess) throws LightweightTransactionException {
+    public <T> Optional<T> executeAndRetrieveObject(ExecutionResultSupplier<T> functionNotifyingSuccess) throws LightweightTransactionException {
         return IntStream.range(0, maxRetry)
-            .mapToObj((x) -> functionNotifyingSuccess.getAsOptional())
-            .filter(Optional::isPresent)
+            .mapToObj((x) -> functionNotifyingSuccess.get())
+            .filter(result -> !result.failed())
             .findFirst()
             .orElseThrow(() -> new LightweightTransactionException(maxRetry))
-            .get();
+            .value();
     }
 
     public <T> CompletableFuture<Optional<T>> executeAsyncAndRetrieveObject(Supplier<CompletableFuture<Optional<T>>> futureSupplier) {

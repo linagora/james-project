@@ -323,27 +323,32 @@ public class CassandraMessageMapper implements MessageMapper {
     }
 
     private Stream<UpdatedFlags> updateFlagsOnMessage(Mailbox mailbox, FlagsUpdateCalculator flagUpdateCalculator, MailboxMessage message) {
-        return tryMessageFlagsUpdate(flagUpdateCalculator, mailbox, message)
-            .map(Stream::of)
-            .orElse(handleRetries(mailbox, flagUpdateCalculator, message));
+        FunctionRunnerWithRetry.ExecutionResult<UpdatedFlags> initialExecution = tryMessageFlagsUpdate(flagUpdateCalculator, mailbox, message);
+        if (initialExecution.failed()) {
+            return handleRetries(mailbox, flagUpdateCalculator, message);
+        }
+        return OptionalConverter.toStream(initialExecution.value());
     }
 
-    private Optional<UpdatedFlags> tryMessageFlagsUpdate(FlagsUpdateCalculator flagUpdateCalculator, Mailbox mailbox, MailboxMessage message) {
+    private FunctionRunnerWithRetry.ExecutionResult<UpdatedFlags> tryMessageFlagsUpdate(FlagsUpdateCalculator flagUpdateCalculator, Mailbox mailbox, MailboxMessage message) {
         try {
             long oldModSeq = message.getModSeq();
             Flags oldFlags = message.createFlags();
             Flags newFlags = flagUpdateCalculator.buildNewFlags(oldFlags);
+            if (oldFlags.equals(newFlags)) {
+                return FunctionRunnerWithRetry.canceled();
+            }
             message.setFlags(newFlags);
             message.setModSeq(modSeqProvider.nextModSeq(mailboxSession, mailbox));
             if (updateFlags(message, oldModSeq)) {
-                return Optional.of(UpdatedFlags.builder()
+                return FunctionRunnerWithRetry.success(UpdatedFlags.builder()
                     .uid(message.getUid())
                     .modSeq(message.getModSeq())
                     .oldFlags(oldFlags)
                     .newFlags(newFlags)
                     .build());
             } else {
-                return Optional.empty();
+                return FunctionRunnerWithRetry.failed();
             }
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
@@ -367,7 +372,7 @@ public class CassandraMessageMapper implements MessageMapper {
 
     private Stream<UpdatedFlags> handleRetries(Mailbox mailbox, FlagsUpdateCalculator flagUpdateCalculator, MailboxMessage message) {
         try {
-            return Stream.of(
+            return OptionalConverter.toStream(
                 new FunctionRunnerWithRetry(maxRetries)
                     .executeAndRetrieveObject(() -> retryMessageFlagsUpdate(mailbox,
                             message.getMessageId(),
@@ -383,7 +388,7 @@ public class CassandraMessageMapper implements MessageMapper {
         }
     }
 
-    private Optional<UpdatedFlags> retryMessageFlagsUpdate(Mailbox mailbox, MessageId messageId, FlagsUpdateCalculator flagUpdateCalculator) {
+    private FunctionRunnerWithRetry.ExecutionResult<UpdatedFlags> retryMessageFlagsUpdate(Mailbox mailbox, MessageId messageId, FlagsUpdateCalculator flagUpdateCalculator) {
         CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
         ComposedMessageIdWithMetaData composedMessageIdWithMetaData = imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.of(cassandraId))
             .join()

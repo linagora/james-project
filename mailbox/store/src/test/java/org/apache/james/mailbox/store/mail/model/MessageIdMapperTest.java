@@ -535,11 +535,28 @@ public class MessageIdMapperTest<T extends MapperProvider> {
         sut.save(message1);
 
         MessageId messageId = message1.getMessageId();
-        sut.setFlags(messageId, ImmutableList.of(message1.getMailboxId()), new Flags(Flag.ANSWERED), MessageManager.FlagsUpdateMode.REMOVE);
+        sut.setFlags(messageId, ImmutableList.of(message1.getMailboxId()),
+            new Flags(Flag.ANSWERED), FlagsUpdateMode.ADD);
 
         List<MailboxMessage> messages = sut.find(ImmutableList.of(messageId), MessageMapper.FetchType.Body);
         assertThat(messages).hasSize(1);
         assertThat(messages.get(0).getModSeq()).isGreaterThan(modSeq);
+    }
+
+    @ContractTest
+    public void setFlagsShouldNotUpdateModseqWhenNoFlagsUpdate() throws Exception {
+        message1.setUid(mapperProvider.generateMessageUid());
+        long modSeq = mapperProvider.generateModSeq(benwaInboxMailbox);
+        message1.setModSeq(modSeq);
+        sut.save(message1);
+
+        MessageId messageId = message1.getMessageId();
+        sut.setFlags(messageId, ImmutableList.of(message1.getMailboxId()),
+            new Flags(Flag.ANSWERED), FlagsUpdateMode.REMOVE);
+
+        List<MailboxMessage> messages = sut.find(ImmutableList.of(messageId), MessageMapper.FetchType.Body);
+        assertThat(messages).hasSize(1);
+        assertThat(messages.get(0).getModSeq()).isEqualTo(modSeq);
     }
 
     @ContractTest

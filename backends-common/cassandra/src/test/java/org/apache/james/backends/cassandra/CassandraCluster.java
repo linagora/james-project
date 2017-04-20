@@ -55,7 +55,9 @@ public final class CassandraCluster {
     private CassandraCluster(CassandraModule module, EmbeddedCassandra embeddedCassandra) throws RuntimeException {
         this.module = module;
         try {
-            session = new FunctionRunnerWithRetry(MAX_RETRY).executeAndRetrieveObject(CassandraCluster.this::tryInitializeSession);
+            session = new FunctionRunnerWithRetry(MAX_RETRY)
+                .executeAndRetrieveObject(CassandraCluster.this::tryInitializeSession)
+                .get();
             typesProvider = new CassandraTypesProvider(module, session);
         } catch (Exception exception) {
             Throwables.propagate(exception);
@@ -75,17 +77,17 @@ public final class CassandraCluster {
         new CassandraTableManager(module, session).clearAllTables();
     }
 
-    private Optional<Session> tryInitializeSession() {
+    private FunctionRunnerWithRetry.ExecutionResult<Session> tryInitializeSession() {
         try {
             Cluster clusterWithInitializedKeyspace = ClusterWithKeyspaceCreatedFactory
                 .config(getCluster(), KEYSPACE_NAME)
                 .replicationFactor(REPLICATION_FACTOR)
                 .disableDurableWrites()
                 .clusterWithInitializedKeyspace();
-            return Optional.of(new SessionWithInitializedTablesFactory(module).createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME));
+            return FunctionRunnerWithRetry.success(new SessionWithInitializedTablesFactory(module).createSession(clusterWithInitializedKeyspace, KEYSPACE_NAME));
         } catch (NoHostAvailableException exception) {
             sleep(SLEEP_BEFORE_RETRY);
-            return Optional.empty();
+            return FunctionRunnerWithRetry.failed();
         }
     }
 

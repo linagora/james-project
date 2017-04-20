@@ -20,6 +20,7 @@
 package org.apache.james.backends.cassandra.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -47,6 +48,124 @@ public class FunctionRunnerWithRetryTest {
             }
         );
         assertThat(value.getValue()).isEqualTo(MAX_RETRY);
+    }
+
+
+    @Test
+    public void executeAndRetrieveObjectShouldWorkIfSucceedFirstTry() throws Exception {
+        int value = 18;
+
+        Optional<Integer> result = new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> FunctionRunnerWithRetry.success(value));
+
+        assertThat(result).contains(value);
+    }
+
+    @Test
+    public void executeAndRetrieveObjectShouldTryOnlyOnceIfSuccess() throws Exception {
+        int value = 18;
+        AtomicInteger times = new AtomicInteger(0);
+
+        new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> {
+                    times.incrementAndGet();
+                    return FunctionRunnerWithRetry.success(value);
+                });
+
+        assertThat(times.get()).isEqualTo(1);
+    }
+
+    @Test
+    public void executeAndRetrieveObjectShouldRetrieveValueOnRetry() throws Exception {
+        int value = 18;
+        AtomicInteger times = new AtomicInteger(0);
+
+        Optional<Integer> result = new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> {
+                    int attemptCount = times.incrementAndGet();
+                    if (attemptCount == MAX_RETRY) {
+                        return FunctionRunnerWithRetry.success(value);
+                    } else {
+                        return FunctionRunnerWithRetry.failed();
+                    }
+                });
+
+        assertThat(result).contains(value);
+    }
+
+    @Test
+    public void executeAndRetrieveObjectShouldMakeMaxRetryAttempts() throws Exception {
+        int value = 18;
+        AtomicInteger times = new AtomicInteger(0);
+
+        new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> {
+                    int attemptCount = times.incrementAndGet();
+                    if (attemptCount == MAX_RETRY) {
+                        return FunctionRunnerWithRetry.success(value);
+                    } else {
+                        return FunctionRunnerWithRetry.failed();
+                    }
+                });
+
+        assertThat(times.get()).isEqualTo(MAX_RETRY);
+    }
+
+    @Test
+    public void executeAndRetrieveObjectShouldStopWhenCanceled() throws Exception {
+        int value = 18;
+        int cancelationValue = 9;
+        AtomicInteger times = new AtomicInteger(0);
+
+        new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> {
+                    int attemptCount = times.incrementAndGet();
+                    if (attemptCount == cancelationValue) {
+                        return FunctionRunnerWithRetry.success(value);
+                    } else {
+                        return FunctionRunnerWithRetry.failed();
+                    }
+                });
+
+        assertThat(times.get()).isEqualTo(cancelationValue);
+    }
+
+
+    @Test
+    public void executeAndRetrieveObjectShouldReturnEmptyWhenCanceled() throws Exception {
+        int value = 18;
+        int cancelationValue = 9;
+        AtomicInteger times = new AtomicInteger(0);
+
+        assertThat(new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> {
+                    int attemptCount = times.incrementAndGet();
+                    if (attemptCount == cancelationValue) {
+                        return FunctionRunnerWithRetry.canceled();
+                    } else {
+                        return FunctionRunnerWithRetry.failed();
+                    }
+                }))
+            .isEmpty();
+    }
+
+    @Test
+    public void ShouldThrowIfAllFailed() throws Exception {
+        AtomicInteger times = new AtomicInteger(0);
+
+        assertThatThrownBy(() -> new FunctionRunnerWithRetry(MAX_RETRY)
+            .executeAndRetrieveObject(
+                () -> {
+                    times.incrementAndGet();
+                    return FunctionRunnerWithRetry.failed();
+                }))
+            .isInstanceOf(LightweightTransactionException.class);
     }
     
     @Test

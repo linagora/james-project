@@ -763,6 +763,17 @@ public class MessageMapperTest<T extends MapperProvider> {
                     .build());
     }
 
+
+    @ContractTest
+    public void userFlagsUpdateShouldReturnEmptyWhenFlagsNotChanged() throws Exception {
+        saveMessages();
+        long modSeq = messageMapper.getHighestModSeq(benwaInboxMailbox);
+        assertThat(messageMapper.updateFlags(benwaInboxMailbox,
+            new FlagsUpdateCalculator(new Flags(USER_FLAG), FlagsUpdateMode.REMOVE),
+            MessageRange.one(message1.getUid())))
+            .isEmpty();
+    }
+
     @ContractTest
     public void userFlagsUpdateShouldWorkInConcurrentEnvironment() throws Exception {
         saveMessages();
