@@ -18,12 +18,14 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.james.filesystem.api.FileSystem;
@@ -43,11 +45,15 @@ import org.apache.james.modules.server.CamelMailetContainerModule;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.transport.matchers.RecipientIsLocal;
 import org.apache.james.utils.ConfigurationPerformer;
+import org.apache.james.utils.FileConfigurationProvider;
 import org.apache.james.utils.PropertiesProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -58,11 +64,24 @@ import com.google.inject.multibindings.Multibinder;
 
 public class JMAPModule extends AbstractModule {
     private static final int DEFAULT_JMAP_PORT = 80;
+    private static final Logger LOGGER = LoggerFactory.getLogger(JMAPModule.class);
+    public static final CamelMailetContainerModule.DefaultProcessorsConfigurationSupplier DEFAULT_JMAP_PROCESSORS_CONFIGURATION_SUPPLIER =
+        () -> {
+            try {
+                return FileConfigurationProvider.getConfig(ClassLoader.getSystemResourceAsStream("defaultJmapMailetContainer.xml"));
+            } catch (ConfigurationException e) {
+                throw Throwables.propagate(e);
+            }
+        };
 
     @Override
     protected void configure() {
         install(new JMAPCommonModule());
         install(new MethodsModule());
+        install(binder -> binder
+            .bind(CamelMailetContainerModule.DefaultProcessorsConfigurationSupplier.class)
+            .toInstance(DEFAULT_JMAP_PROCESSORS_CONFIGURATION_SUPPLIER));
+
         bind(JMAPServer.class).in(Scopes.SINGLETON);
         bind(RequestHandler.class).in(Scopes.SINGLETON);
         bind(UploadHandler.class).in(Scopes.SINGLETON);
@@ -82,13 +101,21 @@ public class JMAPModule extends AbstractModule {
     @Provides
     @Singleton
     JMAPConfiguration provideConfiguration(PropertiesProvider propertiesProvider, FileSystem fileSystem) throws ConfigurationException, IOException{
-        PropertiesConfiguration configuration = propertiesProvider.getConfiguration("jmap");
-        return JMAPConfiguration.builder()
+        try {
+            PropertiesConfiguration configuration = propertiesProvider.getConfiguration("jmap");
+            return JMAPConfiguration.builder()
+                .enabled(configuration.getBoolean("enabled", true))
                 .keystore(configuration.getString("tls.keystoreURL"))
                 .secret(configuration.getString("tls.secret"))
                 .jwtPublicKeyPem(loadPublicKey(fileSystem, Optional.ofNullable(configuration.getString("jwt.publickeypem.url"))))
                 .port(configuration.getInt("jmap.port", DEFAULT_JMAP_PORT))
                 .build();
+        } catch (FileNotFoundException e) {
+            LOGGER.warn("Could not find JMAP configuration file. JMAP server will not be enabled.");
+            return JMAPConfiguration.builder()
+                .disable()
+                .build();
+        }
     }
 
     @Provides

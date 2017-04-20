@@ -19,7 +19,6 @@
 
 package org.apache.james.utils;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 
 import javax.inject.Inject;
@@ -28,24 +27,15 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.james.filesystem.api.FileSystem;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-
-public class PropertiesProvider {
-
-    private final FileSystem fileSystem;
+public class FailingPropertiesProvider extends PropertiesProvider {
 
     @Inject
-    public PropertiesProvider(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
+    public FailingPropertiesProvider(FileSystem fileSystem) {
+        super(fileSystem);
     }
 
+    @Override
     public PropertiesConfiguration getConfiguration(String fileName) throws FileNotFoundException, ConfigurationException {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(fileName));
-        File file = fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + fileName + ".properties");
-        if (!file.exists()) {
-            throw new FileNotFoundException();
-        }
-        return new PropertiesConfiguration(file);
+        throw new FileNotFoundException();
     }
 }

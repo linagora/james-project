@@ -17,35 +17,43 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import javax.inject.Inject;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.utils.ConfigurationProvider;
+import org.apache.james.utils.FailingPropertiesProvider;
+import org.apache.james.utils.PropertiesProvider;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.james.filesystem.api.FileSystem;
+public class DefaultMemoryJamesServerTest {
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+    @Rule
+    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
 
-public class PropertiesProvider {
+    private GuiceJamesServer guiceJamesServer;
 
-    private final FileSystem fileSystem;
-
-    @Inject
-    public PropertiesProvider(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
+    @Before
+    public void setUp() {
+        guiceJamesServer = memoryJmap.jmapServer()
+            .overrideWith(binder -> binder.bind(PropertiesProvider.class).to(FailingPropertiesProvider.class))
+            .overrideWith(binder -> binder.bind(ConfigurationProvider.class).toInstance(s -> new HierarchicalConfiguration()));
     }
 
-    public PropertiesConfiguration getConfiguration(String fileName) throws FileNotFoundException, ConfigurationException {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(fileName));
-        File file = fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + fileName + ".properties");
-        if (!file.exists()) {
-            throw new FileNotFoundException();
-        }
-        return new PropertiesConfiguration(file);
+    @After
+    public void clean() {
+        guiceJamesServer.stop();
     }
+
+    @Test
+    public void memoryJamesServerShouldStartWithNoConfigurationFile() throws Exception {
+        guiceJamesServer.start();
+
+        assertThat(guiceJamesServer.isStarted()).isTrue();
+    }
+
 }

@@ -42,8 +42,11 @@ import org.apache.james.mailbox.extractor.TextExtractor;
 import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.tika.extractor.TikaTextExtractor;
+import org.apache.james.utils.PropertiesProvider;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.NoNodeAvailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.AbstractModule;
@@ -53,13 +56,18 @@ import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class ElasticSearchMailboxModule extends AbstractModule {
 
-    public static final String ES_CONFIG_FILE = FileSystem.FILE_PROTOCOL_AND_CONF + "elasticsearch.properties";
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchMailboxModule.class);
+
+    public static final String ELASTICSEARCH_CONFIGURATION_NAME = "elasticsearch";
     public static final String ELASTICSEARCH_HOSTS = "elasticsearch.hosts";
     public static final String ELASTICSEARCH_MASTER_HOST = "elasticsearch.masterHost";
     public static final String ELASTICSEARCH_PORT = "elasticsearch.port";
     private static final int DEFAULT_CONNECTION_MAX_RETRIES = 7;
     private static final int DEFAULT_CONNECTION_MIN_DELAY = 3000;
     private static final boolean DEFAULT_INDEX_ATTACHMENTS = true;
+    private static final int DEFAULT_NB_SHARDS = 1;
+    private static final int DEFAULT_NB_REPLICA = 0;
+    private static final String LOCALHOST = "127.0.0.1";
 
     @Override
     protected void configure() {
@@ -75,8 +83,8 @@ public class ElasticSearchMailboxModule extends AbstractModule {
 
     @Provides
     @Singleton
-    protected Client provideClientProvider(FileSystem fileSystem, AsyncRetryExecutor executor) throws ConfigurationException, FileNotFoundException, ExecutionException, InterruptedException {
-        PropertiesConfiguration propertiesReader = new PropertiesConfiguration(fileSystem.getFile(ES_CONFIG_FILE));
+    protected Client provideClientProvider(PropertiesProvider propertiesProvider, AsyncRetryExecutor executor) throws ConfigurationException, FileNotFoundException, ExecutionException, InterruptedException {
+        PropertiesConfiguration propertiesReader = getElasticSearchConfiguration(propertiesProvider);
 
         ClientProvider clientProvider = connectToCluster(propertiesReader);
 
@@ -84,13 +92,24 @@ public class ElasticSearchMailboxModule extends AbstractModule {
                 .getWithRetry(ctx -> clientProvider.get()).get();
         IndexCreationFactory.createIndex(client,
             MailboxElasticsearchConstants.MAILBOX_INDEX,
-            propertiesReader.getInt("elasticsearch.nb.shards"),
-            propertiesReader.getInt("elasticsearch.nb.replica"));
+            propertiesReader.getInt(ELASTICSEARCH_CONFIGURATION_NAME + ".nb.shards", DEFAULT_NB_SHARDS),
+            propertiesReader.getInt(ELASTICSEARCH_CONFIGURATION_NAME + ".nb.replica", DEFAULT_NB_REPLICA));
         NodeMappingFactory.applyMapping(client,
             MailboxElasticsearchConstants.MAILBOX_INDEX,
             MailboxElasticsearchConstants.MESSAGE_TYPE,
             MailboxMappingFactory.getMappingContent());
         return client;
+    }
+
+    private PropertiesConfiguration getElasticSearchConfiguration(PropertiesProvider propertiesProvider) throws ConfigurationException {
+        try {
+            return propertiesProvider.getConfiguration(ELASTICSEARCH_CONFIGURATION_NAME);
+        } catch (FileNotFoundException e) {
+            LOGGER.warn("Could not find " + ELASTICSEARCH_CONFIGURATION_NAME + " configuration file. Using 127.0.0.1:9300 as contact point");
+            PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration();
+            propertiesConfiguration.addProperty(ELASTICSEARCH_HOSTS, LOCALHOST);
+            return propertiesConfiguration;
+        }
     }
 
     private static ClientProvider connectToCluster(PropertiesConfiguration propertiesReader) throws ConfigurationException {
@@ -126,14 +145,14 @@ public class ElasticSearchMailboxModule extends AbstractModule {
         return executor
                 .withProportionalJitter()
                 .retryOn(NoNodeAvailableException.class)
-                .withMaxRetries(configuration.getInt("elasticsearch.retryConnection.maxRetries", DEFAULT_CONNECTION_MAX_RETRIES))
-                .withMinDelay(configuration.getInt("elasticsearch.retryConnection.minDelay", DEFAULT_CONNECTION_MIN_DELAY));
+                .withMaxRetries(configuration.getInt(ELASTICSEARCH_CONFIGURATION_NAME + ".retryConnection.maxRetries", DEFAULT_CONNECTION_MAX_RETRIES))
+                .withMinDelay(configuration.getInt(ELASTICSEARCH_CONFIGURATION_NAME + ".retryConnection.minDelay", DEFAULT_CONNECTION_MIN_DELAY));
     }
 
     @Provides 
     @Singleton
     public IndexAttachments provideIndexAttachments(PropertiesConfiguration configuration) {
-        if (configuration.getBoolean("elasticsearch.indexAttachments", DEFAULT_INDEX_ATTACHMENTS)) {
+        if (configuration.getBoolean(ELASTICSEARCH_CONFIGURATION_NAME + ".indexAttachments", DEFAULT_INDEX_ATTACHMENTS)) {
             return IndexAttachments.YES;
         }
         return IndexAttachments.NO;

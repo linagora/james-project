@@ -17,35 +17,27 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-
-import javax.inject.Inject;
+package org.apache.james.modules.server;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.utils.FileConfigurationProvider;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
+import com.google.inject.AbstractModule;
 
-public class PropertiesProvider {
+public class DefaultProcessorsConfigurationProviderModule extends AbstractModule {
 
-    private final FileSystem fileSystem;
-
-    @Inject
-    public PropertiesProvider(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
-    }
-
-    public PropertiesConfiguration getConfiguration(String fileName) throws FileNotFoundException, ConfigurationException {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(fileName));
-        File file = fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + fileName + ".properties");
-        if (!file.exists()) {
-            throw new FileNotFoundException();
-        }
-        return new PropertiesConfiguration(file);
+    @Override
+    protected void configure() {
+        bind(CamelMailetContainerModule.DefaultProcessorsConfigurationSupplier.class)
+            .toInstance(
+                () -> {
+                    try {
+                        return FileConfigurationProvider.getConfig(ClassLoader.getSystemResourceAsStream("defaultMailetContainer.xml"));
+                    } catch (ConfigurationException e) {
+                        throw Throwables.propagate(e);
+                    }
+                }
+            );
     }
 }
