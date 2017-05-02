@@ -155,6 +155,7 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
         while (active.get()) {
 
             final MailQueueItem queueItem;
+            TimeMetric timeMetric = metricFactory.timer(SPOOL_PROCESSING);
             try {
                 queueItem = queue.deQueue();
                 workerService.execute(new Runnable() {
@@ -207,6 +208,8 @@ public class JamesMailSpooler implements Runnable, Disposable, Configurable, Log
                 }
             } catch (InterruptedException interrupted) {
                 //MailSpooler is stopping
+            } finally {
+                timeMetric.stopAndPublish();
             }
         }
         logger.info("Stop {} : {}", getClass().getName(), Thread.currentThread().getName());
