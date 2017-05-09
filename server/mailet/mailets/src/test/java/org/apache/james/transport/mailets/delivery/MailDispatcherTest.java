@@ -208,7 +208,6 @@ public class MailDispatcherTest {
     public void dispatchShouldAddSpecificHeaderIfRecipientMatches() throws Exception {
         AccumulatorHeaderMailStore accumulatorTestHeaderMailStore = new AccumulatorHeaderMailStore(TEST_HEADER_NAME);
         MailDispatcher testee = MailDispatcher.builder()
-            .log(mock(Log.class))
             .mailetContext(fakeMailContext)
             .mailStore(accumulatorTestHeaderMailStore)
             .consume(false)
@@ -255,7 +254,6 @@ public class MailDispatcherTest {
     public void dispatchShouldAddSpecificHeaderToEachRecipients() throws Exception {
         AccumulatorHeaderMailStore accumulatorTestHeaderMailStore = new AccumulatorHeaderMailStore(TEST_HEADER_NAME);
         MailDispatcher testee = MailDispatcher.builder()
-            .log(mock(Log.class))
             .mailetContext(fakeMailContext)
             .mailStore(accumulatorTestHeaderMailStore)
             .consume(false)
@@ -281,7 +279,6 @@ public class MailDispatcherTest {
     public void dispatchShouldNotAlterOriginalMessageWhenPerRecipientHeaderDoesNotExist() throws Exception {
         AccumulatorHeaderMailStore accumulatorTestHeaderMailStore = new AccumulatorHeaderMailStore(TEST_HEADER_NAME);
         MailDispatcher testee = MailDispatcher.builder()
-            .log(mock(Log.class))
             .mailetContext(fakeMailContext)
             .mailStore(accumulatorTestHeaderMailStore)
             .consume(false)
@@ -304,7 +301,6 @@ public class MailDispatcherTest {
     public void dispatchShouldNotAlterOriginalMessageWhenPerRecipientHeaderExists() throws Exception {
         AccumulatorHeaderMailStore accumulatorTestHeaderMailStore = new AccumulatorHeaderMailStore(TEST_HEADER_NAME);
         MailDispatcher testee = MailDispatcher.builder()
-            .log(mock(Log.class))
             .mailetContext(fakeMailContext)
             .mailStore(accumulatorTestHeaderMailStore)
             .consume(false)

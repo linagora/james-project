@@ -95,8 +95,8 @@ public class SimpleMailStore implements MailStore {
         mailboxAppender.append(mail.getMessage(), username, locatedFolder);
 
         metric.increment();
-        LOGGER.info("Local delivered mail " + mail.getName() + " successfully from " + DeliveryUtils.prettyPrint(mail.getSender())
-            + " to " + DeliveryUtils.prettyPrint(recipient) + " in folder " + locatedFolder);
+        LOGGER.info("Local delivered mail {} successfully from {} to {} in folder {}", mail.getName(),
+            DeliveryUtils.prettyPrint(mail.getSender()), DeliveryUtils.prettyPrint(recipient), locatedFolder);
     }
 
     private String locateFolder(String username, Mail mail) {
