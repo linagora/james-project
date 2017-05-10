@@ -100,7 +100,7 @@ S: 1f OK FETCH completed.
 ## All messages has modseq 5 because of the \RECENT reset while selecting
 
 C: 1g STORE 1:* (UNCHANGEDSINCE 1) FLAGS (\Deleted)
-S: 1g OK \[MODIFIED 0 1:4\] STORE failed.
+S: 1g OK \[MODIFIED 1:4\] STORE failed.
 
 C: 1h STORE 1:2 (UNCHANGEDSINCE 5) +FLAGS (\DRAFT)
 S: \* 1 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Draft \\Recent\)\)
@@ -113,9 +113,7 @@ S: 1h OK Conditional STORE completed.
 C: 1i STORE 2:4 (UNCHANGEDSINCE 5) +FLAGS (\ANSWERED)
 S: \* 3 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Answered \\Recent\)\)
 S: \* 4 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Answered \\Recent\)\)
-S: 1i OK \[MODIFIED 0 2\] STORE failed.
-## TODO buggy. Do not conform with example in RFC-4551 sections 3.2
-## TODO MODIFIED should not include 0
+S: 1i OK \[MODIFIED 2\] STORE failed.
 
 ## Check messages 1 2 3 and 4
 
