@@ -1,0 +1,133 @@
+################################################################
+# Licensed to the Apache Software Foundation (ASF) under one   #
+# or more contributor license agreements.  See the NOTICE file #
+# distributed with this work for additional information        #
+# regarding copyright ownership.  The ASF licenses this file   #
+# to you under the Apache License, Version 2.0 (the            #
+# "License"); you may not use this file except in compliance   #
+# with the License.  You may obtain a copy of the License at   #
+#                                                              #
+#   http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                              #
+# Unless required by applicable law or agreed to in writing,   #
+# software distributed under the License is distributed on an  #
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       #
+# KIND, either express or implied.  See the License for the    #
+# specific language governing permissions and limitations      #
+# under the License.                                           #
+################################################################
+
+##
+## Create a mailbox with 4 messages in it
+
+C: 1a CREATE alpha
+S: 1a OK CREATE completed.
+
+C: 1b APPEND alpha {254+}
+C: Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
+C: From: Fred Foobar <foobar@Blurdybloop.COM>
+C: Subject: Test 01
+C: To: mooch@owatagu.siam.edu
+C: Message-Id: <B27397-0100000@Blurdybloop.COM>
+C: MIME-Version: 1.0
+C: Content-Type: TEXT/PLAIN; CHARSET=US-ASCII
+C:
+C: Test 01
+C:
+S: 1b OK (\[.+\] )?APPEND completed.
+
+C: 1b APPEND alpha {254+}
+C: Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
+C: From: Fred Foobar <foobar@Blurdybloop.COM>
+C: Subject: Test 02
+C: To: mooch@owatagu.siam.edu
+C: Message-Id: <B27397-0100000@Blurdybloop.COM>
+C: MIME-Version: 1.0
+C: Content-Type: TEXT/PLAIN; CHARSET=US-ASCII
+C:
+C: Test 02
+C:
+S: 1b OK (\[.+\] )?APPEND completed.
+
+C: 1c APPEND alpha {254+}
+C: Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
+C: From: Fred Foobar <foobar@Blurdybloop.COM>
+C: Subject: Test 03
+C: To: mooch@owatagu.siam.edu
+C: Message-Id: <B27397-0100000@Blurdybloop.COM>
+C: MIME-Version: 1.0
+C: Content-Type: TEXT/PLAIN; CHARSET=US-ASCII
+C:
+C: Test 03
+C:
+S: 1c OK (\[.+\] )?APPEND completed.
+
+C: 1d APPEND alpha {254+}
+C: Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
+C: From: Fred Foobar <foobar@Blurdybloop.COM>
+C: Subject: Test 04
+C: To: mooch@owatagu.siam.edu
+C: Message-Id: <B27397-0100000@Blurdybloop.COM>
+C: MIME-Version: 1.0
+C: Content-Type: TEXT/PLAIN; CHARSET=US-ASCII
+C:
+C: Test 04
+C:
+S: 1d OK (\[.+\] )?APPEND completed.
+
+##
+## Select it with CONDSTORE enabled
+
+C: 1e SELECT alpha (CONDSTORE)
+S: \* FLAGS \(\\Answered \\Deleted \\Draft \\Flagged \\Seen\)
+S: \* 4 EXISTS
+S: \* 4 RECENT
+S: \* OK \[UIDVALIDITY \d+\].*
+S: \* OK \[UNSEEN 1\].*
+S: \* OK \[PERMANENTFLAGS \(\\Answered \\Deleted \\Draft \\Flagged \\\Seen( \\\*)?\)\].*
+S: \* OK \[HIGHESTMODSEQ \d+\].*
+S: \* OK \[UIDNEXT 5\].*
+S: 1e OK \[READ-WRITE\] SELECT completed.
+
+## Check stored messages before getting started
+C: 1f FETCH 1:* (FLAGS)
+S: \* 1 FETCH \(FLAGS \(\\Recent\)\)
+S: \* 2 FETCH \(FLAGS \(\\Recent\)\)
+S: \* 3 FETCH \(FLAGS \(\\Recent\)\)
+S: \* 4 FETCH \(FLAGS \(\\Recent\)\)
+S: 1f OK FETCH completed.
+
+## All messages has modseq 5 because of the \RECENT reset while selecting
+
+C: 1g STORE 1:* (UNCHANGEDSINCE 1) FLAGS (\Deleted)
+S: 1g OK \[MODIFIED 0 1:4\] STORE failed.
+
+C: 1h STORE 1:2 (UNCHANGEDSINCE 5) +FLAGS (\DRAFT)
+S: \* 1 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Draft \\Recent\)\)
+S: \* 2 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Draft \\Recent\)\)
+S: 1h OK Conditional STORE completed.
+
+## Message 2 have a modseq > 5 thus update will fail on them
+## Message 3 and 4 will be updated
+
+C: 1i STORE 2:4 (UNCHANGEDSINCE 5) +FLAGS (\ANSWERED)
+S: \* 3 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Answered \\Recent\)\)
+S: \* 4 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Answered \\Recent\)\)
+S: 1i OK \[MODIFIED 0 2\] STORE failed.
+## TODO buggy. Do not conform with example in RFC-4551 sections 3.2
+## TODO MODIFIED should not include 0
+
+## Check messages 1 2 3 and 4
+
+C: 1j FETCH 1:* (FLAGS)
+S: \* 1 FETCH \(FLAGS \(\\Draft \\Recent\)\)
+S: \* 2 FETCH \(FLAGS \(\\Draft \\Recent\)\)
+S: \* 3 FETCH \(FLAGS \(\\Answered \\Recent\)\)
+S: \* 4 FETCH \(FLAGS \(\\Answered \\Recent\)\)
+S: 1j OK FETCH completed.
+
+## Check since update 1h -> modseq 6
+C: 1k FETCH 1:* (FLAGS) (CHANGEDSINCE 6)
+S: \* 3 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Answered \\Recent\)\)
+S: \* 4 FETCH \(MODSEQ \(\d+\) FLAGS \(\\Answered \\Recent\)\)
+S: 1k OK FETCH completed.
