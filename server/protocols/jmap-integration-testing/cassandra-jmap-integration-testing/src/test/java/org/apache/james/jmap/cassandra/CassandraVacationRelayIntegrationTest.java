@@ -17,39 +17,35 @@
  * under the License.                                           *
  ****************************************************************/
 
+package org.apache.james.jmap.cassandra;
 
+import org.apache.james.CassandraJmapTestRule;
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.dnsservice.api.DNSService;
+import org.apache.james.dnsservice.api.InMemoryDNSService;
+import org.apache.james.jmap.VacationRelayIntegrationTest;
+import org.junit.Rule;
 
-package org.apache.james.transport.matchers;
+public class CassandraVacationRelayIntegrationTest extends VacationRelayIntegrationTest {
 
-import com.google.common.collect.ImmutableList;
-import org.apache.mailet.base.GenericMatcher;
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
+    private final InMemoryDNSService inMemoryDNSService = new InMemoryDNSService();
 
-import java.util.Collection;
+    @Rule
+    public CassandraJmapTestRule jamesServerRule = CassandraJmapTestRule.defaultTestRule();
 
-/**
- * <P>Matches mails that are sent by an SMTP authenticated user.</P>
- * <P>If the sender was not authenticated it will not match.</P>
- * <PRE><CODE>
- * &lt;mailet match=&quot;SMTPAuthSuccessful&quot; class=&quot;&lt;any-class&gt;&quot;&gt;
- * </CODE></PRE>
- *
- * @version CVS $Revision$ $Date$
- * @since 2.2.0
- */
-public class SMTPAuthSuccessful extends GenericMatcher {
-    
-    /**
-     * The mail attribute holding the SMTP AUTH user name, if any.
-     */
-
-    public Collection<MailAddress> match(Mail mail) {
-        String authUser = (String) mail.getAttribute(Mail.SMTP_AUTH_USER_ATTRIBUTE_NAME);
-        if (authUser != null) {
-            return mail.getRecipients();
-        } else {
-            return ImmutableList.of();
-        }
+    @Override
+    protected GuiceJamesServer getJmapServer() {
+        return jamesServerRule.jmapServer((binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
     }
+
+    @Override
+    protected void await() {
+        jamesServerRule.await();
+    }
+
+    @Override
+    protected InMemoryDNSService getInMemoryDns() {
+        return inMemoryDNSService;
+    }
+
 }

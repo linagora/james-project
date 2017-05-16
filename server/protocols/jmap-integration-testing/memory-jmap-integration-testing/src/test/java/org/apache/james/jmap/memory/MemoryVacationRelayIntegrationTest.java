@@ -17,39 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
+package org.apache.james.jmap.memory;
 
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.dnsservice.api.DNSService;
+import org.apache.james.dnsservice.api.InMemoryDNSService;
+import org.apache.james.jmap.VacationRelayIntegrationTest;
+import org.junit.Rule;
 
-package org.apache.james.transport.matchers;
+public class MemoryVacationRelayIntegrationTest extends VacationRelayIntegrationTest {
 
-import com.google.common.collect.ImmutableList;
-import org.apache.mailet.base.GenericMatcher;
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
+    @Rule
+    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
 
-import java.util.Collection;
+    private final InMemoryDNSService inMemoryDNSService = new InMemoryDNSService();
 
-/**
- * <P>Matches mails that are sent by an SMTP authenticated user.</P>
- * <P>If the sender was not authenticated it will not match.</P>
- * <PRE><CODE>
- * &lt;mailet match=&quot;SMTPAuthSuccessful&quot; class=&quot;&lt;any-class&gt;&quot;&gt;
- * </CODE></PRE>
- *
- * @version CVS $Revision$ $Date$
- * @since 2.2.0
- */
-public class SMTPAuthSuccessful extends GenericMatcher {
-    
-    /**
-     * The mail attribute holding the SMTP AUTH user name, if any.
-     */
+    @Override
+    protected void await() {}
 
-    public Collection<MailAddress> match(Mail mail) {
-        String authUser = (String) mail.getAttribute(Mail.SMTP_AUTH_USER_ATTRIBUTE_NAME);
-        if (authUser != null) {
-            return mail.getRecipients();
-        } else {
-            return ImmutableList.of();
-        }
+    @Override
+    protected GuiceJamesServer getJmapServer() {
+        return memoryJmap.jmapServer((binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
+    }
+
+    @Override
+    protected InMemoryDNSService getInMemoryDns() {
+        return inMemoryDNSService;
     }
 }

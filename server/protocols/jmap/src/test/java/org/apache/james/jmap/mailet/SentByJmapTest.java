@@ -17,12 +17,13 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.transport.matchers;
+package org.apache.james.jmap.mailet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collection;
 
+import org.apache.james.jmap.send.MailMetadata;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.base.MailAddressFixture;
@@ -32,24 +33,24 @@ import org.apache.mailet.base.test.FakeMatcherConfig;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SMTPAuthSuccessfulTest {
+public class SentByJmapTest {
 
-    private SMTPAuthSuccessful testee;
+    private SentByJmap testee;
 
     @Before
     public void setUp() throws Exception {
-        testee = new SMTPAuthSuccessful();
+        testee = new SentByJmap();
         testee.init(FakeMatcherConfig.builder().matcherName("matcherName")
             .mailetContext(FakeMailContext.defaultContext())
             .build());
     }
 
     @Test
-    public void matchShouldReturnRecipientsWhenAuthUserAttributeIsPresent() throws Exception{
-        MailAddress recipient = MailAddressFixture.OTHER_AT_JAMES;
+    public void matchShouldReturnRecipientsWhenUserAttributeIsPresent() throws Exception{
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
         FakeMail fakeMail = FakeMail.builder()
             .recipient(recipient)
-            .attribute(Mail.SMTP_AUTH_USER_ATTRIBUTE_NAME, "other")
+            .attribute(MailMetadata.MAIL_METADATA_USERNAME_ATTRIBUTE, "true")
             .build();
 
         Collection<MailAddress> results =  testee.match(fakeMail);
@@ -58,9 +59,9 @@ public class SMTPAuthSuccessfulTest {
     }
 
     @Test
-    public void matchShouldNotReturnRecipientsWhenAuthUserAttributeIsAbsent() throws Exception{
+    public void matchShouldReturnEmptyCollectionWhenUserAttributeIsAbsent() throws Exception{
         FakeMail fakeMail = FakeMail.builder()
-            .recipients(MailAddressFixture.OTHER_AT_JAMES)
+            .recipients(MailAddressFixture.ANY_AT_JAMES)
             .build();
 
         Collection<MailAddress> results =  testee.match(fakeMail);
@@ -68,4 +69,26 @@ public class SMTPAuthSuccessfulTest {
         assertThat(results).isEmpty();
     }
 
+    @Test
+    public void matchShouldReturnEmptyCollectionWhenUserAttributeIsAbsentAndThereIsNoRecipient() throws Exception {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients()
+            .build();
+
+        Collection<MailAddress> results =  testee.match(fakeMail);
+
+        assertThat(results).isEmpty();
+    }
+
+    @Test
+    public void matchShouldReturnEmptyCollectionWhenUserAttributeIsPresentAndThereIsNoRecipient() throws Exception {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients()
+            .attribute(MailMetadata.MAIL_METADATA_USERNAME_ATTRIBUTE, "true")
+            .build();
+
+        Collection<MailAddress> results =  testee.match(fakeMail);
+
+        assertThat(results).isEmpty();
+    }
 }

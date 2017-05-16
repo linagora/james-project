@@ -19,33 +19,20 @@
 
 
 
-package org.apache.james.transport.matchers;
-
-import com.google.common.collect.ImmutableList;
-import org.apache.mailet.base.GenericMatcher;
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
+package org.apache.james.jmap.mailet;
 
 import java.util.Collection;
 
-/**
- * <P>Matches mails that are sent by an SMTP authenticated user.</P>
- * <P>If the sender was not authenticated it will not match.</P>
- * <PRE><CODE>
- * &lt;mailet match=&quot;SMTPAuthSuccessful&quot; class=&quot;&lt;any-class&gt;&quot;&gt;
- * </CODE></PRE>
- *
- * @version CVS $Revision$ $Date$
- * @since 2.2.0
- */
-public class SMTPAuthSuccessful extends GenericMatcher {
-    
-    /**
-     * The mail attribute holding the SMTP AUTH user name, if any.
-     */
+import org.apache.james.jmap.send.MailMetadata;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.GenericMatcher;
 
+import com.google.common.collect.ImmutableList;
+
+public class SentByJmap extends GenericMatcher {
     public Collection<MailAddress> match(Mail mail) {
-        String authUser = (String) mail.getAttribute(Mail.SMTP_AUTH_USER_ATTRIBUTE_NAME);
+        String authUser = (String) mail.getAttribute(MailMetadata.MAIL_METADATA_USERNAME_ATTRIBUTE);
         if (authUser != null) {
             return mail.getRecipients();
         } else {

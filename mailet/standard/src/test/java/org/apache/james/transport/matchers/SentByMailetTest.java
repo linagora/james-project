@@ -32,13 +32,13 @@ import org.apache.mailet.base.test.FakeMatcherConfig;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SMTPAuthSuccessfulTest {
+public class SentByMailetTest {
 
-    private SMTPAuthSuccessful testee;
+    private SentByMailet testee;
 
     @Before
     public void setUp() throws Exception {
-        testee = new SMTPAuthSuccessful();
+        testee = new SentByMailet();
         testee.init(FakeMatcherConfig.builder().matcherName("matcherName")
             .mailetContext(FakeMailContext.defaultContext())
             .build());
@@ -46,10 +46,10 @@ public class SMTPAuthSuccessfulTest {
 
     @Test
     public void matchShouldReturnRecipientsWhenAuthUserAttributeIsPresent() throws Exception{
-        MailAddress recipient = MailAddressFixture.OTHER_AT_JAMES;
+        MailAddress recipient = MailAddressFixture.ANY_AT_JAMES;
         FakeMail fakeMail = FakeMail.builder()
             .recipient(recipient)
-            .attribute(Mail.SMTP_AUTH_USER_ATTRIBUTE_NAME, "other")
+            .attribute(Mail.SENT_BY_MAILET, "true")
             .build();
 
         Collection<MailAddress> results =  testee.match(fakeMail);
@@ -58,9 +58,9 @@ public class SMTPAuthSuccessfulTest {
     }
 
     @Test
-    public void matchShouldNotReturnRecipientsWhenAuthUserAttributeIsAbsent() throws Exception{
+    public void matchShouldReturnEmptyCollectionWhenAuthUserAttributeIsAbsent() throws Exception{
         FakeMail fakeMail = FakeMail.builder()
-            .recipients(MailAddressFixture.OTHER_AT_JAMES)
+            .recipients(MailAddressFixture.ANY_AT_JAMES)
             .build();
 
         Collection<MailAddress> results =  testee.match(fakeMail);
@@ -68,4 +68,26 @@ public class SMTPAuthSuccessfulTest {
         assertThat(results).isEmpty();
     }
 
+    @Test
+    public void matchShouldReturnEmptyCollectionWhenAuthUserAttributeIsAbsentAndThereIsNoRecipient() throws Exception {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients()
+            .build();
+
+        Collection<MailAddress> results =  testee.match(fakeMail);
+
+        assertThat(results).isEmpty();
+    }
+
+    @Test
+    public void matchShouldReturnEmptyCollectionWhenAuthUserAttributeIsPresentAndThereIsNoRecipient() throws Exception {
+        FakeMail fakeMail = FakeMail.builder()
+            .recipients()
+            .attribute(Mail.SENT_BY_MAILET, "true")
+            .build();
+
+        Collection<MailAddress> results =  testee.match(fakeMail);
+
+        assertThat(results).isEmpty();
+    }
 }
