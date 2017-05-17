@@ -131,8 +131,9 @@ public interface StatusResponse extends ImapResponseMessage {
 
         /** RFC5162 <code>CLOSED</code> response code */
         private static final ResponseCode CLOSED = new ResponseCode("CLOSED");
+        public static final int IGNORE_NUMBER = -1;
 
-        
+
         /** RFC4315 <code>APPENDUID</code> response code */
         public static ResponseCode appendUid(long uidValidity, UidRange[] uids) {
             String uidParam = formatRanges(uids);
@@ -151,7 +152,7 @@ public interface StatusResponse extends ImapResponseMessage {
         public static ResponseCode condStore(IdRange[] failedRanges) {
             String failed = formatRanges(failedRanges);
 
-            return new ResponseCode("MODIFIED", Arrays.asList(new String[] { failed}), 0, false);
+            return new ResponseCode("MODIFIED", Arrays.asList(new String[] { failed}), IGNORE_NUMBER, false);
         }
         
         /** RFC4551 <code>Conditional STORE</code> response code */

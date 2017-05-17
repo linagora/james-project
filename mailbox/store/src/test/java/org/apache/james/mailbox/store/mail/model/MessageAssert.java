@@ -106,22 +106,22 @@ public class MessageAssert extends AbstractAssert<MessageAssert, MailboxMessage>
 
     public MessageAssert hasFlags(Flags flags) {
         if (flags.contains(Flags.Flag.ANSWERED) != actual.isAnswered()) {
-            failWithMessage("Expected ANSWERED flag to be <%s> but was <%>", flags.contains(Flags.Flag.ANSWERED), actual.isAnswered());
+            failWithMessage("Expected ANSWERED flag to be <%s> but was <%s>", flags.contains(Flags.Flag.ANSWERED), actual.isAnswered());
         }
         if (flags.contains(Flags.Flag.DELETED) != actual.isDeleted()) {
-            failWithMessage("Expected DELETED flag to be <%s> but was <%>", flags.contains(Flags.Flag.DELETED), actual.isDeleted());
+            failWithMessage("Expected DELETED flag to be <%s> but was <%s>", flags.contains(Flags.Flag.DELETED), actual.isDeleted());
         }
         if (flags.contains(Flags.Flag.DRAFT) != actual.isDraft()) {
-            failWithMessage("Expected DRAFT flag to be <%s> but was <%>", flags.contains(Flags.Flag.DRAFT), actual.isDraft());
+            failWithMessage("Expected DRAFT flag to be <%s> but was <%s>", flags.contains(Flags.Flag.DRAFT), actual.isDraft());
         }
         if (flags.contains(Flags.Flag.FLAGGED) != actual.isFlagged()) {
-            failWithMessage("Expected FLAGGED flag to be <%s> but was <%>", flags.contains(Flags.Flag.FLAGGED), actual.isFlagged());
+            failWithMessage("Expected FLAGGED flag to be <%s> but was <%s>", flags.contains(Flags.Flag.FLAGGED), actual.isFlagged());
         }
         if (flags.contains(Flags.Flag.SEEN) != actual.isSeen()) {
-            failWithMessage("Expected SEEN flag to be <%s> but was <%>", flags.contains(Flags.Flag.SEEN), actual.isSeen());
+            failWithMessage("Expected SEEN flag to be <%s> but was <%s>", flags.contains(Flags.Flag.SEEN), actual.isSeen());
         }
         if (flags.contains(Flags.Flag.RECENT) != actual.isRecent()) {
-            failWithMessage("Expected RECENT flag to be <%s> but was <%>", flags.contains(Flags.Flag.RECENT), actual.isRecent());
+            failWithMessage("Expected RECENT flag to be <%s> but was <%s>", flags.contains(Flags.Flag.RECENT), actual.isRecent());
         }
         return this;
     }

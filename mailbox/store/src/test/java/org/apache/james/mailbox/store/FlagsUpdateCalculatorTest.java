@@ -25,7 +25,6 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.junit.Test;
 
 public class FlagsUpdateCalculatorTest {
@@ -55,6 +54,60 @@ public class FlagsUpdateCalculatorTest {
             MessageManager.FlagsUpdateMode.REMOVE);
         assertThat(flagsUpdateCalculator.buildNewFlags(new FlagsBuilder().add(Flags.Flag.RECENT, Flags.Flag.FLAGGED).build()))
             .isEqualTo(new Flags(Flags.Flag.RECENT));
+    }
+
+    @Test
+    public void isFlagModifiedShouldReturnTrueWhenFlagAdded() {
+        FlagsUpdateCalculator flagsUpdateCalculator = new FlagsUpdateCalculator(
+            new Flags(Flags.Flag.ANSWERED),
+            MessageManager.FlagsUpdateMode.ADD);
+
+        assertThat(flagsUpdateCalculator.isFlagModified(Flags.Flag.ANSWERED)).isTrue();
+    }
+
+    @Test
+    public void isFlagModifiedShouldReturnFalseWhenFlagNotAdded() {
+        FlagsUpdateCalculator flagsUpdateCalculator = new FlagsUpdateCalculator(
+            new Flags(Flags.Flag.ANSWERED),
+            MessageManager.FlagsUpdateMode.ADD);
+
+        assertThat(flagsUpdateCalculator.isFlagModified(Flags.Flag.DRAFT)).isFalse();
+    }
+
+    @Test
+    public void isFlagModifiedShouldReturnTrueWhenFlagRemoved() {
+        FlagsUpdateCalculator flagsUpdateCalculator = new FlagsUpdateCalculator(
+            new Flags(Flags.Flag.ANSWERED),
+            MessageManager.FlagsUpdateMode.REMOVE);
+
+        assertThat(flagsUpdateCalculator.isFlagModified(Flags.Flag.ANSWERED)).isTrue();
+    }
+
+    @Test
+    public void isFlagModifiedShouldReturnFalseWhenFlagNotRemoved() {
+        FlagsUpdateCalculator flagsUpdateCalculator = new FlagsUpdateCalculator(
+            new Flags(Flags.Flag.ANSWERED),
+            MessageManager.FlagsUpdateMode.REMOVE);
+
+        assertThat(flagsUpdateCalculator.isFlagModified(Flags.Flag.DRAFT)).isFalse();
+    }
+
+    @Test
+    public void isFlagModifiedShouldReturnTrueWhenFlagReplaceSet() {
+        FlagsUpdateCalculator flagsUpdateCalculator = new FlagsUpdateCalculator(
+            new Flags(Flags.Flag.ANSWERED),
+            MessageManager.FlagsUpdateMode.REPLACE);
+
+        assertThat(flagsUpdateCalculator.isFlagModified(Flags.Flag.ANSWERED)).isTrue();
+    }
+
+    @Test
+    public void isFlagModifiedShouldReturnTrueWhenFlagReplaceUnset() {
+        FlagsUpdateCalculator flagsUpdateCalculator = new FlagsUpdateCalculator(
+            new Flags(Flags.Flag.ANSWERED),
+            MessageManager.FlagsUpdateMode.REPLACE);
+
+        assertThat(flagsUpdateCalculator.isFlagModified(Flags.Flag.DRAFT)).isTrue();
     }
 
 }

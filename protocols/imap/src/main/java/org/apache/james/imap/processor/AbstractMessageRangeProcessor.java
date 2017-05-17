@@ -97,7 +97,7 @@ public abstract class AbstractMessageRangeProcessor<M extends AbstractMessageRan
                 IdRange[] resultUids = IdRange.mergeRanges(resultRanges).toArray(new IdRange[0]);
 
                 // get folder UIDVALIDITY
-                Long uidValidity = mailbox.getMetaData(false, mailboxSession, MessageManager.MetaData.FetchGroup.NO_UNSEEN).getUidValidity();
+                Long uidValidity = mailbox.getMetaData(false, mailboxSession, MessageManager.MetaData.FetchGroup.NO_COUNT).getUidValidity();
 
                 unsolicitedResponses(session, responder, useUids);
                 okComplete(command, tag, StatusResponse.ResponseCode.copyUid(uidValidity, idSet, resultUids), responder);

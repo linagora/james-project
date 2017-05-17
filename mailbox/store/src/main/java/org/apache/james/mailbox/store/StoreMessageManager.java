@@ -719,11 +719,11 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
             public List<MessageUid> run() throws MailboxException {
                 final List<MessageUid> members = messageMapper.findRecentMessageUidsInMailbox(getMailboxEntity());
 
-                // Convert to MessageRanges so we may be able to optimize the
-                // flag update
-                List<MessageRange> ranges = MessageRange.toRanges(members);
-                for (MessageRange range : ranges) {
-                    if (reset) {
+                if (reset) {
+                    // Convert to MessageRanges so we may be able to optimize the
+                    // flag update
+                    List<MessageRange> ranges = MessageRange.toRanges(members);
+                    for (MessageRange range : ranges) {
                         // only call save if we need to
                         messageMapper.updateFlags(getMailboxEntity(), new FlagsUpdateCalculator(new Flags(Flag.RECENT), FlagsUpdateMode.REMOVE), range);
                     }

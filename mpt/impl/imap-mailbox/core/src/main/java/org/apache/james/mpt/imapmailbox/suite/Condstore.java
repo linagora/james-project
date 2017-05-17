@@ -17,20 +17,28 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.table;
+package org.apache.james.mpt.imapmailbox.suite;
 
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.IMAP_UID;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MAILBOX_ID;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
+import java.util.Locale;
 
-public interface MessageIdToImapUid {
+import javax.inject.Inject;
 
-    String TABLE_NAME = "imapUidTable";
+import org.apache.james.mpt.api.HostSystem;
+import org.apache.james.mpt.imapmailbox.suite.base.BaseAuthenticatedState;
+import org.junit.Test;
 
-    String MOD_SEQ = "modSeq";
+public class Condstore extends BaseAuthenticatedState {
 
-    String MOD_SEQ_SET = "modSeqSet";
+    @Inject
+    private static HostSystem system;
 
-    String[] FIELDS = { MESSAGE_ID, MAILBOX_ID, IMAP_UID, MOD_SEQ, MOD_SEQ_SET,
-            Flag.ANSWERED, Flag.DELETED, Flag.DRAFT, Flag.FLAGGED, Flag.RECENT, Flag.SEEN, Flag.USER, Flag.USER_FLAGS };
+    public Condstore() throws Exception {
+        super(system);
+    }
+    
+    @Test
+    public void testConcurrentExpungeResponseUS() throws Exception {
+          scriptTest("Condstore", Locale.US);
+    }
+
 }

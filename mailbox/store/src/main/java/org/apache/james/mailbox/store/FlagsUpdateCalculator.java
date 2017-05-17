@@ -33,6 +33,22 @@ public class FlagsUpdateCalculator {
         this.mode = mode;
     }
 
+    public Flags getProvidedFlags() {
+        return new Flags(providedFlags);
+    }
+
+    public MessageManager.FlagsUpdateMode getMode() {
+        return mode;
+    }
+
+    public boolean isFlagModified(Flags.Flag flag) {
+        if (mode == MessageManager.FlagsUpdateMode.ADD
+            || mode == MessageManager.FlagsUpdateMode.REMOVE) {
+            return providedFlags.contains(flag);
+        }
+        return true;
+    }
+
     public Flags buildNewFlags(Flags oldFlags) {
         Flags updatedFlags = new Flags(oldFlags);
         switch (mode) {
