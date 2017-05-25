@@ -27,6 +27,7 @@ import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.mailbox.elasticsearch.MailboxElasticsearchConstants;
+import org.apache.james.mailbox.tika.TikaContainer;
 import org.apache.james.modules.CassandraJmapServerModule;
 import org.apache.james.modules.protocols.ProtocolHandlerModule;
 import org.apache.james.modules.protocols.SMTPServerModule;
@@ -43,6 +44,7 @@ import com.google.common.base.Splitter;
 public class CassandraJamesSmtpHostSystem extends ExternalSessionFactory implements SmtpHostSystem {
 
     private TemporaryFolder folder;
+    private TikaContainer tikaContainer;
     private EmbeddedCassandra embeddedCassandra;
     private EmbeddedElasticSearch embeddedElasticSearch;
 
@@ -90,6 +92,8 @@ public class CassandraJamesSmtpHostSystem extends ExternalSessionFactory impleme
         inMemoryDNSService = new InMemoryDNSService();
         folder = new TemporaryFolder();
         folder.create();
+        tikaContainer = new TikaContainer();
+        tikaContainer.start();
         embeddedElasticSearch = new EmbeddedElasticSearch(folder.getRoot().toPath(), MailboxElasticsearchConstants.MAILBOX_INDEX);
         embeddedElasticSearch.before();
         embeddedCassandra = EmbeddedCassandra.createStartServer();
@@ -101,6 +105,7 @@ public class CassandraJamesSmtpHostSystem extends ExternalSessionFactory impleme
     public void afterTest() throws Exception {
         jamesServer.stop();
         embeddedElasticSearch.after();
+        tikaContainer.stop();
         folder.delete();
     }
 
@@ -110,7 +115,7 @@ public class CassandraJamesSmtpHostSystem extends ExternalSessionFactory impleme
     protected GuiceJamesServer createJamesServer() {
         return new GuiceJamesServer()
             .combineWith(CassandraJamesServerMain.cassandraServerModule, new SMTPServerModule(), new ProtocolHandlerModule())
-            .overrideWith(new CassandraJmapServerModule(folder::getRoot, embeddedElasticSearch, embeddedCassandra),
+            .overrideWith(new CassandraJmapServerModule(folder::getRoot, tikaContainer, embeddedElasticSearch, embeddedCassandra),
                 (binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
     }
 }

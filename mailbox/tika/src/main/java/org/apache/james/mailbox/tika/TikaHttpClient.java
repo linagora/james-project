@@ -16,42 +16,11 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
-package org.apache.james.mailbox.store.extractor;
-
-import static org.assertj.core.api.Assertions.assertThat;
+package org.apache.james.mailbox.tika;
 
 import java.io.InputStream;
 
-import org.apache.james.mailbox.extractor.TextExtractor;
-import org.junit.Before;
-import org.junit.Test;
+public interface TikaHttpClient {
 
-public class DefaultTextExtractorTest {
-    private TextExtractor textExtractor;
-
-    @Before
-    public void setUp() {
-        textExtractor = new DefaultTextExtractor();
-    }
-
-    @Test
-    public void textTest() throws Exception {
-        InputStream inputStream = ClassLoader.getSystemResourceAsStream("documents/Text.txt");
-        assertThat(inputStream).isNotNull();
-        assertThat(textExtractor.extractContent(inputStream, "text/plain")
-            .getTextualContent())
-            .isEqualTo("This is some awesome text text.\n\n");
-    }
-
-    @Test
-    public void textMicrosoftWorldTest() throws Exception {
-        InputStream inputStream = ClassLoader.getSystemResourceAsStream("documents/writter.docx");
-        assertThat(inputStream).isNotNull();
-        assertThat(textExtractor.extractContent(
-            inputStream,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            .getTextualContent())
-            .isNull();
-    }
+    InputStream rmetaAsJson(InputStream inputStream, String contentType) throws TikaException;
 }

@@ -24,7 +24,7 @@ public class MailboxBasedHtmlTextExtractor implements HtmlTextExtractor {
     @Override
     public String toPlainText(String html) {
         try {
-            return textExtractor.extractContent(new ByteArrayInputStream(html.getBytes()), "text/html", "").getTextualContent();
+            return textExtractor.extractContent(new ByteArrayInputStream(html.getBytes()), "text/html").getTextualContent();
         } catch (Exception e) {
             LOGGER.warn("Error extracting text from HTML", e);
             return html;

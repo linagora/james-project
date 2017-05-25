@@ -16,13 +16,11 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.tika;
 
-package org.apache.james.mailbox.extractor;
+public class TikaException extends RuntimeException {
 
-import java.io.InputStream;
-
-public interface TextExtractor {
-
-    ParsedContent extractContent(InputStream inputStream, String contentType) throws Exception;
-
+    public TikaException(Exception exception) {
+        super(exception);
+    }
 }

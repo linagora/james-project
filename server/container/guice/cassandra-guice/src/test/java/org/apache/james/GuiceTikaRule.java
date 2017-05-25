@@ -18,48 +18,36 @@
  ****************************************************************/
 
 package org.apache.james;
-import org.apache.james.modules.TestESMetricReporterModule;
-import org.apache.james.modules.TestJMAPServerModule;
-import org.junit.rules.TestRule;
+import org.apache.james.mailbox.tika.TikaContainer;
+import org.apache.james.modules.TestTikaModule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import com.google.inject.Module;
 
 
-public class CassandraJmapTestRule implements TestRule {
+public class GuiceTikaRule implements GuiceModuleTestRule {
 
-    private static final int LIMIT_TO_3_MESSAGES = 3;
-
-    public static CassandraJmapTestRule defaultTestRule() {
-        return new CassandraJmapTestRule(
-                AggregateGuiceModuleTestRule.of(new EmbeddedElasticSearchRule(), new EmbeddedCassandraRule(), new GuiceTikaRule()));
-    }
-
-    private GuiceModuleTestRule guiceModuleTestRule;
-
-    public CassandraJmapTestRule(GuiceModuleTestRule... guiceModuleTestRule) {
-        this.guiceModuleTestRule =
-                AggregateGuiceModuleTestRule
-                    .of(guiceModuleTestRule)
-                    .aggregate(new TempFilesystemTestRule());
-    }
-
-    public GuiceJamesServer jmapServer(Module... additionals) {
-        return new GuiceJamesServer()
-            .combineWith(CassandraJamesServerMain.cassandraServerModule, CassandraJamesServerMain.protocols)
-            .overrideWith(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES))
-            .overrideWith(new TestESMetricReporterModule())
-            .overrideWith(guiceModuleTestRule.getModule())
-            .overrideWith(additionals);
-    }
+    private TikaContainer tika;
 
     @Override
     public Statement apply(Statement base, Description description) {
-        return guiceModuleTestRule.apply(base, description);
+        return new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                tika = new TikaContainer();
+                tika.start();
+                base.evaluate();
+            }
+        };
     }
 
+    @Override
     public void await() {
-        guiceModuleTestRule.await();
+    }
+
+    @Override
+    public Module getModule() {
+        return new TestTikaModule(tika);
     }
 }

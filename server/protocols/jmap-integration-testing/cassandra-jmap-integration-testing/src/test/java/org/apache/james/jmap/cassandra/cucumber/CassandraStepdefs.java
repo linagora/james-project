@@ -32,6 +32,7 @@ import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.jmap.methods.integration.cucumber.MainStepdefs;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.elasticsearch.MailboxElasticsearchConstants;
+import org.apache.james.mailbox.tika.TikaContainer;
 import org.apache.james.modules.CassandraJmapServerModule;
 import org.junit.rules.TemporaryFolder;
 
@@ -46,6 +47,7 @@ public class CassandraStepdefs {
 
     private final MainStepdefs mainStepdefs;
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
+    private TikaContainer tikaContainer = new TikaContainer();
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder, MailboxElasticsearchConstants.MAILBOX_INDEX);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
 
@@ -57,11 +59,12 @@ public class CassandraStepdefs {
     @Before
     public void init() throws Exception {
         temporaryFolder.create();
+        tikaContainer.start();
         embeddedElasticSearch.before();
         mainStepdefs.messageIdFactory = new CassandraMessageId.Factory();
         mainStepdefs.jmapServer = new GuiceJamesServer()
                 .combineWith(CassandraJamesServerMain.cassandraServerModule, CassandraJamesServerMain.protocols)
-                .overrideWith(new CassandraJmapServerModule(temporaryFolder, embeddedElasticSearch, cassandra))
+                .overrideWith(new CassandraJmapServerModule(temporaryFolder, tikaContainer, embeddedElasticSearch, cassandra))
                 .overrideWith((binder) -> binder.bind(PersistenceAdapter.class).to(MemoryPersistenceAdapter.class));
         mainStepdefs.awaitMethod = () -> embeddedElasticSearch.awaitForElasticSearch();
         mainStepdefs.init();
@@ -71,6 +74,7 @@ public class CassandraStepdefs {
     public void tearDown() {
         ignoreFailures(() -> mainStepdefs.tearDown(),
                 () -> embeddedElasticSearch.after(),
+                () -> tikaContainer.stop(),
                 () -> temporaryFolder.delete());
     }
 

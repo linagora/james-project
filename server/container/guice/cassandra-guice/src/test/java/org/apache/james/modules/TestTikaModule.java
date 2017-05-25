@@ -19,66 +19,38 @@
 
 package org.apache.james.modules;
 
-import java.io.File;
 import java.net.URISyntaxException;
-import java.util.function.Supplier;
 
 import javax.inject.Singleton;
 
-import org.apache.james.backends.cassandra.CassandraCluster;
-import org.apache.james.backends.cassandra.EmbeddedCassandra;
-import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.mailbox.tika.TikaConfiguration;
 import org.apache.james.mailbox.tika.TikaContainer;
 import org.apache.james.mailbox.tika.TikaHttpClient;
 import org.apache.james.mailbox.tika.TikaHttpClientImpl;
-import org.junit.rules.TemporaryFolder;
 
-import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 
-public class CassandraJmapServerModule extends AbstractModule {
+public class TestTikaModule extends AbstractModule{
 
-    private static final int LIMIT_TO_3_MESSAGES = 3;
-    private final Supplier<File> fileSupplier;
-    private final TikaContainer tikaContainer;
-    private final EmbeddedElasticSearch embeddedElasticSearch;
-    private final EmbeddedCassandra cassandra;
+    private final TikaContainer tika;
 
-    public CassandraJmapServerModule(Supplier<File> fileSupplier, TikaContainer tikaContainer, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
-        this.fileSupplier = fileSupplier;
-        this.tikaContainer = tikaContainer;
-        this.embeddedElasticSearch = embeddedElasticSearch;
-        this.cassandra = cassandra;
+    public TestTikaModule(TikaContainer tika) {
+        this.tika = tika;
     }
-
-    public CassandraJmapServerModule(TemporaryFolder temporaryFolder, TikaContainer tikaContainer, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra) {
-        this(temporaryFolder::getRoot, tikaContainer, embeddedElasticSearch, cassandra);
-    }
-
 
     @Override
     protected void configure() {
-        install(new TestElasticSearchModule(embeddedElasticSearch));
-        install(new TestFilesystemModule(fileSupplier));
-        install(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES));
-        bind(EmbeddedCassandra.class).toInstance(cassandra);
-    }
-    
-    @Provides
-    @Singleton
-    Session provideSession(CassandraCluster initializedCassandra) {
-        return initializedCassandra.getConf();
+
     }
 
     @Provides
     @Singleton
     protected TikaHttpClient provideTikaHttpClient() throws URISyntaxException {
         return new TikaHttpClientImpl(TikaConfiguration.builder()
-                .host(tikaContainer.getIp())
-                .port(tikaContainer.getPort())
-                .timeoutInMillis(tikaContainer.getTimeoutInMillis())
+                .host(tika.getIp())
+                .port(tika.getPort())
+                .timeoutInMillis(tika.getTimeoutInMillis())
                 .build());
     }
 }

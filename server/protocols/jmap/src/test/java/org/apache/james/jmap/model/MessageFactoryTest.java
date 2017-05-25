@@ -40,9 +40,13 @@ import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Cid;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.TestMessageId;
-import org.apache.james.mailbox.tika.extractor.TikaTextExtractor;
+import org.apache.james.mailbox.tika.TikaConfiguration;
+import org.apache.james.mailbox.tika.TikaContainer;
+import org.apache.james.mailbox.tika.TikaHttpClientImpl;
+import org.apache.james.mailbox.tika.TikaTextExtractor;
 import org.apache.james.util.mime.MessageContentExtractor;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
@@ -58,16 +62,25 @@ public class MessageFactoryTest {
     private MessageFactory messageFactory;
     private MessagePreviewGenerator messagePreview ;
     private HtmlTextExtractor htmlTextExtractor;
-    
+
+    @ClassRule
+    public static TikaContainer tika = new TikaContainer();
+
     @Before
-    public void setUp() {
-        htmlTextExtractor = new MailboxBasedHtmlTextExtractor(new TikaTextExtractor());
+    public void setUp() throws Exception {
+        TikaTextExtractor textExtractor = new TikaTextExtractor(new TikaHttpClientImpl(TikaConfiguration.builder()
+                .host(tika.getIp())
+                .port(tika.getPort())
+                .timeoutInMillis(tika.getTimeoutInMillis())
+                .build()));
+        htmlTextExtractor = new MailboxBasedHtmlTextExtractor(textExtractor);
 
         messagePreview = new MessagePreviewGenerator();
         MessageContentExtractor messageContentExtractor = new MessageContentExtractor();
 
         messageFactory = new MessageFactory(messagePreview, messageContentExtractor, htmlTextExtractor);
     }
+
     @Test
     public void emptyMailShouldBeLoadedIntoMessage() throws Exception {
         MetaDataWithContent testMail = MetaDataWithContent.builder()

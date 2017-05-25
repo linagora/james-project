@@ -199,6 +199,12 @@
                 <artifactId>apache-james-mailbox-tika</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>apache-james-mailbox-tika</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
 
            <dependency>
                 <groupId>org.apache.james</groupId>
@@ -209,6 +215,17 @@
                 <groupId>org.apache.james</groupId>
                 <artifactId>james-server-util</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-util-java8</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.james</groupId>
+                <artifactId>james-server-util-java8</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <!--
                 END Modules

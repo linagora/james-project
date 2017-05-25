@@ -19,9 +19,9 @@
 
 package org.apache.james.util.streams;
 
+import java.time.Duration;
 import java.util.List;
 
-import com.google.common.base.Strings;
 import org.junit.Assume;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -29,8 +29,11 @@ import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.WaitStrategy;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.shaded.com.github.dockerjava.api.command.InspectContainerResponse;
+
+import com.google.common.base.Strings;
 
 public class SwarmGenericContainer implements TestRule {
     private static final Logger LOGGER = LoggerFactory.getLogger(SwarmGenericContainer.class);
@@ -38,11 +41,11 @@ public class SwarmGenericContainer implements TestRule {
     private static final String NO_DOCKER_ENVIRONMENT = "Could not find a valid Docker environment.";
     private static final String SKIPPING_TEST_CAUTION = "Skipping all docker tests as no Docker environment was found";
 
-    private GenericContainer container;
+    private GenericContainer<?> container;
 
     public SwarmGenericContainer(String dockerImageName) {
         try {
-            this.container = new GenericContainer(dockerImageName);
+            this.container = new GenericContainer<>(dockerImageName);
         } catch (IllegalStateException e) {
             logAndCheckSkipTest(e);
         }
@@ -50,12 +53,11 @@ public class SwarmGenericContainer implements TestRule {
 
     public SwarmGenericContainer(ImageFromDockerfile imageFromDockerfile) {
         try {
-            this.container = new GenericContainer(imageFromDockerfile);
+            this.container = new GenericContainer<>(imageFromDockerfile);
         } catch (IllegalStateException e) {
             logAndCheckSkipTest(e);
         }
     }
-
     private void logAndCheckSkipTest(IllegalStateException e) {
         LOGGER.error("Cannot initial a docker container because: " + e);
         if (e.getMessage().startsWith(NO_DOCKER_ENVIRONMENT)) {
@@ -77,6 +79,21 @@ public class SwarmGenericContainer implements TestRule {
 
     public SwarmGenericContainer withEnv(String key, String value) {
         container.addEnv(key, value);
+        return this;
+    }
+
+    public SwarmGenericContainer withExposedPorts(Integer... ports) {
+        container.withExposedPorts(ports);
+        return this;
+    }
+
+    public SwarmGenericContainer waitingFor(WaitStrategy waitStrategy) {
+        container.waitingFor(waitStrategy);
+        return this;
+    }
+
+    public SwarmGenericContainer withStartupTimeout(Duration startupTimeout) {
+        container.withStartupTimeout(startupTimeout);
         return this;
     }
 
