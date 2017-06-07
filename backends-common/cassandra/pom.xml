@@ -17,7 +17,8 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -130,24 +131,31 @@
                     <groupId>org.apache.james</groupId>
                     <artifactId>james-server-util-java8</artifactId>
                 </dependency>
-		        <dependency>
-		            <groupId>com.datastax.cassandra</groupId>
-		            <artifactId>cassandra-driver-core</artifactId>
-		            <version>2.1.8</version>
-		        </dependency>
-		        <dependency>
-		            <groupId>com.google.guava</groupId>
-		            <artifactId>guava</artifactId>
-		        </dependency>
-			<dependency>
-			    <groupId>commons-lang</groupId>
-			    <artifactId>commons-lang</artifactId>
-			    <version>2.6</version>
-			</dependency>
-            <dependency>
-                <groupId>javax.inject</groupId>
-                <artifactId>javax.inject</artifactId>
-            </dependency>
+                <dependency>
+                    <groupId>com.datastax.cassandra</groupId>
+                    <artifactId>cassandra-driver-core</artifactId>
+                    <version>2.1.8</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport-native-epoll</artifactId>
+                    <version>4.1.10.Final</version>
+                    <classifier>linux-x86_64</classifier>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>commons-lang</groupId>
+                    <artifactId>commons-lang</artifactId>
+                    <version>2.6</version>
+                </dependency>
+                <dependency>
+                    <groupId>javax.inject</groupId>
+                    <artifactId>javax.inject</artifactId>
+                </dependency>
                 <dependency>
                     <groupId>net.javacrumbs.future-converter</groupId>
                     <artifactId>future-converter-java8-guava</artifactId>
@@ -159,13 +167,13 @@
                     <version>${assertj-3.version}</version>
                     <scope>test</scope>
                 </dependency>
-		        <dependency>
-		            <groupId>org.cassandraunit</groupId>
-		            <artifactId>cassandra-unit</artifactId>
-		            <version>2.1.9.2</version>
-		            <scope>test</scope>
-		        </dependency>
-		    </dependencies>
+                <dependency>
+                    <groupId>org.cassandraunit</groupId>
+                    <artifactId>cassandra-unit</artifactId>
+                    <version>2.1.9.2</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
             <build>
                 <plugins>
                     <plugin>
