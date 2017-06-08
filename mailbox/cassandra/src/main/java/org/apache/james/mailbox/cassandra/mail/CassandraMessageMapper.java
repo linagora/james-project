@@ -32,6 +32,7 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.james.mailbox.ApplicableFlagBuilder;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
@@ -104,6 +105,15 @@ public class CassandraMessageMapper implements MessageMapper {
         this.attachmentLoader = new AttachmentLoader(attachmentMapper);
         this.applicableFlagDAO = applicableFlagDAO;
         this.deletedMessageDAO = deletedMessageDAO;
+    }
+
+    @Override
+    public Iterator<MessageUid> getUids(Mailbox mailbox) throws MailboxException {
+        CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
+        return messageIdDAO.retrieveMessages(cassandraId, MessageRange.all())
+            .join()
+            .map(metaData -> metaData.getComposedMessageId().getUid())
+            .iterator();
     }
 
     @Override
@@ -359,9 +369,11 @@ public class CassandraMessageMapper implements MessageMapper {
 
     @Override
     public Flags getApplicableFlag(Mailbox mailbox) throws MailboxException {
-        return applicableFlagDAO.retrieveApplicableFlag((CassandraId) mailbox.getMailboxId())
-            .join()
-            .orElse(new Flags());
+        return ApplicableFlagBuilder.builder()
+            .add(applicableFlagDAO.retrieveApplicableFlag((CassandraId) mailbox.getMailboxId())
+                .join()
+                .orElse(new Flags()))
+            .build();
     }
 
     private CompletableFuture<Void> save(Mailbox mailbox, MailboxMessage message) throws MailboxException {

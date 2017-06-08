@@ -59,6 +59,11 @@ public class TransactionalMessageMapper implements MessageMapper {
     }
 
     @Override
+    public Iterator<MessageUid> getUids(Mailbox mailbox) throws MailboxException {
+        return messageMapper.getUids(mailbox);
+    }
+
+    @Override
     public <T> T execute(Transaction<T> transaction) throws MailboxException {
         throw new NotImplementedException();
     }

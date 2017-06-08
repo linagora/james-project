@@ -748,6 +748,9 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     @Override
     public Iterator<MessageUid> search(SearchQuery query, MailboxSession mailboxSession) throws MailboxException {
+        if (query.equals(new SearchQuery(SearchQuery.all()))) {
+            return getUids(mailboxSession);
+        }
         return index.search(mailboxSession, getMailboxEntity(), query);
     }
 
@@ -868,8 +871,19 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     }
 
     @Override
-    public Flags getApplicableFlag(MailboxSession session) throws MailboxException {
+    public Flags getApplicableFlags(MailboxSession session) throws MailboxException {
         return mapperFactory.getMessageMapper(session)
             .getApplicableFlag(mailbox);
+    }
+
+    private Iterator<MessageUid> getUids(MailboxSession session) throws MailboxException {
+        final MessageMapper messageMapper = mapperFactory.getMessageMapper(session);
+
+        return messageMapper.execute(new Mapper.Transaction<Iterator<MessageUid>>() {
+            @Override
+            public Iterator<MessageUid> run() throws MailboxException {
+                return messageMapper.getUids(mailbox);
+            }
+        });
     }
 }

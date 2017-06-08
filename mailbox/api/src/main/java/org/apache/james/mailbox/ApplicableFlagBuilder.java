@@ -16,45 +16,50 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
 package org.apache.james.mailbox;
 
 import javax.mail.Flags;
 
-public class FlagsBuilder {
+import com.google.common.annotations.VisibleForTesting;
 
-    public static FlagsBuilder builder() {
-        return new FlagsBuilder();
+public class ApplicableFlagBuilder {
+
+    @VisibleForTesting
+    static final Flags DEFAULT_APPLICABLE_FLAGS = FlagsBuilder.builder().add(
+        Flags.Flag.ANSWERED,
+        Flags.Flag.DELETED,
+        Flags.Flag.DRAFT,
+        Flags.Flag.FLAGGED,
+        Flags.Flag.SEEN)
+        .build();
+
+    private final FlagsBuilder builder;
+
+    public static ApplicableFlagBuilder builder() {
+        return new ApplicableFlagBuilder();
     }
 
-    private final Flags internalFlags;
-
-    public FlagsBuilder() {
-        internalFlags = new Flags();
+    private ApplicableFlagBuilder() {
+        builder = FlagsBuilder.builder().add(DEFAULT_APPLICABLE_FLAGS);
     }
 
-    public FlagsBuilder add(Flags.Flag... flags) {
-        for (Flags.Flag flag : flags) {
-            internalFlags.add(flag);
-        }
+    public ApplicableFlagBuilder add(String... flags) {
+        builder.add(flags);
+
         return this;
     }
 
-    public FlagsBuilder add(String... flags) {
-        for (String userFlag : flags) {
-            internalFlags.add(userFlag);
-        }
-        return this;
-    }
+    public ApplicableFlagBuilder add(Flags flags) {
+        builder.add(flags);
 
-    public FlagsBuilder add(Flags... flagsArray) {
-        for (Flags flags: flagsArray) {
-            internalFlags.add(flags);
-        }
         return this;
     }
 
     public Flags build() {
-        return new Flags(internalFlags);
+        Flags flags = builder.build();
+        flags.remove(Flags.Flag.RECENT);
+        flags.remove(Flags.Flag.USER);
+
+        return flags;
     }
 }
