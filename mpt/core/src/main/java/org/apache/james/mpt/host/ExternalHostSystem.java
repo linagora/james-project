@@ -20,6 +20,7 @@
 package org.apache.james.mpt.host;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.imap.api.ImapConfiguration;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
@@ -112,5 +113,9 @@ public class ExternalHostSystem extends ExternalSessionFactory implements ImapHo
     public void setQuotaLimits(long maxMessageQuota, long maxStorageQuota) throws Exception {
         throw new NotImplementedException();
     }
-    
+
+    @Override
+    public void configure(ImapConfiguration imapConfiguration) {
+        throw new NotImplementedException();
+    }
 }

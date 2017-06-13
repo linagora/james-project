@@ -59,16 +59,20 @@ public class ImapConfiguration {
             return !StringUtils.isBlank(disableCap);
         }
 
+        private static final boolean DEFAULT_IS_CONDSTORE_UNABLE = false;
+
         private Optional<Long> idleTimeInterval;
         private Optional<TimeUnit> idleTimeIntervalUnit;
         private Optional<Boolean> enableIdle;
         private ImmutableSet<String> disabledCaps;
+        private Optional<Boolean> isCondstoreUnable;
 
         private Builder() {
             this.idleTimeInterval = Optional.absent();
             this.idleTimeIntervalUnit = Optional.absent();
             this.enableIdle = Optional.absent();
             this.disabledCaps = ImmutableSet.of();
+            this.isCondstoreUnable = Optional.absent();
         }
 
         public Builder idleTimeInterval(long idleTimeInterval) {
@@ -101,6 +105,12 @@ public class ImapConfiguration {
             this.disabledCaps = ImmutableSet.of(disableCap);
             return this;
         }
+
+        public Builder isCondstoreUnable(boolean isCondstoreUnable) {
+            this.isCondstoreUnable = Optional.of(isCondstoreUnable);
+            return this;
+        }
+
         public ImapConfiguration build() {
             ImmutableSet<String> normalizeDisableCaps = FluentIterable.from(disabledCaps)
                     .filter(NO_BLANK)
@@ -110,7 +120,8 @@ public class ImapConfiguration {
                     enableIdle.or(DEFAULT_ENABLE_IDLE),
                     idleTimeInterval.or(DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS),
                     idleTimeIntervalUnit.or(DEFAULT_HEARTBEAT_INTERVAL_UNIT),
-                    normalizeDisableCaps);
+                    normalizeDisableCaps,
+                    isCondstoreUnable.or(DEFAULT_IS_CONDSTORE_UNABLE));
         }
     }
 
@@ -118,12 +129,14 @@ public class ImapConfiguration {
     private final TimeUnit idleTimeIntervalUnit;
     private final ImmutableSet<String> disabledCaps;
     private final boolean enableIdle;
+    private final boolean isCondstoreUnable;
 
-    private ImapConfiguration(boolean enableIdle, long idleTimeInterval, TimeUnit idleTimeIntervalUnit, ImmutableSet<String> disabledCaps) {
+    private ImapConfiguration(boolean enableIdle, long idleTimeInterval, TimeUnit idleTimeIntervalUnit, ImmutableSet<String> disabledCaps, boolean isCondstoreUnable) {
         this.enableIdle = enableIdle;
         this.idleTimeInterval = idleTimeInterval;
         this.idleTimeIntervalUnit = idleTimeIntervalUnit;
         this.disabledCaps = disabledCaps;
+        this.isCondstoreUnable = isCondstoreUnable;
     }
 
     public long getIdleTimeInterval() {
@@ -141,6 +154,10 @@ public class ImapConfiguration {
     public boolean isEnableIdle() {
         return enableIdle;
     }
+    
+    public boolean isCondstoreUnable() {
+        return isCondstoreUnable;
+    }
 
     @Override
     public final boolean equals(Object obj) {
@@ -149,14 +166,15 @@ public class ImapConfiguration {
             return Objects.equal(that.isEnableIdle(), enableIdle)
                 && Objects.equal(that.getIdleTimeInterval(), idleTimeInterval)
                 && Objects.equal(that.getIdleTimeIntervalUnit(), idleTimeIntervalUnit)
-                && Objects.equal(that.getDisabledCaps(), disabledCaps);
+                && Objects.equal(that.getDisabledCaps(), disabledCaps)
+                && Objects.equal(that.isCondstoreUnable(), isCondstoreUnable);
         }
         return false;
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hashCode(enableIdle, idleTimeInterval, idleTimeIntervalUnit, disabledCaps);
+        return Objects.hashCode(enableIdle, idleTimeInterval, idleTimeIntervalUnit, disabledCaps, isCondstoreUnable);
     }
 
     @Override
@@ -166,6 +184,7 @@ public class ImapConfiguration {
                 .add("idleTimeInterval", idleTimeInterval)
                 .add("idleTimeIntervalUnit", idleTimeIntervalUnit)
                 .add("disabledCaps", disabledCaps)
+                .add("isCondstoreUnable", isCondstoreUnable)
                 .toString();
     }
 }

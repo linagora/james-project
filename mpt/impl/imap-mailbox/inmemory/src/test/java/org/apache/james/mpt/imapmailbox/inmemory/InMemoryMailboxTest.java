@@ -51,6 +51,7 @@ import org.junit.runners.Suite.SuiteClasses;
     AuthenticatedState.class,
     AuthenticatePlain.class,
     ConcurrentSessions.class,
+    Condstore.class,
     Events.class,
     Expunge.class,
     Fetch.class,

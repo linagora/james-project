@@ -20,14 +20,16 @@
 package org.apache.james.imap.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.concurrent.TimeUnit;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.ImmutableSet;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class ImapConfigurationTest {
     @Rule
@@ -158,4 +160,29 @@ public class ImapConfigurationTest {
 
         assertThat(imapConfiguration.isEnableIdle()).isFalse();
     }
+
+    @Test
+    public void isCondstoreUnableShouldBeFalseWhenNoSetting() {
+        ImapConfiguration imapConfiguration = ImapConfiguration.builder().build();
+
+        assertThat(imapConfiguration.isCondstoreUnable()).isFalse();
+   }
+
+    @Test
+    public void isCondstoreUnableShouldBeTrueWhenValueIsTrue() {
+        ImapConfiguration imapConfiguration = ImapConfiguration.builder()
+                .isCondstoreUnable(true)
+                .build();
+
+        assertThat(imapConfiguration.isCondstoreUnable()).isTrue();
+   }
+
+    @Test
+    public void isCondstoreUnableShouldBeFalseWhenValueIsFalse() {
+        ImapConfiguration imapConfiguration = ImapConfiguration.builder()
+                .isCondstoreUnable(false)
+                .build();
+
+        assertThat(imapConfiguration.isCondstoreUnable()).isFalse();
+   }
 }

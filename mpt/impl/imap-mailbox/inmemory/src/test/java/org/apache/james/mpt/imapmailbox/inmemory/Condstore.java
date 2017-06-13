@@ -16,19 +16,36 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mpt.api;
+
+package org.apache.james.mpt.imapmailbox.inmemory;
+
+import java.util.Locale;
+
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.ImapConfiguration;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mpt.api.ImapFeatures.Feature;
+import org.apache.james.mpt.api.ImapHostSystem;
+import org.apache.james.mpt.imapmailbox.suite.base.BaseAuthenticatedState;
+import org.junit.Test;
 
-public interface ImapHostSystem extends HostSystem {
+public class Condstore extends BaseAuthenticatedState {
 
-    boolean supports(Feature... features);
+    @Inject
+    private static ImapHostSystem system;
     
-    void createMailbox(MailboxPath mailboxPath) throws Exception;
+    public Condstore() throws Exception {
+        super(system);
+    }
 
-    void setQuotaLimits(long maxMessageQuota, long maxStorageQuota) throws Exception;
+    @Test
+    public void condstoreShouldBeDisableByDefault() throws Exception {
+        system.configure(ImapConfiguration.builder().build());
+        scriptTest("CondstoreDisable", Locale.US);
+    }
 
-    void configure(ImapConfiguration imapConfiguration);
+    @Test
+    public void condstoreShouldBeEnableWhenGivenAndTrue() throws Exception {
+        system.configure(ImapConfiguration.builder().isCondstoreUnable(true).build());
+        scriptTest("CondstoreEnable", Locale.US);
+    }
 }
