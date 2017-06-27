@@ -23,6 +23,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.mailet.PerRecipientHeaders.Header;
+import org.apache.james.mime4j.dom.Message;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -98,7 +99,9 @@ public interface Mail extends Serializable, Cloneable {
      * @throws MessagingException when an error occurs while retrieving the message
      */
     MimeMessage getMessage() throws MessagingException;
-    
+
+    Message getParsedMimeMessage() throws MessagingException;
+
     /**
      * Returns the message recipients as a Collection of MailAddress objects,
      * as specified by the SMTP "RCPT TO" command, or internally defined.

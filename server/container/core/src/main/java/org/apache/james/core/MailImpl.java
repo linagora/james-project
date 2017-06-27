@@ -19,8 +19,11 @@
 
 package org.apache.james.core;
 
+import com.google.common.base.Optional;
 import org.apache.james.lifecycle.api.Disposable;
 import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.james.mime4j.dom.Message;
+import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.PerRecipientHeaders;
@@ -72,6 +75,14 @@ public class MailImpl implements Disposable, Mail {
      * be deserializable (so your mail doesn't get lost)
      */
     public static final long serialVersionUID = -4289663364703986260L;
+
+    private static final MimeConfig MIME_ENTITY_CONFIG = MimeConfig.custom()
+        .setMaxContentLen(-1)
+        .setMaxHeaderLen(-1)
+        .setMaxHeaderCount(-1)
+        .setMaxLineLen(-1)
+        .build();
+
     /**
      * The error message, if any, associated with this mail.
      */
@@ -117,6 +128,7 @@ public class MailImpl implements Disposable, Mail {
      * These headers will be added at delivery time
      */
     private PerRecipientHeaders perRecipientSpecificHeaders;
+    private Message parsedMimeMessage;
 
     /**
      * A constructor that creates a new, uninitialized MailImpl
@@ -270,6 +282,15 @@ public class MailImpl implements Disposable, Mail {
         return message;
     }
 
+    @Override
+    public Message getParsedMimeMessage() throws MessagingException {
+        if (parsedMimeMessage == null) {
+            parsedMimeMessage = parseMimeMessage();
+        }
+
+        return parsedMimeMessage;
+    }
+
     /**
      * Set the name of this MailImpl.
      *
@@ -399,6 +420,7 @@ public class MailImpl implements Disposable, Mail {
                 LifecycleUtil.dispose(this.message);
             }
             this.message = message;
+            this.parsedMimeMessage = null;
         }
     }
 
@@ -686,5 +708,16 @@ public class MailImpl implements Disposable, Mail {
     @Override
     public void addSpecificHeaderForRecipient(Header header, MailAddress recipient) {
         perRecipientSpecificHeaders.addHeaderForRecipient(header, recipient);
+    }
+
+    private Message parseMimeMessage() throws MessagingException {
+        try {
+            return Message.Builder
+                .of(getMessage().getInputStream())
+                .use(MIME_ENTITY_CONFIG)
+                .build();
+        } catch (IOException e) {
+            throw new MessagingException("Could not parse Mime", e);
+        }
     }
 }

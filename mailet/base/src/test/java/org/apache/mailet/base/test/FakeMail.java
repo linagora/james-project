@@ -21,6 +21,7 @@
 package org.apache.mailet.base.test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
@@ -35,6 +36,8 @@ import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import org.apache.james.mime4j.dom.Message;
+import org.apache.james.mime4j.stream.MimeConfig;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.PerRecipientHeaders;
@@ -50,6 +53,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class FakeMail implements Mail {
+
+    private static final MimeConfig MIME_ENTITY_CONFIG = MimeConfig.custom()
+        .setMaxContentLen(-1)
+        .setMaxHeaderLen(-1)
+        .setMaxHeaderCount(-1)
+        .setMaxLineLen(-1)
+        .build();
 
     public static FakeMail fromMime(String text, String javaEncodingCharset, String javamailDefaultEncodingCharset) throws MessagingException, UnsupportedEncodingException {
         Properties javamailProperties = new Properties();
@@ -209,6 +219,7 @@ public class FakeMail implements Mail {
     }
 
     private MimeMessage msg;
+    private Message parsedMimeMessage;
     private Collection<MailAddress> recipients;
     private String name;
     private MailAddress sender;
@@ -248,6 +259,15 @@ public class FakeMail implements Mail {
     @Override
     public MimeMessage getMessage() throws MessagingException {
         return msg;
+    }
+
+    @Override
+    public Message getParsedMimeMessage() throws MessagingException {
+        if (parsedMimeMessage == null) {
+            parsedMimeMessage = parseMimeMessage();
+        }
+
+        return parsedMimeMessage;
     }
 
     @Override
@@ -293,6 +313,7 @@ public class FakeMail implements Mail {
     @Override
     public void setMessage(MimeMessage message) {
         this.msg = message;
+        this.parsedMimeMessage = null;
         try {
             if (message != null && message.getSender() != null) {
                 this.sender = new MailAddress((InternetAddress) message.getSender());
@@ -405,5 +426,16 @@ public class FakeMail implements Mail {
     @Override
     public void addSpecificHeaderForRecipient(Header header, MailAddress recipient) {
         perRecipientHeaders.addHeaderForRecipient(header, recipient);
+    }
+
+    private Message parseMimeMessage() throws MessagingException {
+        try {
+            return Message.Builder
+                .of(getMessage().getInputStream())
+                .use(MIME_ENTITY_CONFIG)
+                .build();
+        } catch (IOException e) {
+            throw new MessagingException("Could not parse Mime", e);
+        }
     }
 }
