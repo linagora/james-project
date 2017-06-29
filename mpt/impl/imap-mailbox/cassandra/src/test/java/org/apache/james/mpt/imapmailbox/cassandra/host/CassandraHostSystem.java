@@ -82,7 +82,7 @@ public class CassandraHostSystem extends JamesImapHostSystem {
     public static final int MAX_ACL_RETRY = 10;
 
     private final CassandraMailboxManager mailboxManager;
-    private final CassandraCluster cassandraClusterSingleton;
+    private final CassandraCluster cassandra;
     private final CassandraPerUserMaxQuotaManager perUserMaxQuotaManager;
 
     public CassandraHostSystem() throws Exception {
@@ -101,8 +101,8 @@ public class CassandraHostSystem extends JamesImapHostSystem {
             new CassandraAttachmentModule(),
             new CassandraAnnotationModule(),
             new CassandraApplicableFlagsModule());
-        cassandraClusterSingleton = CassandraCluster.create(mailboxModule);
-        com.datastax.driver.core.Session session = cassandraClusterSingleton.getConf();
+        cassandra = CassandraCluster.create(mailboxModule);
+        com.datastax.driver.core.Session session = cassandra.getConf();
         CassandraModSeqProvider modSeqProvider = new CassandraModSeqProvider(session);
         CassandraUidProvider uidProvider = new CassandraUidProvider(session);
         CassandraTypesProvider typesProvider = new CassandraTypesProvider(mailboxModule, session);
@@ -159,12 +159,18 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         configure(new DefaultImapDecoderFactory().buildImapDecoder(),
                 new DefaultImapEncoderFactory().buildImapEncoder(),
                 DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, subscriptionManager, quotaManager, quotaRootResolver, new DefaultMetricFactory()));
-        cassandraClusterSingleton.ensureAllTables();
+        cassandra.ensureAllTables();
     }
 
     @Override
+    public void afterTest() throws Exception {
+        super.afterTest();
+        cassandra.close();
+    }
+    
+    @Override
     protected void resetData() throws Exception {
-        cassandraClusterSingleton.clearAllTables();
+        cassandra.clearAllTables();
     }
 
     @Override
