@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -33,6 +34,7 @@ import org.apache.commons.net.smtp.AuthenticatingSMTPClient;
 import org.apache.commons.net.smtp.SMTPClient;
 import org.apache.mailet.Mail;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -61,11 +63,13 @@ public class SMTPMessageSender implements Closeable {
         this.senderDomain = senderDomain;
     }
 
-    public void sendMessage(String from, String recipient) {
+    public void sendMessage(String from, String... recipients) {
         try {
             smtpClient.helo(senderDomain);
             smtpClient.setSender(from);
-            smtpClient.rcpt("<" + recipient + ">");
+            Arrays.asList(recipients)
+                .forEach(Throwing.consumer(
+                    recipient -> smtpClient.rcpt("<" + recipient + ">")));
             smtpClient.sendShortMessageData("FROM: " + from + "\r\n" +
                 "subject: test\r\n" +
                 "\r\n" +

@@ -18,6 +18,7 @@
  ****************************************************************/
 
 package org.apache.mailet;
+import java.io.Serializable;
 import java.util.Collection;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -29,7 +30,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Multimap;
 
-public class PerRecipientHeaders {
+public class PerRecipientHeaders implements Serializable {
     public static final Function<Header, String> GET_HEADER_NAME = new Function<Header, String>() {
         @Override
         public String apply(Header input) {
@@ -61,7 +62,7 @@ public class PerRecipientHeaders {
         headersByRecipient.put(recipient, header);
     }
 
-    public static class Header {
+    public static class Header implements Serializable {
         private final String name;
         private final String value;
 

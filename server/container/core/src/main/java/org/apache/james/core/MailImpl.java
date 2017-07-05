@@ -19,17 +19,6 @@
 
 package org.apache.james.core;
 
-import org.apache.james.lifecycle.api.Disposable;
-import org.apache.james.lifecycle.api.LifecycleUtil;
-import org.apache.mailet.Mail;
-import org.apache.mailet.MailAddress;
-import org.apache.mailet.PerRecipientHeaders;
-import org.apache.mailet.PerRecipientHeaders.Header;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.ParseException;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,13 +28,27 @@ import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
+
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.ParseException;
+
+import org.apache.james.lifecycle.api.Disposable;
+import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.mailet.Mail;
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.PerRecipientHeaders;
+import org.apache.mailet.PerRecipientHeaders.Header;
 
 /**
  * <p>
@@ -91,7 +94,7 @@ public class MailImpl implements Disposable, Mail {
     /**
      * The collection of recipients to whom this mail was sent.
      */
-    private Collection<MailAddress> recipients;
+    private Set<MailAddress> recipients;
     /**
      * The identifier for this mail message
      */
@@ -125,6 +128,7 @@ public class MailImpl implements Disposable, Mail {
         setState(Mail.DEFAULT);
         attributes = new HashMap<String, Object>();
         perRecipientSpecificHeaders = new PerRecipientHeaders();
+        recipients = new LinkedHashSet<MailAddress>();
     }
 
     /**
@@ -139,13 +143,7 @@ public class MailImpl implements Disposable, Mail {
         this();
         this.name = name;
         this.sender = sender;
-        this.recipients = null;
-
-        // Copy the recipient list
-        if (recipients != null) {
-            this.recipients = new ArrayList<MailAddress>();
-            this.recipients.addAll(recipients);
-        }
+        this.recipients.addAll(recipients);
     }
 
     /**
@@ -366,6 +364,9 @@ public class MailImpl implements Disposable, Mail {
      */
     @Override
     public long getMessageSize() throws MessagingException {
+        if (message == null) {
+            return 0;
+        }
         return MimeMessageUtil.getMessageSize(message);
     }
 
@@ -409,7 +410,7 @@ public class MailImpl implements Disposable, Mail {
      */
     @Override
     public void setRecipients(Collection<MailAddress> recipients) {
-        this.recipients = recipients;
+        this.recipients = new LinkedHashSet<MailAddress>(recipients);
     }
 
     /**
@@ -490,7 +491,7 @@ public class MailImpl implements Disposable, Mail {
      * @throws ClassCastException     if the serialized objects are not of the appropriate type
      */
     @SuppressWarnings("unchecked")
-    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException, MessagingException {
         try {
             Object obj = in.readObject();
             if (obj == null) {
@@ -503,7 +504,7 @@ public class MailImpl implements Disposable, Mail {
         } catch (ParseException pe) {
             throw new IOException("Error parsing sender address: " + pe.getMessage());
         }
-        recipients = (Collection<MailAddress>) in.readObject();
+        recipients = (Set<MailAddress>) in.readObject();
         state = (String) in.readObject();
         errorMessage = (String) in.readObject();
         name = (String) in.readObject();
@@ -521,6 +522,8 @@ public class MailImpl implements Disposable, Mail {
                 throw ode;
             }
         }
+        perRecipientSpecificHeaders = (PerRecipientHeaders) in.readObject();
+        message = new MimeMessageCopyOnWriteProxy(new MimeMessage(Session.getDefaultInstance(new Properties()), in));
     }
 
     /**
@@ -529,7 +532,7 @@ public class MailImpl implements Disposable, Mail {
      * @param out the ObjectOutputStream to which the object is written
      * @throws IOException if an error occurs while writing to the stream
      */
-    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+    private void writeObject(ObjectOutputStream out) throws IOException, MessagingException {
         out.writeObject(sender);
         out.writeObject(recipients);
         out.writeObject(state);
@@ -539,6 +542,8 @@ public class MailImpl implements Disposable, Mail {
         out.writeObject(remoteAddr);
         out.writeObject(lastUpdated);
         out.writeObject(attributes);
+        out.writeObject(perRecipientSpecificHeaders);
+        message.writeTo(out);
     }
 
     @Override
