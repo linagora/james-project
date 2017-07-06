@@ -19,8 +19,8 @@
 
 package org.apache.james.mailbox.cassandra.mail.utils;
 
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.ids.CassandraId;
+import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 
 public class MessageDeletedDuringFlagsUpdateException extends RuntimeException {
 

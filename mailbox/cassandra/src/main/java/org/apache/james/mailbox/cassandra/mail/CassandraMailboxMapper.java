@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
-import org.apache.james.mailbox.cassandra.CassandraId;
+import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -42,6 +42,7 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.util.CompletableFutureUtil;
+import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.OptionalConverter;
 
 import com.datastax.driver.core.Session;
@@ -110,15 +111,14 @@ public class CassandraMailboxMapper implements MailboxMapper {
     @Override
     public List<Mailbox> findMailboxWithPathLike(MailboxPath path) throws MailboxException {
         Pattern regex = Pattern.compile(constructEscapedRegexForMailboxNameMatching(path));
-        return mailboxPathDAO.listUserMailboxes(path.getNamespace(), path.getUser())
-            .thenApply(stream -> stream.filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches()))
-            .thenApply(stream -> stream.map(CassandraMailboxPathDAO.CassandraIdAndPath::getCassandraId))
-            .thenApply(stream -> stream.map(mailboxDAO::retrieveMailbox))
-            .thenCompose(CompletableFutureUtil::allOf)
-            .thenApply(stream -> stream
-                .flatMap(OptionalConverter::toStream)
-                .collect(Guavate.<Mailbox>toImmutableList()))
-            .join();
+
+        return FluentFutureStream.of(mailboxPathDAO.listUserMailboxes(path.getNamespace(), path.getUser()))
+            .filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches())
+            .map(CassandraMailboxPathDAO.CassandraIdAndPath::getCassandraId)
+            .thenComposeOnAllUnboxedOptional(mailboxDAO::retrieveMailbox)
+            .completableFuture()
+            .join()
+            .collect(Guavate.toImmutableList());
     }
 
     @Override
