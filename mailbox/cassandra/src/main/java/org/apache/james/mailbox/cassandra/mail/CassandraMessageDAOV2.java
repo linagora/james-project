@@ -24,23 +24,21 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.ATTACHMENTS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.BODY;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.BODY_CONTENT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.BODY_OCTECTS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.BODY_START_OCTET;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.FIELDS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.FULL_CONTENT_OCTETS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.HEADERS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.HEADER_CONTENT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.INTERNAL_DATE;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.METADATA;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.PROPERTIES;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.TABLE_NAME;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.TEXTUAL_LINE_COUNT;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.ATTACHMENTS;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.BODY;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.BODY_CONTENT;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.BODY_OCTECTS;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.BODY_START_OCTET;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.FIELDS;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.FULL_CONTENT_OCTETS;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.HEADERS;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.HEADER_CONTENT;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.INTERNAL_DATE;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.METADATA;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.PROPERTIES;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.TABLE_NAME;
+import static org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.TEXTUAL_LINE_COUNT;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -52,15 +50,17 @@ import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
+import org.apache.james.mailbox.cassandra.BlobId;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.Limit;
-import org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.Attachments;
-import org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.Properties;
+import org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.Attachments;
+import org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.Properties;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Cid;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
@@ -68,6 +68,7 @@ import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.util.CompletableFutureUtil;
 import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.streams.JamesCollectors;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.datastax.driver.core.BoundStatement;
@@ -77,14 +78,16 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.google.common.io.ByteStreams;
+import com.github.steveash.guavate.Guavate;
 import com.google.common.primitives.Bytes;
 
-public class CassandraMessageDAO {
-
+public class CassandraMessageDAOV2 {
     public static final int CHUNK_SIZE_ON_READ = 100;
+    public static final long DEFAULT_LONG_VALUE = 0L;
+    public static final String DEFAULT_OBJECT_VALUE = null;
     private final CassandraAsyncExecutor cassandraAsyncExecutor;
     private final CassandraTypesProvider typesProvider;
+    private final CassandraBlobsDAO blobsDAO;
     private final PreparedStatement insert;
     private final PreparedStatement delete;
     private final PreparedStatement selectMetadata;
@@ -93,9 +96,10 @@ public class CassandraMessageDAO {
     private final PreparedStatement selectBody;
 
     @Inject
-    public CassandraMessageDAO(Session session, CassandraTypesProvider typesProvider) {
+    public CassandraMessageDAOV2(Session session, CassandraTypesProvider typesProvider, CassandraBlobsDAO blobsDAO) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
         this.typesProvider = typesProvider;
+        this.blobsDAO = blobsDAO;
         this.insert = prepareInsert(session);
         this.delete = prepareDelete(session);
         this.selectMetadata = prepareSelect(session, METADATA);
@@ -126,46 +130,58 @@ public class CassandraMessageDAO {
 
     private PreparedStatement prepareDelete(Session session) {
         return session.prepare(QueryBuilder.delete()
-                .from(TABLE_NAME)
-                .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
+            .from(TABLE_NAME)
+            .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
     }
 
     public CompletableFuture<Void> save(MailboxMessage message) throws MailboxException {
+        return saveContent(message).thenCompose(pair ->
+            cassandraAsyncExecutor.executeVoid(boundWriteStatement(message, pair)));
+    }
+
+    private CompletableFuture<Pair<Optional<BlobId>, Optional<BlobId>>> saveContent(MailboxMessage message) throws MailboxException {
         try {
-            CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
-            BoundStatement boundStatement = insert.bind()
-                .setUUID(MESSAGE_ID, messageId.get())
-                .setTimestamp(INTERNAL_DATE, message.getInternalDate())
-                .setInt(BODY_START_OCTET, (int) (message.getFullContentOctets() - message.getBodyOctets()))
-                .setLong(FULL_CONTENT_OCTETS, message.getFullContentOctets())
-                .setLong(BODY_OCTECTS, message.getBodyOctets())
-                .setBytes(BODY_CONTENT, toByteBuffer(message.getBodyContent()))
-                .setBytes(HEADER_CONTENT, toByteBuffer(message.getHeaderContent()))
-                .setList(PROPERTIES, message.getProperties().stream()
-                    .map(x -> typesProvider.getDefinedUserType(PROPERTIES)
-                        .newValue()
-                        .setString(Properties.NAMESPACE, x.getNamespace())
-                        .setString(Properties.NAME, x.getLocalName())
-                        .setString(Properties.VALUE, x.getValue()))
-                    .collect(Collectors.toList()))
-                .setList(ATTACHMENTS, message.getAttachments().stream()
-                    .map(this::toUDT)
-                    .collect(Collectors.toList()));
+            CompletableFuture<Optional<BlobId>> bodyContent = blobsDAO.save(
+                IOUtils.toByteArray(
+                    message.getBodyContent(),
+                    message.getBodyOctets()));
+            CompletableFuture<Optional<BlobId>> headerContent = blobsDAO.save(
+                IOUtils.toByteArray(
+                    message.getHeaderContent(),
+                    message.getFullContentOctets() - message.getBodyOctets()));
 
-            return cassandraAsyncExecutor.executeVoid(setTextualLineCount(boundStatement, message.getTextualLineCount()));
-
+            return bodyContent.thenCompose(bodyContentId ->
+                    headerContent.thenApply(headerContentId ->
+                            Pair.of(bodyContentId, headerContentId)));
         } catch (IOException e) {
             throw new MailboxException("Error saving mail", e);
         }
     }
 
-    private BoundStatement setTextualLineCount(BoundStatement boundStatement, Long textualLineCount) {
-        return Optional.ofNullable(textualLineCount)
-               .map(value -> boundStatement.setLong(TEXTUAL_LINE_COUNT, value))
-               .orElseGet(() -> boundStatement.setToNull(TEXTUAL_LINE_COUNT));
+    private BoundStatement boundWriteStatement(MailboxMessage message, Pair<Optional<BlobId>, Optional<BlobId>> pair) {
+        CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
+        return insert.bind()
+                .setUUID(MESSAGE_ID, messageId.get())
+                .setTimestamp(INTERNAL_DATE, message.getInternalDate())
+                .setInt(BODY_START_OCTET, (int) (message.getFullContentOctets() - message.getBodyOctets()))
+                .setLong(FULL_CONTENT_OCTETS, message.getFullContentOctets())
+                .setLong(BODY_OCTECTS, message.getBodyOctets())
+                .setString(BODY_CONTENT, pair.getLeft().map(BlobId::getId).orElse(DEFAULT_OBJECT_VALUE))
+                .setString(HEADER_CONTENT, pair.getRight().map(BlobId::getId).orElse(DEFAULT_OBJECT_VALUE))
+                .setLong(TEXTUAL_LINE_COUNT, Optional.ofNullable(message.getTextualLineCount()).orElse(DEFAULT_LONG_VALUE))
+                .setList(PROPERTIES, message.getProperties().stream()
+                        .map(x -> typesProvider.getDefinedUserType(PROPERTIES)
+                                .newValue()
+                                .setString(Properties.NAMESPACE, x.getNamespace())
+                                .setString(Properties.NAME, x.getLocalName())
+                                .setString(Properties.VALUE, x.getValue()))
+                        .collect(Collectors.toList()))
+                .setList(ATTACHMENTS, message.getAttachments().stream()
+                        .map(this::toUDT)
+                        .collect(Guavate.toImmutableList()));
     }
 
-    private UDTValue toUDT(org.apache.james.mailbox.model.MessageAttachment messageAttachment) {
+    private UDTValue toUDT(MessageAttachment messageAttachment) {
         return typesProvider.getDefinedUserType(ATTACHMENTS)
             .newValue()
             .setString(Attachments.ID, messageAttachment.getAttachmentId().getId())
@@ -174,23 +190,14 @@ public class CassandraMessageDAO {
             .setBool(Attachments.IS_INLINE, messageAttachment.isInline());
     }
 
-    private ByteBuffer toByteBuffer(InputStream stream) throws IOException {
-        return ByteBuffer.wrap(ByteStreams.toByteArray(stream));
-    }
-
-    public CompletableFuture<Stream<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> retrieveMessages(
-        List<ComposedMessageIdWithMetaData> messageIds,
-        FetchType fetchType,
-        Limit limit
-    ) {
+    public CompletableFuture<Stream<MessageResult>> retrieveMessages(List<ComposedMessageIdWithMetaData> messageIds, FetchType fetchType, Limit limit) {
         return CompletableFutureUtil.chainAll(
             limit.applyOnStream(messageIds.stream().distinct())
                 .collect(JamesCollectors.chunker(CHUNK_SIZE_ON_READ)),
             ids -> FluentFutureStream.of(
                 ids.stream()
                     .map(id -> retrieveRow(id, fetchType)
-                        .thenApply((ResultSet resultSet) ->
-                            message(resultSet.one(), id, fetchType))))
+                        .thenCompose((ResultSet resultSet) -> message(resultSet, id, fetchType))))
                 .completableFuture())
             .thenApply(stream -> stream.flatMap(Function.identity()));
     }
@@ -203,22 +210,32 @@ public class CassandraMessageDAO {
             .setUUID(MESSAGE_ID, cassandraMessageId.get()));
     }
 
-    private Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message(Row row, ComposedMessageIdWithMetaData messageIdWithMetaData, FetchType fetchType) {
+    private CompletableFuture<MessageResult>
+            message(ResultSet rows,ComposedMessageIdWithMetaData messageIdWithMetaData, FetchType fetchType) {
         ComposedMessageId messageId = messageIdWithMetaData.getComposedMessageId();
 
-        MessageWithoutAttachment messageWithoutAttachment =
-            new MessageWithoutAttachment(
-                messageId.getMessageId(),
-                row.getTimestamp(INTERNAL_DATE),
-                row.getLong(FULL_CONTENT_OCTETS),
-                row.getInt(BODY_START_OCTET),
-                buildContent(row, fetchType),
-                messageIdWithMetaData.getFlags(),
-                getPropertyBuilder(row),
-                messageId.getMailboxId(),
-                messageId.getUid(),
-                messageIdWithMetaData.getModSeq());
-        return Pair.of(messageWithoutAttachment, getAttachments(row, fetchType));
+        if (rows.isExhausted()) {
+            return CompletableFuture.completedFuture(notFound(messageIdWithMetaData));
+        }
+
+        Row row = rows.one();
+        CompletableFuture<byte[]> contentFuture = buildContentRetriever(fetchType).apply(row);
+
+        return contentFuture.thenApply(content -> {
+            MessageWithoutAttachment messageWithoutAttachment =
+                new MessageWithoutAttachment(
+                    messageId.getMessageId(),
+                    row.getTimestamp(INTERNAL_DATE),
+                    row.getLong(FULL_CONTENT_OCTETS),
+                    row.getInt(BODY_START_OCTET),
+                    new SharedByteArrayInputStream(content),
+                    messageIdWithMetaData.getFlags(),
+                    getPropertyBuilder(row),
+                    messageId.getMailboxId(),
+                    messageId.getUid(),
+                    messageIdWithMetaData.getModSeq());
+            return found(Pair.of(messageWithoutAttachment, getAttachments(row, fetchType)));
+        });
     }
 
     private PropertyBuilder getPropertyBuilder(Row row) {
@@ -276,32 +293,67 @@ public class CassandraMessageDAO {
             .setUUID(MESSAGE_ID, messageId.get()));
     }
 
-    private SharedByteArrayInputStream buildContent(Row row, FetchType fetchType) {
+    private Function<Row, CompletableFuture<byte[]>> buildContentRetriever(FetchType fetchType) {
         switch (fetchType) {
             case Full:
-                return new SharedByteArrayInputStream(getFullContent(row));
+                return this::getFullContent;
             case Headers:
-                return new SharedByteArrayInputStream(getFieldContent(HEADER_CONTENT, row));
+                return this::getHeaderContent;
             case Body:
-                return new SharedByteArrayInputStream(getBodyContent(row));
+                return row -> getBodyContent(row)
+                        .thenApply(data -> Bytes.concat(new byte[row.getInt(BODY_START_OCTET)], data));
             case Metadata:
-                return new SharedByteArrayInputStream(new byte[]{});
+                return row -> CompletableFuture.completedFuture(new byte[]{});
             default:
                 throw new RuntimeException("Unknown FetchType " + fetchType);
         }
     }
 
-    private byte[] getFullContent(Row row) {
-        return Bytes.concat(getFieldContent(HEADER_CONTENT, row), getFieldContent(BODY_CONTENT, row));
+    private CompletableFuture<byte[]> getFullContent(Row row) {
+        return getBodyContent(row)
+            .thenCompose(bodyBytes -> getHeaderContent(row).thenApply(
+                headerBytes -> Bytes.concat(headerBytes, bodyBytes)));
     }
 
-    private byte[] getBodyContent(Row row) {
-        return Bytes.concat(new byte[row.getInt(BODY_START_OCTET)], getFieldContent(BODY_CONTENT, row));
+    private CompletableFuture<byte[]> getBodyContent(Row row) {
+        return getFieldContent(BODY_CONTENT, row);
     }
 
-    private byte[] getFieldContent(String field, Row row) {
-        byte[] headerContent = new byte[row.getBytes(field).remaining()];
-        row.getBytes(field).get(headerContent);
-        return headerContent;
+    private CompletableFuture<byte[]> getHeaderContent(Row row) {
+        return getFieldContent(HEADER_CONTENT, row);
+    }
+
+    private CompletableFuture<byte[]> getFieldContent(String field, Row row) {
+        return blobsDAO.read(BlobId.from(row.getString(field)));
+    }
+
+    public static MessageResult notFound(ComposedMessageIdWithMetaData id) {
+        return new MessageResult(id, Optional.empty());
+    }
+
+    public static MessageResult found(Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message) {
+        return new MessageResult(message.getLeft().getMetadata(), Optional.of(message));
+    }
+
+    public static class MessageResult {
+        private final ComposedMessageIdWithMetaData metaData;
+        private final Optional<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> message;
+
+        public MessageResult(ComposedMessageIdWithMetaData metaData, Optional<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> message) {
+            this.metaData = metaData;
+            this.message = message;
+        }
+
+        public ComposedMessageIdWithMetaData getMetadata() {
+            return metaData;
+        }
+
+        public boolean isFound() {
+            return message.isPresent();
+        }
+
+        public Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message() {
+            return message.get();
+        }
     }
 }
