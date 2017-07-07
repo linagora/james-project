@@ -80,14 +80,13 @@ public abstract class ListeningMessageSearchIndex implements MessageSearchIndex,
                         Iterator<MailboxMessage> messages = factory.getMessageMapper(session).findInMailbox(mailbox, MessageRange.one(next), FetchType.Full, -1);
                         while (messages.hasNext()) {
                             MailboxMessage message = messages.next();
-                            try {
-                                add(session, mailbox, message);
-                            } catch (MailboxException e) {
-                                session.getLog().error("Unable to index message " + message.getUid() + " for mailbox " + mailbox, e);
-                            }
+                            addMessage(session, mailbox, message);
                         }
 
                     }
+                } else if (event instanceof EventFactory.SingleAddedImpl) {
+                    EventFactory.SingleAddedImpl added = (EventFactory.SingleAddedImpl) event;
+                    addMessage(session, added.getMailbox(), added.getMessage());
                 } else if (event instanceof EventFactory.ExpungedImpl) {
                     EventFactory.ExpungedImpl expunged = (EventFactory.ExpungedImpl) event;
                     try {
@@ -110,6 +109,14 @@ public abstract class ListeningMessageSearchIndex implements MessageSearchIndex,
             }
         } catch (MailboxException e) {
             session.getLog().error("Unable to update index", e);
+        }
+    }
+
+    private void addMessage(final MailboxSession session, final Mailbox mailbox, MailboxMessage message) {
+        try {
+            add(session, mailbox, message);
+        } catch (MailboxException e) {
+            session.getLog().error("Unable to index message " + message.getUid() + " for mailbox " + mailbox, e);
         }
     }
 

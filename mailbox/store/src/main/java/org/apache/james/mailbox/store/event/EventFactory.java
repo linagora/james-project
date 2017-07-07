@@ -31,6 +31,7 @@ import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.StoreMailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -61,6 +62,32 @@ public class EventFactory {
 
         public Mailbox getMailbox() {
             return mailbox;
+        }
+    }
+
+    public final class SingleAddedImpl extends MailboxListener.SingleAdded implements MailboxAware {
+        private final Mailbox mailbox;
+        private final MailboxMessage message;
+
+        public SingleAddedImpl(MailboxSession session, Mailbox mailbox, MailboxMessage message) {
+            super(session, new StoreMailboxPath(mailbox));
+            this.mailbox = mailbox;
+            this.message = message;
+        }
+
+        @Override
+        public Mailbox getMailbox() {
+            return mailbox;
+        }
+
+        @Override
+        public MailboxMessage getMessage() {
+            return message;
+        }
+
+        @Override
+        public List<MessageUid> getUids() {
+            return ImmutableList.of(message.getUid());
         }
     }
 
@@ -169,6 +196,10 @@ public class EventFactory {
 
     public MailboxListener.Added added(MailboxSession session, SortedMap<MessageUid, MessageMetaData> uids, Mailbox mailbox) {
         return new AddedImpl(session, mailbox, uids);
+    }
+
+    public MailboxListener.SingleAdded added(MailboxSession session, Mailbox mailbox, MailboxMessage message) {
+        return new SingleAddedImpl(session, mailbox, message);
     }
 
     public MailboxListener.Expunged expunged(MailboxSession session,  Map<MessageUid, MessageMetaData> uids, Mailbox mailbox) {

@@ -427,12 +427,9 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
                 public ComposedMessageId execute() throws MailboxException {
                     MessageMetaData data = appendMessageToStore(message, attachments, mailboxSession);
 
-                    SortedMap<MessageUid, MessageMetaData> uids = new TreeMap<MessageUid, MessageMetaData>();
-                    MessageUid messageUid = data.getUid();
-                    MailboxId mailboxId = getMailboxEntity().getMailboxId();
-                    uids.put(messageUid, data);
-                    dispatcher.added(mailboxSession, uids, getMailboxEntity());
-                    return new ComposedMessageId(mailboxId, data.getMessageId(), messageUid);
+                    Mailbox mailbox = getMailboxEntity();
+                    dispatcher.added(mailboxSession, mailbox, message);
+                    return new ComposedMessageId(mailbox.getMailboxId(), data.getMessageId(), data.getUid());
                 }
             }, true);
 

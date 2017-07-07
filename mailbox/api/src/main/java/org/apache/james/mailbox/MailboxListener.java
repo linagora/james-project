@@ -26,6 +26,7 @@ import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 
 /**
@@ -251,6 +252,24 @@ public interface MailboxListener {
          * @return flags
          */
         public abstract MessageMetaData getMetaData(MessageUid uid);
+        
+    }
+
+    /**
+     * A mailbox event related to a single added message
+     */
+    abstract class SingleAdded extends MessageEvent {
+
+        private static final long serialVersionUID = 1L;
+
+        public SingleAdded(MailboxSession session, MailboxPath path) {
+            super(session, path);
+        }
+        
+        /**
+         * Return the added message
+         */
+        public abstract MailboxMessage getMessage();
         
     }
     

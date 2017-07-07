@@ -32,6 +32,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -80,6 +81,9 @@ public class MailboxEventDispatcher {
         added(session, metaDataMap, mailbox);
     }
 
+    public void added(MailboxSession session, Mailbox mailbox, MailboxMessage message) {
+        listener.event(eventFactory.added(session, mailbox, message));
+    }
     /**
      * Should get called when a message was expunged from a Mailbox. All
      * registered MailboxListener will get triggered then
