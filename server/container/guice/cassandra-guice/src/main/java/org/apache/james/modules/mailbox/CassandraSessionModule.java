@@ -39,8 +39,14 @@ import org.apache.james.backends.cassandra.init.ClusterWithKeyspaceCreatedFactor
 import org.apache.james.backends.cassandra.init.QueryLoggerConfiguration;
 import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
+import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionDAO;
+import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager;
+import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager.SchemaState;
+import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionModule;
+import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.util.Host;
+import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.PropertiesProvider;
 import org.apache.james.utils.RetryExecutorUtil;
 import org.slf4j.Logger;
@@ -55,7 +61,9 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
@@ -94,6 +102,12 @@ public class CassandraSessionModule extends AbstractModule {
 
         Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
         cassandraDataDefinitions.addBinding().to(CassandraZonedDateTimeModule.class);
+        cassandraDataDefinitions.addBinding().to(CassandraSchemaVersionModule.class);
+
+        bind(CassandraSchemaVersionManager.class).in(Scopes.SINGLETON);
+        bind(CassandraSchemaVersionDAO.class).in(Scopes.SINGLETON);
+
+        Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(CassandraSchemaChecker.class);
     }
 
     @Provides
@@ -288,6 +302,46 @@ public class CassandraSessionModule extends AbstractModule {
             PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration();
             propertiesConfiguration.addProperty(CASSANDRA_NODES, LOCALHOST);
             return propertiesConfiguration;
+        }
+    }
+
+    public static class CassandraSchemaChecker implements ConfigurationPerformer {
+        private final CassandraSchemaVersionManager versionManager;
+
+        @Inject
+        public CassandraSchemaChecker(CassandraSchemaVersionManager versionManager) {
+            this.versionManager = versionManager;
+        }
+
+        @Override
+        public void initModule() {
+            SchemaState schemaState = versionManager.computeSchemaState();
+            switch (schemaState) {
+                case TOO_OLD:
+                    throw new IllegalStateException(
+                        String.format("Current schema version is %d whereas minimum required version is %d. " +
+                            "Recommended version is %d", versionManager.computeVersion(), versionManager.getMinimumSupportedVersion(),
+                            versionManager.getMaximumSupportedVersion()));
+                case TOO_RECENT:
+                    throw new IllegalStateException(
+                        String.format("Current schema version is %d whereas the minimum supported version is %d. " +
+                            "Recommended version is %d.", versionManager.computeVersion(), versionManager.getMinimumSupportedVersion(),
+                            versionManager.getMaximumSupportedVersion()));
+                case UP_TO_DATE:
+                    LOGGER.info("Schema version is up-to-date");
+                    return;
+                case UPGRADABLE:
+                    LOGGER.warn("Current schema version is {}. Recommended version is {}", versionManager.computeVersion(),
+                        versionManager.getMaximumSupportedVersion());
+                    return;
+                default:
+                    throw new IllegalStateException("Unknown schema state " + schemaState);
+            }
+        }
+
+        @Override
+        public List<Class<? extends Configurable>> forClasses() {
+            return ImmutableList.of();
         }
     }
 }
