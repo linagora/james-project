@@ -23,18 +23,24 @@ import com.datastax.driver.core.Session;
 import com.google.common.collect.ImmutableList;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
+import org.apache.james.util.FluentFutureStream;
 
 public class CassandraTypesCreator {
     private final ImmutableList<CassandraType> types;
-    private final Session session;
+    private final CassandraAsyncExecutor executor;
 
     public CassandraTypesCreator(CassandraModule module, Session session) {
         this.types = ImmutableList.copyOf(module.moduleTypes());
-        this.session = session;
+        this.executor = new CassandraAsyncExecutor(session);
     }
 
     public void initializeTypes() {
-        types.forEach((type) -> session.execute(type.getCreateStatement()));
+        FluentFutureStream.of(
+            types.stream()
+                .map(CassandraType::getCreateStatement)
+                .map(executor::execute))
+            .join();
     }
 
 }

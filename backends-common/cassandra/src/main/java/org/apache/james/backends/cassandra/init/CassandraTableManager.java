@@ -19,32 +19,47 @@
 
 package org.apache.james.backends.cassandra.init;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.truncate;
+
+import java.util.concurrent.CompletableFuture;
+
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
 import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.components.CassandraTable;
+import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
+import org.apache.james.util.FluentFutureStream;
 
 public class CassandraTableManager {
 
-    private final Session session;
+    private final CassandraAsyncExecutor executor;
     private final CassandraModule module;
 
     public CassandraTableManager(CassandraModule module, Session session) {
-        this.session = session;
+        this.executor = new CassandraAsyncExecutor(session);
         this.module = module;
     }
 
     public CassandraTableManager ensureAllTables() {
-        module.moduleTables()
-            .forEach(table -> session.execute(table.getCreateStatement()));
+        FluentFutureStream.of(
+            module.moduleTables()
+                .stream()
+                .map(CassandraTable::getCreateStatement)
+                .map(executor::execute))
+            .join();
         return this;
     }
 
     public void clearAllTables() {
-        module.moduleTables()
-            .forEach(table -> clearTable(table.getName()));
+        FluentFutureStream.of(
+            module.moduleTables()
+                .stream()
+                .map(CassandraTable::getName)
+                .map(this::clearTable))
+            .join();
     }
 
-    private void clearTable(String tableName) {
-        session.execute(QueryBuilder.truncate(tableName));
+    private CompletableFuture<ResultSet> clearTable(String tableName) {
+        return executor.execute(truncate(tableName));
     }
 }
