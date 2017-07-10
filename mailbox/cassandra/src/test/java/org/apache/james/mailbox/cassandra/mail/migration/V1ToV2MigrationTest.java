@@ -104,9 +104,14 @@ public class V1ToV2MigrationTest {
         CassandraBlobsDAO blobsDAO = new CassandraBlobsDAO(cassandra.getConf());
         messageDAOV2 = new CassandraMessageDAOV2(cassandra.getConf(), cassandra.getTypesProvider(), blobsDAO);
         attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
-        testee = new V1ToV2Migration(messageDAOV1, messageDAOV2, attachmentMapper, CassandraConfiguration.builder()
-            .onTheFlyV1ToV2Migration(true)
-            .build());
+        testee = new V1ToV2Migration(
+            messageDAOV1,
+            messageDAOV2,
+            attachmentMapper,
+            CassandraConfiguration.builder()
+                .onTheFlyV1ToV2Migration(true)
+                .build(),
+            new MigrationTracking());
 
 
         messageIdFactory = new CassandraMessageId.Factory();
@@ -214,5 +219,4 @@ public class V1ToV2MigrationTest {
     private SimpleMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) {
         return new SimpleMailboxMessage(messageId, new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, MAILBOX_ID, attachments);
     }
-
 }

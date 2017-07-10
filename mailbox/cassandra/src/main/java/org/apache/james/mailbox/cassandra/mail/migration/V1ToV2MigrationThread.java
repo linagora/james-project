@@ -45,13 +45,21 @@ public class V1ToV2MigrationThread implements Runnable {
     private final CassandraMessageDAO messageDAOV1;
     private final CassandraMessageDAOV2 messageDAOV2;
     private final AttachmentLoader attachmentLoader;
+    private final MigrationTracking migrationTracking;
 
-    public V1ToV2MigrationThread(BlockingQueue<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> messagesToBeMigrated,
-                                 CassandraMessageDAO messageDAOV1, CassandraMessageDAOV2 messageDAOV2, AttachmentLoader attachmentLoader) {
+    public V1ToV2MigrationThread(
+        BlockingQueue<Pair<MessageWithoutAttachment,
+        Stream<MessageAttachmentRepresentation>>> messagesToBeMigrated,
+        CassandraMessageDAO messageDAOV1,
+        CassandraMessageDAOV2 messageDAOV2,
+        AttachmentLoader attachmentLoader,
+        MigrationTracking migrationTracking
+    ) {
         this.messagesToBeMigrated = messagesToBeMigrated;
         this.messageDAOV1 = messageDAOV1;
         this.messageDAOV2 = messageDAOV2;
         this.attachmentLoader = attachmentLoader;
+        this.migrationTracking = migrationTracking;
     }
 
     @Override
@@ -86,9 +94,14 @@ public class V1ToV2MigrationThread implements Runnable {
 
     private CompletableFuture<Optional<SimpleMailboxMessage>> saveInV2FromV1(SimpleMailboxMessage message) {
         try {
-            return messageDAOV2.save(message).thenApply(any -> Optional.of(message));
+            return messageDAOV2.save(message).thenApply(any -> {
+                migrationTracking.reportSuccess();
+
+                return Optional.of(message);
+            });
         } catch (MailboxException e) {
             LOGGER.error("Exception while saving message during migration", e);
+            migrationTracking.reportError();
             return CompletableFuture.completedFuture(Optional.<SimpleMailboxMessage>empty());
         }
     }
