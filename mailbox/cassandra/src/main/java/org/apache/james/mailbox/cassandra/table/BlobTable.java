@@ -17,37 +17,16 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.mailbox.cassandra.table;
 
-import static org.assertj.core.api.Assertions.assertThat;
+public interface BlobTable {
+    String TABLE_NAME = "blobs";
+    String ID = "id";
+    String NUMBER_OF_CHUNK = "position";
 
-import org.apache.james.mailbox.store.mail.model.MailboxIdDeserialisationException;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.UUID;
-
-public class CassandraMailboxIdDeserializerTest {
-
-    private static final String UUID_STRING = "5530370f-44c6-4647-990e-7768ce5131d4";
-    private static final String MALFORMED_UUID_STRING = "xyz";
-    private static final CassandraId CASSANDRA_ID = CassandraId.of(UUID.fromString(UUID_STRING));
-
-    private CassandraMailboxIdDeserializer mailboxIdDeserializer;
-
-    @Before
-    public void setUp() {
-        mailboxIdDeserializer = new CassandraMailboxIdDeserializer();
+    interface BlobParts {
+        String TABLE_NAME = "blobParts";
+        String CHUNK_NUMBER = "chunkNumber";
+        String DATA = "data";
     }
-
-    @Test
-    public void deserializeShouldWork() throws Exception {
-        assertThat(mailboxIdDeserializer.deserialize(UUID_STRING)).isEqualTo(CASSANDRA_ID);
-    }
-
-    @Test(expected = MailboxIdDeserialisationException.class)
-    public void deserializeShouldThrowOnMalformedData() throws Exception {
-        mailboxIdDeserializer.deserialize(MALFORMED_UUID_STRING);
-    }
-
 }

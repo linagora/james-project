@@ -16,50 +16,41 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.mailbox.cassandra.ids;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 
-public class CassandraMessageIdTest {
+public class CassandraIdTest {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void beanShouldRespectBeanContract() {
-        EqualsVerifier.forClass(CassandraMessageId.class)
+        EqualsVerifier.forClass(CassandraId.class)
             .verify();
     }
 
     @Test
-    public void generateShouldReturnAValidCassandraMesssageId() {
-        CassandraMessageId.Factory testee = new CassandraMessageId.Factory();
+    public void fromStringShouldWorkWhenParameterIsAnUUID() {
+        UUID id = UUID.randomUUID();
 
-        CassandraMessageId cassandraMessageId = testee.generate();
-        assertThat(cassandraMessageId.serialize()).isNotNull();
+        CassandraId cassandraId = new CassandraId.Factory().fromString(id.toString());
+
+        assertThat(cassandraId.asUuid()).isEqualTo(id);
     }
 
     @Test
-    public void ofShouldReturnAValidCassandraMesssageId() {
-        CassandraMessageId.Factory testee = new CassandraMessageId.Factory();
-
-        UUID expectedUuid = UUID.randomUUID();
-        CassandraMessageId cassandraMessageId = testee.of(expectedUuid);
-
-        assertThat(cassandraMessageId.get()).isEqualTo(expectedUuid);
-    }
-
-    @Test
-    public void serializeShouldReturnTheUuidAsString() {
-        CassandraMessageId.Factory testee = new CassandraMessageId.Factory();
-
-        UUID uuid = UUID.randomUUID();
-        CassandraMessageId cassandraMessageId = testee.of(uuid);
-
-        String expected = uuid.toString();
-        assertThat(cassandraMessageId.serialize()).isEqualTo(expected);
+    public void fromStringShouldThrowWhenParameterIsNotAnUUID() {
+        expectedException.expect(IllegalArgumentException.class);
+        new CassandraId.Factory().fromString("not an UUID");
     }
 }

@@ -28,10 +28,12 @@ import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.james.backends.cassandra.CassandraConfiguration;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
-import org.apache.james.mailbox.cassandra.CassandraId;
+import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -43,7 +45,7 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.util.CompletableFutureUtil;
-import org.apache.james.util.OptionalConverter;
+import org.apache.james.util.FluentFutureStream;
 
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
@@ -62,6 +64,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
     private final Session session;
     private final CassandraConfiguration cassandraConfiguration;
 
+    @Inject
     public CassandraMailboxMapper(Session session, CassandraMailboxDAO mailboxDAO, CassandraMailboxPathDAO mailboxPathDAO, CassandraConfiguration cassandraConfiguration) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
         this.mailboxDAO = mailboxDAO;
@@ -111,15 +114,13 @@ public class CassandraMailboxMapper implements MailboxMapper {
     @Override
     public List<Mailbox> findMailboxWithPathLike(MailboxPath path) throws MailboxException {
         Pattern regex = Pattern.compile(constructEscapedRegexForMailboxNameMatching(path));
-        return mailboxPathDAO.listUserMailboxes(path.getNamespace(), path.getUser())
-            .thenApply(stream -> stream.filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches()))
-            .thenApply(stream -> stream.map(CassandraMailboxPathDAO.CassandraIdAndPath::getCassandraId))
-            .thenApply(stream -> stream.map(mailboxDAO::retrieveMailbox))
-            .thenCompose(CompletableFutureUtil::allOf)
-            .thenApply(stream -> stream
-                .flatMap(OptionalConverter::toStream)
-                .collect(Guavate.<Mailbox>toImmutableList()))
-            .join();
+
+        return FluentFutureStream.of(mailboxPathDAO.listUserMailboxes(path.getNamespace(), path.getUser()))
+            .filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches())
+            .map(CassandraMailboxPathDAO.CassandraIdAndPath::getCassandraId)
+            .thenFlatComposeOnOptional(mailboxDAO::retrieveMailbox)
+            .join()
+            .collect(Guavate.toImmutableList());
     }
 
     @Override

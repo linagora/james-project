@@ -27,8 +27,9 @@ import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mailbox.cassandra.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.ids.CassandraId;
+import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.mail.utils.Limit;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
@@ -42,6 +43,7 @@ import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 
 import com.github.steveash.guavate.Guavate;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 
 import org.junit.After;
@@ -106,7 +108,8 @@ public class CassandraMessageDAOTest {
 
         testee.save(messageWith1Attachment).join();
 
-        List<Optional<CassandraMessageDAO.MessageAttachmentRepresentation>> attachmentRepresentation = testee.retrieveMessages(messageIds, MessageMapper.FetchType.Body, Optional.empty())
+        List<Optional<MessageAttachmentRepresentation>> attachmentRepresentation =
+            testee.retrieveMessages(messageIds, MessageMapper.FetchType.Body, Limit.unlimited())
                 .get()
                 .map(pair -> pair.getRight())
                 .map(streamAttachemnt -> streamAttachemnt.findFirst())
@@ -128,7 +131,8 @@ public class CassandraMessageDAOTest {
 
         testee.save(messageWith1Attachment).join();
 
-        List<Optional<CassandraMessageDAO.MessageAttachmentRepresentation>> attachmentRepresentation = testee.retrieveMessages(messageIds, MessageMapper.FetchType.Body, Optional.empty())
+        List<Optional<MessageAttachmentRepresentation>> attachmentRepresentation =
+            testee.retrieveMessages(messageIds, MessageMapper.FetchType.Body, Limit.unlimited())
                 .get()
                 .map(pair -> pair.getRight())
                 .map(streamAttachemnt -> streamAttachemnt.findFirst())
@@ -138,8 +142,25 @@ public class CassandraMessageDAOTest {
         assertThat(attachmentRepresentation.get(0).get().getCid().isPresent()).isFalse();
     }
 
-    private SimpleMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) {
-        return new SimpleMailboxMessage(messageId, new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, MAILBOX_ID, attachments);
+    private SimpleMailboxMessage createMessage(
+            MessageId messageId,
+            String content,
+            int bodyStart,
+            PropertyBuilder propertyBuilder,
+            List<MessageAttachment> attachments) {
+
+        return SimpleMailboxMessage.builder()
+            .messageId(messageId)
+            .mailboxId(MAILBOX_ID)
+            .uid(messageUid)
+            .internalDate(new Date())
+            .bodyStartOctet(bodyStart)
+            .size(content.length())
+            .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
+            .flags(new Flags())
+            .propertyBuilder(propertyBuilder)
+            .addAttachments(attachments)
+            .build();
     }
 
 }

@@ -37,6 +37,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import javax.inject.Inject;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
 import org.apache.james.mailbox.exception.AttachmentNotFoundException;
@@ -58,6 +60,7 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
 
     private final CassandraAsyncExecutor cassandraAsyncExecutor;
 
+    @Inject
     public CassandraAttachmentMapper(Session session) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
     }
@@ -145,11 +148,10 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
     @Override
     public void storeAttachments(Collection<Attachment> attachments) throws MailboxException {
         try {
-            CompletableFuture.allOf(
-                    attachments.stream()
-                        .map(Throwing.function(this::asyncStoreAttachment))
-                        .toArray(CompletableFuture[]::new)
-                ).join();
+            FluentFutureStream.of(
+                attachments.stream()
+                    .map(Throwing.function(this::asyncStoreAttachment)))
+                .join();
         } catch (ThrownByLambdaException e) {
             throw new MailboxException(e.getCause().getMessage(), e.getCause());
         }

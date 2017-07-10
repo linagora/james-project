@@ -16,66 +16,69 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.cassandra;
+
+package org.apache.james.mailbox.cassandra.ids;
 
 import java.util.Objects;
 import java.util.UUID;
 
-import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageId;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.common.base.MoreObjects;
 
-public class CassandraId implements MailboxId {
+public class CassandraMessageId implements MessageId {
 
-    public static class Factory implements MailboxId.Factory {
+    public static class Factory implements MessageId.Factory {
+
         @Override
-        public CassandraId fromString(String serialized) {
+        public CassandraMessageId generate() {
+            return of(UUIDs.timeBased());
+        }
+
+        public CassandraMessageId of(UUID uuid) {
+            return new CassandraMessageId(uuid);
+        }
+
+        @Override
+        public MessageId fromString(String serialized) {
             return of(UUID.fromString(serialized));
         }
     }
+
+    private final UUID uuid;
+
+    private CassandraMessageId(UUID uuid) {
+        this.uuid = uuid;
+    }
     
-    private final UUID id;
-
-    public static CassandraId timeBased() {
-        return of(UUIDs.timeBased());
-    }
-
-    public static CassandraId of(UUID id) {
-        return new CassandraId(id);
-    }
-
-    private CassandraId(UUID id) {
-        this.id = id;
-    }
-
     @Override
     public String serialize() {
-        return id.toString();
+        return uuid.toString();
     }
 
-    public UUID asUuid() {
-        return id;
+    public UUID get() {
+        return uuid;
     }
 
     @Override
     public final boolean equals(Object o) {
-        if (o instanceof CassandraId) {
-            CassandraId other = (CassandraId) o;
-            return Objects.equals(id, other.id);
+        if (o instanceof CassandraMessageId) {
+            CassandraMessageId other = (CassandraMessageId) o;
+            return Objects.equals(uuid, other.uuid);
         }
         return false;
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(uuid);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("id", id)
+            .add("uuid", uuid)
             .toString();
     }
 }

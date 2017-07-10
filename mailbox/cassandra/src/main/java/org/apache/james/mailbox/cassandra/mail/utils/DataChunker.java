@@ -17,22 +17,36 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra;
+package org.apache.james.mailbox.cassandra.mail.utils;
 
-import java.util.UUID;
+import java.nio.ByteBuffer;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-import org.apache.james.mailbox.store.mail.model.MailboxIdDeserialisationException;
-import org.apache.james.mailbox.store.mail.model.MailboxIdDeserializer;
+import org.apache.commons.lang3.tuple.Pair;
 
-public class CassandraMailboxIdDeserializer implements MailboxIdDeserializer {
+import com.google.common.base.Preconditions;
 
-    @Override
-    public CassandraId deserialize(String serializedMailboxId) throws MailboxIdDeserialisationException {
-        try {
-            return CassandraId.of(UUID.fromString(serializedMailboxId));
-        } catch (Exception e) {
-            throw new MailboxIdDeserialisationException("Error de-serialising " + serializedMailboxId, e);
+public class DataChunker {
+
+    public Stream<Pair<Integer, ByteBuffer>> chunk(byte[] data, int chunkSize) {
+        Preconditions.checkNotNull(data);
+        Preconditions.checkArgument(chunkSize > 0, "ChunkSize can not be negative");
+
+        int size = data.length;
+        int fullChunkCount = size / chunkSize;
+
+        return Stream.concat(
+            IntStream.range(0, fullChunkCount)
+                .mapToObj(i -> Pair.of(i, ByteBuffer.wrap(data, i * chunkSize, chunkSize))),
+            lastChunk(data, chunkSize * fullChunkCount, fullChunkCount));
+    }
+
+    private Stream<Pair<Integer, ByteBuffer>> lastChunk(byte[] data, int offset, int index) {
+        if (offset == data.length && index > 0) {
+            return Stream.empty();
         }
+        return Stream.of(Pair.of(index, ByteBuffer.wrap(data, offset, data.length - offset)));
     }
 
 }
