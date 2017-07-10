@@ -33,7 +33,6 @@ import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.CassandraSubscriptionManager;
-import org.apache.james.mailbox.cassandra.mail.CassandraMailboxDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdToImapUidDAO;

@@ -17,58 +17,44 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.imapmailbox.jpa;
+package org.apache.james.util;
 
-import org.apache.james.mpt.api.ImapHostSystem;
-import org.apache.james.mpt.imapmailbox.suite.SelectedState;
-import org.junit.After;
-import org.junit.Before;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
-public class JpaSelectedState extends SelectedState {
+public class IteratorWrapper<U> implements Iterator<U> {
 
-    private ImapHostSystem system;
+    private final Iterator<U> underlying;
+    private final List<U> entriesSeen;
 
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new JpaMailboxTestModule());
-        system = injector.getInstance(ImapHostSystem.class);
-        super.setUp();
-    }
-    
-    @Override
-    protected ImapHostSystem createImapHostSystem() {
-        return system;
+    public IteratorWrapper(Iterator<U> underlying) {
+        Preconditions.checkNotNull(underlying);
+        this.underlying = underlying;
+        this.entriesSeen = new ArrayList<U>();
     }
 
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
+    public List<U> getEntriesSeen() {
+        return ImmutableList.copyOf(entriesSeen);
     }
 
     @Override
-    public void testCopyITALY() {
+    public boolean hasNext() {
+        return underlying.hasNext();
     }
 
     @Override
-    public void testCopyKOREA() {
+    public U next() {
+        U next = underlying.next();
+        entriesSeen.add(next);
+        return next;
     }
 
     @Override
-    public void testCopyUS() {
-    }
-
-    @Override
-    public void testUidITALY() {
-    }
-
-    @Override
-    public void testUidKOREA() {
-    }
-
-    @Override
-    public void testUidUS() {
+    public void remove() {
+        underlying.remove();
     }
 }
