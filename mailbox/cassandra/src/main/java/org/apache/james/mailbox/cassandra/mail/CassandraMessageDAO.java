@@ -48,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 import javax.mail.util.SharedByteArrayInputStream;
@@ -68,6 +69,7 @@ import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.util.CompletableFutureUtil;
 import org.apache.james.util.FluentFutureStream;
@@ -93,6 +95,7 @@ public class CassandraMessageDAO {
     private final PreparedStatement selectHeaders;
     private final PreparedStatement selectFields;
     private final PreparedStatement selectBody;
+    private final PreparedStatement scanMessages;
     private final CassandraConfiguration cassandraConfiguration;
 
     @Inject
@@ -104,6 +107,7 @@ public class CassandraMessageDAO {
         this.selectMetadata = prepareSelect(session, METADATA);
         this.selectHeaders = prepareSelect(session, HEADERS);
         this.selectFields = prepareSelect(session, FIELDS);
+        this.scanMessages = prepareScanMessages(session);
         this.selectBody = prepareSelect(session, BODY);
         this.cassandraConfiguration = cassandraConfiguration;
     }
@@ -117,6 +121,11 @@ public class CassandraMessageDAO {
         return session.prepare(select(fields)
             .from(TABLE_NAME)
             .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
+    }
+
+    private PreparedStatement prepareScanMessages(Session session) {
+        return session.prepare(select()
+            .from(TABLE_NAME));
     }
 
     private PreparedStatement prepareInsert(Session session) {
@@ -199,9 +208,23 @@ public class CassandraMessageDAO {
                 ids.stream()
                     .map(id -> retrieveRow(id, fetchType)
                         .thenApply((ResultSet resultSet) ->
-                            message(resultSet.one(), id, fetchType))))
+                            message(resultSet.one(), fetchType, id))))
                 .completableFuture())
             .thenApply(stream -> stream.flatMap(Function.identity()));
+    }
+
+    public CompletableFuture<Stream<Pair<RawMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> scanAllMessage () {
+        boolean parrallelStream = true;
+
+        CompletableFuture<Stream<Row>> cassandraResult = cassandraAsyncExecutor.execute(scanMessages
+            .bind()
+            .setFetchSize(cassandraConfiguration.getMessageReadChunkSize()))
+            .thenApply(resultSet -> StreamSupport.stream(resultSet.spliterator(), parrallelStream));
+
+        return FluentFutureStream
+            .of(cassandraResult)
+            .map(row -> rawMessage(row, FetchType.Full))
+            .completableFuture();
     }
 
     private CompletableFuture<ResultSet> retrieveRow(ComposedMessageIdWithMetaData messageId, FetchType fetchType) {
@@ -212,21 +235,29 @@ public class CassandraMessageDAO {
             .setUUID(MESSAGE_ID, cassandraMessageId.get()));
     }
 
-    private Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message(Row row, ComposedMessageIdWithMetaData messageIdWithMetaData, FetchType fetchType) {
-        ComposedMessageId messageId = messageIdWithMetaData.getComposedMessageId();
+    private Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message(
+        Row row,
+        FetchType fetchType,
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData
+    ) {
+        Pair<RawMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> rawPair = rawMessage(row, fetchType);
 
-        MessageWithoutAttachment messageWithoutAttachment =
-            new MessageWithoutAttachment(
-                messageId.getMessageId(),
+        return Pair.of(
+            rawPair.getLeft().toMessageWithoutAttachment(composedMessageIdWithMetaData),
+            rawPair.getRight()
+        );
+    }
+
+    private Pair<RawMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> rawMessage(Row row, FetchType fetchType) {
+        RawMessageWithoutAttachment messageWithoutAttachment =
+            new RawMessageWithoutAttachment(
+                CassandraMessageId.Factory.of(row.getUUID(MESSAGE_ID)),
                 row.getTimestamp(INTERNAL_DATE),
                 row.getLong(FULL_CONTENT_OCTETS),
                 row.getInt(BODY_START_OCTET),
                 buildContent(row, fetchType),
-                messageIdWithMetaData.getFlags(),
-                getPropertyBuilder(row),
-                messageId.getMailboxId(),
-                messageId.getUid(),
-                messageIdWithMetaData.getModSeq());
+                getPropertyBuilder(row));
+
         return Pair.of(messageWithoutAttachment, getAttachments(row, fetchType));
     }
 

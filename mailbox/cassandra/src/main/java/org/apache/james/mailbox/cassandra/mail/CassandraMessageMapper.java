@@ -193,7 +193,7 @@ public class CassandraMessageMapper implements MessageMapper {
             messageRepresentations = retrieveMessagesAndDoMigrationIfNeeded(messageIds, fetchType, limit);
 
         return messageRepresentations
-            .thenCompose(stream -> attachmentLoader.addAttachmentToMessages(stream, fetchType));
+            .thenCompose(stream -> attachmentLoader.addAttachmentToMailboxMessages(stream, fetchType));
     }
 
 

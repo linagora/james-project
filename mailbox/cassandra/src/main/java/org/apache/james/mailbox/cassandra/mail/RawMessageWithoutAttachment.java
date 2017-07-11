@@ -21,74 +21,80 @@ package org.apache.james.mailbox.cassandra.mail;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Stream;
+
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMessage;
 
-public class MessageWithoutAttachment {
+public class RawMessageWithoutAttachment {
     private final MessageId messageId;
     private final Date internalDate;
     private final Long size;
     private final Integer bodySize;
     private final SharedByteArrayInputStream content;
-    private final Flags flags;
     private final PropertyBuilder propertyBuilder;
-    private final MailboxId mailboxId;
-    private final MessageUid messageUid;
-    private final long modSeq;
 
-    public MessageWithoutAttachment(MessageId messageId, Date internalDate, Long size, Integer bodySize, SharedByteArrayInputStream content,
-                                    Flags flags, PropertyBuilder propertyBuilder, MailboxId mailboxId, MessageUid messageUid, long modSeq) {
+    public RawMessageWithoutAttachment(
+        MessageId messageId,
+        Date internalDate,
+        Long size,
+        Integer bodySize,
+        SharedByteArrayInputStream content,
+        PropertyBuilder propertyBuilder
+    ) {
         this.messageId = messageId;
         this.internalDate = internalDate;
         this.size = size;
         this.bodySize = bodySize;
         this.content = content;
-        this.flags = flags;
         this.propertyBuilder = propertyBuilder;
-        this.mailboxId = mailboxId;
-        this.messageUid = messageUid;
-        this.modSeq = modSeq;
     }
 
-    public RawMessageWithoutAttachment toRawMessageWithoutAttachment() {
-        return new RawMessageWithoutAttachment(messageId, internalDate, size, bodySize, content, propertyBuilder);
-    }
-
-    public SimpleMailboxMessage toMailboxMessage(List<MessageAttachment> attachments) {
+    public SimpleMailboxMessage toMailboxMessage(MailboxId mailboxId, Flags flags, List<MessageAttachment> attachments) {
         return SimpleMailboxMessage.builder()
             .messageId(messageId)
             .mailboxId(mailboxId)
-            .uid(messageUid)
-            .modseq(modSeq)
             .internalDate(internalDate)
             .bodyStartOctet(bodySize)
             .size(size)
             .content(content)
-            .flags(flags)
             .propertyBuilder(propertyBuilder)
             .addAttachments(attachments)
+            .flags(flags)
             .build();
     }
 
-    public MailboxId getMailboxId() {
-        return mailboxId;
+    public MessageWithoutAttachment toMessageWithoutAttachment(ComposedMessageIdWithMetaData composedMessageIdWithMetaData) {
+        ComposedMessageId composedMessageId = composedMessageIdWithMetaData.getComposedMessageId();
+
+        return new MessageWithoutAttachment(
+            composedMessageId.getMessageId(),
+            internalDate,
+            size,
+            bodySize,
+            content,
+            composedMessageIdWithMetaData.getFlags(),
+            propertyBuilder,
+            composedMessageId.getMailboxId(),
+            composedMessageId.getUid(),
+            composedMessageIdWithMetaData.getModSeq()
+        );
     }
 
     public MessageId getMessageId() {
         return messageId;
-    }
-
-    public ComposedMessageIdWithMetaData getMetadata() {
-        return new ComposedMessageIdWithMetaData(new ComposedMessageId(mailboxId, messageId, messageUid), flags, modSeq);
     }
 
     public SharedByteArrayInputStream getContent() {
@@ -97,5 +103,19 @@ public class MessageWithoutAttachment {
 
     public PropertyBuilder getPropertyBuilder() {
         return propertyBuilder;
+    }
+
+    public SimpleMessage toMessage(List<MessageAttachment> attachments) {
+        return new SimpleMessage(
+                messageId,
+                content,
+                size,
+                internalDate,
+                propertyBuilder.getSubType(),
+                propertyBuilder.getMediaType(),
+                bodySize,
+                propertyBuilder.getTextualLineCount(),
+                propertyBuilder.toProperties(),
+                attachments);
     }
 }

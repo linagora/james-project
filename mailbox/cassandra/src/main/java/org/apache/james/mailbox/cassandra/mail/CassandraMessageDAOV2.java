@@ -68,7 +68,7 @@ import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.util.CompletableFutureUtil;
@@ -148,12 +148,12 @@ public class CassandraMessageDAOV2 {
             .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
     }
 
-    public CompletableFuture<Void> save(MailboxMessage message) throws MailboxException {
+    public CompletableFuture<Void> save(Message message) throws MailboxException {
         return saveContent(message).thenCompose(pair ->
             cassandraAsyncExecutor.executeVoid(boundWriteStatement(message, pair)));
     }
 
-    private CompletableFuture<Pair<Optional<BlobId>, Optional<BlobId>>> saveContent(MailboxMessage message) throws MailboxException {
+    private CompletableFuture<Pair<Optional<BlobId>, Optional<BlobId>>> saveContent(Message message) throws MailboxException {
         try {
             return CompletableFutureUtil.combine(
                 blobsDAO.save(
@@ -168,8 +168,9 @@ public class CassandraMessageDAOV2 {
         }
     }
 
-    private BoundStatement boundWriteStatement(MailboxMessage message, Pair<Optional<BlobId>, Optional<BlobId>> pair) {
+    private BoundStatement boundWriteStatement(Message message, Pair<Optional<BlobId>, Optional<BlobId>> pair) {
         CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
+
         return insert.bind()
             .setUUID(MESSAGE_ID, messageId.get())
             .setTimestamp(INTERNAL_DATE, message.getInternalDate())
@@ -180,16 +181,16 @@ public class CassandraMessageDAOV2 {
             .setString(HEADER_CONTENT, pair.getLeft().map(BlobId::getId).orElse(DEFAULT_OBJECT_VALUE))
             .setLong(TEXTUAL_LINE_COUNT, Optional.ofNullable(message.getTextualLineCount()).orElse(DEFAULT_LONG_VALUE))
             .setList(PROPERTIES, buildPropertiesUdt(message))
-            .setList(ATTACHMENTS, buildAttachmentUdt(message));
+            .setList(ATTACHMENTS, buildAttachmentUdt(message.getAttachments()));
     }
 
-    private ImmutableList<UDTValue> buildAttachmentUdt(MailboxMessage message) {
-        return message.getAttachments().stream()
+    private ImmutableList<UDTValue> buildAttachmentUdt(List<MessageAttachment> attachments) {
+        return attachments.stream()
             .map(this::toUDT)
             .collect(Guavate.toImmutableList());
     }
 
-    private List<UDTValue> buildPropertiesUdt(MailboxMessage message) {
+    private List<UDTValue> buildPropertiesUdt(Message message) {
         return message.getProperties().stream()
             .map(x -> typesProvider.getDefinedUserType(PROPERTIES)
                 .newValue()

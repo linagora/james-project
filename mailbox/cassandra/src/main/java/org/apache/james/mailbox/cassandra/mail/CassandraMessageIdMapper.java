@@ -105,7 +105,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
             .completableFuture()
             .thenApply(stream -> stream.collect(Guavate.toImmutableList()))
             .thenCompose(composedMessageIds -> retrieveMessagesAndDoMigrationIfNeeded(fetchType, composedMessageIds))
-            .thenCompose(stream -> attachmentLoader.addAttachmentToMessages(stream, fetchType))
+            .thenCompose(stream -> attachmentLoader.addAttachmentToMailboxMessages(stream, fetchType))
             .thenCompose(this::filterMessagesWithExistingMailbox)
             .join()
             .sorted(Comparator.comparing(MailboxMessage::getUid));

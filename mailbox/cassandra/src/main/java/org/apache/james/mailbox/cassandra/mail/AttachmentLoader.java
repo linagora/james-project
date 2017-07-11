@@ -31,6 +31,7 @@ import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMessage;
 import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.OptionalConverter;
 
@@ -47,7 +48,7 @@ public class AttachmentLoader {
         this.attachmentMapper = attachmentMapper;
     }
 
-    public CompletableFuture<Stream<SimpleMailboxMessage>> addAttachmentToMessages(Stream<Pair<MessageWithoutAttachment,
+    public CompletableFuture<Stream<SimpleMailboxMessage>> addAttachmentToMailboxMessages(Stream<Pair<MessageWithoutAttachment,
             Stream<MessageAttachmentRepresentation>>> messageRepresentations, MessageMapper.FetchType fetchType) {
 
         if (fetchType == MessageMapper.FetchType.Body || fetchType == MessageMapper.FetchType.Full) {
@@ -60,6 +61,22 @@ public class AttachmentLoader {
             return CompletableFuture.completedFuture(messageRepresentations
                 .map(pair -> pair.getLeft()
                     .toMailboxMessage(ImmutableList.of())));
+        }
+    }
+
+    public CompletableFuture<Stream<SimpleMessage>> addAttachmentToMessages(Stream<Pair<RawMessageWithoutAttachment,
+        Stream<MessageAttachmentRepresentation>>> messageRepresentations, MessageMapper.FetchType fetchType) {
+
+        if (fetchType == MessageMapper.FetchType.Body || fetchType == MessageMapper.FetchType.Full) {
+            return FluentFutureStream.of(
+                messageRepresentations
+                    .map(pair -> getAttachments(pair.getRight().collect(Guavate.toImmutableList()))
+                        .thenApply(attachments -> pair.getLeft().toMessage(attachments))))
+                .completableFuture();
+        } else {
+            return CompletableFuture.completedFuture(messageRepresentations
+                .map(pair -> pair.getLeft()
+                    .toMessage(ImmutableList.of())));
         }
     }
 

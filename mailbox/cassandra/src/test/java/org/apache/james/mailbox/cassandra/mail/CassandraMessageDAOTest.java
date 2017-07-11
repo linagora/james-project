@@ -46,6 +46,7 @@ import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 
+import org.apache.james.util.FluentFutureStream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +64,8 @@ public class CassandraMessageDAOTest {
 
     private SimpleMailboxMessage messageWith1Attachment;
     private CassandraMessageId messageId;
+    private CassandraMessageId messageId2;
+    private CassandraMessageId messageId3;
     private Attachment attachment;
     private ComposedMessageId composedMessageId;
     private List<ComposedMessageIdWithMetaData> messageIds;
@@ -74,6 +77,8 @@ public class CassandraMessageDAOTest {
 
         messageIdFactory = new CassandraMessageId.Factory();
         messageId = messageIdFactory.generate();
+        messageId2 = messageIdFactory.generate();
+        messageId3 = messageIdFactory.generate();
         testee = new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider());
 
         attachment = Attachment.builder()
@@ -119,6 +124,29 @@ public class CassandraMessageDAOTest {
 
         assertThat(attachmentRepresentation).hasSize(1);
         assertThat(attachmentRepresentation.get(0).get().getCid().get()).isEqualTo(expectedCid);
+    }
+
+    @Test
+    public void scanMessageShouldReturnAllMessageInTheTable() throws Exception {
+        SimpleMailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(),
+            ImmutableList.of());
+
+        SimpleMailboxMessage message2 = createMessage(messageId2, CONTENT, BODY_START, new PropertyBuilder(),
+            ImmutableList.of());
+
+        SimpleMailboxMessage message3 = createMessage(messageId3, CONTENT, BODY_START, new PropertyBuilder(),
+            ImmutableList.of());
+
+        FluentFutureStream.ofFutures(testee.save(message1), testee.save(message2), testee.save(message3)).join();
+
+        List<MessageId> mails =
+            testee.scanAllMessage()
+                .get()
+                .map(pair -> pair.getLeft().getMessageId())
+                .collect(Guavate.toImmutableList());
+
+
+        assertThat(mails).contains(message1.getMessageId(), message2.getMessageId(), message3.getMessageId());
     }
 
     @Test
