@@ -466,7 +466,7 @@ public abstract class VacationIntegrationTest {
     private List<Map<String, String>> getAllMailboxesIds(AccessToken accessToken) {
         return with()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"propertyBuilder\": [\"role\", \"id\"]}, \"#0\"]]")
             .post("/jmap")
         .andReturn()
             .body()

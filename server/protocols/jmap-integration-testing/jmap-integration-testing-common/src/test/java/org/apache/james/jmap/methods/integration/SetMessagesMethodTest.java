@@ -176,7 +176,7 @@ public abstract class SetMessagesMethodTest {
     private List<Map<String, String>> getAllMailboxesIds(AccessToken accessToken) {
         return with()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"propertyBuilder\": [\"role\", \"id\"]}, \"#0\"]]")
         .post("/jmap")
             .andReturn()
             .body()
@@ -229,7 +229,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notDestroyed", hasEntry(equalTo(unknownMailboxMessageId), Matchers.allOf(
                 hasEntry("type", "notFound"),
                 hasEntry("description", "The message " + unknownMailboxMessageId + " can't be found"),
-                hasEntry(equalTo("properties"), isEmptyOrNullString())))
+                hasEntry(equalTo("propertyBuilder"), isEmptyOrNullString())))
             );
     }
 
@@ -251,7 +251,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notDestroyed", hasEntry(equalTo(messageId), Matchers.allOf(
                 hasEntry("type", "notFound"),
                 hasEntry("description", "The message " + messageId + " can't be found"),
-                hasEntry(equalTo("properties"), isEmptyOrNullString())))
+                hasEntry(equalTo("propertyBuilder"), isEmptyOrNullString())))
             );
     }
 
@@ -571,7 +571,7 @@ public abstract class SetMessagesMethodTest {
             .body(NAME, equalTo("messagesSet"))
             .body(NOT_UPDATED, hasKey(messageId))
             .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
-            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("isUnread"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].propertyBuilder[0]", equalTo("isUnread"))
             .body(NOT_UPDATED + "[\""+messageId+"\"].description", equalTo("isUnread: Can not construct instance of java.lang.Boolean from String value '123': only \"true\" or \"false\" recognized\n" +
                     " at [Source: {\"isUnread\":\"123\"}; line: 1, column: 2] (through reference chain: org.apache.james.jmap.model.Builder[\"isUnread\"])"))
             .body(ARGUMENTS + ".updated", hasSize(0));
@@ -599,9 +599,9 @@ public abstract class SetMessagesMethodTest {
             .body(NAME, equalTo("messagesSet"))
             .body(NOT_UPDATED, hasKey(messageId))
             .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
-            .body(NOT_UPDATED + "[\""+messageId+"\"].properties", hasSize(2))
-            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("isUnread"))
-            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[1]", equalTo("isFlagged"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].propertyBuilder", hasSize(2))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].propertyBuilder[0]", equalTo("isUnread"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].propertyBuilder[1]", equalTo("isFlagged"))
             .body(ARGUMENTS + ".updated", hasSize(0));
     }
 
@@ -1050,8 +1050,8 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notCreated", hasKey(messageCreationId))
             .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
             .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].description", endsWith("'from' address is mandatory"))
-            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", hasSize(1))
-            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", contains("from"))
+            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].propertyBuilder", hasSize(1))
+            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].propertyBuilder", contains("from"))
             .body(ARGUMENTS + ".created", aMapWithSize(0));
     }
 
@@ -1226,8 +1226,8 @@ public abstract class SetMessagesMethodTest {
             .body(NAME, equalTo("messagesSet"))
             .body(ARGUMENTS + ".notCreated", hasKey(messageCreationId))
             .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
-            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", hasSize(1))
-            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].properties", contains("from"))
+            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].propertyBuilder", hasSize(1))
+            .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].propertyBuilder", contains("from"))
             .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].description", endsWith("Invalid 'from' field. Must be one of username@domain.tld"))
             .body(ARGUMENTS + ".created", aMapWithSize(0));
     }
@@ -1989,8 +1989,8 @@ public abstract class SetMessagesMethodTest {
             .body(NAME, equalTo("messagesSet"))
             .body(NOT_UPDATED, hasKey(messageToMoveId))
             .body(NOT_UPDATED + "[\""+messageToMoveId+"\"].type", equalTo("invalidProperties"))
-            .body(NOT_UPDATED + "[\""+messageToMoveId+"\"].properties", hasSize(1))
-            .body(NOT_UPDATED + "[\""+messageToMoveId+"\"].properties[0]", equalTo("mailboxIds"))
+            .body(NOT_UPDATED + "[\""+messageToMoveId+"\"].propertyBuilder", hasSize(1))
+            .body(NOT_UPDATED + "[\""+messageToMoveId+"\"].propertyBuilder[0]", equalTo("mailboxIds"))
             .body(ARGUMENTS + ".updated", hasSize(0));
     }
 

@@ -31,7 +31,7 @@ public interface CassandraMessageV1Table {
     String TEXTUAL_LINE_COUNT = "textualLineCount";
     String BODY_CONTENT = "bodyContent";
     String HEADER_CONTENT = "headerContent";
-    String PROPERTIES = "properties";
+    String PROPERTIES = "propertyBuilder";
     String ATTACHMENTS = "attachments";
 
     String[] FIELDS = { MESSAGE_ID, INTERNAL_DATE, BODY_START_OCTET, FULL_CONTENT_OCTETS, BODY_OCTECTS, BODY_CONTENT, HEADER_CONTENT, TEXTUAL_LINE_COUNT, PROPERTIES, ATTACHMENTS };

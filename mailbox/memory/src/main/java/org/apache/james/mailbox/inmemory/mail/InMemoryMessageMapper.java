@@ -42,6 +42,7 @@ import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.mail.utils.ApplicableFlagCalculator;
 
@@ -176,7 +177,7 @@ public class InMemoryMessageMapper extends AbstractMessageMapper {
     @Override
     protected MessageMetaData copy(Mailbox mailbox, MessageUid uid, long modSeq, MailboxMessage original)
             throws MailboxException {
-        SimpleMailboxMessage message = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original);
+        MailboxMessage message = MessageUtil.copy(original, mailbox.getMailboxId());
         message.setUid(uid);
         message.setModSeq(modSeq);
         Flags flags = original.createFlags();
@@ -189,7 +190,7 @@ public class InMemoryMessageMapper extends AbstractMessageMapper {
 
     @Override
     protected MessageMetaData save(Mailbox mailbox, MailboxMessage message) throws MailboxException {
-        SimpleMailboxMessage copy = SimpleMailboxMessage.copy(mailbox.getMailboxId(), message);
+        MailboxMessage copy = MessageUtil.copy(message, mailbox.getMailboxId());
         copy.setUid(message.getUid());
         copy.setModSeq(message.getModSeq());
         getMembershipByUidForMailbox(mailbox).put(message.getUid(), copy);

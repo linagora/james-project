@@ -309,13 +309,13 @@ public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Pers
             for (Property prop : currentProperties) {
                 newProperties.add(new JCRProperty(prop, logger));
             }
-            // remove old properties, we will add a bunch of new ones
+            // remove old propertyBuilder, we will add a bunch of new ones
             NodeIterator iterator = node.getNodes("messageProperty");
             while (iterator.hasNext()) {
                 iterator.nextNode().remove();
             }
 
-            // store new properties
+            // store new propertyBuilder
             for (Property newProperty : newProperties) {
                 JCRProperty prop = (JCRProperty) newProperty;
                 Node propNode = node.addNode("messageProperty", "nt:unstructured");

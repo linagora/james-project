@@ -106,19 +106,11 @@ public interface MessageWithoutAttachment {
     InputStream getFullContent() throws IOException;
 
     /**
-     * Gets a read-only list of meta-data properties.
-     * For properties with multiple values, this list will contain
+     * Gets a read-only list of meta-data propertyBuilder.
+     * For propertyBuilder with multiple values, this list will contain
      * several enteries with the same namespace and local name.
      *
      * @return unmodifiable list of meta-data, not null
      */
     List<Property> getProperties();
-    
-    /**
-     * Return the list of attachments
-     * 
-     * @return a read only list of attachments
-     */
-    List<MessageAttachment> getAttachments();
-
 }

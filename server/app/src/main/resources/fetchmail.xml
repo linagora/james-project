@@ -60,7 +60,7 @@
        <!-- There must be one<accounts>entry per fetch task. An accounts entry can have 0 to many -->
        <!--<account>entries and 0 or 1<alllocal>entries.<alllocal>generates -->
        <!--<accounts>for every user defined to James.<accounts>run consecutively within the -->
-       <!-- scope of their fetch task and inherit all the properties of the fetch task. -->
+       <!-- scope of their fetch task and inherit all the propertyBuilder of the fetch task. -->
             
        <!-- The advantage of running consecutively is that we can avoid conflicting fetch tasks -->
        <!-- operating concurrently on the same mailboxes. -->
@@ -86,10 +86,10 @@
        <!-- Limitations and Future Directions -->
        <!-- 1)<alllocal>requires the password for all accounts for a domain on the message server be the same. True -->
        <!-- in many cases, but not all. A future version might work out a way of associating James users with a set -->
-       <!-- of account properties. -->
+       <!-- of account propertyBuilder. -->
        <!-- 2)<alllocal>will try to access an INBOX on the message server for all local users. The instance of James used -->
        <!-- for this purpose should not have extraneous users defined. This is inefficient, but not fatal. -->
-       <!-- Again, a future version might work out a way of associating James users with message account properties. -->
+       <!-- Again, a future version might work out a way of associating James users with message account propertyBuilder. -->
        <!-- This would allow all local users with an account on a particular message server to be fetched. -->
             
        <accounts>

@@ -99,7 +99,7 @@ public class HBaseMailboxMessage implements MailboxMessage {
     
     /**
      * Create a copy of the given message.
-     * All properties are cloned except mailbox and UID.
+     * All propertyBuilder are cloned except mailbox and UID.
      */
     public HBaseMailboxMessage(Configuration conf, HBaseId mailboxId, MessageUid uid, MessageId messageId, long modSeq, MailboxMessage original) throws MailboxException {
         this.conf = conf;
@@ -208,8 +208,8 @@ public class HBaseMailboxMessage implements MailboxMessage {
     }
 
     /**
-     * Gets a read-only list of meta-data properties.
-     * For properties with multiple values, this list will contain
+     * Gets a read-only list of meta-data propertyBuilder.
+     * For propertyBuilder with multiple values, this list will contain
      * several enteries with the same namespace and local name.
      * @return unmodifiable list of meta-data, not null
      */

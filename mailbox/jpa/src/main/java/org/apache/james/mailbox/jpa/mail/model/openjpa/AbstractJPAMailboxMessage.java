@@ -259,7 +259,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     }
 
     /**
-     * Constructs a copy of the given message. All properties are cloned except
+     * Constructs a copy of the given message. All propertyBuilder are cloned except
      * mailbox and UID.
      *
      * @param mailbox
@@ -348,7 +348,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     }
 
     /**
-     * Gets a read-only list of meta-data properties. For properties with
+     * Gets a read-only list of meta-data propertyBuilder. For propertyBuilder with
      * multiple values, this list will contain several enteries with the same
      * namespace and local name.
      *

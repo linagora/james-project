@@ -64,11 +64,12 @@ import org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table.Properti
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Cid;
-import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
+import org.apache.james.mailbox.store.mail.model.MailboxMessageWithoutAttachment;
 import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.util.CompletableFutureUtil;
@@ -233,10 +234,11 @@ public class CassandraMessageDAOV2 {
             .setUUID(MESSAGE_ID, cassandraMessageId.get()));
     }
 
-    private CompletableFuture<MessageResult>
-    message(ResultSet rows,ComposedMessageIdWithMetaData messageIdWithMetaData, FetchType fetchType) {
-        ComposedMessageId messageId = messageIdWithMetaData.getComposedMessageId();
-
+    private CompletableFuture<MessageResult> message(
+        ResultSet rows,
+        ComposedMessageIdWithMetaData messageIdWithMetaData,
+        FetchType fetchType
+    ) {
         if (rows.isExhausted()) {
             return CompletableFuture.completedFuture(notFound(messageIdWithMetaData));
         }
@@ -245,18 +247,16 @@ public class CassandraMessageDAOV2 {
         CompletableFuture<byte[]> contentFuture = buildContentRetriever(fetchType).apply(row);
 
         return contentFuture.thenApply(content -> {
-            MessageWithoutAttachment messageWithoutAttachment =
-                new MessageWithoutAttachment(
-                    messageId.getMessageId(),
-                    row.getTimestamp(INTERNAL_DATE),
-                    row.getLong(FULL_CONTENT_OCTETS),
-                    row.getInt(BODY_START_OCTET),
-                    new SharedByteArrayInputStream(content),
-                    messageIdWithMetaData.getFlags(),
-                    getPropertyBuilder(row),
-                    messageId.getMailboxId(),
-                    messageId.getUid(),
-                    messageIdWithMetaData.getModSeq());
+            MailboxMessageWithoutAttachment messageWithoutAttachment = MessageUtil.buildMailboxMessageWithoutAttachment()
+                .internalDate(row.getTimestamp(INTERNAL_DATE))
+                .size(row.getLong(FULL_CONTENT_OCTETS))
+                .bodyStartOctet(row.getInt(BODY_START_OCTET))
+                .content(new SharedByteArrayInputStream(content))
+                .propertyBuilder(getPropertyBuilder(row))
+                .idWithMetatData(messageIdWithMetaData)
+                .build();
+
+
             return found(Pair.of(messageWithoutAttachment, getAttachments(row, fetchType)));
         });
     }
@@ -355,15 +355,18 @@ public class CassandraMessageDAOV2 {
         return new MessageResult(id, Optional.empty());
     }
 
-    public static MessageResult found(Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message) {
-        return new MessageResult(message.getLeft().getMetadata(), Optional.of(message));
+    public static MessageResult found(Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message) {
+        return new MessageResult(MessageUtil.getOnlyMetaData(message.getLeft()), Optional.of(message));
     }
 
     public static class MessageResult {
         private final ComposedMessageIdWithMetaData metaData;
-        private final Optional<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> message;
+        private final Optional<Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> message;
 
-        public MessageResult(ComposedMessageIdWithMetaData metaData, Optional<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> message) {
+        public MessageResult(
+            ComposedMessageIdWithMetaData metaData,
+            Optional<Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> message
+        ) {
             this.metaData = metaData;
             this.message = message;
         }
@@ -376,7 +379,7 @@ public class CassandraMessageDAOV2 {
             return message.isPresent();
         }
 
-        public Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message() {
+        public Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message() {
             return message.get();
         }
     }

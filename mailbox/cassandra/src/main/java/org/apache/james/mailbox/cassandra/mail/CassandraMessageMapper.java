@@ -39,9 +39,9 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
-import org.apache.james.mailbox.cassandra.mail.utils.Limit;
 import org.apache.james.mailbox.cassandra.mail.migration.V1ToV2Migration;
 import org.apache.james.mailbox.cassandra.mail.utils.FlagsUpdateStageResult;
+import org.apache.james.mailbox.cassandra.mail.utils.Limit;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
@@ -54,7 +54,8 @@ import org.apache.james.mailbox.store.SimpleMessageMetaData;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MailboxMessageWithoutAttachment;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.streams.JamesCollectors;
 import org.slf4j.Logger;
@@ -188,8 +189,12 @@ public class CassandraMessageMapper implements MessageMapper {
             .collect(Guavate.toImmutableList());
     }
 
-    private CompletableFuture<Stream<SimpleMailboxMessage>> retrieveMessages(List<ComposedMessageIdWithMetaData> messageIds, FetchType fetchType, Limit limit) {
-        CompletableFuture<Stream<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>>
+    private CompletableFuture<Stream<MailboxMessage>> retrieveMessages(
+        List<ComposedMessageIdWithMetaData> messageIds,
+        FetchType fetchType,
+        Limit limit
+    ) {
+        CompletableFuture<Stream<Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>>
             messageRepresentations = retrieveMessagesAndDoMigrationIfNeeded(messageIds, fetchType, limit);
 
         return messageRepresentations
@@ -226,16 +231,16 @@ public class CassandraMessageMapper implements MessageMapper {
             .collect(Guavate.toImmutableMap(MailboxMessage::getUid, SimpleMessageMetaData::new));
     }
 
-    private CompletableFuture<Stream<SimpleMailboxMessage>> expungeUidChunk(CassandraId mailboxId, Collection<MessageUid> uidChunk) {
+    private CompletableFuture<Stream<MailboxMessage>> expungeUidChunk(CassandraId mailboxId, Collection<MessageUid> uidChunk) {
         return FluentFutureStream.ofOptionals(
                 uidChunk.stream().map(uid -> messageIdDAO.retrieve(mailboxId, uid)))
             .performOnAll(this::deleteUsingMailboxId)
             .thenFlatCompose(idWithMetadata -> retrieveMessagesAndDoMigrationIfNeeded(ImmutableList.of(idWithMetadata), FetchType.Metadata, Limit.unlimited()))
-            .map(pair -> pair.getKey().toMailboxMessage(ImmutableList.of()))
+            .map(pair -> MessageUtil.addAttachmentToMailboxMessage(pair.getKey(), ImmutableList.of()))
             .completableFuture();
     }
 
-    private CompletableFuture<Stream<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> retrieveMessagesAndDoMigrationIfNeeded(
+    private CompletableFuture<Stream<Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> retrieveMessagesAndDoMigrationIfNeeded(
         List<ComposedMessageIdWithMetaData> messageIds, FetchType fetchType, Limit limit) {
 
         return FluentFutureStream.of(messageDAOV2.retrieveMessages(messageIds, fetchType, limit))

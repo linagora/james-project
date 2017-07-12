@@ -76,6 +76,7 @@ import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.quota.QuotaChecker;
@@ -478,7 +479,30 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
      * Create a new {@link MailboxMessage} for the given data
      */
     protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException {
-        return new SimpleMailboxMessage(messageIdFactory.generate(), internalDate, size, bodyStartOctet, content, flags, propertyBuilder, getMailboxEntity().getMailboxId(), attachments);
+        //return new SimpleMailboxMessage(
+        //    messageIdFactory.generate(),
+        //    internalDate,
+        //    size,
+        //    bodyStartOctet,
+        //    content,
+        //    flags,
+        //    propertyBuilder,
+        //    getMailboxEntity().getMailboxId(),
+        //    attachments);
+
+        return MessageUtil.buildMailboxMessage()
+            .messageId(messageIdFactory.generate())
+            .internalDate(internalDate)
+            .size(size)
+            .bodyStartOctet(bodyStartOctet)
+            .content(content)
+            .flags(flags)
+            .propertyBuilder(propertyBuilder)
+            .mailboxId(getMailboxEntity().getMailboxId())
+            .attachments(attachments)
+            .uid(null)
+            .modSeq(0)
+            .build();
     }
 
     /**

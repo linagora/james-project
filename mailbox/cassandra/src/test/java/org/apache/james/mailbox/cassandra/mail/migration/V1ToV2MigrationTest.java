@@ -174,7 +174,7 @@ public class V1ToV2MigrationTest {
 
         CassandraMessageDAOV2.MessageResult messageResult = retrieveMessageOnV2().get();
         softly.assertThat(messageResult.message().getLeft().getMessageId()).isEqualTo(messageId);
-        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getContent(), Charsets.UTF_8))
+        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getFullContent(), Charsets.UTF_8))
             .isEqualTo(CONTENT);
         softly.assertThat(messageResult.message().getRight().findAny().isPresent()).isFalse();
     }
@@ -255,7 +255,7 @@ public class V1ToV2MigrationTest {
 
         CassandraMessageDAOV2.MessageResult messageResult = retrieveMessageOnV2().get();
         softly.assertThat(messageResult.message().getLeft().getMessageId()).isEqualTo(messageId);
-        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getContent(), Charsets.UTF_8))
+        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getFullContent(), Charsets.UTF_8))
             .isEqualTo(CONTENT);
         softly.assertThat(messageResult.message().getRight().findAny().get()).isEqualTo(MessageAttachmentRepresentation.builder()
             .attachmentId(attachment.getAttachmentId())

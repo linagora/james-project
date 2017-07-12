@@ -347,7 +347,7 @@ public abstract class GetMailboxesMethodTest {
         MailboxId mailboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, "name").getMailboxId();
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId.serialize() + "\"], \"properties\" : [\"unreadMessages\", \"sortOrder\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId.serialize() + "\"], \"propertyBuilder\" : [\"unreadMessages\", \"sortOrder\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -376,7 +376,7 @@ public abstract class GetMailboxesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"properties\" : []}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"propertyBuilder\" : []}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -392,7 +392,7 @@ public abstract class GetMailboxesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"properties\" : [\"unknown\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"propertyBuilder\" : [\"unknown\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()

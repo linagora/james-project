@@ -34,11 +34,14 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageManager.FlagsUpdateMode;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
@@ -48,9 +51,9 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MapperProvider.Capabilities;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.util.concurrency.ConcurrentTestRunner;
 import org.junit.After;
 import org.junit.Assume;
@@ -494,21 +497,21 @@ public abstract class MessageMapperTest {
     public void copyShouldIncrementUid() throws MailboxException, IOException {
         saveMessages();
         MessageUid uid = messageMapper.getLastUid(benwaInboxMailbox).get();
-        messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(messageMapper.getLastUid(benwaInboxMailbox).get()).isGreaterThan(uid);
     }
 
     @Test
     public void copyShouldIncrementMessageCount() throws MailboxException, IOException {
         saveMessages();
-        messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(messageMapper.countMessagesInMailbox(benwaInboxMailbox)).isEqualTo(6);
     }
 
     @Test
     public void copyOfUnSeenMessageShouldIncrementUnSeenMessageCount() throws MailboxException, IOException {
         saveMessages();
-        messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(messageMapper.countUnseenMessagesInMailbox(benwaInboxMailbox)).isEqualTo(6);
     }
 
@@ -516,14 +519,14 @@ public abstract class MessageMapperTest {
     public void copyShouldIncrementModSeq() throws MailboxException, IOException {
         saveMessages();
         long modSeq = messageMapper.getHighestModSeq(benwaInboxMailbox);
-        messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(messageMapper.getHighestModSeq(benwaInboxMailbox)).isGreaterThan(modSeq);
     }
 
     @Test
     public void copyShouldCreateAMessageInDestination() throws MailboxException, IOException {
         saveMessages();
-        MailboxMessage message7 = SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6);
+        MailboxMessage message7 = MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId());
         messageMapper.copy(benwaInboxMailbox, message7);
         message7.setModSeq(messageMapper.getHighestModSeq(benwaInboxMailbox));
         assertThat(messageMapper.getLastUid(benwaInboxMailbox).get()).isGreaterThan(message6.getUid());
@@ -544,14 +547,14 @@ public abstract class MessageMapperTest {
         saveMessages();
         long expectedUnseenMessages = messageMapper.countUnseenMessagesInMailbox(benwaInboxMailbox);
 
-        messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(messageMapper.countUnseenMessagesInMailbox(benwaInboxMailbox)).isEqualTo(expectedUnseenMessages);
     }
 
     @Test
     public void copiedMessageShouldBeMarkedAsRecent() throws MailboxException {
         saveMessages();
-        MessageMetaData metaData = messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        MessageMetaData metaData = messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(
             messageMapper.findInMailbox(benwaInboxMailbox,
                 MessageRange.one(metaData.getUid()),
@@ -566,7 +569,7 @@ public abstract class MessageMapperTest {
     public void copiedRecentMessageShouldBeMarkedAsRecent() throws MailboxException {
         saveMessages();
         message6.setFlags(new Flags(Flags.Flag.RECENT));
-        MessageMetaData metaData = messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        MessageMetaData metaData = messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(
             messageMapper.findInMailbox(benwaInboxMailbox,
                 MessageRange.one(metaData.getUid()),
@@ -580,7 +583,7 @@ public abstract class MessageMapperTest {
     @Test
     public void copiedMessageShouldNotChangeTheFlagsOnOriginalMessage() throws MailboxException {
         saveMessages();
-        messageMapper.copy(benwaInboxMailbox, SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message6));
+        messageMapper.copy(benwaInboxMailbox, MessageUtil.copy(message6, benwaInboxMailbox.getMailboxId()));
         assertThat(
             messageMapper.findInMailbox(benwaWorkMailbox,
                 MessageRange.one(message6.getUid()),
@@ -856,7 +859,7 @@ public abstract class MessageMapperTest {
 
     @Test
     public void messagesShouldBeSavedWithTheirUserFlags() throws Exception {
-        MailboxMessage message = SimpleMailboxMessage.copy(benwaInboxMailbox.getMailboxId(), message1);
+        MailboxMessage message = MessageUtil.copy(message1, benwaInboxMailbox.getMailboxId());
         messageMapper.add(benwaInboxMailbox, message);
         assertThat(retrieveMessageFromStorage(message)).hasFlags(new Flags(USER_FLAG));
     }
@@ -1138,7 +1141,18 @@ public abstract class MessageMapperTest {
         return messageMapper.findInMailbox(benwaInboxMailbox, MessageRange.one(message.getUid()), MessageMapper.FetchType.Metadata, LIMIT).next();
     }
     
-    private MailboxMessage createMessage(Mailbox mailbox, MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder) {
-        return new SimpleMailboxMessage(messageId, new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, mailbox.getMailboxId());
+    private MailboxMessage createMessage(Mailbox mailbox, MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder) throws MailboxException {
+        return MessageUtil.buildMailboxMessage()
+            .messageId(messageId)
+            .internalDate(new Date())
+            .size(content.length())
+            .bodyStartOctet(bodyStart)
+            .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
+            .flags(new Flags())
+            .propertyBuilder(propertyBuilder)
+            .mailboxId(mailbox.getMailboxId())
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .modSeq(0)
+            .build();
     }
 }

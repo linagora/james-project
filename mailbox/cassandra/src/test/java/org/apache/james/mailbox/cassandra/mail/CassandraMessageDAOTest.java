@@ -39,6 +39,9 @@ import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MailboxUtil;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 
@@ -62,7 +65,7 @@ public class CassandraMessageDAOTest {
     private CassandraMessageDAO testee;
     private CassandraMessageId.Factory messageIdFactory;
 
-    private SimpleMailboxMessage messageWith1Attachment;
+    private MailboxMessage messageWith1Attachment;
     private CassandraMessageId messageId;
     private CassandraMessageId messageId2;
     private CassandraMessageId messageId3;
@@ -128,13 +131,13 @@ public class CassandraMessageDAOTest {
 
     @Test
     public void scanMessageShouldReturnAllMessageInTheTable() throws Exception {
-        SimpleMailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(),
+        MailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(),
             ImmutableList.of());
 
-        SimpleMailboxMessage message2 = createMessage(messageId2, CONTENT, BODY_START, new PropertyBuilder(),
+        MailboxMessage message2 = createMessage(messageId2, CONTENT, BODY_START, new PropertyBuilder(),
             ImmutableList.of());
 
-        SimpleMailboxMessage message3 = createMessage(messageId3, CONTENT, BODY_START, new PropertyBuilder(),
+        MailboxMessage message3 = createMessage(messageId3, CONTENT, BODY_START, new PropertyBuilder(),
             ImmutableList.of());
 
         FluentFutureStream.ofFutures(testee.save(message1), testee.save(message2), testee.save(message3)).join();
@@ -170,14 +173,14 @@ public class CassandraMessageDAOTest {
         assertThat(attachmentRepresentation.get(0).get().getCid().isPresent()).isFalse();
     }
 
-    private SimpleMailboxMessage createMessage(
+    private MailboxMessage createMessage(
             MessageId messageId,
             String content,
             int bodyStart,
             PropertyBuilder propertyBuilder,
             List<MessageAttachment> attachments) {
 
-        return SimpleMailboxMessage.builder()
+        return MessageUtil.buildMailboxMessage()
             .messageId(messageId)
             .mailboxId(MAILBOX_ID)
             .uid(messageUid)
@@ -187,7 +190,8 @@ public class CassandraMessageDAOTest {
             .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
             .flags(new Flags())
             .propertyBuilder(propertyBuilder)
-            .addAttachments(attachments)
+            .attachments(attachments)
+            .modSeq(0)
             .build();
     }
 
