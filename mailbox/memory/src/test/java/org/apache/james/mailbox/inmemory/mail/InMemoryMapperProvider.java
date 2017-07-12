@@ -48,6 +48,7 @@ public class InMemoryMapperProvider implements MapperProvider {
     private final MessageId.Factory messageIdFactory;
     private final MessageUidProvider messageUidProvider;
     private final InMemoryMailboxSessionMapperFactory inMemoryMailboxSessionMapperFactory;
+    private final InMemoryAttachmentMapper attachmentMapper;
 
 
     public InMemoryMapperProvider() {
@@ -55,6 +56,7 @@ public class InMemoryMapperProvider implements MapperProvider {
         messageIdFactory = new InMemoryMessageId.Factory();
         messageUidProvider = new MessageUidProvider();
         inMemoryMailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
+        attachmentMapper = new InMemoryAttachmentMapper();
     }
 
     @Override
@@ -70,11 +72,6 @@ public class InMemoryMapperProvider implements MapperProvider {
     @Override
     public MessageIdMapper createMessageIdMapper() throws MailboxException {
         throw new NotImplementedException();
-    }
-
-    @Override
-    public AttachmentMapper createAttachmentMapper() throws MailboxException {
-        return inMemoryMailboxSessionMapperFactory.createAttachmentMapper(new MockMailboxSession("user"));
     }
 
     @Override
@@ -137,5 +134,10 @@ public class InMemoryMapperProvider implements MapperProvider {
     @Override
     public void close() throws IOException {
 
+    }
+
+    @Override
+    public AttachmentMapper getAttachmentMapper() {
+        return attachmentMapper;
     }
 }

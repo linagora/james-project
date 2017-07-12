@@ -66,6 +66,7 @@ public abstract class AbstractMailboxManagerAttachmentTest {
     protected abstract MailboxManager getMailboxManager();
     protected abstract MailboxManager getParseFailingMailboxManager();
     protected abstract MailboxSessionMapperFactory getMailboxSessionMapperFactory();
+    protected abstract AttachmentMapper getAttachmentMapper();
     
     protected void clean() {
     }
@@ -80,7 +81,7 @@ public abstract class AbstractMailboxManagerAttachmentTest {
         mailboxManager.createMailbox(inboxPath, mailboxSession);
         inbox = mailboxMapper.findMailboxByPath(inboxPath);
         inboxMessageManager = mailboxManager.getMailbox(inboxPath, mailboxSession);
-        attachmentMapper = getMailboxSessionMapperFactory().getAttachmentMapper(mailboxSession);
+        attachmentMapper = getAttachmentMapper();
     }
 
     @After

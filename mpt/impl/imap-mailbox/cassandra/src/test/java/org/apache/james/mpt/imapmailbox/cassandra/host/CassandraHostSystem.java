@@ -29,10 +29,11 @@ import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraBlobsDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraDeletedMessageDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraFirstUnseenDAO;
-import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxCounterDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxPathDAO;
@@ -122,6 +123,7 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         CassandraFirstUnseenDAO firstUnseenDAO = new CassandraFirstUnseenDAO(session);
         CassandraApplicableFlagDAO applicableFlagDAO = new CassandraApplicableFlagDAO(session);
         CassandraDeletedMessageDAO deletedMessageDAO = new CassandraDeletedMessageDAO(session);
+        CassandraAttachmentMapper attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
 
         CassandraMailboxSessionMapperFactory mapperFactory = new CassandraMailboxSessionMapperFactory(
             uidProvider,
@@ -137,9 +139,10 @@ public class CassandraHostSystem extends JamesImapHostSystem {
             mailboxPathDAO,
             firstUnseenDAO,
             applicableFlagDAO,
-            deletedMessageDAO);
+            deletedMessageDAO,
+            attachmentMapper);
 
-        mailboxManager = new CassandraMailboxManager(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), new MessageParser(), messageIdFactory);
+        mailboxManager = new CassandraMailboxManager(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), new MessageParser(), messageIdFactory, attachmentMapper);
         QuotaRootResolver quotaRootResolver = new DefaultQuotaRootResolver(mapperFactory);
 
         perUserMaxQuotaManager = new CassandraPerUserMaxQuotaManager(session);

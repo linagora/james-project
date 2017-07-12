@@ -34,6 +34,7 @@ import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
@@ -46,14 +47,14 @@ public class HBaseMailboxManager extends StoreMailboxManager {
 
     public HBaseMailboxManager(HBaseMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
-            MessageParser messageParser, MessageId.Factory messageIdFactory) {
-        super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory);
+            MessageParser messageParser, MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
+        super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory, attachmentMapper);
     }
 
     public HBaseMailboxManager(HBaseMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
-            MessageParser messageParser, MessageId.Factory messageIdFactory) {
-        super(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory);
+            MessageParser messageParser, MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
+        super(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory, attachmentMapper);
     }
 
     @Override
@@ -105,6 +106,7 @@ public class HBaseMailboxManager extends StoreMailboxManager {
             getQuotaRootResolver(),
             getMessageParser(),
             getMessageIdFactory(),
-            getBatchSizes());
+            getBatchSizes(),
+            getAttachmentMapper());
     }
 }

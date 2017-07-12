@@ -31,42 +31,33 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
 
 public class StoreAttachmentManager implements AttachmentManager {
 
-    private final AttachmentMapperFactory attachmentMapperFactory;
+    private final AttachmentMapper attachmentMapper;
 
     @Inject
-    public StoreAttachmentManager(AttachmentMapperFactory attachmentMapperFactory) {
-        this.attachmentMapperFactory = attachmentMapperFactory;
-    }
-
-    protected AttachmentMapperFactory getAttachmentMapperFactory() {
-        return attachmentMapperFactory;
-    }
-
-    protected AttachmentMapper getAttachmentMapper(MailboxSession mailboxSession) throws MailboxException {
-        return attachmentMapperFactory.getAttachmentMapper(mailboxSession);
+    public StoreAttachmentManager(AttachmentMapper attachmentMapper) {
+        this.attachmentMapper = attachmentMapper;
     }
 
     @Override
     public Attachment getAttachment(AttachmentId attachmentId, MailboxSession mailboxSession) throws MailboxException, AttachmentNotFoundException {
-        return getAttachmentMapper(mailboxSession).getAttachment(attachmentId);
+        return attachmentMapper.getAttachment(attachmentId);
     }
 
     @Override
     public List<Attachment> getAttachments(List<AttachmentId> attachmentIds, MailboxSession mailboxSession) throws MailboxException {
-        return getAttachmentMapper(mailboxSession).getAttachments(attachmentIds);
+        return attachmentMapper.getAttachments(attachmentIds);
     }
 
     @Override
     public void storeAttachment(Attachment attachment, MailboxSession mailboxSession) throws MailboxException {
-        getAttachmentMapper(mailboxSession).storeAttachment(attachment);
+        attachmentMapper.storeAttachment(attachment);
     }
 
     @Override
     public void storeAttachments(Collection<Attachment> attachments, MailboxSession mailboxSession) throws MailboxException {
-        getAttachmentMapper(mailboxSession).storeAttachments(attachments);
+        attachmentMapper.storeAttachments(attachments);
     }
 }

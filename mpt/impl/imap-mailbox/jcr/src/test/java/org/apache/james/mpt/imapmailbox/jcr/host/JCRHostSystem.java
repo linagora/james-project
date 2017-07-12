@@ -42,6 +42,7 @@ import org.apache.james.mailbox.jcr.mail.JCRModSeqProvider;
 import org.apache.james.mailbox.jcr.mail.JCRUidProvider;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
@@ -94,7 +95,7 @@ public class JCRHostSystem extends JamesImapHostSystem {
             MessageParser messageParser = new MessageParser();
 
             mailboxManager = new JCRMailboxManager(mf, authenticator, authorizator, aclResolver, groupMembershipResolver, messageParser,
-                    new DefaultMessageId.Factory());
+                    new DefaultMessageId.Factory(), new NoopAttachmentMapper());
             mailboxManager.init();
 
             final ImapProcessor defaultImapProcessorFactory = 

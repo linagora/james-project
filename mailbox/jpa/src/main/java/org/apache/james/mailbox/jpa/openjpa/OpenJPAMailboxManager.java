@@ -37,6 +37,7 @@ import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 
@@ -51,9 +52,9 @@ public class OpenJPAMailboxManager extends JPAMailboxManager {
     public OpenJPAMailboxManager(JPAMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxPathLocker locker, boolean useStreaming, MailboxACLResolver aclResolver, 
             GroupMembershipResolver groupMembershipResolver, MessageParser messageParser, MessageId.Factory messageIdFactory,
-            int annotationLimit, int annotationLimitSize) {
+            int annotationLimit, int annotationLimitSize, AttachmentMapper attachmentMapper) {
         super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser,
-            messageIdFactory, annotationLimit, annotationLimitSize);
+            messageIdFactory, annotationLimit, annotationLimitSize, attachmentMapper);
         if (useStreaming) {
             feature = AdvancedFeature.Streaming;
         } else {
@@ -63,9 +64,10 @@ public class OpenJPAMailboxManager extends JPAMailboxManager {
 
     public OpenJPAMailboxManager(JPAMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxPathLocker locker,  String encryptPass, MailboxACLResolver aclResolver, 
-            GroupMembershipResolver groupMembershipResolver, MessageParser messageParser, MessageId.Factory messageIdFactory) {
+            GroupMembershipResolver groupMembershipResolver, MessageParser messageParser, 
+            MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
         super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser,
-            messageIdFactory);
+            messageIdFactory, attachmentMapper);
         if (encryptPass != null) {
             EncryptDecryptHelper.init(encryptPass);
             feature = AdvancedFeature.Encryption;
@@ -77,18 +79,18 @@ public class OpenJPAMailboxManager extends JPAMailboxManager {
     @Inject
     public OpenJPAMailboxManager(JPAMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
-            MessageParser messageParser, MessageId.Factory messageIdFactory) {
+            MessageParser messageParser, MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
         this(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), false, aclResolver,
             groupMembershipResolver, messageParser, messageIdFactory, MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX,
-            MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE);
+            MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE, attachmentMapper);
     }
 
     public OpenJPAMailboxManager(JPAMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
                                  MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver,
                                  MessageParser messageParser, MessageId.Factory messageIdFactory, int annotationLimit,
-                                 int annotationLimitSize) {
+                                 int annotationLimitSize, AttachmentMapper attachmentMapper) {
         this(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), false, aclResolver,
-            groupMembershipResolver, messageParser, messageIdFactory, annotationLimit, annotationLimitSize);
+            groupMembershipResolver, messageParser, messageIdFactory, annotationLimit, annotationLimitSize, attachmentMapper);
     }
 
     @Override
@@ -105,6 +107,7 @@ public class OpenJPAMailboxManager extends JPAMailboxManager {
             getQuotaRootResolver(),
             getMessageParser(),
             getMessageIdFactory(),
-            getBatchSizes());
+            getBatchSizes(),
+            getAttachmentMapper());
     }
 }

@@ -30,6 +30,7 @@ import org.apache.james.mailbox.store.FakeAuthenticator;
 import org.apache.james.mailbox.store.FakeAuthorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.junit.Ignore;
 
@@ -51,7 +52,8 @@ public class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest
             new UnionMailboxACLResolver(),
             new SimpleGroupMembershipResolver(),
             new MessageParser(),
-            new InMemoryMessageId.Factory());
+            new InMemoryMessageId.Factory(),
+            new NoopAttachmentMapper());
         messageIdManager = new InMemoryMessageIdManager(storeMailboxManager);
         storeMailboxManager.setMessageSearchIndex(messageSearchIndex);
         storeMailboxManager.init();

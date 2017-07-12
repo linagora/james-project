@@ -40,6 +40,7 @@ import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
@@ -49,9 +50,11 @@ import com.google.common.collect.ImmutableList;
 public class JPAMapperProvider implements MapperProvider {
 
     private final JpaTestCluster JPA_TEST_CLUSTER;
+    private final NoopAttachmentMapper attachmentMapper;
 
     public JPAMapperProvider(JpaTestCluster JPA_TEST_CLUSTER) {
         this.JPA_TEST_CLUSTER = JPA_TEST_CLUSTER;
+        attachmentMapper = new NoopAttachmentMapper();
     }
 
     @Override
@@ -70,11 +73,6 @@ public class JPAMapperProvider implements MapperProvider {
             entityManagerFactory);
 
         return new TransactionalMessageMapper(messageMapper);
-    }
-
-    @Override
-    public AttachmentMapper createAttachmentMapper() throws MailboxException {
-        throw new NotImplementedException();
     }
 
     @Override
@@ -135,5 +133,10 @@ public class JPAMapperProvider implements MapperProvider {
     @Override
     public void close() throws IOException {
 
+    }
+
+    @Override
+    public AttachmentMapper getAttachmentMapper() {
+        return attachmentMapper;
     }
 }

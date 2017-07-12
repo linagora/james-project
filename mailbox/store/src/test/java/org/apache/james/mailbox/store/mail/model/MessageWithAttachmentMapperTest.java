@@ -83,7 +83,7 @@ public abstract class MessageWithAttachmentMapperTest {
         Assume.assumeTrue(mapperProvider.getSupportedCapabilities().contains(MapperProvider.Capabilities.ATTACHMENT));
 
         this.messageMapper = mapperProvider.createMessageMapper();
-        this.attachmentMapper = mapperProvider.createAttachmentMapper();
+        this.attachmentMapper = mapperProvider.getAttachmentMapper();
 
         attachmentsMailbox = createMailbox( new MailboxPath("#private", "benwa", "Attachments"));
 

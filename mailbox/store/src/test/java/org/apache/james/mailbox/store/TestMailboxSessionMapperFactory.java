@@ -44,7 +44,6 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
@@ -258,11 +257,6 @@ public class TestMailboxSessionMapperFactory extends MailboxSessionMapperFactory
 
     @Override
     public MessageMapper createMessageMapper(MailboxSession session) throws MailboxException {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public AttachmentMapper createAttachmentMapper(MailboxSession session) throws MailboxException {
         throw new NotImplementedException();
     }
 

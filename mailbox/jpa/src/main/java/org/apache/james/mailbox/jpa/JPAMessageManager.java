@@ -39,6 +39,7 @@ import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreMessageManager;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
@@ -54,15 +55,16 @@ public class JPAMessageManager extends StoreMessageManager {
     			final MailboxEventDispatcher dispatcher, MailboxPathLocker locker, 
     			final Mailbox mailbox, MailboxACLResolver aclResolver, 
     			GroupMembershipResolver groupMembershipResolver, QuotaManager quotaManager,
-                QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory, BatchSizes batchSizes) throws MailboxException {
+                QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory,
+                BatchSizes batchSizes, AttachmentMapper attachmentMapper) throws MailboxException {
     	
         super(mapperFactory, index, dispatcher, locker, mailbox, aclResolver, groupMembershipResolver,
-            quotaManager, quotaRootResolver, messageParser, messageIdFactory, batchSizes);
+            quotaManager, quotaRootResolver, messageParser, messageIdFactory, batchSizes, attachmentMapper);
     }
     
     @Override
     protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content,
-                                                  final Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException{
+                final Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException{
 
         return new JPAMailboxMessage((JPAMailbox) getMailboxEntity(), internalDate, size, flags, content,  bodyStartOctet,  propertyBuilder);
     }

@@ -40,6 +40,7 @@ import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
 import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.apache.james.mailbox.inmemory.InMemoryMessageIdManager;
 import org.apache.james.mailbox.inmemory.JsoupTextExtractor;
+import org.apache.james.mailbox.inmemory.mail.InMemoryAttachmentMapper;
 import org.apache.james.mailbox.inmemory.mail.InMemoryModSeqProvider;
 import org.apache.james.mailbox.inmemory.mail.InMemoryUidProvider;
 import org.apache.james.mailbox.model.MailboxId;
@@ -53,7 +54,7 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.StoreAttachmentManager;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
-import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
@@ -81,7 +82,6 @@ public class MemoryMailboxModule extends AbstractModule {
 
         bind(MessageMapperFactory.class).to(InMemoryMailboxSessionMapperFactory.class);
         bind(MailboxMapperFactory.class).to(InMemoryMailboxSessionMapperFactory.class);
-        bind(AttachmentMapperFactory.class).to(InMemoryMailboxSessionMapperFactory.class);
         bind(MailboxSessionMapperFactory.class).to(InMemoryMailboxSessionMapperFactory.class);
         bind(ModSeqProvider.class).to(InMemoryModSeqProvider.class);
         bind(UidProvider.class).to(InMemoryUidProvider.class);
@@ -117,6 +117,8 @@ public class MemoryMailboxModule extends AbstractModule {
         bind(InMemoryMessageIdManager.class).in(Scopes.SINGLETON);
         bind(MailboxEventDispatcher.class).in(Scopes.SINGLETON);
         bind(StoreAttachmentManager.class).in(Scopes.SINGLETON);
+        bind(InMemoryAttachmentMapper.class).in(Scopes.SINGLETON);
+        bind(AttachmentMapper.class).to(InMemoryAttachmentMapper.class);
 
         Multibinder.newSetBinder(binder(), MailboxManagerDefinition.class)
             .addBinding()

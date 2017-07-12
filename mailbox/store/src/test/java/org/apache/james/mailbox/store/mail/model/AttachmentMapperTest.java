@@ -52,7 +52,7 @@ public abstract class AttachmentMapperTest {
     public final void setUp() throws MailboxException {
         mapperProvider = createMapperProvider();
         Assume.assumeTrue(mapperProvider.getSupportedCapabilities().contains(MapperProvider.Capabilities.ATTACHMENT));
-        this.attachmentMapper = mapperProvider.createAttachmentMapper();
+        this.attachmentMapper = mapperProvider.getAttachmentMapper();
     }
 
     @After

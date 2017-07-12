@@ -32,6 +32,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.StoreMailboxManager;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
@@ -43,17 +44,18 @@ public abstract class JPAMailboxManager extends StoreMailboxManager {
     
     public JPAMailboxManager(JPAMailboxSessionMapperFactory mailboxSessionMapperFactory,
             Authenticator authenticator, Authorizator authorizator, MailboxPathLocker locker, MailboxACLResolver aclResolver, 
-            GroupMembershipResolver groupMembershipResolver, MessageParser messageParser, MessageId.Factory messageIdFactory) {
+            GroupMembershipResolver groupMembershipResolver, MessageParser messageParser, MessageId.Factory messageIdFactory,
+            AttachmentMapper attachmentMapper) {
         super(mailboxSessionMapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver,
-            messageParser, messageIdFactory);
+            messageParser, messageIdFactory, attachmentMapper);
     }
 
     public JPAMailboxManager(JPAMailboxSessionMapperFactory mailboxSessionMapperFactory,
                              Authenticator authenticator, Authorizator authorizator, MailboxPathLocker locker, MailboxACLResolver aclResolver,
                              GroupMembershipResolver groupMembershipResolver, MessageParser messageParser, MessageId.Factory messageIdFactory,
-                             int limitAnnotation, int limitAnnotationSize) {
+                             int limitAnnotation, int limitAnnotationSize, AttachmentMapper attachmentMapper) {
         super(mailboxSessionMapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver,
-            messageParser, messageIdFactory, limitAnnotation, limitAnnotationSize);
+            messageParser, messageIdFactory, limitAnnotation, limitAnnotationSize, attachmentMapper);
     }
     
     @Override

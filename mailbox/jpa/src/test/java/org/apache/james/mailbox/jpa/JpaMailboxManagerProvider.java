@@ -33,6 +33,7 @@ import org.apache.james.mailbox.jpa.openjpa.OpenJPAMailboxManager;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 
@@ -56,7 +57,7 @@ public class JpaMailboxManagerProvider {
         Authorizator noAuthorizator = null;
         OpenJPAMailboxManager openJPAMailboxManager = new OpenJPAMailboxManager(mf, noAuthenticator, noAuthorizator,
             aclResolver, groupMembershipResolver, messageParser, new DefaultMessageId.Factory(), LIMIT_ANNOTATIONS,
-            LIMIT_ANNOTATION_SIZE);
+            LIMIT_ANNOTATION_SIZE, new NoopAttachmentMapper());
 
         try {
             openJPAMailboxManager.init();

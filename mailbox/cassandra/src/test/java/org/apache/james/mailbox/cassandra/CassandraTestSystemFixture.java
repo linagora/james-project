@@ -24,10 +24,11 @@ import static org.mockito.Mockito.mock;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraBlobsDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraDeletedMessageDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraFirstUnseenDAO;
-import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxCounterDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxPathDAO;
@@ -83,6 +84,7 @@ public class CassandraTestSystemFixture {
         CassandraMailboxPathDAO mailboxPathDAO = new CassandraMailboxPathDAO(cassandra.getConf(), cassandra.getTypesProvider());
         CassandraFirstUnseenDAO firstUnseenDAO = new CassandraFirstUnseenDAO(cassandra.getConf());
         CassandraDeletedMessageDAO deletedMessageDAO = new CassandraDeletedMessageDAO(cassandra.getConf());
+        CassandraAttachmentMapper attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
         return new CassandraMailboxSessionMapperFactory(uidProvider,
             modSeqProvider,
             cassandra.getConf(),
@@ -96,12 +98,14 @@ public class CassandraTestSystemFixture {
             mailboxPathDAO,
             firstUnseenDAO,
             applicableFlagDAO,
-            deletedMessageDAO);
+            deletedMessageDAO,
+            attachmentMapper);
     }
 
     public static CassandraMailboxManager createMailboxManager(CassandraMailboxSessionMapperFactory mapperFactory) throws Exception{
+        CassandraAttachmentMapper attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
         CassandraMailboxManager cassandraMailboxManager = new CassandraMailboxManager(mapperFactory, mock(Authenticator.class), mock(Authorizator.class),
-            new NoMailboxPathLocker(), new MessageParser(), new CassandraMessageId.Factory());
+            new NoMailboxPathLocker(), new MessageParser(), new CassandraMessageId.Factory(), attachmentMapper);
         cassandraMailboxManager.init();
 
         return cassandraMailboxManager;

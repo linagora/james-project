@@ -317,6 +317,7 @@ public class CassandraSessionModule extends AbstractModule {
         }
     }
 
+    @Singleton
     public static class CassandraSchemaChecker implements ConfigurationPerformer {
         private final CassandraSchemaVersionManager versionManager;
 

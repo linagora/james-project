@@ -37,6 +37,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
@@ -70,7 +71,7 @@ public class MaildirHostSystem extends JamesImapHostSystem {
         MessageParser messageParser = new MessageParser();
 
         mailboxManager = new StoreMailboxManager(mailboxSessionMapperFactory, authenticator, authorizator, locker, aclResolver,
-                groupMembershipResolver, messageParser, new DefaultMessageId.Factory());
+                groupMembershipResolver, messageParser, new DefaultMessageId.Factory(), new NoopAttachmentMapper());
         mailboxManager.init();
 
         final ImapProcessor defaultImapProcessorFactory = 

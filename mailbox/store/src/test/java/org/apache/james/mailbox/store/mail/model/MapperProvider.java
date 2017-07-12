@@ -52,7 +52,7 @@ public interface MapperProvider extends Closeable {
 
     MessageIdMapper createMessageIdMapper() throws MailboxException;
 
-    AttachmentMapper createAttachmentMapper() throws MailboxException;
+    AttachmentMapper getAttachmentMapper();
 
     AnnotationMapper createAnnotationMapper() throws MailboxException;
 

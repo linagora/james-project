@@ -40,6 +40,7 @@ import org.apache.james.mailbox.hbase.mail.HBaseUidProvider;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.junit.After;
@@ -70,8 +71,8 @@ public class HBaseMailboxManagerTest extends MailboxManagerTest {
             new UnionMailboxACLResolver(),
             new SimpleGroupMembershipResolver(),
             new MessageParser(),
-            messageIdFactory
-        );
+            messageIdFactory,
+            new NoopAttachmentMapper());
 
         try {
             manager.init();

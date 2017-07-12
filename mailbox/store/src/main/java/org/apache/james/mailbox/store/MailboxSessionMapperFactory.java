@@ -23,8 +23,6 @@ import org.apache.james.mailbox.RequestAware;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageIdMapper;
@@ -40,7 +38,7 @@ import org.apache.james.mailbox.store.user.SubscriptionMapperFactory;
  * Maintain mapper instances by {@link MailboxSession}. So only one mapper instance is used
  * in a {@link MailboxSession}
  */
-public abstract class MailboxSessionMapperFactory implements RequestAware, MailboxMapperFactory, MessageMapperFactory, AttachmentMapperFactory, SubscriptionMapperFactory {
+public abstract class MailboxSessionMapperFactory implements RequestAware, MailboxMapperFactory, MessageMapperFactory, SubscriptionMapperFactory {
 
     protected final static String ATTACHMENTMAPPER = "ATTACHMENTMAPPER";
     protected final static String MESSAGEMAPPER ="MESSAGEMAPPER";
@@ -71,15 +69,6 @@ public abstract class MailboxSessionMapperFactory implements RequestAware, Mailb
         return mapper;
     }
 
-    public AttachmentMapper getAttachmentMapper(MailboxSession session) throws MailboxException {
-        AttachmentMapper mapper = (AttachmentMapper) session.getAttributes().get(ATTACHMENTMAPPER);
-        if (mapper == null) {
-            mapper = createAttachmentMapper(session);
-            session.getAttributes().put(ATTACHMENTMAPPER, mapper);
-        }
-        return mapper;
-    }
-
     public AnnotationMapper getAnnotationMapper(MailboxSession session) throws MailboxException {
         AnnotationMapper mapper = (AnnotationMapper)session.getAttributes().get(ANNOTATIONMAPPER);
         if (mapper == null) {
@@ -100,10 +89,7 @@ public abstract class MailboxSessionMapperFactory implements RequestAware, Mailb
      */
     public abstract MessageMapper createMessageMapper(MailboxSession session) throws MailboxException;
 
-
     public abstract MessageIdMapper createMessageIdMapper(MailboxSession session) throws MailboxException;
-
-    public abstract AttachmentMapper createAttachmentMapper(MailboxSession session) throws MailboxException;
 
 
     /**

@@ -47,6 +47,7 @@ import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.util.FluentFutureStream;
+import org.apache.james.util.OptionalConverter;
 
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
@@ -54,7 +55,6 @@ import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.ThrownByLambdaException;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
-import org.apache.james.util.OptionalConverter;
 
 public class CassandraAttachmentMapper implements AttachmentMapper {
 

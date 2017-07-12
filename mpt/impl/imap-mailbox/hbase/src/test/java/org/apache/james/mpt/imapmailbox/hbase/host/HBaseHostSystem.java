@@ -42,6 +42,7 @@ import org.apache.james.mailbox.hbase.mail.HBaseModSeqProvider;
 import org.apache.james.mailbox.hbase.mail.HBaseUidProvider;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
@@ -100,7 +101,7 @@ public class HBaseHostSystem extends JamesImapHostSystem {
         MessageParser messageParser = new MessageParser();
         
         mailboxManager = new HBaseMailboxManager(mapperFactory, authenticator, authorizator, aclResolver, groupMembershipResolver,
-                messageParser, messageIdFactory);
+                messageParser, messageIdFactory, new NoopAttachmentMapper());
         mailboxManager.init();
 
         SubscriptionManager subscriptionManager = new StoreSubscriptionManager(mapperFactory);

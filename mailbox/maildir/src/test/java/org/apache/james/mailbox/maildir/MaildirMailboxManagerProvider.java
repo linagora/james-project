@@ -30,6 +30,7 @@ import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.junit.rules.TemporaryFolder;
@@ -46,7 +47,7 @@ public class MaildirMailboxManagerProvider {
         Authenticator noAuthenticator = null;
         Authorizator noAuthorizator = null;
         StoreMailboxManager manager = new StoreMailboxManager(mf, noAuthenticator, noAuthorizator, new JVMMailboxPathLocker(), aclResolver,
-            groupMembershipResolver, messageParser, new DefaultMessageId.Factory());
+            groupMembershipResolver, messageParser, new DefaultMessageId.Factory(), new NoopAttachmentMapper());
         manager.init();
 
         return manager;

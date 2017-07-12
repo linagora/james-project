@@ -49,6 +49,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.FakeAuthorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.SimpleMailboxMetaData;
+import org.apache.james.mailbox.store.mail.NoopAttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
@@ -113,7 +114,8 @@ public class UserMailboxesRoutesTest {
                 new UnionMailboxACLResolver(),
                 new SimpleGroupMembershipResolver(),
                 new MessageParser(),
-                messageIdFactory);
+                messageIdFactory,
+                new NoopAttachmentMapper());
             mailboxManager.init();
 
             createServer(mailboxManager);

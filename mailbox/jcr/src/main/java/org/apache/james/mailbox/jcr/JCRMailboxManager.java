@@ -33,6 +33,7 @@ import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.StoreMessageManager;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.slf4j.Logger;
@@ -48,14 +49,14 @@ public class JCRMailboxManager extends StoreMailboxManager implements JCRImapCon
     
     public JCRMailboxManager(JCRMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
-            MessageParser messageParser, MessageId.Factory messageIdFactory) {
-	    this(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory);
+            MessageParser messageParser, MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
+	    this(mapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory, attachmentMapper);
     }
 
     public JCRMailboxManager(JCRMailboxSessionMapperFactory mapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
-            MessageParser messageParser, MessageId.Factory messageIdFactory) {
-        super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory);
+            MessageParser messageParser, MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
+        super(mapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory, attachmentMapper);
     }
 
     @Override
@@ -77,7 +78,8 @@ public class JCRMailboxManager extends StoreMailboxManager implements JCRImapCon
             getQuotaRootResolver(),
             getMessageParser(),
             getMessageIdFactory(),
-            getBatchSizes());
+            getBatchSizes(),
+            getAttachmentMapper());
     }
 
     @Override

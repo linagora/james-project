@@ -24,8 +24,8 @@ import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
+import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId.Factory;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
@@ -64,6 +64,7 @@ public class CassandraMapperProvider implements MapperProvider {
     private final MessageUidProvider messageUidProvider;
     private final CassandraModSeqProvider cassandraModSeqProvider;
     private final MockMailboxSession mailboxSession = new MockMailboxSession("benwa");
+    private final CassandraAttachmentMapper attachmentMapper;
 
 
     public CassandraMapperProvider() {
@@ -84,6 +85,7 @@ public class CassandraMapperProvider implements MapperProvider {
                     new CassandraBlobModule()));
         messageUidProvider = new MessageUidProvider();
         cassandraModSeqProvider = new CassandraModSeqProvider(this.cassandra.getConf());
+        attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
     }
 
     @Override
@@ -106,6 +108,11 @@ public class CassandraMapperProvider implements MapperProvider {
         return createMapperFactory().getMessageIdMapper(mailboxSession);
     }
 
+    @Override
+    public AttachmentMapper getAttachmentMapper() {
+        return attachmentMapper;
+    }
+
     private CassandraMailboxSessionMapperFactory createMapperFactory() {
         CassandraMailboxDAO mailboxDAO = new CassandraMailboxDAO(cassandra.getConf(), cassandra.getTypesProvider());
         CassandraMailboxPathDAO mailboxPathDAO = new CassandraMailboxPathDAO(cassandra.getConf(), cassandra.getTypesProvider());
@@ -114,6 +121,7 @@ public class CassandraMapperProvider implements MapperProvider {
         CassandraBlobsDAO blobsDAO = new CassandraBlobsDAO(cassandra.getConf());
         CassandraMessageDAO messageDAO = new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider());
         CassandraMessageDAOV2 messageDAOV2 = new CassandraMessageDAOV2(cassandra.getConf(), cassandra.getTypesProvider(), blobsDAO);
+        CassandraAttachmentMapper attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
         return new CassandraMailboxSessionMapperFactory(
             new CassandraUidProvider(cassandra.getConf()),
             cassandraModSeqProvider,
@@ -128,12 +136,8 @@ public class CassandraMapperProvider implements MapperProvider {
             mailboxPathDAO,
             firstUnseenDAO,
             new CassandraApplicableFlagDAO(cassandra.getConf()),
-            deletedMessageDAO);
-    }
-
-    @Override
-    public AttachmentMapper createAttachmentMapper() throws MailboxException {
-        return createMapperFactory().getAttachmentMapper(mailboxSession);
+            deletedMessageDAO,
+            attachmentMapper);
     }
 
     @Override

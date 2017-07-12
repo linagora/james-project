@@ -171,9 +171,12 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     
     private BatchSizes batchSizes = BatchSizes.defaultValues();
 
+    private final AttachmentMapper attachmentMapper;
+
     public StoreMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, MailboxEventDispatcher dispatcher, 
             MailboxPathLocker locker, Mailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver,
-            QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory, BatchSizes batchSizes) 
+            QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory, BatchSizes batchSizes,
+            AttachmentMapper attachmentMapper) 
                     throws MailboxException {
         this.mailbox = mailbox;
         this.dispatcher = dispatcher;
@@ -187,6 +190,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         this.messageParser = messageParser;
         this.messageIdFactory = messageIdFactory;
         this.batchSizes = batchSizes;
+        this.attachmentMapper = attachmentMapper;
     }
 
     protected Factory getMessageIdFactory() {
@@ -668,7 +672,6 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
     protected MessageMetaData appendMessageToStore(final MailboxMessage message, final List<MessageAttachment> messageAttachments, MailboxSession session) throws MailboxException {
         final MessageMapper messageMapper = mapperFactory.getMessageMapper(session);
-        final AttachmentMapper attachmentMapper = mapperFactory.getAttachmentMapper(session);
         return mapperFactory.getMessageMapper(session).execute(new Mapper.Transaction<MessageMetaData>() {
 
             public MessageMetaData run() throws MailboxException {

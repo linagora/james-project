@@ -70,6 +70,7 @@ import org.apache.james.mailbox.store.event.DelegatingMailboxListener;
 import org.apache.james.mailbox.store.event.MailboxAnnotationListener;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
@@ -140,39 +141,42 @@ public class StoreMailboxManager implements MailboxManager {
 
     private final int limitAnnotationSize;
 
+    private final AttachmentMapper attachmentMapper;
+
     @Inject
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator, 
             MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
             MessageParser messageParser, MessageId.Factory messageIdFactory, MailboxEventDispatcher mailboxEventDispatcher,
-            DelegatingMailboxListener delegatingListener) {
+            DelegatingMailboxListener delegatingListener, AttachmentMapper attachmentMapper) {
         this(mailboxSessionMapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory,
-                MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX, MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE, mailboxEventDispatcher, delegatingListener);
+                MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX, MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE, mailboxEventDispatcher, delegatingListener, attachmentMapper);
     }
 
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator,
                                MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver,
-                               MessageParser messageParser, MessageId.Factory messageIdFactory) {
+                               MessageParser messageParser, MessageId.Factory messageIdFactory, AttachmentMapper attachmentMapper) {
         this(mailboxSessionMapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory,
-            MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX, MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE);
+            MailboxConstants.DEFAULT_LIMIT_ANNOTATIONS_ON_MAILBOX, MailboxConstants.DEFAULT_LIMIT_ANNOTATION_SIZE, attachmentMapper);
     }
 
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, MessageParser messageParser,
-            MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize) {
+            MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize, AttachmentMapper attachmentMapper) {
         this(mailboxSessionMapperFactory, authenticator, authorizator, new JVMMailboxPathLocker(), aclResolver, groupMembershipResolver, messageParser, messageIdFactory,
-                limitOfAnnotations, limitAnnotationSize);
+                limitOfAnnotations, limitAnnotationSize, attachmentMapper);
     }
 
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator,
             MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, MessageParser messageParser,
-            MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize) {
+            MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize, AttachmentMapper attachmentMapper) {
         this(mailboxSessionMapperFactory, authenticator, authorizator, locker, aclResolver, groupMembershipResolver, messageParser, messageIdFactory,
-            limitOfAnnotations, limitAnnotationSize, null, null);
+            limitOfAnnotations, limitAnnotationSize, null, null, attachmentMapper);
     }
 
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator,
                                MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, MessageParser messageParser,
-                               MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize, MailboxEventDispatcher mailboxEventDispatcher, DelegatingMailboxListener delegatingListener) {
+                               MessageId.Factory messageIdFactory, int limitOfAnnotations, int limitAnnotationSize, MailboxEventDispatcher mailboxEventDispatcher, DelegatingMailboxListener delegatingListener,
+                               AttachmentMapper attachmentMapper) {
         this.authenticator = authenticator;
         this.authorizator = authorizator;
         this.locker = locker;
@@ -185,6 +189,7 @@ public class StoreMailboxManager implements MailboxManager {
         this.limitAnnotationSize = limitAnnotationSize;
         this.delegatingListener = delegatingListener;
         this.dispatcher = mailboxEventDispatcher;
+        this.attachmentMapper = attachmentMapper;
     }
 
     protected Factory getMessageIdFactory() {
@@ -221,6 +226,10 @@ public class StoreMailboxManager implements MailboxManager {
 
     public BatchSizes getBatchSizes() {
         return batchSizes;
+    }
+
+    public AttachmentMapper getAttachmentMapper() {
+        return attachmentMapper;
     }
 
     /**
@@ -464,7 +473,7 @@ public class StoreMailboxManager implements MailboxManager {
     protected StoreMessageManager createMessageManager(Mailbox mailbox, MailboxSession session) throws MailboxException {
         return new StoreMessageManager(getMapperFactory(), getMessageSearchIndex(), getEventDispatcher(), 
                 getLocker(), mailbox, getAclResolver(), getGroupMembershipResolver(), getQuotaManager(), 
-                getQuotaRootResolver(), getMessageParser(), getMessageIdFactory(), getBatchSizes());
+                getQuotaRootResolver(), getMessageParser(), getMessageIdFactory(), getBatchSizes(), attachmentMapper);
     }
 
     /**
