@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.model.SearchQuery.Sort;
+import org.apache.james.mailbox.store.mail.model.HasMailboxContext;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.Function;
@@ -67,7 +68,7 @@ public class CombinedComparator implements Comparator<MailboxMessage>{
             case MailboxTo:
                 return HeaderMailboxComparator.TO_COMPARATOR;
             case Uid:
-                return UidComparator.UID;
+                return UidComparator.UID_FOR_MAILBOX_MESSAGE;
             case SentDate:
                 return SentDateComparator.SENTDATE;
             case DisplayFrom:

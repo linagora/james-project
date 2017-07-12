@@ -47,6 +47,7 @@ import org.apache.james.mailbox.jcr.Persistent;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
+import org.apache.james.mailbox.store.mail.model.HasMailboxContext;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
@@ -55,7 +56,7 @@ import org.slf4j.Logger;
 
 public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Persistent {
 
-    private static final Comparator<MailboxMessage> MESSAGE_UID_COMPARATOR = new UidComparator();
+    private static final Comparator<HasMailboxContext> MESSAGE_UID_COMPARATOR = UidComparator.UID;
     
     private Node node;
     private final Logger logger;
@@ -684,7 +685,7 @@ public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Pers
     }
 
     @Override
-    public int compareTo(MailboxMessage other) {
+    public int compareTo(HasMailboxContext other) {
         return MESSAGE_UID_COMPARATOR.compare(this, other);
     }
 

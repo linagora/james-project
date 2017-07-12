@@ -106,7 +106,7 @@ public class CombinedComparatorTest {
     @SuppressWarnings("unchecked")
     public void createShouldConvertUid() {
         assertThat(CombinedComparator.create(ImmutableList.of(new Sort(SortClause.Uid))).getComparators())
-            .containsOnly(UidComparator.UID);
+            .containsOnly(UidComparator.UID_FOR_MAILBOX_MESSAGE);
     }
 
     @Test

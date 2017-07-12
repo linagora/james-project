@@ -148,7 +148,7 @@ public class ListMessageAssertTest {
             }
 
             @Override
-            public int compareTo(MailboxMessage o) {
+            public int compareTo(HasMailboxContext o) {
                 return 0;
             }
 

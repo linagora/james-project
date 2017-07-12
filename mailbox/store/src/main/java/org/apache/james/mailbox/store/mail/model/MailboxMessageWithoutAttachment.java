@@ -16,28 +16,7 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.search.comparator;
+package org.apache.james.mailbox.store.mail.model;
 
-import java.util.Comparator;
-
-import org.apache.james.mailbox.store.mail.model.HasMailboxContext;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-
-/**
- * {@link Comparator} which compares {@link MailboxMessage}'s with their {@link MailboxMessage#getUid()} value
- */
-public class UidComparator implements Comparator<HasMailboxContext> {
-    public final static Comparator<HasMailboxContext> UID = new UidComparator();
-
-    public final static Comparator<MailboxMessage> UID_FOR_MAILBOX_MESSAGE = new Comparator<MailboxMessage>() {
-        @Override
-        public int compare(MailboxMessage o1, MailboxMessage o2) {
-            return UID.compare(o1, o2);
-        }
-    };
-
-    @Override
-    public int compare(HasMailboxContext o1, HasMailboxContext o2) {
-        return o1.getUid().compareTo(o2.getUid());
-    }
+public interface MailboxMessageWithoutAttachment extends MessageWithoutAttachment, HasMailboxContext {
 }
