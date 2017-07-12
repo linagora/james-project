@@ -133,16 +133,7 @@
                 <dependency>
                     <groupId>com.datastax.cassandra</groupId>
                     <artifactId>cassandra-driver-core</artifactId>
-                    <version>3.2.0</version>
-                    <classifier>shaded</classifier>
-                    <!-- Because the shaded JAR uses the original POM, you still need to 
-                        exclude this dependency explicitly: -->
-                    <exclusions>
-                        <exclusion>
-                            <groupId>io.netty</groupId>
-                            <artifactId>*</artifactId>
-                        </exclusion>
-                    </exclusions>
+                    <version>2.1.8</version>
                 </dependency>
                 <dependency>
                     <groupId>com.google.guava</groupId>

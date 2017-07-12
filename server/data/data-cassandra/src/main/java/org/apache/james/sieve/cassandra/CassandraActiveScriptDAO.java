@@ -23,11 +23,10 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.delete;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
-
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.apache.james.sieve.cassandra.tables.CassandraSieveActiveTable.DATE;
-import static org.apache.james.sieve.cassandra.tables.CassandraSieveActiveTable.TABLE_NAME;
 import static org.apache.james.sieve.cassandra.tables.CassandraSieveActiveTable.SCRIPT_NAME;
+import static org.apache.james.sieve.cassandra.tables.CassandraSieveActiveTable.TABLE_NAME;
 import static org.apache.james.sieve.cassandra.tables.CassandraSieveActiveTable.USER_NAME;
 
 import java.util.Date;
@@ -69,7 +68,7 @@ public class CassandraActiveScriptDAO {
                 .setString(USER_NAME, username))
             .thenApply(rowOptional -> rowOptional.map(row -> new ActiveScriptInfo(
                 row.getString(SCRIPT_NAME),
-                row.getTimestamp(DATE))));
+                row.getDate(DATE))));
     }
 
     public CompletableFuture<Void> unactivate(String username) {
@@ -83,6 +82,6 @@ public class CassandraActiveScriptDAO {
             insertActive.bind()
                 .setString(USER_NAME, username)
                 .setString(SCRIPT_NAME, scriptName)
-                .setTimestamp(DATE, new Date()));
+                .setDate(DATE, new Date()));
     }
 }

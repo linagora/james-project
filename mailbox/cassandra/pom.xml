@@ -213,6 +213,11 @@
                     <scope>test</scope>
                 </dependency>
                 <dependency>
+                    <groupId>com.datastax.cassandra</groupId>
+                    <artifactId>cassandra-driver-core</artifactId>
+                    <version>${cassandra-driver-core.version}</version>
+                </dependency>
+                <dependency>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
                 </dependency>

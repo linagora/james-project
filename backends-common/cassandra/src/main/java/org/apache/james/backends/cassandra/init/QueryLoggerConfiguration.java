@@ -19,10 +19,12 @@
 
 package org.apache.james.backends.cassandra.init;
 
+import java.util.Optional;
+
+import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PerHostPercentileTracker;
 import com.datastax.driver.core.QueryLogger;
 import com.google.common.base.Preconditions;
-import java.util.Optional;
 
 public class QueryLoggerConfiguration {
     private final Optional<Long> constantThreshold;
@@ -115,8 +117,8 @@ public class QueryLoggerConfiguration {
         this.maxQueryStringLength = maxQueryStringLength;
     }
 
-    public QueryLogger getQueryLogger() {
-        QueryLogger.Builder builder = QueryLogger.builder();
+    public QueryLogger getQueryLogger(Cluster cluster) {
+        QueryLogger.Builder builder = QueryLogger.builder(cluster);
 
         percentileTracker.map(percentileTracker ->
             slowQueryLatencyThresholdPercentile.map(slowQueryLatencyThresholdPercentile ->

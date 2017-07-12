@@ -76,9 +76,7 @@ public class V1ToV2MigrationThread implements Runnable {
     }
 
     private Optional<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>> poll() {
-        synchronized (messagesToBeMigrated) {
-            return Optional.ofNullable(messagesToBeMigrated.poll());
-        }
+        return Optional.ofNullable(messagesToBeMigrated.poll());
     }
 
     private CompletableFuture<Void> performV1ToV2Migration(Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> messageV1) {
