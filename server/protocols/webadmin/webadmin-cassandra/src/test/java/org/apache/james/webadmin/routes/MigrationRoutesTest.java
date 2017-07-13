@@ -23,10 +23,10 @@ import static com.jayway.restassured.RestAssured.when;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -35,14 +35,15 @@ import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.service.MigrationService;
 import org.apache.james.webadmin.utils.JsonTransformer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.RequestSpecBuilder;
 import com.jayway.restassured.http.ContentType;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class MigrationRoutesTest {
 
@@ -88,18 +89,24 @@ public class MigrationRoutesTest {
             .get()
         .then()
             .statusCode(200)
-            .log().all()
-            .body("version", equalTo(expectedVersion));
+            .body(is("{\"version\":2}"));
     }
 
     @Test
-    public void putShouldGenerateInternalErrorOnUnknownException() throws Exception {
-//            doThrow(new RuntimeException()).when(mailboxManager).createMailbox(any(), any());
-//
-//            when()
-//                .put(MAILBOX_NAME)
-//            .then()
-//                .statusCode(500);
+    public void postShouldReturnConflictWhenMigrationOnRunning() throws Exception {
+        when()
+            .post("/upgrade")
+        .then()
+            .statusCode(409);
     }
 
+    @Test
+    public void postShouldDoMigration() throws Exception {
+        when()
+            .post("/upgrade")
+        .then()
+            .statusCode(204);
+
+        verifyNoMoreInteractions(schemaVersionDAO);
+    }
 }
