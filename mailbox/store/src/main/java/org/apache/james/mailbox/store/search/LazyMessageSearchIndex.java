@@ -39,6 +39,7 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.Preconditions;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 /**
  * {@link ListeningMessageSearchIndex} implementation which wraps another {@link ListeningMessageSearchIndex} and will forward all calls to it.
@@ -104,7 +105,7 @@ public class LazyMessageSearchIndex extends ListeningMessageSearchIndex {
                 done = oldDone;
             }
             synchronized (done) {
-                Iterator<MailboxMessage> messages = getFactory().getMessageMapper(session).findInMailbox(mailbox, MessageRange.all(), FetchType.Full, -1);
+                Iterator<MutableMailboxMessage> messages = getFactory().getMessageMapper(session).findInMailbox(mailbox, MessageRange.all(), FetchType.Full, -1);
                 while(messages.hasNext()) {
                     final MailboxMessage message = messages.next();
                     try {

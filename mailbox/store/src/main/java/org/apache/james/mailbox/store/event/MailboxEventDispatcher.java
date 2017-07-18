@@ -39,6 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 /**
  * Helper class to dispatch {@link org.apache.james.mailbox.MailboxListener.Event}'s to registerend MailboxListener
@@ -71,23 +72,25 @@ public class MailboxEventDispatcher {
      * @param uids Sorted map with uids and message meta data
      * @param mailbox The mailbox
      */
-    public void added(MailboxSession session, SortedMap<MessageUid, MessageMetaData> uids, Mailbox mailbox, Map<MessageUid, MailboxMessage> cachedMessages) {
+
+
+    public void added(MailboxSession session, SortedMap<MessageUid, MessageMetaData> uids, Mailbox mailbox, Map<MessageUid, MutableMailboxMessage> cachedMessages) {
         listener.event(eventFactory.added(session, uids, mailbox, cachedMessages));
     }
 
-    public void added(MailboxSession session, Mailbox mailbox, MailboxMessage mailboxMessage) {
+    public void added(MailboxSession session, Mailbox mailbox, MutableMailboxMessage mailboxMessage) {
         SimpleMessageMetaData messageMetaData = new SimpleMessageMetaData(mailboxMessage);
         SortedMap<MessageUid, MessageMetaData> metaDataMap = ImmutableSortedMap.<MessageUid, MessageMetaData>naturalOrder()
                 .put(messageMetaData.getUid(), messageMetaData)
                 .build();
         added(session, metaDataMap, mailbox, ImmutableMap.of(mailboxMessage.getUid(), mailboxMessage));
-    }
+}
 
     public void added(MailboxSession session, MessageMetaData messageMetaData, Mailbox mailbox) {
         SortedMap<MessageUid, MessageMetaData> metaDataMap = ImmutableSortedMap.<MessageUid, MessageMetaData>naturalOrder()
             .put(messageMetaData.getUid(), messageMetaData)
             .build();
-        added(session, metaDataMap, mailbox, ImmutableMap.<MessageUid, MailboxMessage>of());
+        added(session, metaDataMap, mailbox, ImmutableMap.<MessageUid, MutableMailboxMessage>of());
     }
 
     /**

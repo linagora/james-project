@@ -75,9 +75,10 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.quota.QuotaChecker;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.store.streaming.BodyOffsetInputStream;
@@ -173,12 +174,9 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     
     private BatchSizes batchSizes = BatchSizes.defaultValues();
 
-    private final ImmutableMailboxMessage.Factory immutableMailboxMessageFactory;
-
-    public StoreMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, MailboxEventDispatcher dispatcher, 
+    public StoreMessageManager(MailboxSessionMapperFactory mapperFactory, MessageSearchIndex index, MailboxEventDispatcher dispatcher,
             MailboxPathLocker locker, Mailbox mailbox, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver,
-            QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory, BatchSizes batchSizes,
-            ImmutableMailboxMessage.Factory immutableMailboxMessageFactory) 
+            QuotaManager quotaManager, QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory, BatchSizes batchSizes)
                     throws MailboxException {
         this.mailbox = mailbox;
         this.dispatcher = dispatcher;
@@ -192,7 +190,6 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         this.messageParser = messageParser;
         this.messageIdFactory = messageIdFactory;
         this.batchSizes = batchSizes;
-        this.immutableMailboxMessageFactory = immutableMailboxMessageFactory;
     }
 
     protected Factory getMessageIdFactory() {
@@ -423,7 +420,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
             final List<MessageAttachment> attachments = extractAttachments(contentIn);
             propertyBuilder.setHasAttachment(hasNonInlinedAttachment(attachments));
 
-            final MailboxMessage message = createMessage(internalDate, size, bodyStartOctet, contentIn, flags, propertyBuilder, attachments);
+            final MutableMailboxMessage message = createMessage(internalDate, size, bodyStartOctet, contentIn, flags, propertyBuilder, attachments);
 
             new QuotaChecker(quotaManager, quotaRootResolver, mailbox).tryAddition(1, size);
 
@@ -477,8 +474,18 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     /**
      * Create a new {@link MailboxMessage} for the given data
      */
-    protected MailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException {
-        return new SimpleMailboxMessage(messageIdFactory.generate(), internalDate, size, bodyStartOctet, content, flags, propertyBuilder, getMailboxEntity().getMailboxId(), attachments);
+    protected MutableMailboxMessage createMessage(Date internalDate, int size, int bodyStartOctet, SharedInputStream content, Flags flags, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) throws MailboxException {
+        return MessageUtil.buildMutableMailboxMessage()
+            .messageId(messageIdFactory.generate())
+            .internalDate(internalDate)
+            .size(size)
+            .bodyStartOctet(bodyStartOctet)
+            .content(content)
+            .flags(flags)
+            .propertyBuilder(propertyBuilder)
+            .mailboxId(getMailboxEntity().getMailboxId())
+            .attachments(attachments)
+            .build();
     }
 
     /**
@@ -667,7 +674,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         }, true);
     }
 
-    protected MessageMetaData appendMessageToStore(final MailboxMessage message, final List<MessageAttachment> messageAttachments, MailboxSession session) throws MailboxException {
+    protected MessageMetaData appendMessageToStore(final MutableMailboxMessage message, final List<MessageAttachment> messageAttachments, MailboxSession session) throws MailboxException {
         final MessageMapper messageMapper = mapperFactory.getMessageMapper(session);
         final AttachmentMapper attachmentMapper = mapperFactory.getAttachmentMapper(session);
         return mapperFactory.getMessageMapper(session).execute(new Mapper.Transaction<MessageMetaData>() {
@@ -755,13 +762,13 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         return index.search(mailboxSession, getMailboxEntity(), query);
     }
 
-    private Iterator<MessageMetaData> copy(Iterator<MailboxMessage> originalRows, MailboxSession session) throws MailboxException {
+    private Iterator<MessageMetaData> copy(Iterator<MutableMailboxMessage> originalRows, MailboxSession session) throws MailboxException {
         final List<MessageMetaData> copiedRows = new ArrayList<MessageMetaData>();
         final MessageMapper messageMapper = mapperFactory.getMessageMapper(session);
         QuotaChecker quotaChecker = new QuotaChecker(quotaManager, quotaRootResolver, mailbox);
 
         while (originalRows.hasNext()) {
-            final MailboxMessage originalMessage = originalRows.next();
+            final MutableMailboxMessage originalMessage = originalRows.next();
             quotaChecker.tryAddition(1, originalMessage.getFullContentOctets());
             MessageMetaData data = messageMapper.execute(new Mapper.Transaction<MessageMetaData>() {
                 public MessageMetaData run() throws MailboxException {
@@ -775,13 +782,13 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         return copiedRows.iterator();
     }
 
-    private MoveResult move(Iterator<MailboxMessage> originalRows, MailboxSession session) throws MailboxException {
+    private MoveResult move(Iterator<MutableMailboxMessage> originalRows, MailboxSession session) throws MailboxException {
         final List<MessageMetaData> movedRows = new ArrayList<MessageMetaData>();
         final List<MessageMetaData> originalRowsCopy = new ArrayList<MessageMetaData>();
         final MessageMapper messageMapper = mapperFactory.getMessageMapper(session);
 
         while (originalRows.hasNext()) {
-            final MailboxMessage originalMessage = originalRows.next();
+            final MutableMailboxMessage originalMessage = originalRows.next();
             originalRowsCopy.add(new SimpleMessageMetaData(originalMessage));
             MessageMetaData data = messageMapper.execute(new Mapper.Transaction<MessageMetaData>() {
                 public MessageMetaData run() throws MailboxException {
@@ -796,13 +803,14 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
 
 
     private SortedMap<MessageUid, MessageMetaData> copy(MessageRange set, StoreMessageManager to, MailboxSession session) throws MailboxException {
-        IteratorWrapper<MailboxMessage> originalRows = new IteratorWrapper<MailboxMessage>(retrieveOriginalRows(set, session));
+        IteratorWrapper<MutableMailboxMessage> originalRows = new IteratorWrapper<MutableMailboxMessage>(retrieveOriginalRows(set, session));
 
         SortedMap<MessageUid, MessageMetaData> copiedUids = collectMetadata(to.copy(originalRows, session));
 
-        ImmutableMap.Builder<MessageUid, MailboxMessage> messagesMap = ImmutableMap.builder();
+        //TODO move to Immutable message
+        ImmutableMap.Builder<MessageUid, MutableMailboxMessage> messagesMap = ImmutableMap.builder();
         for(MailboxMessage message: originalRows.getEntriesSeen()) {
-            messagesMap.put(message.getUid(), immutableMailboxMessageFactory.from(to.getMailboxEntity().getMailboxId(), message));
+            messagesMap.put(message.getUid(), MessageUtil.mutableViewOfImmutable(MessageUtil.copyToImmutable(message, to.getMailboxEntity().getMailboxId())));
         }
         dispatcher.added(session, copiedUids, to.getMailboxEntity(), messagesMap.build());
 
@@ -810,21 +818,21 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
     }
 
     private SortedMap<MessageUid, MessageMetaData> move(MessageRange set, StoreMessageManager to, MailboxSession session) throws MailboxException {
-        IteratorWrapper<MailboxMessage> originalRows = new IteratorWrapper<MailboxMessage>(retrieveOriginalRows(set, session));
+        IteratorWrapper<MutableMailboxMessage> originalRows = new IteratorWrapper<MutableMailboxMessage>(retrieveOriginalRows(set, session));
 
         MoveResult moveResult = to.move(originalRows, session);
         SortedMap<MessageUid, MessageMetaData> moveUids = collectMetadata(moveResult.getMovedMessages());
 
-        ImmutableMap.Builder<MessageUid, MailboxMessage> messagesMap = ImmutableMap.builder();
+        ImmutableMap.Builder<MessageUid, MutableMailboxMessage> messagesMap = ImmutableMap.builder();
         for(MailboxMessage message: originalRows.getEntriesSeen()) {
-            messagesMap.put(message.getUid(), immutableMailboxMessageFactory.from(to.getMailboxEntity().getMailboxId(), message));
+            messagesMap.put(message.getUid(), MessageUtil.mutableViewOfImmutable(MessageUtil.copyToImmutable(message, to.getMailboxEntity().getMailboxId())));
         }
         dispatcher.added(session, moveUids, to.getMailboxEntity(), messagesMap.build());
         dispatcher.expunged(session, collectMetadata(moveResult.getOriginalMessages()), getMailboxEntity());
         return moveUids;
     }
 
-    private Iterator<MailboxMessage> retrieveOriginalRows(MessageRange set, MailboxSession session) throws MailboxException {
+    private Iterator<MutableMailboxMessage> retrieveOriginalRows(MessageRange set, MailboxSession session) throws MailboxException {
         MessageMapper messageMapper = mapperFactory.getMessageMapper(session);
         return messageMapper.findInMailbox(mailbox, set, FetchType.Full, -1);
     }

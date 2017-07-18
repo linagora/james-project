@@ -24,6 +24,7 @@ import java.util.Date;
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageUid;
@@ -31,14 +32,16 @@ import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.store.MessageIdManagerTestSystem;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
@@ -103,12 +106,20 @@ public class CassandraMessageIdManagerTestSystem extends MessageIdManagerTestSys
         CassandraTestSystemFixture.clean();
     }
 
-    private static MailboxMessage createMessage(MailboxId mailboxId, Flags flags, MessageId messageId, MessageUid uid) {
-        MailboxMessage mailboxMessage = new SimpleMailboxMessage(messageId, new Date(), 1596, 1256,
-            new SharedByteArrayInputStream("subject: any\n\nbody".getBytes(Charsets.UTF_8)), flags, new PropertyBuilder(), mailboxId);
-        mailboxMessage.setModSeq(CassandraTestSystemFixture.MOD_SEQ);
-        mailboxMessage.setUid(uid);
-        return mailboxMessage;
+    private static MutableMailboxMessage createMessage(MailboxId mailboxId, Flags flags, MessageId messageId, MessageUid uid) {
+        return MessageUtil.buildMutableMailboxMessage()
+            .messageId(messageId)
+            .internalDate(new Date())
+            .size(1596)
+            .bodyStartOctet(1596)
+            .content(new SharedByteArrayInputStream("subject: any\n\nbody".getBytes(Charsets.UTF_8)))
+            .flags(flags)
+            .propertyBuilder(new PropertyBuilder())
+            .mailboxId(mailboxId)
+            .modSeq(CassandraTestSystemFixture.MOD_SEQ)
+            .uid(uid)
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .build();
     }
 
     public static void init() {

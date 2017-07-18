@@ -20,7 +20,6 @@ package org.apache.james.mailbox.store.mail;
 
 import java.util.List;
 import java.util.Map;
-
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageManager;
@@ -31,6 +30,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 public interface MessageIdMapper {
 
@@ -38,7 +38,7 @@ public interface MessageIdMapper {
 
     List<MailboxId> findMailboxes(MessageId messageId);
 
-    void save(MailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
+    void save(MutableMailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
 
     void copyInMailbox(MailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
 

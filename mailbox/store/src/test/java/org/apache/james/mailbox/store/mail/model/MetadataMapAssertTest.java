@@ -27,14 +27,18 @@ import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 public class MetadataMapAssertTest {
 
@@ -46,14 +50,23 @@ public class MetadataMapAssertTest {
     private static final String BODY_STRING = "body\\n.\\n";
     private static final TestId MAILBOX_ID = TestId.of(12L);
 
-    private SimpleMailboxMessage message1;
+    private MutableMailboxMessage message1;
 
     @Before
     public void setUp() {
-        message1 = new SimpleMailboxMessage(MESSAGE_ID, DATE, HEADER_STRING.length() + BODY_STRING.length(),
-            HEADER_STRING.length(), new SharedByteArrayInputStream((HEADER_STRING + BODY_STRING).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
-        message1.setUid(UID);
-        message1.setModSeq(MODSEQ);
+        message1 = MessageUtil.buildMutableMailboxMessage()
+            .messageId(MESSAGE_ID)
+            .internalDate(DATE)
+            .size(HEADER_STRING.length() + BODY_STRING.length())
+            .bodyStartOctet(HEADER_STRING.length())
+            .content(new SharedByteArrayInputStream((HEADER_STRING + BODY_STRING).getBytes(Charsets.UTF_8)))
+            .flags(new Flags())
+            .propertyBuilder(new PropertyBuilder())
+            .mailboxId(MAILBOX_ID)
+            .modSeq(MODSEQ)
+            .uid(UID)
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .build();
     }
 
     @Test
@@ -85,6 +98,4 @@ public class MetadataMapAssertTest {
         metaDataMap.put(UID, new SimpleMessageMetaData(UID , MODSEQ, new Flags(), HEADER_STRING.length() + BODY_STRING.length() + 1, DATE, MESSAGE_ID));
         MetadataMapAssert.assertThat(metaDataMap).containsMetadataForMessages(message1);
     }
-
-
 }

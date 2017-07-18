@@ -33,6 +33,7 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.base.Optional;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 /**
  * {@link MessageSearchIndex} which needs to get registered as global {@link MailboxListener} and so get
@@ -79,7 +80,7 @@ public abstract class ListeningMessageSearchIndex implements MessageSearchIndex,
                     final Mailbox mailbox = added.getMailbox();
 
                     for (final MessageUid next : (Iterable<MessageUid>) added.getUids()) {
-                        Optional<MailboxMessage> mailboxMessage = retrieveMailboxMessage(session, added, mailbox, next);
+                        Optional<MutableMailboxMessage> mailboxMessage = retrieveMailboxMessage(session, added, mailbox, next);
                         if (mailboxMessage.isPresent()) {
                             addMessage(session, mailbox, mailboxMessage.get());
                         }
@@ -109,8 +110,8 @@ public abstract class ListeningMessageSearchIndex implements MessageSearchIndex,
         }
     }
 
-    private Optional<MailboxMessage> retrieveMailboxMessage(MailboxSession session, EventFactory.AddedImpl added, Mailbox mailbox, MessageUid next) {
-        Optional<MailboxMessage> firstChoice = Optional.fromNullable(added.getAvailableMessages().get(next));
+    private Optional<MutableMailboxMessage> retrieveMailboxMessage(MailboxSession session, EventFactory.AddedImpl added, Mailbox mailbox, MessageUid next) {
+        Optional<MutableMailboxMessage> firstChoice = Optional.fromNullable(added.getAvailableMessages().get(next));
         if (firstChoice.isPresent()) {
             return firstChoice;
         } else {

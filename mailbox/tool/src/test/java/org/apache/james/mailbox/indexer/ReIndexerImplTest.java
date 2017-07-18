@@ -42,6 +42,7 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.assertj.core.util.Lists;
@@ -145,7 +146,7 @@ public class ReIndexerImplTest {
         MessageMapper user1MessageMapper = mock(MessageMapper.class);
         when(mailboxSessionMapperFactory.getMessageMapper(user1MailboxSession))
             .thenReturn(user1MessageMapper);
-        MailboxMessage user1MailboxMessage = mock(MailboxMessage.class);
+        MutableMailboxMessage user1MailboxMessage = mock(MutableMailboxMessage.class);
         when(user1MessageMapper.findInMailbox(user1Mailbox, MessageRange.all(), MessageMapper.FetchType.Full, ReIndexerImpl.NO_LIMIT))
             .thenReturn(ImmutableList.of(user1MailboxMessage).iterator());
         when(user1MailboxMessage.getUid())

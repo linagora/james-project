@@ -22,13 +22,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 import java.util.List;
-
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 
-public abstract class DelegatingMailboxMessage implements MailboxMessage {
+public abstract class DelegatingMailboxMessage implements MutableMailboxMessage {
 
     private final Message message;
 
@@ -37,7 +36,7 @@ public abstract class DelegatingMailboxMessage implements MailboxMessage {
     }
 
     @Override
-    public int compareTo(MailboxMessage other) {
+    public int compareTo(HasMailboxContext other) {
         return this.getUid().compareTo(other.getUid());
     }
 

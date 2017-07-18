@@ -29,15 +29,20 @@ import java.util.Date;
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,20 +59,32 @@ public class MessageUtilsTest {
     @Mock private ModSeqProvider modSeqProvider;
     @Mock private UidProvider uidProvider;
     @Mock private Mailbox mailbox;
+    @Mock private MailboxId mailboxId;
     private MailboxSession mailboxSession;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
     private MessageUtils messageUtils;
-    private MailboxMessage message;
+    private MutableMailboxMessage message;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        when(mailbox.getMailboxId()).thenReturn(mailboxId);
         mailboxSession = new MockMailboxSession("user");
         messageUtils = new MessageUtils(mailboxSession, uidProvider, modSeqProvider);
-        message = new SimpleMailboxMessage(MESSAGE_ID, new Date(), CONTENT.length(), BODY_START, new SharedByteArrayInputStream(CONTENT.getBytes()), new Flags(), new PropertyBuilder(), mailbox.getMailboxId());
+        message = MessageUtil.buildMutableMailboxMessage()
+            .messageId(MESSAGE_ID)
+            .internalDate(new Date())
+            .size(CONTENT.length())
+            .bodyStartOctet(BODY_START)
+            .content(new SharedByteArrayInputStream(CONTENT.getBytes(Charsets.UTF_8)))
+            .flags(new Flags())
+            .propertyBuilder(new PropertyBuilder())
+            .mailboxId(mailbox.getMailboxId())
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .build();
     }
     @Test
     public void newInstanceShouldFailWhenNullUidProvider() {

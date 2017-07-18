@@ -42,6 +42,7 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +52,7 @@ public class StoreMessageResultIterator implements MessageResultIterator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreMessageResultIterator.class);
 
-    private Iterator<MailboxMessage> next = null;
+    private Iterator<MutableMailboxMessage> next = null;
     private MailboxException exception;
     private final Mailbox mailbox;
     private final FetchGroup group;

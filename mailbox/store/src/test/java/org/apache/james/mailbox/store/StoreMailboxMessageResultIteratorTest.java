@@ -22,6 +22,7 @@ package org.apache.james.mailbox.store;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxCounters;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
@@ -46,12 +48,15 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.assertj.core.api.iterable.Extractor;
 import org.junit.Test;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 public class StoreMailboxMessageResultIteratorTest {
@@ -69,7 +74,7 @@ public class StoreMailboxMessageResultIteratorTest {
     }
 
     private final class TestMessageMapper implements MessageMapper {
-        
+
 
         private final MessageRange messageRange;
 
@@ -101,29 +106,39 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         @Override
-        public Iterator<MailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set,
-                                                              org.apache.james.mailbox.store.mail.MessageMapper.FetchType type, int limit)
-                throws MailboxException {
-            
-            List<MailboxMessage> messages = new ArrayList<MailboxMessage>();
+        public Iterator<MutableMailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set,
+                                                      org.apache.james.mailbox.store.mail.MessageMapper.FetchType type, int limit)
+            throws MailboxException {
+
+            List<MutableMailboxMessage> messages = new ArrayList<MutableMailboxMessage>();
             for (MessageUid uid: Iterables.limit(set, limit)) {
                 if (messageRange.includes(uid)) {
                     messages.add(createMessage(uid));
-                }    
+                }
             }
             return messages.iterator();
         }
 
-        private SimpleMailboxMessage createMessage(MessageUid uid) {
-            SimpleMailboxMessage message = new SimpleMailboxMessage(new DefaultMessageId(), null, 0, 0, new SharedByteArrayInputStream(
-                    "".getBytes()), new Flags(), new PropertyBuilder(), TestId.of(1L));
-            message.setUid(uid);
+        private MutableMailboxMessage createMessage(MessageUid uid) {
+            MutableMailboxMessage message = MessageUtil.buildMutableMailboxMessage()
+                .messageId(new DefaultMessageId())
+                .internalDate(new Date())
+                .bodyStartOctet(0)
+                .size(0)
+                .content(new SharedByteArrayInputStream("".getBytes(Charsets.UTF_8)))
+                .flags(new Flags())
+                .propertyBuilder(new PropertyBuilder())
+                .mailboxId(TestId.of(1L))
+                .uid(uid)
+                .attachments(ImmutableList.<MessageAttachment>of())
+                .build();
+
             return message;
         }
 
         @Override
         public Map<MessageUid, MessageMetaData> expungeMarkedForDeletionInMailbox(Mailbox mailbox, MessageRange set)
-                throws MailboxException {
+            throws MailboxException {
             throw new UnsupportedOperationException();
 
         }
@@ -140,7 +155,7 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         @Override
-        public void delete(Mailbox mailbox, MailboxMessage message) throws MailboxException {
+        public void delete(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
             throw new UnsupportedOperationException();
         }
 
@@ -156,7 +171,7 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         @Override
-        public MessageMetaData add(Mailbox mailbox, MailboxMessage message) throws MailboxException {
+        public MessageMetaData add(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
             throw new UnsupportedOperationException();
         }
 
@@ -166,7 +181,7 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         @Override
-        public MessageMetaData copy(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+        public MessageMetaData copy(Mailbox mailbox, MutableMailboxMessage original) throws MailboxException {
             throw new UnsupportedOperationException();
 
         }
@@ -182,7 +197,7 @@ public class StoreMailboxMessageResultIteratorTest {
         }
 
         @Override
-        public MessageMetaData move(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+        public MessageMetaData move(Mailbox mailbox, MutableMailboxMessage original) throws MailboxException {
             throw new UnsupportedOperationException();
 
         }
@@ -214,7 +229,7 @@ public class StoreMailboxMessageResultIteratorTest {
         StoreMessageResultIterator iterator = new StoreMessageResultIterator(new TestMessageMapper(range), null, range, batchSize, new TestFetchGroup());
         assertThat(iterator.next()).isNotNull();
     }
-    
+
     @Test(expected=NoSuchElementException.class)
     public void nextShouldThrowWhenNoElement() {
         MessageRange messages = MessageUid.of(1).toRange();
@@ -223,7 +238,7 @@ public class StoreMailboxMessageResultIteratorTest {
         StoreMessageResultIterator iterator = new StoreMessageResultIterator(new TestMessageMapper(messages), null, findRange, batchSize, new TestFetchGroup());
         iterator.next();
     }
-    
+
     @Test
     public void hasNextShouldReturnFalseWhenNoElement() {
         MessageRange messages = MessageUid.of(1).toRange();

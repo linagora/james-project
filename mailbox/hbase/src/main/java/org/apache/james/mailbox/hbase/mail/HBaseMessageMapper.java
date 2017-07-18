@@ -82,6 +82,7 @@ import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.utils.ApplicableFlagCalculator;
 import org.apache.james.mailbox.store.transaction.NonTransactionalMapper;
 
@@ -98,9 +99,9 @@ import com.google.common.collect.Iterators;
 public class HBaseMessageMapper extends NonTransactionalMapper implements MessageMapper {
 
     private static final int UNLIMITED = -1;
-    private static final Function<MailboxMessage, MessageUid> TO_UID = new Function<MailboxMessage, MessageUid>() {
+    private static final Function<MutableMailboxMessage, MessageUid> TO_UID = new Function<MutableMailboxMessage, MessageUid>() {
         @Override
-        public MessageUid apply(MailboxMessage mailboxMessage) {
+        public MessageUid apply(MutableMailboxMessage mailboxMessage) {
             return mailboxMessage.getUid();
         }
     };
@@ -141,10 +142,10 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
     }
 
     @Override
-    public Iterator<MailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set, FetchType fType, int max) throws MailboxException {
+    public Iterator<MutableMailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set, FetchType fType, int max) throws MailboxException {
         HBaseId mailboxId = (HBaseId) mailbox.getMailboxId();
         try {
-            List<MailboxMessage> results;
+            List<MutableMailboxMessage> results;
             MessageUid from = set.getUidFrom();
             final MessageUid to = set.getUidTo();
             final Type type = set.getType();
@@ -171,8 +172,8 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
         }
     }
 
-    private List<MailboxMessage> findMessagesInMailbox(HBaseId mailboxId, int batchSize, boolean flaggedForDelete) throws IOException {
-        List<MailboxMessage> messageList = new ArrayList<MailboxMessage>();
+    private List<MutableMailboxMessage> findMessagesInMailbox(HBaseId mailboxId, int batchSize, boolean flaggedForDelete) throws IOException {
+        List<MutableMailboxMessage> messageList = new ArrayList<MutableMailboxMessage>();
         HTable messages = new HTable(conf, MESSAGES_TABLE);
         Scan scan = new Scan(minMessageRowKey(mailboxId),
                 new PrefixFilter(mailboxId.toBytes()));
@@ -200,8 +201,8 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
         return messageList;
     }
 
-    private List<MailboxMessage> findMessagesInMailboxWithUID(HBaseId mailboxId, MessageUid from, boolean flaggedForDelete) throws IOException {
-        List<MailboxMessage> messageList = new ArrayList<MailboxMessage>();
+    private List<MutableMailboxMessage> findMessagesInMailboxWithUID(HBaseId mailboxId, MessageUid from, boolean flaggedForDelete) throws IOException {
+        List<MutableMailboxMessage> messageList = new ArrayList<MutableMailboxMessage>();
         HTable messages = new HTable(conf, MESSAGES_TABLE);
         Get get = new Get(messageRowKey(mailboxId, from));
         get.setMaxVersions(1);
@@ -215,7 +216,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
         }
         get.addFamily(MESSAGES_META_CF);
         Result result = messages.get(get);
-        MailboxMessage message = null;
+        MutableMailboxMessage message = null;
         if (!result.isEmpty()) {
             message = messageMetaFromResult(conf, result, messageIdFactory);
             messageList.add(message);
@@ -224,8 +225,8 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
         return messageList;
     }
 
-    private List<MailboxMessage> findMessagesInMailboxAfterUID(HBaseId mailboxId, MessageUid messageUid, int batchSize, boolean flaggedForDelete) throws IOException {
-        List<MailboxMessage> messageList = new ArrayList<MailboxMessage>();
+    private List<MutableMailboxMessage> findMessagesInMailboxAfterUID(HBaseId mailboxId, MessageUid messageUid, int batchSize, boolean flaggedForDelete) throws IOException {
+        List<MutableMailboxMessage> messageList = new ArrayList<MutableMailboxMessage>();
         HTable messages = new HTable(conf, MESSAGES_TABLE);
         // uids are stored in reverse so we need to search
         
@@ -262,8 +263,8 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
         }
     }
 
-    private List<MailboxMessage> findMessagesInMailboxBetweenUIDs(HBaseId mailboxId, MessageUid from, MessageUid to, int batchSize, boolean flaggedForDelete) throws IOException {
-        List<MailboxMessage> messageList = new ArrayList<MailboxMessage>();
+    private List<MutableMailboxMessage> findMessagesInMailboxBetweenUIDs(HBaseId mailboxId, MessageUid from, MessageUid to, int batchSize, boolean flaggedForDelete) throws IOException {
+        List<MutableMailboxMessage> messageList = new ArrayList<MutableMailboxMessage>();
         if (from.compareTo(to) > 0) {
             return messageList;
         }
@@ -290,7 +291,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
             if (count == 0) {
                 break;
             }
-            MailboxMessage message = messageMetaFromResult(conf, result, messageIdFactory);
+            MutableMailboxMessage message = messageMetaFromResult(conf, result, messageIdFactory);
             messageList.add(message);
             count--;
         }
@@ -305,7 +306,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
     public Map<MessageUid, MessageMetaData> expungeMarkedForDeletionInMailbox(Mailbox mailbox, MessageRange set) throws MailboxException {
         try {
             final Map<MessageUid, MessageMetaData> data;
-            final List<MailboxMessage> results;
+            final List<MutableMailboxMessage> results;
             final MessageUid from = set.getUidFrom();
             final MessageUid to = set.getUidTo();
             HBaseId mailboxId = (HBaseId) mailbox.getMailboxId();
@@ -400,7 +401,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
     }
 
     @Override
-    public void delete(Mailbox mailbox, MailboxMessage message) throws MailboxException {
+    public void delete(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
         //TODO: maybe switch to checkAndDelete
         HTable messages = null;
         HTable mailboxes = null;
@@ -528,7 +529,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
      * @see org.apache.james.mailbox.store.mail.MessageMapper#add(org.apache.james.mailbox.store.mail.model.Mailbox, org.apache.james.mailbox.store.mail.model.MailboxMessage)
      */
     @Override
-    public MessageMetaData add(Mailbox mailbox, MailboxMessage message) throws MailboxException {
+    public MessageMetaData add(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
         message.setUid(uidProvider.nextUid(mailboxSession, mailbox));
         // if a mailbox does not support mod-sequences the provider may be null
         if (modSeqProvider != null) {
@@ -548,7 +549,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
     public Iterator<UpdatedFlags> updateFlags(Mailbox mailbox, FlagsUpdateCalculator flagsUpdateCalculator, MessageRange set) throws MailboxException {
 
         final List<UpdatedFlags> updatedFlags = new ArrayList<UpdatedFlags>();
-        Iterator<MailboxMessage> messagesFound = findInMailbox(mailbox, set, FetchType.Metadata, -1);
+        Iterator<MutableMailboxMessage> messagesFound = findInMailbox(mailbox, set, FetchType.Metadata, -1);
 
         HTable messages = null;
         long modSeq = -1;
@@ -563,7 +564,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
             messages = new HTable(conf, MESSAGES_TABLE);
             while (messagesFound.hasNext()) {
                 Put put = null;
-                final MailboxMessage member = messagesFound.next();
+                final MutableMailboxMessage member = messagesFound.next();
                 Flags originalFlags = member.createFlags();
                 member.setFlags(flagsUpdateCalculator.buildNewFlags(originalFlags));
                 Flags newFlags = member.createFlags();
@@ -599,7 +600,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
     }
 
     @Override
-    public MessageMetaData copy(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+    public MessageMetaData copy(Mailbox mailbox, MutableMailboxMessage original) throws MailboxException {
         MessageUid uid = uidProvider.nextUid(mailboxSession, mailbox);
         long modSeq = -1;
         if (modSeqProvider != null) {
@@ -613,7 +614,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
     }
 
     @Override
-    public MessageMetaData move(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+    public MessageMetaData move(Mailbox mailbox, MutableMailboxMessage original) throws MailboxException {
     	//TODO implement if possible
     	throw new UnsupportedOperationException();
     }
@@ -648,7 +649,7 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
      * @return metaData
      * @throws MailboxException
      */
-    protected MessageMetaData save(HBaseId mailboxId, MailboxMessage message) throws MailboxException {
+    protected MessageMetaData save(HBaseId mailboxId, MutableMailboxMessage message) throws MailboxException {
         HTable messages = null;
         HTable mailboxes = null;
         BufferedInputStream in = null;
@@ -808,9 +809,9 @@ public class HBaseMessageMapper extends NonTransactionalMapper implements Messag
         messages.close();
     }
 
-    private Map<MessageUid, MessageMetaData> createMetaData(List<MailboxMessage> uids) {
+    private Map<MessageUid, MessageMetaData> createMetaData(List<MutableMailboxMessage> uids) {
         final Map<MessageUid, MessageMetaData> data = new HashMap<MessageUid, MessageMetaData>();
-        for (MailboxMessage m : uids) {
+        for (MutableMailboxMessage m : uids) {
             data.put(m.getUid(), new SimpleMessageMetaData(m));
         }
         return data;

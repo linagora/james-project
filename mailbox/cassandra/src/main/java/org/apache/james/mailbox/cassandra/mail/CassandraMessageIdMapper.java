@@ -49,7 +49,8 @@ import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessageWithoutAttachment;
 import org.apache.james.util.FluentFutureStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,20 +99,20 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
             .collect(Guavate.toImmutableList());
     }
 
-    private Stream<SimpleMailboxMessage> findAsStream(List<MessageId> messageIds, FetchType fetchType) {
+    private Stream<MailboxMessage> findAsStream(List<MessageId> messageIds, FetchType fetchType) {
         return FluentFutureStream.ofNestedStreams(
             messageIds.stream()
                 .map(messageId -> imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.empty())))
             .completableFuture()
             .thenApply(stream -> stream.collect(Guavate.toImmutableList()))
             .thenCompose(composedMessageIds -> retrieveMessagesAndDoMigrationIfNeeded(fetchType, composedMessageIds))
-            .thenCompose(stream -> attachmentLoader.addAttachmentToMessages(stream, fetchType))
+            .thenCompose(stream -> attachmentLoader.addAttachmentToMailboxMessages(stream, fetchType))
             .thenCompose(this::filterMessagesWithExistingMailbox)
             .join()
             .sorted(Comparator.comparing(MailboxMessage::getUid));
     }
 
-    private CompletableFuture<Stream<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>>
+    private CompletableFuture<Stream<Pair<MutableMailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>>
             retrieveMessagesAndDoMigrationIfNeeded(FetchType fetchType, ImmutableList<ComposedMessageIdWithMetaData> composedMessageIds) {
 
         return FluentFutureStream.of(messageDAOV2.retrieveMessages(composedMessageIds, fetchType, Limit.unlimited()))
@@ -119,12 +120,12 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
             .completableFuture();
     }
 
-    private CompletableFuture<Stream<SimpleMailboxMessage>> filterMessagesWithExistingMailbox(Stream<SimpleMailboxMessage> stream) {
+    private CompletableFuture<Stream<MailboxMessage>> filterMessagesWithExistingMailbox(Stream<MailboxMessage> stream) {
         return FluentFutureStream.ofOptionals(stream.map(this::keepMessageIfMailboxExists))
             .completableFuture();
     }
 
-    private CompletableFuture<Optional<SimpleMailboxMessage>> keepMessageIfMailboxExists(SimpleMailboxMessage message) {
+    private CompletableFuture<Optional<MailboxMessage>> keepMessageIfMailboxExists(MailboxMessage message) {
         CassandraId cassandraId = (CassandraId) message.getMailboxId();
         return mailboxDAO.retrieveMailbox(cassandraId)
             .thenApply(optional -> {
@@ -148,7 +149,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
     }
 
     @Override
-    public void save(MailboxMessage mailboxMessage) throws MailboxException {
+    public void save(MutableMailboxMessage mailboxMessage) throws MailboxException {
         CassandraId mailboxId = (CassandraId) mailboxMessage.getMailboxId();
         mailboxMapper.findMailboxById(mailboxId);
         CassandraMessageId messageId = (CassandraMessageId) mailboxMessage.getMessageId();

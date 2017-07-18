@@ -3,7 +3,6 @@ package org.apache.james.mailbox.caching;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageUid;
@@ -16,6 +15,7 @@ import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 import com.google.common.base.Optional;
 
@@ -50,7 +50,7 @@ public class CachingMessageMapper implements MessageMapper {
     }
 
     @Override
-    public Iterator<MailboxMessage> findInMailbox(Mailbox mailbox,
+    public Iterator<MutableMailboxMessage> findInMailbox(Mailbox mailbox,
                                                       MessageRange set,
                                                       org.apache.james.mailbox.store.mail.MessageMapper.FetchType type,
                                                       int limit) throws MailboxException {
@@ -85,7 +85,7 @@ public class CachingMessageMapper implements MessageMapper {
     }
 
     @Override
-    public void delete(Mailbox mailbox, MailboxMessage message)
+    public void delete(Mailbox mailbox, MutableMailboxMessage message)
             throws MailboxException {
         invalidateMetadata(mailbox);
         underlying.delete(mailbox, message);
@@ -106,7 +106,7 @@ public class CachingMessageMapper implements MessageMapper {
     }
 
     @Override
-    public MessageMetaData add(Mailbox mailbox, MailboxMessage message)
+    public MessageMetaData add(Mailbox mailbox, MutableMailboxMessage message)
             throws MailboxException {
         invalidateMetadata(mailbox);
         return underlying.add(mailbox, message);
@@ -123,7 +123,7 @@ public class CachingMessageMapper implements MessageMapper {
 
 
     @Override
-    public MessageMetaData copy(Mailbox mailbox, MailboxMessage original)
+    public MessageMetaData copy(Mailbox mailbox, MutableMailboxMessage original)
             throws MailboxException {
         invalidateMetadata(mailbox);
         return underlying.copy(mailbox, original);
@@ -145,7 +145,7 @@ public class CachingMessageMapper implements MessageMapper {
     }
 
     @Override
-    public MessageMetaData move(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+    public MessageMetaData move(Mailbox mailbox, MutableMailboxMessage original) throws MailboxException {
         throw new UnsupportedOperationException("Move is not yet supported");
     }
 

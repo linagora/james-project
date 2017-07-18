@@ -35,6 +35,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 public class EventFactory {
 
@@ -44,10 +45,10 @@ public class EventFactory {
 
     public final class AddedImpl extends MailboxListener.Added implements MailboxAware {
         private final Map<MessageUid, MessageMetaData> added;
-        private final Map<MessageUid, MailboxMessage> availableMessages;
+        private final Map<MessageUid, MutableMailboxMessage> availableMessages;
         private final Mailbox mailbox;
 
-        public AddedImpl(MailboxSession session, Mailbox mailbox, SortedMap<MessageUid, MessageMetaData> uids, Map<MessageUid, MailboxMessage> availableMessages) {
+        public AddedImpl(MailboxSession session, Mailbox mailbox, SortedMap<MessageUid, MessageMetaData> uids, Map<MessageUid, MutableMailboxMessage> availableMessages) {
             super(session, new StoreMailboxPath(mailbox));
             this.added = ImmutableMap.copyOf(uids);
             this.mailbox = mailbox;
@@ -66,7 +67,7 @@ public class EventFactory {
             return mailbox;
         }
 
-        public Map<MessageUid, MailboxMessage> getAvailableMessages() {
+        public Map<MessageUid, MutableMailboxMessage> getAvailableMessages() {
             return availableMessages;
         }
     }
@@ -174,7 +175,7 @@ public class EventFactory {
         }
     }
 
-    public MailboxListener.Added added(MailboxSession session, SortedMap<MessageUid, MessageMetaData> uids, Mailbox mailbox, Map<MessageUid, MailboxMessage> cachedMessages) {
+    public MailboxListener.Added added(MailboxSession session, SortedMap<MessageUid, MessageMetaData> uids, Mailbox mailbox, Map<MessageUid, MutableMailboxMessage> cachedMessages) {
         return new AddedImpl(session, mailbox, uids, cachedMessages);
     }
 

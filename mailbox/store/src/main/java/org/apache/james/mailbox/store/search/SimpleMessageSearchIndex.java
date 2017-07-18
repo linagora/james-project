@@ -48,6 +48,7 @@ import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -131,14 +132,14 @@ public class SimpleMessageSearchIndex implements MessageSearchIndex {
             // only fetching this uid range
             UidRange[] ranges = uidCrit.getOperator().getRange();
             for (UidRange r : ranges) {
-                Iterator<MailboxMessage> it = mapper.findInMailbox(mailbox, MessageRange.range(r.getLowValue(), r.getHighValue()), FetchType.Metadata, -1);
+                Iterator<MutableMailboxMessage> it = mapper.findInMailbox(mailbox, MessageRange.range(r.getLowValue(), r.getHighValue()), FetchType.Metadata, -1);
                 while (it.hasNext()) {
                     hitSet.add(it.next());
                 }
             }
         } else {
         	// we have to fetch all messages
-            Iterator<MailboxMessage> messages = mapper.findInMailbox(mailbox, MessageRange.all(), FetchType.Full, -1);
+            Iterator<MutableMailboxMessage> messages = mapper.findInMailbox(mailbox, MessageRange.all(), FetchType.Full, -1);
             while(messages.hasNext()) {
             	MailboxMessage m = messages.next();
             	hitSet.add(m);

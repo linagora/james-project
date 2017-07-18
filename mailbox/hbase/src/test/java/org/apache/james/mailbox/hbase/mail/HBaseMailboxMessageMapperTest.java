@@ -49,15 +49,19 @@ import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Unit tests for HBaseMessageMapper.
@@ -72,7 +76,7 @@ public class HBaseMailboxMessageMapperTest {
     private static HBaseMessageMapper messageMapper;
     private static final List<MailboxPath> MBOX_PATHS = new ArrayList<MailboxPath>();
     private static final List<Mailbox> MBOXES = new ArrayList<Mailbox>();
-    private static final List<MailboxMessage> MESSAGE_NO = new ArrayList<MailboxMessage>();
+    private static final List<MutableMailboxMessage> MESSAGE_NO = new ArrayList<MutableMailboxMessage>();
     private static final int COUNT = 5;
     private static Configuration conf;
     private DefaultMessageId.Factory messageIdFactory;
@@ -100,12 +104,9 @@ public class HBaseMailboxMessageMapperTest {
         uidProvider = new HBaseUidProvider(conf);
         modSeqProvider = new HBaseModSeqProvider(conf);
         messageIdFactory = new DefaultMessageId.Factory();
-        generateTestData();
         final MailboxSession session = new MockMailboxSession("ieugen");
         messageMapper = new HBaseMessageMapper(session, uidProvider, modSeqProvider, messageIdFactory, conf);
-        for (MailboxMessage message : MESSAGE_NO) {
-            messageMapper.add(MBOXES.get(1), message);
-        }
+        generateTestData();
     }
 
     private void ensureTables() throws IOException {
@@ -121,7 +122,7 @@ public class HBaseMailboxMessageMapperTest {
         CLUSTER.clearTable(SUBSCRIPTIONS);
     }
 
-    public void generateTestData() {
+    public void generateTestData() throws Exception {
         final Random random = new Random();
         MailboxPath mboxPath;
         final PropertyBuilder propBuilder = new PropertyBuilder();
@@ -140,20 +141,29 @@ public class HBaseMailboxMessageMapperTest {
         propBuilder.setSubType("html");
         propBuilder.setTextualLineCount(2L);
 
-        SimpleMailboxMessage myMsg;
-        final Flags flags = new Flags(Flags.Flag.RECENT);
+        MutableMailboxMessage myMsg;
+        Flags flags = new Flags(Flags.Flag.RECENT);
         final Date today = new Date();
 
         for (int i = 0; i < COUNT * 2; i++) {
-            myMsg = new SimpleMailboxMessage(messageIdFactory.generate(), today, messageTemplate.length,
-                    messageTemplate.length - 20, content, flags, propBuilder,
-                    MBOXES.get(1).getMailboxId());
             if (i == COUNT * 2 - 1) {
                 flags.add(Flags.Flag.SEEN);
                 flags.remove(Flags.Flag.RECENT);
-                myMsg.setFlags(flags);
             }
+            myMsg = MessageUtil.buildMutableMailboxMessage()
+                    .messageId(messageIdFactory.generate())
+                    .internalDate(today)
+                    .size(messageTemplate.length)
+                    .bodyStartOctet(messageTemplate.length - 20)
+                    .content(content)
+                    .flags(flags)
+                    .propertyBuilder(propBuilder)
+                    .mailboxId(MBOXES.get(1).getMailboxId())
+                    .attachments(ImmutableList.<MessageAttachment>of())
+                    .build();
             MESSAGE_NO.add(myMsg);
+
+            messageMapper.add(MBOXES.get(1), myMsg);
         }
     }
 

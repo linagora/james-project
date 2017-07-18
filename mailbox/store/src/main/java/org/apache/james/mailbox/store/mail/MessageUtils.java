@@ -31,6 +31,7 @@ import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -66,20 +67,20 @@ public class MessageUtils {
         return modSeqProvider.nextModSeq(mailboxSession, mailbox);
     }
 
-    public void enrichMessage(Mailbox mailbox, MailboxMessage message) throws MailboxException { 
+    public void enrichMessage(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
         message.setUid(nextUid(mailbox));
         message.setModSeq(nextModSeq(mailbox));
     }
 
     public MessageChangedFlags updateFlags(Mailbox mailbox, FlagsUpdateCalculator flagsUpdateCalculator, 
-            Iterator<MailboxMessage> messages) throws MailboxException {
+            Iterator<MutableMailboxMessage> messages) throws MailboxException {
         ImmutableList.Builder<UpdatedFlags> updatedFlags = ImmutableList.builder();
-        ImmutableList.Builder<MailboxMessage> changedFlags = ImmutableList.builder();
+        ImmutableList.Builder<MutableMailboxMessage> changedFlags = ImmutableList.builder();
 
         long modSeq = nextModSeq(mailbox);
 
         while(messages.hasNext()) {
-            MailboxMessage member = messages.next();
+            MutableMailboxMessage member = messages.next();
             Flags originalFlags = member.createFlags();
             member.setFlags(flagsUpdateCalculator.buildNewFlags(originalFlags));
             Flags newFlags = member.createFlags();
@@ -102,9 +103,9 @@ public class MessageUtils {
     
     public class MessageChangedFlags {
         private final Iterator<UpdatedFlags> updatedFlags;
-        private final List<MailboxMessage> changedFlags;
+        private final List<MutableMailboxMessage> changedFlags;
 
-        public MessageChangedFlags(Iterator<UpdatedFlags> updatedFlags, List<MailboxMessage> changedFlags) {
+        public MessageChangedFlags(Iterator<UpdatedFlags> updatedFlags, List<MutableMailboxMessage> changedFlags) {
             this.updatedFlags = updatedFlags;
             this.changedFlags = changedFlags;
         }
@@ -113,7 +114,7 @@ public class MessageUtils {
             return updatedFlags;
         }
 
-        public List<MailboxMessage> getChangedFlags() {
+        public List<MutableMailboxMessage> getChangedFlags() {
             return changedFlags;
         }
     }

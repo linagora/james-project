@@ -140,8 +140,6 @@ public class StoreMailboxManager implements MailboxManager {
 
     private final int limitAnnotationSize;
 
-    private final ImmutableMailboxMessage.Factory immutableMailboxMessageFactory;
-
     @Inject
     public StoreMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator, 
             MailboxPathLocker locker, MailboxACLResolver aclResolver, GroupMembershipResolver groupMembershipResolver, 
@@ -187,7 +185,6 @@ public class StoreMailboxManager implements MailboxManager {
         this.limitAnnotationSize = limitAnnotationSize;
         this.delegatingListener = delegatingListener;
         this.dispatcher = mailboxEventDispatcher;
-        this.immutableMailboxMessageFactory = new ImmutableMailboxMessage.Factory(this);
     }
 
     protected Factory getMessageIdFactory() {
@@ -224,10 +221,6 @@ public class StoreMailboxManager implements MailboxManager {
 
     public BatchSizes getBatchSizes() {
         return batchSizes;
-    }
-
-    public ImmutableMailboxMessage.Factory getImmutableMailboxMessageFactory() {
-        return immutableMailboxMessageFactory;
     }
 
     /**
@@ -471,7 +464,7 @@ public class StoreMailboxManager implements MailboxManager {
     protected StoreMessageManager createMessageManager(Mailbox mailbox, MailboxSession session) throws MailboxException {
         return new StoreMessageManager(getMapperFactory(), getMessageSearchIndex(), getEventDispatcher(), 
                 getLocker(), mailbox, getAclResolver(), getGroupMembershipResolver(), getQuotaManager(), 
-                getQuotaRootResolver(), getMessageParser(), getMessageIdFactory(), getBatchSizes(), getImmutableMailboxMessageFactory());
+                getQuotaRootResolver(), getMessageParser(), getMessageIdFactory(), getBatchSizes());
     }
 
     /**

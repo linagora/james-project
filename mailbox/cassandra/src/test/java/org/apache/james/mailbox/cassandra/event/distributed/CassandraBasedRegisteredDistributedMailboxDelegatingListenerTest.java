@@ -43,6 +43,7 @@ import org.apache.james.mailbox.store.json.MessagePackEventSerializer;
 import org.apache.james.mailbox.store.json.event.EventConverter;
 import org.apache.james.mailbox.store.json.event.MailboxConverter;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.util.EventCollector;
 import org.junit.After;
@@ -62,7 +63,7 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
     public static final MailboxPath MAILBOX_PATH_2 = new MailboxPath("#private", "user", "mbx.other");
     public static final int CASSANDRA_TIME_OUT_IN_S = 10;
     public static final int SCHEDULER_PERIOD_IN_S = 20;
-    public static final ImmutableMap<MessageUid, MailboxMessage> EMPTY_MESSAGE_CACHE = ImmutableMap.of();
+    public static final ImmutableMap<MessageUid, MutableMailboxMessage> EMPTY_MESSAGE_CACHE = ImmutableMap.of();
 
     private CassandraCluster cassandra = CassandraCluster.create(new CassandraRegistrationModule());
     private RegisteredDelegatingMailboxListener registeredDelegatingMailboxListener1;

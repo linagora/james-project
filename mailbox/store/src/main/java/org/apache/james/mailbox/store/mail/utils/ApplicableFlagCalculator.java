@@ -27,6 +27,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 public class ApplicableFlagCalculator {
 
@@ -39,9 +40,9 @@ public class ApplicableFlagCalculator {
         };
     }
 
-    private final Iterable<MailboxMessage> mailboxMessages;
+    private final Iterable<MutableMailboxMessage> mailboxMessages;
 
-    public ApplicableFlagCalculator(Iterable<MailboxMessage> mailboxMessages) {
+    public ApplicableFlagCalculator(Iterable<MutableMailboxMessage> mailboxMessages) {
         Preconditions.checkNotNull(mailboxMessages);
         this.mailboxMessages = mailboxMessages;
     }

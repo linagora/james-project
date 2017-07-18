@@ -77,6 +77,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.user.model.Subscription;
@@ -147,7 +148,7 @@ public class HBaseUtils {
      * @param message
      * @return a put that contains all metadata information.
      */
-    public static Put metadataToPut(MailboxMessage message) {
+    public static Put metadataToPut(MutableMailboxMessage message) {
         Put put = new Put(messageRowKey(message));
         // we store the message uid and mailbox uid in the row key
         // store the meta data
@@ -205,7 +206,7 @@ public class HBaseUtils {
      * @param message message to get row key from
      * @return rowkey byte array that can be used with HBase API
      */
-    public static byte[] messageRowKey(MailboxMessage message) {
+    public static byte[] messageRowKey(MutableMailboxMessage message) {
         return messageRowKey((HBaseId) message.getMailboxId(), message.getUid());
     }
 
@@ -254,7 +255,7 @@ public class HBaseUtils {
      * @param result the result object containing message data
      * @return a HBaseMailboxMessage instance with message metadata.
      */
-    public static MailboxMessage messageMetaFromResult(Configuration conf, Result result, MessageId.Factory messageIdFactory) {
+    public static MutableMailboxMessage messageMetaFromResult(Configuration conf, Result result, MessageId.Factory messageIdFactory) {
         HBaseMailboxMessage message = null;
         Flags flags = new Flags();
         List<Property> propList = new ArrayList<Property>();
@@ -347,7 +348,7 @@ public class HBaseUtils {
      * @param flags
      * @return a put object with 
      */
-    public static Put flagsToPut(MailboxMessage message, Flags flags) {
+    public static Put flagsToPut(MutableMailboxMessage message, Flags flags) {
         Put put = new Put(messageRowKey(message));
         //system flags
         if (flags.contains(Flag.ANSWERED)) {
@@ -395,7 +396,7 @@ public class HBaseUtils {
         return put;
     }
 
-    public static Delete flagsToDelete(MailboxMessage message, Flags flags) {
+    public static Delete flagsToDelete(MutableMailboxMessage message, Flags flags) {
         Delete delete = new Delete(messageRowKey(message));
         //we mark for delete flags that are not present (they will be Put'ed)
         if (flags.contains(Flag.ANSWERED)) {

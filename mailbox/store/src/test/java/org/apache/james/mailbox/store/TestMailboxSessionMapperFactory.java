@@ -53,6 +53,7 @@ import org.apache.james.mailbox.store.mail.ModSeqProvider;
 import org.apache.james.mailbox.store.mail.UidProvider;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
 
@@ -176,7 +177,7 @@ public class TestMailboxSessionMapperFactory extends MailboxSessionMapperFactory
             }
 
             @Override
-            public void save(MailboxMessage mailboxMessage) throws MailboxException {
+            public void save(MutableMailboxMessage mailboxMessage) throws MailboxException {
                 messages.add(mailboxMessage);
             }
 

@@ -42,6 +42,7 @@ import org.apache.james.mailbox.cassandra.mail.CassandraMessageMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
 import org.apache.james.mailbox.cassandra.mail.*;
+import org.apache.james.mailbox.cassandra.mail.migration.MigrationTracking;
 import org.apache.james.mailbox.cassandra.mail.migration.V1ToV2Migration;
 import org.apache.james.mailbox.cassandra.user.CassandraSubscriptionMapper;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -128,10 +129,28 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
         CassandraApplicableFlagDAO applicableFlagDAO,
         CassandraDeletedMessageDAO deletedMesageDAO) {
 
-        this(uidProvider, modSeqProvider, session, messageDAO, messageDAOV2, messageIdDAO, imapUidDAO, mailboxCounterDAO,
-            mailboxRecentsDAO, mailboxDAO, mailboxPathDAO, firstUnseenDAO, applicableFlagDAO, deletedMesageDAO,
-            new V1ToV2Migration(messageDAO, messageDAOV2, new CassandraAttachmentMapper(session), CassandraConfiguration.DEFAULT_CONFIGURATION),
-            CassandraUtils.WITH_DEFAULT_CONFIGURATION, CassandraConfiguration.DEFAULT_CONFIGURATION);
+        this(uidProvider,
+            modSeqProvider,
+            session,
+            messageDAO,
+            messageDAOV2,
+            messageIdDAO,
+            imapUidDAO,
+            mailboxCounterDAO,
+            mailboxRecentsDAO,
+            mailboxDAO,
+            mailboxPathDAO,
+            firstUnseenDAO,
+            applicableFlagDAO,
+            deletedMesageDAO,
+            new V1ToV2Migration(
+                messageDAO,
+                messageDAOV2,
+                new CassandraAttachmentMapper(session),
+                CassandraConfiguration.DEFAULT_CONFIGURATION,
+                new MigrationTracking()),
+            CassandraUtils.WITH_DEFAULT_CONFIGURATION,
+            CassandraConfiguration.DEFAULT_CONFIGURATION);
     }
 
     @Override

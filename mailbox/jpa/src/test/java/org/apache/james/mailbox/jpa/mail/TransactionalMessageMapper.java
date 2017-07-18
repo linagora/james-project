@@ -36,6 +36,7 @@ import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 import com.google.common.base.Optional;
 
@@ -69,7 +70,7 @@ public class TransactionalMessageMapper implements MessageMapper {
     }
 
     @Override
-    public Iterator<MailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set, FetchType type, int limit)
+    public Iterator<MutableMailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set, FetchType type, int limit)
             throws MailboxException {
         return messageMapper.findInMailbox(mailbox, set, type, limit);
     }
@@ -97,7 +98,7 @@ public class TransactionalMessageMapper implements MessageMapper {
     }
 
     @Override
-    public void delete(final Mailbox mailbox, final MailboxMessage message) throws MailboxException {
+    public void delete(final Mailbox mailbox, final MutableMailboxMessage message) throws MailboxException {
         messageMapper.execute(new VoidTransaction() {
             @Override
             public void runVoid() throws MailboxException {
@@ -117,7 +118,7 @@ public class TransactionalMessageMapper implements MessageMapper {
     }
 
     @Override
-    public MessageMetaData add(final Mailbox mailbox, final MailboxMessage message) throws MailboxException {
+    public MessageMetaData add(final Mailbox mailbox, final MutableMailboxMessage message) throws MailboxException {
         MessageMetaData data = messageMapper.execute(new Transaction<MessageMetaData>() {
             @Override
             public MessageMetaData run() throws MailboxException {
@@ -140,7 +141,7 @@ public class TransactionalMessageMapper implements MessageMapper {
     }
 
     @Override
-    public MessageMetaData copy(final Mailbox mailbox, final MailboxMessage original) throws MailboxException {
+    public MessageMetaData copy(final Mailbox mailbox, final MutableMailboxMessage original) throws MailboxException {
         MessageMetaData data = messageMapper.execute(new Transaction<MessageMetaData>() {
             @Override
             public MessageMetaData run() throws MailboxException {
@@ -151,7 +152,7 @@ public class TransactionalMessageMapper implements MessageMapper {
     }
 
     @Override
-    public MessageMetaData move(Mailbox mailbox, MailboxMessage original) throws MailboxException {
+    public MessageMetaData move(Mailbox mailbox, MutableMailboxMessage original) throws MailboxException {
         return messageMapper.move(mailbox, original);
     }
 

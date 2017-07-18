@@ -39,6 +39,7 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 
 import com.google.common.base.Throwables;
 
@@ -90,8 +91,8 @@ public class StoreMessageIdManagerTestSystem extends MessageIdManagerTestSystem 
         mapperFactory.clean();
     }
 
-    private MailboxMessage createMessage(MailboxId mailboxId, Flags flags, MessageId messageId, MessageUid uid) {
-        MailboxMessage mailboxMessage = mock(MailboxMessage.class);
+    private MutableMailboxMessage createMessage(MailboxId mailboxId, Flags flags, MessageId messageId, MessageUid uid) {
+        MutableMailboxMessage mailboxMessage = mock(MutableMailboxMessage.class);
         when(mailboxMessage.getMessageId()).thenReturn(messageId);
         when(mailboxMessage.getUid()).thenReturn(uid);
         when(mailboxMessage.getModSeq()).thenReturn(MOD_SEQ);
