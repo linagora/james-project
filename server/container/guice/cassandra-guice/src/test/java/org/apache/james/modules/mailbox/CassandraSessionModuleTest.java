@@ -46,7 +46,7 @@ public class CassandraSessionModuleTest {
     @Test
     public void provideCassandraConfigurationShouldReturnRightConfigurationFile() throws ConfigurationException {
         CassandraConfiguration configuration = cassandraSessionModule.provideCassandraConfiguration(
-            () -> new PropertiesConfiguration(ClassLoader.getSystemResource("modules/mailbox/cassandra.properties")));
+            () -> new PropertiesConfiguration(ClassLoader.getSystemResource("modules/mailbox/cassandra.propertyBuilder")));
 
         assertThat(configuration)
             .isEqualTo(CassandraConfiguration.builder()

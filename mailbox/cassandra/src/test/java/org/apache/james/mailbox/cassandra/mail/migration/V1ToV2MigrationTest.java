@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
@@ -54,6 +55,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.OptionalConverter;
 import org.assertj.core.api.JUnitSoftAssertions;
 import org.junit.After;
@@ -61,6 +63,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.jayway.awaitility.Awaitility;
@@ -82,6 +85,9 @@ public class V1ToV2MigrationTest {
 
     private Attachment attachment;
     private CassandraMessageId messageId;
+    private CassandraMessageId messageId2;
+    private CassandraMessageId messageId3;
+
     private CassandraMessageId.Factory messageIdFactory;
     private ComposedMessageId composedMessageId;
     private List<ComposedMessageIdWithMetaData> metaDataList;
@@ -104,13 +110,20 @@ public class V1ToV2MigrationTest {
         CassandraBlobsDAO blobsDAO = new CassandraBlobsDAO(cassandra.getConf());
         messageDAOV2 = new CassandraMessageDAOV2(cassandra.getConf(), cassandra.getTypesProvider(), blobsDAO);
         attachmentMapper = new CassandraAttachmentMapper(cassandra.getConf());
-        testee = new V1ToV2Migration(messageDAOV1, messageDAOV2, attachmentMapper, CassandraConfiguration.builder()
-            .onTheFlyV1ToV2Migration(true)
-            .build());
+        testee = new V1ToV2Migration(
+            messageDAOV1,
+            messageDAOV2,
+            attachmentMapper,
+            CassandraConfiguration.builder()
+                .onTheFlyV1ToV2Migration(true)
+                .build(),
+            new MigrationTracking());
 
 
         messageIdFactory = new CassandraMessageId.Factory();
         messageId = messageIdFactory.generate();
+        messageId2 = messageIdFactory.generate();
+        messageId3 = messageIdFactory.generate();
 
         attachment = Attachment.builder()
                 .attachmentId(AttachmentId.from("123"))
@@ -125,6 +138,7 @@ public class V1ToV2MigrationTest {
             .flags(new Flags())
             .modSeq(1)
             .build();
+
         metaDataList = ImmutableList.of(metaData);
         messageAttachment = MessageAttachment.builder()
             .attachment(attachment)
@@ -160,9 +174,70 @@ public class V1ToV2MigrationTest {
 
         CassandraMessageDAOV2.MessageResult messageResult = retrieveMessageOnV2().get();
         softly.assertThat(messageResult.message().getLeft().getMessageId()).isEqualTo(messageId);
-        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getContent(), Charsets.UTF_8))
+        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getFullContent(), Charsets.UTF_8))
             .isEqualTo(CONTENT);
         softly.assertThat(messageResult.message().getRight().findAny().isPresent()).isFalse();
+    }
+
+    @Test
+    public void fullMigrationShouldRemoveAllMessageFromOldDao() throws Exception {
+        SimpleMailboxMessage originalMessage = createMessage(messageId, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+
+        SimpleMailboxMessage originalMessage2 = createMessage(messageId2, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+
+        SimpleMailboxMessage originalMessage3 = createMessage(messageId3, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+
+        FluentFutureStream.ofFutures(
+            messageDAOV1.save(originalMessage),
+            messageDAOV1.save(originalMessage2),
+            messageDAOV1.save(originalMessage3)
+        ).join();
+
+        testee.runFullMigration();
+
+        awaitFullMigration();
+    }
+
+    @Test
+    public void fullMigrationShouldHaveMovedAllMessageIntoNewDao() throws Exception {
+        SimpleMailboxMessage originalMessage = createMessage(messageId, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+
+        SimpleMailboxMessage originalMessage2 = createMessage(messageId2, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+
+        SimpleMailboxMessage originalMessage3 = createMessage(messageId3, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+
+        FluentFutureStream.ofFutures(
+            messageDAOV1.save(originalMessage),
+            messageDAOV1.save(originalMessage2),
+            messageDAOV1.save(originalMessage3)
+        ).join();
+
+        testee.runFullMigration();
+
+        List<ComposedMessageIdWithMetaData> ids = Stream.of(originalMessage, originalMessage2, originalMessage3)
+            .map(id -> {
+                ComposedMessageId composedMessageId = new ComposedMessageId(MAILBOX_ID, id.getMessageId(), messageUid);
+
+                return ComposedMessageIdWithMetaData.builder()
+                    .composedMessageId(composedMessageId)
+                    .flags(new Flags())
+                    .modSeq(1)
+                    .build();
+            }).collect(Guavate.toImmutableList());
+
+        List<CassandraMessageDAOV2.MessageResult> result = messageDAOV2.retrieveMessages(
+            ids,
+            MessageMapper.FetchType.Full,
+            Limit.unlimited()).join().collect(Guavate.toImmutableList()
+        );
+
+        assertThat(result).hasSize(3);
     }
 
     @Test
@@ -180,7 +255,7 @@ public class V1ToV2MigrationTest {
 
         CassandraMessageDAOV2.MessageResult messageResult = retrieveMessageOnV2().get();
         softly.assertThat(messageResult.message().getLeft().getMessageId()).isEqualTo(messageId);
-        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getContent(), Charsets.UTF_8))
+        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getFullContent(), Charsets.UTF_8))
             .isEqualTo(CONTENT);
         softly.assertThat(messageResult.message().getRight().findAny().get()).isEqualTo(MessageAttachmentRepresentation.builder()
             .attachmentId(attachment.getAttachmentId())
@@ -202,6 +277,15 @@ public class V1ToV2MigrationTest {
             });
     }
 
+    private void awaitFullMigration() {
+        awaitability.atMost(1, TimeUnit.MINUTES)
+            .until(this::noMessageInV1);
+    }
+
+    private boolean noMessageInV1() {
+        return !messageDAOV1.scanAllMessage().join().findFirst().isPresent();
+    }
+
     private Optional<CassandraMessageDAOV2.MessageResult> retrieveMessageOnV2() {
         Optional<CassandraMessageDAOV2.MessageResult> messageResult = messageDAOV2.retrieveMessages(metaDataList, MessageMapper.FetchType.Full, Limit.unlimited())
             .join()
@@ -214,5 +298,4 @@ public class V1ToV2MigrationTest {
     private SimpleMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder, List<MessageAttachment> attachments) {
         return new SimpleMailboxMessage(messageId, new Date(), content.length(), bodyStart, new SharedByteArrayInputStream(content.getBytes()), new Flags(), propertyBuilder, MAILBOX_ID, attachments);
     }
-
 }

@@ -158,7 +158,7 @@ public class JmapResponse {
                 .add("method", method)
                 .add("response", response)
                 .add("clientId", clientId)
-                .add("properties", properties)
+                .add("propertyBuilder", properties)
                 .add("filterProvider", filterProvider)
                 .toString();
     }

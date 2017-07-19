@@ -43,6 +43,7 @@ import org.apache.james.mailbox.hbase.io.ChunkInputStream;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
+import org.apache.james.mailbox.store.mail.model.HasMailboxContext;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
@@ -57,7 +58,7 @@ import com.google.common.base.Objects;
  */
 public class HBaseMailboxMessage implements MailboxMessage {
 
-    private static final Comparator<MailboxMessage> MESSAGE_UID_COMPARATOR = new UidComparator();
+    private static final Comparator<HasMailboxContext> MESSAGE_UID_COMPARATOR = UidComparator.UID;
     private static final String TOSTRING_SEPARATOR = " ";
     /** Configuration for the HBase cluster */
     private final Configuration conf;
@@ -98,7 +99,7 @@ public class HBaseMailboxMessage implements MailboxMessage {
     
     /**
      * Create a copy of the given message.
-     * All properties are cloned except mailbox and UID.
+     * All propertyBuilder are cloned except mailbox and UID.
      */
     public HBaseMailboxMessage(Configuration conf, HBaseId mailboxId, MessageUid uid, MessageId messageId, long modSeq, MailboxMessage original) throws MailboxException {
         this.conf = conf;
@@ -207,8 +208,8 @@ public class HBaseMailboxMessage implements MailboxMessage {
     }
 
     /**
-     * Gets a read-only list of meta-data properties.
-     * For properties with multiple values, this list will contain
+     * Gets a read-only list of meta-data propertyBuilder.
+     * For propertyBuilder with multiple values, this list will contain
      * several enteries with the same namespace and local name.
      * @return unmodifiable list of meta-data, not null
      */
@@ -341,7 +342,7 @@ public class HBaseMailboxMessage implements MailboxMessage {
     }
 
     @Override
-    public int compareTo(MailboxMessage other) {
+    public int compareTo(HasMailboxContext other) {
         return MESSAGE_UID_COMPARATOR.compare(this, other);
     }
 

@@ -134,7 +134,7 @@ public class SetError {
         return MoreObjects.toStringHelper(this)
                 .add("description", description)
                 .add("type", type)
-                .add("properties", properties)
+                .add("propertyBuilder", properties)
                 .toString();
     }
 }

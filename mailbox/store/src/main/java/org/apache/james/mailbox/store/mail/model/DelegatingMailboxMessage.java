@@ -37,7 +37,7 @@ public abstract class DelegatingMailboxMessage implements MailboxMessage {
     }
 
     @Override
-    public int compareTo(MailboxMessage other) {
+    public int compareTo(HasMailboxContext other) {
         return this.getUid().compareTo(other.getUid());
     }
 

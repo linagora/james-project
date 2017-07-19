@@ -44,6 +44,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
+/**
+ * Deprecated use MessageUtil.buildMailboxMessage() instead
+ */
+@Deprecated
 public class SimpleMailboxMessage extends DelegatingMailboxMessage {
 
     public static Builder builder() {

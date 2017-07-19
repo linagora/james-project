@@ -110,7 +110,7 @@ public class IMAP180JpaMigrateCommand implements JpaMigrateCommand {
     }
         
     /**
-     * Migrate the properties.
+     * Migrate the propertyBuilder.
      */
     @SuppressWarnings("rawtypes")
     private static void migrateProperties(EntityManager em) {

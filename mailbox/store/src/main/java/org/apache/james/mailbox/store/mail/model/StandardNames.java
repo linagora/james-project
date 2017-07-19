@@ -19,11 +19,11 @@
 package org.apache.james.mailbox.store.mail.model;
 
 /**
- * <p>Conventional meta-data names for standard properties.</p>
+ * <p>Conventional meta-data names for standard propertyBuilder.</p>
  * <h4>Conventions</h4>
  * <p>
  * The domain containing the namespace should be controlled by the definer.
- * So, all properties defined here begin with <code>http://james.apache.org</code>.
+ * So, all propertyBuilder defined here begin with <code>http://james.apache.org</code>.
  * This is a simple way to prevent namespace collisions with expansion terms.
  * </p><p>
  * Local names are lower case.
@@ -46,7 +46,7 @@ package org.apache.james.mailbox.store.mail.model;
  * <strong>Parameters of structured fields</strong> use a namespace rooted in this 
  * base suffixed with <em>params</em>. This namespace should contains only those 
  * parameters. The name of each property is the name of the parameter, converted 
- * to lower case. So, by iterating through all properties in the sufffixed namespace, 
+ * to lower case. So, by iterating through all propertyBuilder in the sufffixed namespace,
  * every parameter can be named and value.
  * </li>
  * </ul>
@@ -56,7 +56,7 @@ package org.apache.james.mailbox.store.mail.model;
  * <h5>Content-Type</h5>
  * <code>Content-Type</code> is defined in <code>RFC2045</code>.
  * So, the namespaces are based in <code>http://james.apache.org/rfc2045/</code>.
- * It is a structure field with parameters.  It's direct properties are spaced in
+ * It is a structure field with parameters.  It's direct propertyBuilder are spaced in
  * <code>http://james.apache.org/rfc2045/Content-Type/</code>. 
  * It's parameters are spaced in 
  * <code>http://james.apache.org/rfc2045/Content-Type/params</code>.
@@ -100,8 +100,8 @@ public class StandardNames {
     public static final String MIME_CONTENT_TYPE_PARAMETER_BOUNDARY_NAME = "boundary";
     
     /**
-     * Namespace for <a href='http://www.faqs.org/rfcs/rfc2045.html'>MIME</a> mime type properties.
-     * A distinct namespace is required to distinguish these properties from the Content-Type
+     * Namespace for <a href='http://www.faqs.org/rfcs/rfc2045.html'>MIME</a> mime type propertyBuilder.
+     * A distinct namespace is required to distinguish these propertyBuilder from the Content-Type
      * parameters.
      * @see #NAMESPACE_RFC_2045
      */

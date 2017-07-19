@@ -41,7 +41,7 @@ public class JPAProperty implements Property {
     @Index(name = "INDEX_PROPERTY_MSG_ID", columnNames = { "MAILBOX_ID", "MAIL_UID" })
     private long id;
 
-    /** Order within the list of properties */
+    /** Order within the list of propertyBuilder */
     @Basic(optional = false)
     @Column(name = "PROPERTY_LINE_NUMBER", nullable = false)
     @Index(name = "INDEX_PROPERTY_LINE_NUMBER")

@@ -32,6 +32,10 @@ import org.apache.james.mailbox.store.mail.model.Property;
 
 import com.google.common.collect.ImmutableList;
 
+/**
+ * Deprecated use MessageUtil.buildMessage() instead
+ */
+@Deprecated
 public class SimpleMessage implements Message {
 
     private final MessageId messageId;

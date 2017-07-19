@@ -53,7 +53,7 @@ import org.apache.james.mailbox.store.mail.model.Property;
 import com.google.common.base.Predicate;
 
 /**
- * Builds properties
+ * Builds propertyBuilder
  */
 public class PropertyBuilder {
 
@@ -183,7 +183,7 @@ public class PropertyBuilder {
     }
     
     /**
-     * Maps properties in the given namespace.
+     * Maps propertyBuilder in the given namespace.
      * @param namespace not null
      * @return values indexed by local name
      */
@@ -198,8 +198,8 @@ public class PropertyBuilder {
     }
     
     /**
-     * Sets properties in the given namespace from the map.
-     * Existing properties in the namespace will be removed.
+     * Sets propertyBuilder in the given namespace from the map.
+     * Existing propertyBuilder in the namespace will be removed.
      * All local names will be converted to lower case.
      * @param namespace not null
      * @param valuesByLocalName not null
@@ -472,7 +472,7 @@ public class PropertyBuilder {
     }
     
     /**
-     * Builds a list of properties.
+     * Builds a list of propertyBuilder.
      * @return not null
      */
     public List<Property> toProperties() {
@@ -490,7 +490,7 @@ public class PropertyBuilder {
     {
         return "PropertyBuilder ( "
         + " textualLineCount = " + this.textualLineCount
-        + " properties = " + this.properties
+        + " propertyBuilder = " + this.properties
         + " )";
     }
 }

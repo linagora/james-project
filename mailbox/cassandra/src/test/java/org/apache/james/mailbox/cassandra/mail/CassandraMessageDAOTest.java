@@ -39,6 +39,9 @@ import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MailboxUtil;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 
@@ -46,6 +49,7 @@ import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 
+import org.apache.james.util.FluentFutureStream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,8 +65,10 @@ public class CassandraMessageDAOTest {
     private CassandraMessageDAO testee;
     private CassandraMessageId.Factory messageIdFactory;
 
-    private SimpleMailboxMessage messageWith1Attachment;
+    private MailboxMessage messageWith1Attachment;
     private CassandraMessageId messageId;
+    private CassandraMessageId messageId2;
+    private CassandraMessageId messageId3;
     private Attachment attachment;
     private ComposedMessageId composedMessageId;
     private List<ComposedMessageIdWithMetaData> messageIds;
@@ -74,6 +80,8 @@ public class CassandraMessageDAOTest {
 
         messageIdFactory = new CassandraMessageId.Factory();
         messageId = messageIdFactory.generate();
+        messageId2 = messageIdFactory.generate();
+        messageId3 = messageIdFactory.generate();
         testee = new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider());
 
         attachment = Attachment.builder()
@@ -122,6 +130,29 @@ public class CassandraMessageDAOTest {
     }
 
     @Test
+    public void scanMessageShouldReturnAllMessageInTheTable() throws Exception {
+        MailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(),
+            ImmutableList.of());
+
+        MailboxMessage message2 = createMessage(messageId2, CONTENT, BODY_START, new PropertyBuilder(),
+            ImmutableList.of());
+
+        MailboxMessage message3 = createMessage(messageId3, CONTENT, BODY_START, new PropertyBuilder(),
+            ImmutableList.of());
+
+        FluentFutureStream.ofFutures(testee.save(message1), testee.save(message2), testee.save(message3)).join();
+
+        List<MessageId> mails =
+            testee.scanAllMessage()
+                .get()
+                .map(pair -> pair.getLeft().getMessageId())
+                .collect(Guavate.toImmutableList());
+
+
+        assertThat(mails).contains(message1.getMessageId(), message2.getMessageId(), message3.getMessageId());
+    }
+
+    @Test
     public void saveShouldStoreMessageWithAttachmentButNoCid() throws Exception {
         messageWith1Attachment = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(),
                 ImmutableList.of(MessageAttachment.builder()
@@ -142,14 +173,14 @@ public class CassandraMessageDAOTest {
         assertThat(attachmentRepresentation.get(0).get().getCid().isPresent()).isFalse();
     }
 
-    private SimpleMailboxMessage createMessage(
+    private MailboxMessage createMessage(
             MessageId messageId,
             String content,
             int bodyStart,
             PropertyBuilder propertyBuilder,
             List<MessageAttachment> attachments) {
 
-        return SimpleMailboxMessage.builder()
+        return MessageUtil.buildMailboxMessage()
             .messageId(messageId)
             .mailboxId(MAILBOX_ID)
             .uid(messageUid)
@@ -159,7 +190,8 @@ public class CassandraMessageDAOTest {
             .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
             .flags(new Flags())
             .propertyBuilder(propertyBuilder)
-            .addAttachments(attachments)
+            .attachments(attachments)
+            .modSeq(0)
             .build();
     }
 

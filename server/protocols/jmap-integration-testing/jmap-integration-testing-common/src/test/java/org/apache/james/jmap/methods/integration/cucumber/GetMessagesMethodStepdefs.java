@@ -302,7 +302,7 @@ public class GetMessagesMethodStepdefs {
         return string -> "\"" + string + "\"";
     }
 
-    @When("^the user is getting messages \"(.*?)\" with properties \"(.*?)\"$")
+    @When("^the user is getting messages \"(.*?)\" with propertyBuilder \"(.*?)\"$")
     public void postWithParameters(List<String> ids, List<String> properties) throws Exception {
         requestedMessageIds = ids.stream()
                 .map(messageIdsByName::get)
@@ -317,7 +317,7 @@ public class GetMessagesMethodStepdefs {
                 .map(toJsonString())
                 .collect(Collectors.joining(",", "[", "]" ));
 
-        post("[[\"getMessages\", {\"ids\": " + serializedIds + ", \"properties\": " + serializedProperties + "}, \"#0\"]]");
+        post("[[\"getMessages\", {\"ids\": " + serializedIds + ", \"propertyBuilder\": " + serializedProperties + "}, \"#0\"]]");
     }
 
     private Pair<String, String> entryToPair(Map.Entry<String, String> entry) {

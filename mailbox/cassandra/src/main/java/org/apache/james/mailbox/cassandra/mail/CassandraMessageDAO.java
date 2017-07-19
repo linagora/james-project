@@ -48,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 import javax.mail.util.SharedByteArrayInputStream;
@@ -63,10 +64,12 @@ import org.apache.james.mailbox.cassandra.table.CassandraMessageV1Table.Properti
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Cid;
-import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MailboxMessageWithoutAttachment;
+import org.apache.james.mailbox.store.mail.model.MessageWithoutAttachment;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.util.CompletableFutureUtil;
@@ -93,6 +96,7 @@ public class CassandraMessageDAO {
     private final PreparedStatement selectHeaders;
     private final PreparedStatement selectFields;
     private final PreparedStatement selectBody;
+    private final PreparedStatement scanMessages;
     private final CassandraConfiguration cassandraConfiguration;
 
     @Inject
@@ -104,6 +108,7 @@ public class CassandraMessageDAO {
         this.selectMetadata = prepareSelect(session, METADATA);
         this.selectHeaders = prepareSelect(session, HEADERS);
         this.selectFields = prepareSelect(session, FIELDS);
+        this.scanMessages = prepareScanMessages(session);
         this.selectBody = prepareSelect(session, BODY);
         this.cassandraConfiguration = cassandraConfiguration;
     }
@@ -117,6 +122,11 @@ public class CassandraMessageDAO {
         return session.prepare(select(fields)
             .from(TABLE_NAME)
             .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
+    }
+
+    private PreparedStatement prepareScanMessages(Session session) {
+        return session.prepare(select()
+            .from(TABLE_NAME));
     }
 
     private PreparedStatement prepareInsert(Session session) {
@@ -187,7 +197,7 @@ public class CassandraMessageDAO {
         return ByteBuffer.wrap(ByteStreams.toByteArray(stream));
     }
 
-    public CompletableFuture<Stream<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> retrieveMessages(
+    public CompletableFuture<Stream<Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> retrieveMessages(
         List<ComposedMessageIdWithMetaData> messageIds,
         FetchType fetchType,
         Limit limit
@@ -199,9 +209,23 @@ public class CassandraMessageDAO {
                 ids.stream()
                     .map(id -> retrieveRow(id, fetchType)
                         .thenApply((ResultSet resultSet) ->
-                            message(resultSet.one(), id, fetchType))))
+                            message(resultSet.one(), fetchType, id))))
                 .completableFuture())
             .thenApply(stream -> stream.flatMap(Function.identity()));
+    }
+
+    public CompletableFuture<Stream<Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>>>> scanAllMessage () {
+        boolean parrallelStream = true;
+
+        CompletableFuture<Stream<Row>> cassandraResult = cassandraAsyncExecutor.execute(scanMessages
+            .bind()
+            .setFetchSize(cassandraConfiguration.getMessageReadChunkSize()))
+            .thenApply(resultSet -> StreamSupport.stream(resultSet.spliterator(), parrallelStream));
+
+        return FluentFutureStream
+            .of(cassandraResult)
+            .map(row -> rawMessage(row, FetchType.Full))
+            .completableFuture();
     }
 
     private CompletableFuture<ResultSet> retrieveRow(ComposedMessageIdWithMetaData messageId, FetchType fetchType) {
@@ -212,21 +236,29 @@ public class CassandraMessageDAO {
             .setUUID(MESSAGE_ID, cassandraMessageId.get()));
     }
 
-    private Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message(Row row, ComposedMessageIdWithMetaData messageIdWithMetaData, FetchType fetchType) {
-        ComposedMessageId messageId = messageIdWithMetaData.getComposedMessageId();
+    private Pair<MailboxMessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> message(
+        Row row,
+        FetchType fetchType,
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData
+    ) {
+        Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> rawPair = rawMessage(row, fetchType);
 
-        MessageWithoutAttachment messageWithoutAttachment =
-            new MessageWithoutAttachment(
-                messageId.getMessageId(),
-                row.getTimestamp(INTERNAL_DATE),
-                row.getLong(FULL_CONTENT_OCTETS),
-                row.getInt(BODY_START_OCTET),
-                buildContent(row, fetchType),
-                messageIdWithMetaData.getFlags(),
-                getPropertyBuilder(row),
-                messageId.getMailboxId(),
-                messageId.getUid(),
-                messageIdWithMetaData.getModSeq());
+        return Pair.of(
+            MessageUtil.addMailboxContext(rawPair.getLeft(), composedMessageIdWithMetaData),
+            rawPair.getRight()
+        );
+    }
+
+    private Pair<MessageWithoutAttachment, Stream<MessageAttachmentRepresentation>> rawMessage(Row row, FetchType fetchType) {
+        MessageWithoutAttachment messageWithoutAttachment = MessageUtil.buildMessageWithoutAttachment()
+            .messageId(CassandraMessageId.Factory.of(row.getUUID(MESSAGE_ID)))
+            .internalDate(row.getTimestamp(INTERNAL_DATE))
+            .size(row.getLong(FULL_CONTENT_OCTETS))
+            .bodyStartOctet(row.getInt(BODY_START_OCTET))
+            .content(buildContent(row, fetchType))
+            .propertyBuilder(getPropertyBuilder(row))
+            .build();
+
         return Pair.of(messageWithoutAttachment, getAttachments(row, fetchType));
     }
 

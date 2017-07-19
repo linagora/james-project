@@ -54,7 +54,7 @@
             ${javamail.system-property9} ${javamail.system-property10}
         </javamail.system-properties>
 
-        <!-- JMX system properties -->
+        <!-- JMX system propertyBuilder -->
         <!-- For more details see -->
         <!-- http://download.oracle.com/javase/1.5.0/docs/guide/management/agent.html -->
         <jmx.system-property1>-Dcom.sun.management.jmxremote=true</jmx.system-property1>

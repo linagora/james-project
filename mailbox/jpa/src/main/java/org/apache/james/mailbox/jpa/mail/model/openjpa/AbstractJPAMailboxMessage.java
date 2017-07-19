@@ -54,6 +54,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.DelegatingMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.FlagsBuilder;
+import org.apache.james.mailbox.store.mail.model.HasMailboxContext;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
@@ -95,7 +96,7 @@ import com.google.common.base.Objects;
 @MappedSuperclass
 public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
 
-    private static final Comparator<MailboxMessage> MESSAGE_UID_COMPARATOR = new UidComparator();
+    private static final Comparator<HasMailboxContext> MESSAGE_UID_COMPARATOR = new UidComparator();
     private static final String TOSTRING_SEPARATOR = " ";
 
     /** Identifies composite key */
@@ -258,7 +259,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     }
 
     /**
-     * Constructs a copy of the given message. All properties are cloned except
+     * Constructs a copy of the given message. All propertyBuilder are cloned except
      * mailbox and UID.
      *
      * @param mailbox
@@ -347,7 +348,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     }
 
     /**
-     * Gets a read-only list of meta-data properties. For properties with
+     * Gets a read-only list of meta-data propertyBuilder. For propertyBuilder with
      * multiple values, this list will contain several enteries with the same
      * namespace and local name.
      *
@@ -493,7 +494,7 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     }
 
     @Override
-    public int compareTo(MailboxMessage other) {
+    public int compareTo(HasMailboxContext other) {
         return MESSAGE_UID_COMPARATOR.compare(this, other);
     }
 
