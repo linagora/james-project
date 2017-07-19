@@ -17,27 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin.utils;
+package org.apache.james.modules.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.routes.MigrationRoutes;
 
-import spark.ResponseTransformer;
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
-public class JsonTransformer implements ResponseTransformer {
-
-    private final ObjectMapper objectMapper;
-
-    public JsonTransformer() {
-        objectMapper = new ObjectMapper();
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        objectMapper.registerModule(new Jdk8Module());
-    }
+public class CassandraRoutesModule extends AbstractModule {
 
     @Override
-    public String render(Object o) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(o);
+    protected void configure() {
+        Multibinder<Routes> routesMultibinder = Multibinder.newSetBinder(binder(), Routes.class);
+        routesMultibinder.addBinding().to(MigrationRoutes.class);
     }
 }
