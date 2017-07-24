@@ -166,6 +166,44 @@ public class V1ToV2MigrationTest {
     }
 
     @Test
+    public void ruwShouldMigrateMessages() throws Exception {
+        SimpleMailboxMessage originalMessage = createMessage(messageId, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+        messageDAOV1.save(originalMessage).join();
+
+        testee.run();
+
+        awaitMigration();
+
+        CassandraMessageDAOV2.MessageResult messageResult = retrieveMessageOnV2().get();
+        softly.assertThat(messageResult.message().getLeft().getMessageId()).isEqualTo(messageId);
+        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getContent(), Charsets.UTF_8))
+            .isEqualTo(CONTENT);
+        softly.assertThat(messageResult.message().getRight().findAny().isPresent()).isFalse();
+    }
+
+    @Test
+    public void ruwShouldBeIndempotent() throws Exception {
+        SimpleMailboxMessage originalMessage = createMessage(messageId, CONTENT, BODY_START,
+            new PropertyBuilder(), ImmutableList.of());
+        messageDAOV1.save(originalMessage).join();
+
+        testee.run();
+
+        awaitMigration();
+
+        testee.run();
+
+        awaitMigration();
+
+        CassandraMessageDAOV2.MessageResult messageResult = retrieveMessageOnV2().get();
+        softly.assertThat(messageResult.message().getLeft().getMessageId()).isEqualTo(messageId);
+        softly.assertThat(IOUtils.toString(messageResult.message().getLeft().getContent(), Charsets.UTF_8))
+            .isEqualTo(CONTENT);
+        softly.assertThat(messageResult.message().getRight().findAny().isPresent()).isFalse();
+    }
+
+    @Test
     public void migrationShouldWorkWithAttachments() throws Exception {
         SimpleMailboxMessage originalMessage = createMessage(messageId, CONTENT, BODY_START,
             new PropertyBuilder(), ImmutableList.of(messageAttachment));
