@@ -49,7 +49,13 @@ public class FlagsBuilder {
 
     public FlagsBuilder add(Flags... flagsArray) {
         for (Flags flags: flagsArray) {
-            internalFlags.add(flags);
+            for(Flags.Flag flag: flags.getSystemFlags()) {
+                internalFlags.add(flag);
+            }
+
+            for(String flag: flags.getUserFlags()) {
+                internalFlags.add(flag);
+            }
         }
         return this;
     }

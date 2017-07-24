@@ -26,30 +26,34 @@ import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.Test;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 public class MailboxMessageAssertTest {
 
     public static final TestId MAILBOX_ID = TestId.of(42L);
     public static final MessageUid UID = MessageUid.of(24);
     public static final MessageId MESSAGE_ID = new DefaultMessageId();
+    private static final Date DATE = new Date();
 
     @Test
     public void messageAssertShouldSucceedWithTwoEqualsMessages() throws IOException {
         String headerString = "name: headerName\n\n";
         String bodyString = "body\n.\n";
         Date date = new Date();
-        SimpleMailboxMessage message1 = new SimpleMailboxMessage(MESSAGE_ID, date, headerString.length() + bodyString.length(),
-            headerString.length(), new SharedByteArrayInputStream((headerString + bodyString).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
-        message1.setUid(UID);
-        SimpleMailboxMessage message2 = new SimpleMailboxMessage(MESSAGE_ID, date, headerString.length() + bodyString.length(),
-            headerString.length(), new SharedByteArrayInputStream((headerString + bodyString).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
-        message2.setUid(UID);
+
+        MailboxMessage message1 = createMessage(headerString, bodyString);
+
+        MailboxMessage message2 = createMessage(headerString, bodyString);
+
         MessageAssert.assertThat(message1).isEqualTo(message2, MessageMapper.FetchType.Full);
     }
 
@@ -58,13 +62,13 @@ public class MailboxMessageAssertTest {
         String headerString = "name: headerName\n\n";
         String bodyString = "body\n.\n";
         Date date = new Date();
-        SimpleMailboxMessage message1 = new SimpleMailboxMessage(MESSAGE_ID, date, headerString.length() + bodyString.length(),
-            headerString.length(), new SharedByteArrayInputStream((headerString + bodyString).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
-        message1.setUid(UID);
+
+        MailboxMessage message1 = createMessage(headerString, bodyString);
+
         bodyString = "work\n.\n";
-        SimpleMailboxMessage message2 = new SimpleMailboxMessage(MESSAGE_ID, date, headerString.length() + bodyString.length(),
-            headerString.length(), new SharedByteArrayInputStream((headerString + bodyString).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
-        message2.setUid(UID);
+
+        MailboxMessage message2 = createMessage(headerString, bodyString);
+
         MessageAssert.assertThat(message1).isEqualTo(message2, MessageMapper.FetchType.Headers);
     }
 
@@ -73,14 +77,30 @@ public class MailboxMessageAssertTest {
         String headerString = "name: headerName\n\n";
         String bodyString = "body\n.\n";
         Date date = new Date();
-        SimpleMailboxMessage message1 = new SimpleMailboxMessage(MESSAGE_ID, date, headerString.length() + bodyString.length(),
-            headerString.length(), new SharedByteArrayInputStream((headerString + bodyString).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
+
+        MutableMailboxMessage message1 = createMessage(headerString, bodyString);
+
         message1.setUid(UID);
         bodyString = "work\n.\n";
-        SimpleMailboxMessage message2 = new SimpleMailboxMessage(MESSAGE_ID, date, headerString.length() + bodyString.length(),
-            headerString.length(), new SharedByteArrayInputStream((headerString + bodyString).getBytes()), new Flags(), new PropertyBuilder(), MAILBOX_ID);
+
+        MutableMailboxMessage message2 = createMessage(headerString, bodyString);
         message2.setUid(UID);
+
         MessageAssert.assertThat(message1).isEqualTo(message2, MessageMapper.FetchType.Body);
     }
 
+    private MutableMailboxMessage createMessage(String headerString, String bodyString) {
+        return MessageUtil.buildMutableMailboxMessage()
+            .messageId(MESSAGE_ID)
+            .internalDate(DATE)
+            .size(headerString.length() + bodyString.length())
+            .bodyStartOctet(headerString.length())
+            .content(new SharedByteArrayInputStream((headerString + bodyString).getBytes(Charsets.UTF_8)))
+            .flags(new Flags())
+            .propertyBuilder(new PropertyBuilder())
+            .mailboxId(MAILBOX_ID)
+            .uid(UID)
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .build();
+    }
 }

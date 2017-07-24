@@ -37,9 +37,9 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 
 public class ListMessageAssert {
-    private final List<MailboxMessage> actual;
+    private final List<MutableMailboxMessage> actual;
 
-    private final List<InnerMessage> messageToInnerMessage(List<MailboxMessage> messages) {
+    private final List<InnerMessage> messageToInnerMessage(List<MutableMailboxMessage> messages) {
         return FluentIterable.from(messages).transform(new Function<MailboxMessage, InnerMessage>() {
             @Override
             public InnerMessage apply(MailboxMessage input) {
@@ -55,15 +55,15 @@ public class ListMessageAssert {
         }).toList();
     }
 
-    private ListMessageAssert(List<MailboxMessage> actual) {
+    private ListMessageAssert(List<MutableMailboxMessage> actual) {
         this.actual = actual;
     }
 
-    public static ListMessageAssert assertMessages(List<MailboxMessage> actual) {
+    public static ListMessageAssert assertMessages(List<MutableMailboxMessage> actual) {
         return new ListMessageAssert(actual);
     }
 
-    public void containOnly(MailboxMessage... expecteds) throws IOException {
+    public void containOnly(MutableMailboxMessage... expecteds) throws IOException {
         assertThat(messageToInnerMessage(actual)).containsOnlyElementsOf(messageToInnerMessage(Lists.newArrayList(expecteds)));
     }
 

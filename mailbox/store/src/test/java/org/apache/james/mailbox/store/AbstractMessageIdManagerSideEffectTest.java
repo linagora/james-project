@@ -53,6 +53,7 @@ import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.quota.QuotaImpl;
 import org.junit.After;
 import org.junit.Before;
@@ -146,7 +147,7 @@ public abstract class AbstractMessageIdManagerSideEffectTest {
 
         messageIdManager.setInMailboxes(messageId, ImmutableList.of(mailbox1.getMailboxId(), mailbox2.getMailboxId()), session);
 
-        verify(dispatcher).added(eq(session), eq(mailbox1), any(MailboxMessage.class));
+        verify(dispatcher).added(eq(session), eq(mailbox1), any(MutableMailboxMessage.class));
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -160,8 +161,8 @@ public abstract class AbstractMessageIdManagerSideEffectTest {
 
         messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, session);
 
-        verify(dispatcher).added(eq(session), eq(mailbox1), any(MailboxMessage.class));
-        verify(dispatcher).added(eq(session), eq(mailbox3), any(MailboxMessage.class));
+        verify(dispatcher).added(eq(session), eq(mailbox1), any(MutableMailboxMessage.class));
+        verify(dispatcher).added(eq(session), eq(mailbox3), any(MutableMailboxMessage.class));
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -190,7 +191,7 @@ public abstract class AbstractMessageIdManagerSideEffectTest {
         messageIdManager.setInMailboxes(messageId, ImmutableList.of(mailbox1.getMailboxId(), mailbox3.getMailboxId()), session);
 
         verify(dispatcher).expunged(eq(session), any(SimpleMessageMetaData.class), eq(mailbox2));
-        verify(dispatcher).added(eq(session), eq(mailbox3), any(MailboxMessage.class));
+        verify(dispatcher).added(eq(session), eq(mailbox3), any(MutableMailboxMessage.class));
         verifyNoMoreInteractions(dispatcher);
     }
 

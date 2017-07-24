@@ -44,15 +44,16 @@ import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MailboxMessageWithoutAttachment;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Bytes;
 
 public class CassandraMessageDAOV2Test {
     private static final int BODY_START = 16;
@@ -66,7 +67,7 @@ public class CassandraMessageDAOV2Test {
     private CassandraBlobsDAO blobsDAO;
     private CassandraMessageId.Factory messageIdFactory;
 
-    private SimpleMailboxMessage message;
+    private MutableMailboxMessage message;
     private CassandraMessageId messageId;
     private ComposedMessageId composedMessageId;
     private List<ComposedMessageIdWithMetaData> messageIds;
@@ -102,10 +103,10 @@ public class CassandraMessageDAOV2Test {
 
         testee.save(message).join();
 
-        MessageWithoutAttachment attachmentRepresentation =
+        MailboxMessageWithoutAttachment attachmentRepresentation =
             toMessage(testee.retrieveMessages(messageIds, MessageMapper.FetchType.Metadata, Limit.unlimited()));
 
-        assertThat(attachmentRepresentation.getPropertyBuilder().getTextualLineCount())
+        assertThat(attachmentRepresentation.getTextualLineCount())
             .isEqualTo(0L);
     }
 
@@ -118,10 +119,10 @@ public class CassandraMessageDAOV2Test {
 
         testee.save(message).join();
 
-        MessageWithoutAttachment attachmentRepresentation =
+        MailboxMessageWithoutAttachment attachmentRepresentation =
             toMessage(testee.retrieveMessages(messageIds, MessageMapper.FetchType.Metadata, Limit.unlimited()));
 
-        assertThat(attachmentRepresentation.getPropertyBuilder().getTextualLineCount()).isEqualTo(textualLineCount);
+        assertThat(attachmentRepresentation.getTextualLineCount()).isEqualTo(textualLineCount);
     }
 
     @Test
@@ -130,10 +131,10 @@ public class CassandraMessageDAOV2Test {
 
         testee.save(message).join();
 
-        MessageWithoutAttachment attachmentRepresentation =
+        MailboxMessageWithoutAttachment attachmentRepresentation =
             toMessage(testee.retrieveMessages(messageIds, MessageMapper.FetchType.Full, Limit.unlimited()));
 
-        assertThat(IOUtils.toString(attachmentRepresentation.getContent(), Charsets.UTF_8))
+        assertThat(IOUtils.toString(attachmentRepresentation.getFullContent(), Charsets.UTF_8))
             .isEqualTo(CONTENT);
     }
 
@@ -143,13 +144,12 @@ public class CassandraMessageDAOV2Test {
 
         testee.save(message).join();
 
-        MessageWithoutAttachment attachmentRepresentation =
+        MailboxMessageWithoutAttachment attachmentRepresentation =
             toMessage(testee.retrieveMessages(messageIds, MessageMapper.FetchType.Body, Limit.unlimited()));
 
-        byte[] expected = Bytes.concat(
-            new byte[BODY_START],
-            CONTENT.substring(BODY_START).getBytes(Charsets.UTF_8));
-        assertThat(IOUtils.toString(attachmentRepresentation.getContent(), Charsets.UTF_8))
+        byte[] expected = CONTENT.substring(BODY_START).getBytes(Charsets.UTF_8);
+
+        assertThat(IOUtils.toString(attachmentRepresentation.getBodyContent(), Charsets.UTF_8))
             .isEqualTo(IOUtils.toString(new ByteArrayInputStream(expected), Charsets.UTF_8));
     }
 
@@ -159,15 +159,15 @@ public class CassandraMessageDAOV2Test {
 
         testee.save(message).join();
 
-        MessageWithoutAttachment attachmentRepresentation =
+        MailboxMessageWithoutAttachment attachmentRepresentation =
             toMessage(testee.retrieveMessages(messageIds, MessageMapper.FetchType.Headers, Limit.unlimited()));
 
-        assertThat(IOUtils.toString(attachmentRepresentation.getContent(), Charsets.UTF_8))
+        assertThat(IOUtils.toString(attachmentRepresentation.getHeaderContent(), Charsets.UTF_8))
             .isEqualTo(CONTENT.substring(0, BODY_START));
     }
 
-    private SimpleMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder) {
-        return SimpleMailboxMessage.builder()
+    private MutableMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder) {
+        return MessageUtil.buildMutableMailboxMessage()
             .messageId(messageId)
             .mailboxId(MAILBOX_ID)
             .uid(messageUid)
@@ -177,10 +177,11 @@ public class CassandraMessageDAOV2Test {
             .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
             .flags(new Flags())
             .propertyBuilder(propertyBuilder)
+            .attachments(ImmutableList.of())
             .build();
     }
 
-    private MessageWithoutAttachment toMessage(CompletableFuture<Stream<CassandraMessageDAOV2.MessageResult>> readOptional) throws InterruptedException, java.util.concurrent.ExecutionException {
+    private MailboxMessageWithoutAttachment toMessage(CompletableFuture<Stream<CassandraMessageDAOV2.MessageResult>> readOptional) throws InterruptedException, java.util.concurrent.ExecutionException {
         return readOptional.join()
             .map(CassandraMessageDAOV2.MessageResult::message)
             .map(Pair::getLeft)

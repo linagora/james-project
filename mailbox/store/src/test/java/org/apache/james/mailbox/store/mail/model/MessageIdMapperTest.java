@@ -30,21 +30,23 @@ import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import com.google.common.base.Charsets;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageManager.FlagsUpdateMode;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.util.concurrency.ConcurrentTestRunner;
 import org.assertj.core.data.MapEntry;
 import org.junit.After;
@@ -72,10 +74,10 @@ public abstract class MessageIdMapperTest {
     private SimpleMailbox benwaInboxMailbox;
     private SimpleMailbox benwaWorkMailbox;
     
-    private SimpleMailboxMessage message1;
-    private SimpleMailboxMessage message2;
-    private SimpleMailboxMessage message3;
-    private SimpleMailboxMessage message4;
+    private MutableMailboxMessage message1;
+    private MutableMailboxMessage message2;
+    private MutableMailboxMessage message3;
+    private MutableMailboxMessage message4;
 
     @Rule
     public ExpectedException expected = ExpectedException.none();
@@ -150,7 +152,7 @@ public abstract class MessageIdMapperTest {
     public void findMailboxesShouldReturnTwoMailboxesWhenMessageExistsInTwoMailboxes() throws MailboxException {
         saveMessages();
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -172,7 +174,7 @@ public abstract class MessageIdMapperTest {
     public void saveShouldThrowWhenMailboxDoesntExist() throws Exception {
         SimpleMailbox notPersistedMailbox = new SimpleMailbox(new MailboxPath("#private", "benwa", "mybox"), UID_VALIDITY);
         notPersistedMailbox.setMailboxId(mapperProvider.generateId());
-        SimpleMailboxMessage message = createMessage(notPersistedMailbox, "Subject: Test \n\nBody\n.\n", BODY_START, new PropertyBuilder());
+        MutableMailboxMessage message = createMessage(notPersistedMailbox, "Subject: Test \n\nBody\n.\n", BODY_START, new PropertyBuilder());
         message.setUid(mapperProvider.generateMessageUid());
         message.setModSeq(mapperProvider.generateModSeq(notPersistedMailbox));
 
@@ -186,7 +188,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -200,7 +202,7 @@ public abstract class MessageIdMapperTest {
         message1.setUid(mapperProvider.generateMessageUid());
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
-        SimpleMailboxMessage copiedMessage = SimpleMailboxMessage.copy(message1.getMailboxId(), message1);
+        MutableMailboxMessage copiedMessage = MessageUtil.copyToMutable(message1, message1.getMailboxId());
         copiedMessage.setUid(mapperProvider.generateMessageUid());
         copiedMessage.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(copiedMessage);
@@ -281,7 +283,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -298,7 +300,7 @@ public abstract class MessageIdMapperTest {
         message1.setUid(mapperProvider.generateMessageUid());
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
-        SimpleMailboxMessage copiedMessage = SimpleMailboxMessage.copy(message1.getMailboxId(), message1);
+        MutableMailboxMessage copiedMessage = MessageUtil.copyToMutable(message1, message1.getMailboxId());
         copiedMessage.setUid(mapperProvider.generateMessageUid());
         copiedMessage.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(copiedMessage);
@@ -316,7 +318,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -334,7 +336,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -352,7 +354,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -516,7 +518,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -612,7 +614,7 @@ public abstract class MessageIdMapperTest {
         message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));
         sut.save(message1);
 
-        SimpleMailboxMessage message1InOtherMailbox = SimpleMailboxMessage.copy(benwaWorkMailbox.getMailboxId(), message1);
+        MutableMailboxMessage message1InOtherMailbox = MessageUtil.copyToMutable(message1, benwaWorkMailbox.getMailboxId());
         message1InOtherMailbox.setUid(mapperProvider.generateMessageUid());
         message1InOtherMailbox.setModSeq(mapperProvider.generateModSeq(benwaWorkMailbox));
         sut.save(message1InOtherMailbox);
@@ -905,19 +907,23 @@ public abstract class MessageIdMapperTest {
         addMessageAndSetModSeq(benwaWorkMailbox, message4);
     }
 
-    private void addMessageAndSetModSeq(Mailbox mailbox, MailboxMessage message) throws MailboxException {
+    private void addMessageAndSetModSeq(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
         messageMapper.add(mailbox, message);
         message1.setModSeq(mapperProvider.generateModSeq(mailbox));
     }
 
-    private SimpleMailboxMessage createMessage(Mailbox mailbox, String content, int bodyStart, PropertyBuilder propertyBuilder) {
-        return new SimpleMailboxMessage(mapperProvider.generateMessageId(), 
-                new Date(), 
-                content.length(), 
-                bodyStart, 
-                new SharedByteArrayInputStream(content.getBytes()), 
-                new Flags(), 
-                propertyBuilder, 
-                mailbox.getMailboxId());
+    private MutableMailboxMessage createMessage(Mailbox mailbox, String content, int bodyStart, PropertyBuilder propertyBuilder) {
+        return MessageUtil.buildMutableMailboxMessage()
+            .messageId(mapperProvider.generateMessageId())
+            .internalDate(new Date())
+            .size(content.length())
+            .bodyStartOctet(bodyStart)
+            .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
+            .flags(new Flags())
+            .propertyBuilder(propertyBuilder)
+            .mailboxId(mailbox.getMailboxId())
+            .uid(mapperProvider.generateMessageUid())
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .build();
     }
 }

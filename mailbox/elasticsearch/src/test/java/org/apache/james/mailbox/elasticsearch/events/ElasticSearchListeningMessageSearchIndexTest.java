@@ -128,7 +128,7 @@ public class ElasticSearchListeningMessageSearchIndexTest {
         verify(indexer).indexMessage(eq(ELASTIC_SEARCH_ID), eq(EXPECTED_JSON_CONTENT));
     }
 
-    private MailboxMessage mockedMessage(MessageUid messageId) throws IOException {
+    private MutableMailboxMessage mockedMessage(MessageUid messageId) throws IOException {
         MailboxMessage message = mock(MailboxMessage.class);
         when(message.getUid())
             .thenReturn(messageId);

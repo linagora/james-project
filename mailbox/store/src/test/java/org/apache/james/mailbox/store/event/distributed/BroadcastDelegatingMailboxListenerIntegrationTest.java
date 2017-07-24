@@ -37,6 +37,7 @@ import org.apache.james.mailbox.store.json.MessagePackEventSerializer;
 import org.apache.james.mailbox.store.json.event.EventConverter;
 import org.apache.james.mailbox.store.json.event.MailboxConverter;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.util.EventCollector;
 import org.junit.Before;
@@ -54,7 +55,7 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
     public static final MailboxPath MAILBOX_PATH_1 = new MailboxPath("#private", "user", "mbx");
     public static final MailboxPath MAILBOX_PATH_2 = new MailboxPath("#private", "user", "mbx.other");
     public static final String TOPIC = "TOPIC";
-    public static final ImmutableMap<MessageUid, MailboxMessage> EMPTY_MESSAGE_CACHE = ImmutableMap.<MessageUid, MailboxMessage>of();
+    public static final ImmutableMap<MessageUid, MutableMailboxMessage> EMPTY_MESSAGE_CACHE = ImmutableMap.<MessageUid, MutableMailboxMessage>of();
     private BroadcastDelegatingMailboxListener broadcastDelegatingMailboxListener1;
     private BroadcastDelegatingMailboxListener broadcastDelegatingMailboxListener2;
     private BroadcastDelegatingMailboxListener broadcastDelegatingMailboxListener3;

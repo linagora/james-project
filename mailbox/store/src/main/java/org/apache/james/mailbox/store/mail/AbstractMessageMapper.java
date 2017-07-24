@@ -34,6 +34,7 @@ import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 
 import com.google.common.base.Function;
@@ -86,7 +87,7 @@ public abstract class AbstractMessageMapper extends TransactionalMapper implemen
     @Override
     public Iterator<UpdatedFlags> updateFlags(Mailbox mailbox, FlagsUpdateCalculator flagsUpdateCalculator, MessageRange set) throws MailboxException {
         final List<UpdatedFlags> updatedFlags = new ArrayList<UpdatedFlags>();
-        Iterator<MailboxMessage> messages = findInMailbox(mailbox, set, FetchType.Metadata, -1);
+        Iterator<MutableMailboxMessage> messages = findInMailbox(mailbox, set, FetchType.Metadata, -1);
         
         long modSeq = -1;
         if (messages.hasNext()) {
@@ -96,7 +97,7 @@ public abstract class AbstractMessageMapper extends TransactionalMapper implemen
             }
         }
         while(messages.hasNext()) {
-        	final MailboxMessage member = messages.next();
+        	final MutableMailboxMessage member = messages.next();
             Flags originalFlags = member.createFlags();
             member.setFlags(flagsUpdateCalculator.buildNewFlags(originalFlags));
             Flags newFlags = member.createFlags();
@@ -120,7 +121,7 @@ public abstract class AbstractMessageMapper extends TransactionalMapper implemen
     }
 
     @Override
-    public MessageMetaData add(Mailbox mailbox, MailboxMessage message) throws MailboxException {
+    public MessageMetaData add(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException {
         message.setUid(uidProvider.nextUid(mailboxSession, mailbox));
         
         // if a mailbox does not support mod-sequences the provider may be null

@@ -49,15 +49,18 @@ import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Unit tests for HBaseMessageMapper.
@@ -140,14 +143,23 @@ public class HBaseMailboxMessageMapperTest {
         propBuilder.setSubType("html");
         propBuilder.setTextualLineCount(2L);
 
-        SimpleMailboxMessage myMsg;
+        MailboxMessage myMsg;
         final Flags flags = new Flags(Flags.Flag.RECENT);
         final Date today = new Date();
 
         for (int i = 0; i < COUNT * 2; i++) {
-            myMsg = new SimpleMailboxMessage(messageIdFactory.generate(), today, messageTemplate.length,
-                    messageTemplate.length - 20, content, flags, propBuilder,
-                    MBOXES.get(1).getMailboxId());
+            myMsg = MessageUtil.buildMutableMailboxMessage()
+                .messageId(messageIdFactory.generate())
+                .internalDate(today)
+                .size(messageTemplate.length)
+                .bodyStartOctet(messageTemplate.length - 20)
+                .content(content)
+                .flags(flags)
+                .propertyBuilder(propBuilder)
+                .mailboxId(MBOXES.get(1).getMailboxId())
+                .attachments(ImmutableList.<MessageAttachment>of())
+                .build();
+
             if (i == COUNT * 2 - 1) {
                 flags.add(Flags.Flag.SEEN);
                 flags.remove(Flags.Flag.RECENT);

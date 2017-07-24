@@ -38,7 +38,7 @@ import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.SimpleMessageMetaData;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.event.EventSerializer;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.Before;
 import org.junit.Test;
@@ -82,7 +82,8 @@ public abstract class EventSerializerTest {
     public void addedEventShouldBeWellConverted() throws Exception {
         TreeMap<MessageUid, MessageMetaData> treeMap = new TreeMap<MessageUid, MessageMetaData>();
         treeMap.put(UID, MESSAGE_META_DATA);
-        MailboxListener.Event event = eventFactory.added(mailboxSession, treeMap, mailbox, ImmutableMap.<MessageUid, MailboxMessage>of());
+
+        MailboxListener.Event event = eventFactory.added(mailboxSession, treeMap, mailbox, ImmutableMap.<MessageUid, MutableMailboxMessage>of());
         byte[] serializedEvent = serializer.serializeEvent(event);
         MailboxListener.Event deserializedEvent = serializer.deSerializeEvent(serializedEvent);
         assertThat(deserializedEvent.getMailboxPath()).isEqualTo(event.getMailboxPath());

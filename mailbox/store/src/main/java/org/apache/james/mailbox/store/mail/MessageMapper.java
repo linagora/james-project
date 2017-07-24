@@ -33,6 +33,7 @@ import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.mail.model.MutableMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
 import org.apache.james.mailbox.store.transaction.Mapper;
 
@@ -55,7 +56,7 @@ public interface MessageMapper extends Mapper {
      *              MAY just ignore it
      * @throws MailboxException
      */
-    Iterator<MailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set, FetchType type, int limit)
+    Iterator<MutableMailboxMessage> findInMailbox(Mailbox mailbox, MessageRange set, FetchType type, int limit)
             throws MailboxException;
 
     /**
@@ -124,7 +125,7 @@ public interface MessageMapper extends Mapper {
      * @return uid
      * @throws StorageException
      */
-    MessageMetaData add(Mailbox mailbox, MailboxMessage message) throws MailboxException;
+    MessageMetaData add(Mailbox mailbox, MutableMailboxMessage message) throws MailboxException;
     
     /**
      * Update flags for the given {@link MessageRange}. Only the flags may be modified after a message was saved to a mailbox.

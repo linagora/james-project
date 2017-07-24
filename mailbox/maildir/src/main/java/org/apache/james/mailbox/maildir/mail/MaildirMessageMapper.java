@@ -52,7 +52,7 @@ import org.apache.james.mailbox.store.SimpleMessageMetaData;
 import org.apache.james.mailbox.store.mail.AbstractMessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.utils.ApplicableFlagCalculator;
 
 public class MaildirMessageMapper extends AbstractMessageMapper {
@@ -259,7 +259,7 @@ public class MaildirMessageMapper extends AbstractMessageMapper {
     @Override
     protected MessageMetaData copy(Mailbox mailbox, MessageUid uid, long modSeq, MailboxMessage original)
             throws MailboxException {
-        SimpleMailboxMessage theCopy = SimpleMailboxMessage.copy(mailbox.getMailboxId(), original);
+        MailboxMessage theCopy = MessageUtil.copyToMutable(original, mailbox.getMailboxId());
         Flags flags = theCopy.createFlags();
         flags.add(Flag.RECENT);
         theCopy.setFlags(flags);

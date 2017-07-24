@@ -50,16 +50,21 @@ import java.util.Date;
 import java.util.UUID;
 
 import javax.mail.Flags;
+import javax.mail.util.SharedByteArrayInputStream;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.hbase.mail.model.HBaseMailbox;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
+import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
+import org.apache.james.mailbox.store.mail.model.impl.MessageUtil;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleProperty;
 import org.apache.james.mailbox.store.user.model.Subscription;
 import org.apache.james.mailbox.store.user.model.impl.SimpleSubscription;
@@ -149,8 +154,20 @@ public class HBaseUtilsTest {
         flags.add("userFlag2");
         HBaseId uuid = HBaseId.of(UUID.randomUUID());
         DefaultMessageId messageId = new DefaultMessageId();
-        final SimpleMailboxMessage message = new SimpleMailboxMessage(messageId, new Date(), 100, 10, null, flags, new PropertyBuilder(), uuid);
-        message.setUid(MessageUid.of(1));
+
+        final MailboxMessage message = MessageUtil.buildMutableMailboxMessage()
+            .messageId(messageId)
+            .internalDate(new Date())
+            .size(100)
+            .bodyStartOctet(10)
+            .content(new SharedByteArrayInputStream(new byte[100]))
+            .flags(FlagsBuilder.builder().build())
+            .propertyBuilder(new PropertyBuilder())
+            .mailboxId(uuid)
+            .uid(MessageUid.of(1))
+            .attachments(ImmutableList.<MessageAttachment>of())
+            .build();
+
         Put put = flagsToPut(message, flags);
         //test for the system flags
         assertTrue(put.has(MESSAGES_META_CF, FLAGS_SEEN, MARKER_PRESENT));
