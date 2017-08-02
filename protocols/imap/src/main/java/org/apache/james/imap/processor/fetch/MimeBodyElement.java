@@ -29,6 +29,7 @@ import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.message.response.FetchResponse.BodyElement;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MessageResult;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 
 
 /**
@@ -49,7 +50,6 @@ public class MimeBodyElement implements BodyElement {
         this.name = name;
         this.headers = headers;
         this.size = calculateSize(headers);
-        
     }
 
     /**
@@ -88,7 +88,7 @@ public class MimeBodyElement implements BodyElement {
      * @see org.apache.james.imap.message.response.FetchResponse.BodyElement#getInputStream()
      */
     public InputStream getInputStream() throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ExposedByteArrayOutputStream(size);
 
         for (MessageResult.Header header : headers) {
             out.write((header.getName() + ": " + header.getValue() + ImapConstants.LINE_END).getBytes(US_ASCII));

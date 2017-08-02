@@ -28,6 +28,7 @@ import java.util.Enumeration;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetHeaders;
 
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 import org.apache.mailet.base.RFC2822Headers;
 
 /**
@@ -87,7 +88,7 @@ public class MailHeaders extends InternetHeaders implements Serializable, Clonea
      * @return the byte array containing the headers
      */
     public byte[] toByteArray() throws MessagingException {
-        ByteArrayOutputStream headersBytes = new ByteArrayOutputStream();
+        ByteArrayOutputStream headersBytes = new ExposedByteArrayOutputStream(getSize());
         writeTo(headersBytes);
         return headersBytes.toByteArray();
     }

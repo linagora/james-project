@@ -100,6 +100,7 @@ public class StripAttachment extends GenericMailet {
     public static final String SAVED_ATTACHMENTS_ATTRIBUTE_KEY = "org.apache.james.mailet.standard.mailets.StripAttachment.saved";
 
     public static final boolean DECODE_FILENAME_DEFAULT_VALUE = false;
+    public static final int DEFAULT_BYTE_ARRAY_OUTPUT_STREAM_SIZE = 32;
 
     @VisibleForTesting String removeAttachments;
     private String directoryName;
@@ -361,9 +362,17 @@ public class StripAttachment extends GenericMailet {
             fileNamesToPartContent = new LinkedHashMap<String, byte[]>();
             mail.setAttribute(attributeName, (Serializable) fileNamesToPartContent);
         }
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(getSize(bodyPart));
         bodyPart.writeTo(new BufferedOutputStream(byteArrayOutputStream));
         fileNamesToPartContent.put(fileName, byteArrayOutputStream.toByteArray());
+    }
+
+    private int getSize(BodyPart bodyPart) throws MessagingException {
+        int size = bodyPart.getSize();
+        if (size < 0) {
+            return DEFAULT_BYTE_ARRAY_OUTPUT_STREAM_SIZE;
+        }
+        return size;
     }
 
     private void storeFileNameAsAttribute(Mail mail, String fileName, boolean hasToBeStored) {

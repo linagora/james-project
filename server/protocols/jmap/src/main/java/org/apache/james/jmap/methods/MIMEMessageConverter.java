@@ -53,6 +53,7 @@ import org.apache.james.mime4j.message.MultipartBuilder;
 import org.apache.james.mime4j.stream.Field;
 import org.apache.james.mime4j.stream.NameValuePair;
 import org.apache.james.mime4j.stream.RawField;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +78,7 @@ public class MIMEMessageConverter {
     private static final String FIELD_PARAMETERS_SEPARATOR = ";";
     private static final String QUOTED_PRINTABLE = "quoted-printable";
     private static final String BASE64 = "base64";
+    private static final int PRE_SIZE_16KB = 16 * 1024;
 
     private final BasicBodyFactory bodyFactory;
 
@@ -86,7 +88,11 @@ public class MIMEMessageConverter {
 
     public byte[] convert(ValueWithId.CreationMessageEntry creationMessageEntry, ImmutableList<MessageAttachment> messageAttachments) {
 
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        long attachmentSize = messageAttachments.stream().reduce(0L,
+                (accumulator, attachment) -> accumulator + attachment.getAttachment().getSize(),
+                (accumulator1, accumulator2) -> accumulator1 + accumulator2);
+
+        ByteArrayOutputStream buffer = new ExposedByteArrayOutputStream(PRE_SIZE_16KB + attachmentSize);
         DefaultMessageWriter writer = new DefaultMessageWriter();
         try {
             writer.writeMessage(convertToMime(creationMessageEntry, messageAttachments), buffer);

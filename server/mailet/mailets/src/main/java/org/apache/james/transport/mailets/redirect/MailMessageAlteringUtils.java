@@ -34,6 +34,7 @@ import org.apache.mailet.base.RFC2822Headers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 
 public class MailMessageAlteringUtils {
 
@@ -238,7 +239,8 @@ public class MailMessageAlteringUtils {
      * Utility method for obtaining a string representation of a Message's body
      */
     private String getMessageBody(MimeMessage message) throws Exception {
-        ByteArrayOutputStream bodyOs = new ByteArrayOutputStream();
+        int size = Ints.checkedCast(MimeMessageUtil.getMessageSize(message));
+        ByteArrayOutputStream bodyOs = new ByteArrayOutputStream(size);
         MimeMessageUtil.writeMessageBodyTo(message, bodyOs);
         return bodyOs.toString();
     }

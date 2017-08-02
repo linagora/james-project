@@ -18,17 +18,18 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.streaming;
 
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.Content;
-import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.model.MessageResult.Header;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.util.List;
+
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Content;
+import org.apache.james.mailbox.model.MessageResult;
+import org.apache.james.mailbox.model.MessageResult.Header;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 
 /**
  * Abstract base class for {@link Content} implementations which hold the headers and 
@@ -62,7 +63,7 @@ public class FullByteContent implements Content {
 
     @Override
     public InputStream getInputStream() throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ExposedByteArrayOutputStream(size);
         for (Header header : headers) {
             if (header != null) {
                 out.write((header.getName() + ": " + header.getValue() + "\r\n").getBytes("US-ASCII"));

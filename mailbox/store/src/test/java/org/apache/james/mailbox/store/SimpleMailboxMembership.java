@@ -41,6 +41,7 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Property;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
@@ -208,7 +209,7 @@ public class SimpleMailboxMembership implements MailboxMessage {
     }
 
     public InputStream getHeaderContent() throws IOException {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final ByteArrayOutputStream baos = new ExposedByteArrayOutputStream(getFullContentOctets() - getBodyOctets());
         final Writer writer = new OutputStreamWriter(baos, "us-ascii");
 
         Iterator<Entry<String, String>> hIt = headers.entrySet().iterator();

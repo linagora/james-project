@@ -57,6 +57,7 @@ import org.apache.james.queue.api.MailPrioritySupport;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.queue.api.ManageableMailQueue;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.slf4j.Logger;
@@ -259,12 +260,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
             }
 
             long size = mail.getMessageSize();
-            ByteArrayOutputStream out;
-            if (size > -1) {
-                out = new ByteArrayOutputStream((int) size);
-            } else {
-                out = new ByteArrayOutputStream();
-            }
+            ByteArrayOutputStream out = new ExposedByteArrayOutputStream(size);
             mail.getMessage().writeTo(out);
 
             // store the byte array in a ObjectMessage so we can use a

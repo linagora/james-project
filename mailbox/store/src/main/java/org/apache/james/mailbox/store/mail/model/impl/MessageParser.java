@@ -44,6 +44,7 @@ import org.apache.james.mime4j.message.DefaultMessageBuilder;
 import org.apache.james.mime4j.message.DefaultMessageWriter;
 import org.apache.james.mime4j.stream.Field;
 import org.apache.james.mime4j.stream.MimeConfig;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,6 +89,7 @@ public class MessageParser {
                     .or(Optional.<Cid>absent());
         }
     };
+    public static final int LITTLE_BODY_SIZE = 4096;
 
     public List<MessageAttachment> retrieveAttachments(InputStream fullContent) throws MimeException, IOException {
         DefaultMessageBuilder defaultMessageBuilder = new DefaultMessageBuilder();
@@ -240,7 +242,7 @@ public class MessageParser {
     }
 
     private byte[] getBytes(MessageWriter messageWriter, Body body) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ExposedByteArrayOutputStream(LITTLE_BODY_SIZE);
         messageWriter.writeBody(body, out);
         return out.toByteArray();
     }

@@ -73,11 +73,14 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.james.core.MailImpl;
+import org.apache.james.core.MimeMessageUtil;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
+
+import com.google.common.primitives.Ints;
 
 /**
  * Implementation of a MailRepository using UNIX mbox files.
@@ -206,8 +209,8 @@ public class MBoxMailRepository implements MailRepository, LogEnabled, Configura
      * @throws MessagingException
      */
     private String getRawMessage(MimeMessage mc) throws IOException, MessagingException {
-
-        ByteArrayOutputStream rawMessage = new ByteArrayOutputStream();
+        int size = Ints.checkedCast(MimeMessageUtil.getMessageSize(mc));
+        ByteArrayOutputStream rawMessage = new ByteArrayOutputStream(size);
         mc.writeTo(rawMessage);
         return rawMessage.toString();
     }

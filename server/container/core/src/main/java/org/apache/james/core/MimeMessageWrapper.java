@@ -40,6 +40,7 @@ import javax.mail.util.SharedByteArrayInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.lifecycle.api.Disposable;
 import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.james.util.io.ExposedByteArrayOutputStream;
 
 /**
  * This object wraps a MimeMessage, only loading the underlying MimeMessage
@@ -131,13 +132,7 @@ public class MimeMessageWrapper extends MimeMessage implements Disposable {
             try {
 
                 if (useMemoryCopy) {
-                    ByteArrayOutputStream bos;
-                    int size = original.getSize();
-                    if (size > 0) {
-                        bos = new ByteArrayOutputStream(size);
-                    } else {
-                        bos = new ByteArrayOutputStream();
-                    }
+                    ByteArrayOutputStream bos = new ExposedByteArrayOutputStream(original.getSize());
                     original.writeTo(bos);
                     bos.close();
                     in = new SharedByteArrayInputStream(bos.toByteArray());
@@ -692,7 +687,7 @@ public class MimeMessageWrapper extends MimeMessage implements Disposable {
                 } else {
                     // the body was changed so we have no other solution to copy
                     // it into memory first :(
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    ByteArrayOutputStream out = new ExposedByteArrayOutputStream(getSize());
                     writeTo(out);
                     return new ByteArrayInputStream(out.toByteArray());
                 }
