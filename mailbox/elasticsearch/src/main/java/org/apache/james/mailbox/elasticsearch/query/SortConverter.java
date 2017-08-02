@@ -55,7 +55,7 @@ public class SortConverter {
             case Size :
                 return SortBuilders.fieldSort(JsonMessageConstants.SIZE);
             case SentDate :
-                return SortBuilders.fieldSort(JsonMessageConstants.SENT_DATE);
+                return SortBuilders.fieldSort(JsonMessageConstants.DATE);
             case Uid :
                 return SortBuilders.fieldSort(JsonMessageConstants.UID);
             case DisplayFrom:

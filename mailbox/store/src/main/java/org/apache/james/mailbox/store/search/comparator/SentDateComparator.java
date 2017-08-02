@@ -18,14 +18,12 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.search.comparator;
 
-import java.io.StringReader;
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.Date;
 
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mime4j.dom.datetime.DateTime;
-import org.apache.james.mime4j.field.datetime.parser.DateTimeParser;
-import org.apache.james.mime4j.field.datetime.parser.ParseException;
+import org.apache.james.mime4j.dom.Message;
 
 /**
  * {@link Comparator} which works like stated in RFC5256 2.2 Sent Date
@@ -34,27 +32,35 @@ import org.apache.james.mime4j.field.datetime.parser.ParseException;
 public class SentDateComparator extends AbstractHeaderComparator {
     public final static Comparator<MailboxMessage> SENTDATE = new SentDateComparator();
 
+    private SentDateComparator() {
+        super();
+    }
+
     @Override
-    public int compare(MailboxMessage o1, MailboxMessage o2) {
-        Date date1 = getSentDate(o1);
-        Date date2 = getSentDate(o2);
-        int i = date1.compareTo(date2);
+    public int compare(MailboxMessage message1, MailboxMessage message2) {
+        Date date1 = getSentDateOrInternalDate(message1);
+        Date date2 = getSentDateOrInternalDate(message2);
+        int diff = date1.compareTo(date2);
         
         // sent date was the same so use the uid as tie-breaker
-        if (i == 0) {
-            return UidComparator.UID.compare(o1, o2);
+        if (diff == 0) {
+            return UidComparator.UID.compare(message1, message2);
         }
-        return 0;
+
+        return diff;
     }
     
-    private Date getSentDate(MailboxMessage message) {
-        final String value = getHeaderValue("Date", message);
-        final StringReader reader = new StringReader(value);
+    private Date getSentDateOrInternalDate(MailboxMessage message) {
         try {
-            DateTime dateTime = new DateTimeParser(reader).parseAll();
-            return dateTime.getDate();
-        } catch (ParseException e) {
-            // if we can not parse the date header we should use the internaldate as fallback
+            Message mime4jMessage = Message.Builder.of(message.getFullContent()).build();
+            Date date = mime4jMessage.getDate();
+
+            if (date == null) {
+                date = message.getInternalDate();
+            }
+
+            return date;
+        } catch (IOException e) {
             return message.getInternalDate();
         }
     }
