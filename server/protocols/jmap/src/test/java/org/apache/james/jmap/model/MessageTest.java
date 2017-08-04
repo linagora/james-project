@@ -23,12 +23,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.Optional;
 
+import javax.mail.Flags;
+
+import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.model.TestMessageId;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 public class MessageTest {
 
@@ -102,7 +106,8 @@ public class MessageTest {
     public void buildShouldWorkWhenMandatoryFieldsArePresent() {
         Instant currentDate = Instant.now();
         Message expected = new Message(TestMessageId.of(1), BlobId.of("blobId"), "threadId", ImmutableList.of(InMemoryId.of(456)), Optional.empty(), false, false, false, false, false, ImmutableMap.of("key", "value"), Optional.empty(),
-                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "subject", currentDate, 123, "preview", Optional.empty(), Optional.empty(), ImmutableList.of(), ImmutableMap.of());
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "subject", currentDate, 123, "preview", Optional.empty(), Optional.empty(),
+                ImmutableList.of(), ImmutableMap.of(), Optional.empty());
         Message tested = Message.builder()
                 .id(TestMessageId.of(1))
                 .blobId(BlobId.of("blobId"))
@@ -158,12 +163,18 @@ public class MessageTest {
                 .date(currentDate)
                 .build();
         ImmutableMap<BlobId, SubMessage> attachedMessages = ImmutableMap.of(BlobId.of("blobId"), simpleMessage);
+        Flags flags = FlagsBuilder.builder()
+            .add(Flags.Flag.DRAFT)
+            .add(Flags.Flag.ANSWERED)
+            .add(Flags.Flag.FLAGGED)
+            .build();
+        Optional<ImmutableSet<Keyword>> keywords = Optional.of(ImmutableSet.copyOf(Keyword.fromFlags(flags)));
         Message expected = new Message(
                 TestMessageId.of(1),
                 BlobId.of("blobId"),
                 "threadId",
                 ImmutableList.of(InMemoryId.of(456)),
-                Optional.of("inReplyToMessageId"), 
+                Optional.of("inReplyToMessageId"),
                 true,
                 true,
                 true,
@@ -182,17 +193,15 @@ public class MessageTest {
                 Optional.of("textBody"), 
                 Optional.of("htmlBody"),
                 attachments,
-                attachedMessages);
+                attachedMessages,
+                keywords);
         Message tested = Message.builder()
             .id(TestMessageId.of(1))
             .blobId(BlobId.of("blobId"))
             .threadId("threadId")
             .mailboxId(InMemoryId.of(456))
             .inReplyToMessageId("inReplyToMessageId")
-            .isUnread(true)
-            .isFlagged(true)
-            .isAnswered(true)
-            .isDraft(true)
+            .flags(flags)
             .headers(ImmutableMap.of("key", "value"))
             .from(from)
             .to(to)

@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import javax.inject.Inject;
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
@@ -94,10 +93,7 @@ public class MessageFactory {
                 .threadId(message.getMessageId().serialize())
                 .mailboxIds(message.getMailboxIds())
                 .inReplyToMessageId(getHeader(mimeMessage, "in-reply-to"))
-                .isUnread(! message.getFlags().contains(Flags.Flag.SEEN))
-                .isFlagged(message.getFlags().contains(Flags.Flag.FLAGGED))
-                .isAnswered(message.getFlags().contains(Flags.Flag.ANSWERED))
-                .isDraft(message.getFlags().contains(Flags.Flag.DRAFT))
+                .flags(message.getFlags())
                 .subject(Strings.nullToEmpty(mimeMessage.getSubject()).trim())
                 .headers(toMap(mimeMessage.getHeader().getFields()))
                 .from(firstFromMailboxList(mimeMessage.getFrom()))
@@ -112,6 +108,10 @@ public class MessageFactory {
                 .preview(preview)
                 .attachments(getAttachments(message.getAttachments()))
                 .build();
+    }
+
+    private Set<Keyword> getKeywords(MetaDataWithContent message) {
+        return Keyword.fromFlags(message.getFlags());
     }
 
     private Instant getDateFromHeaderOrInternalDateOtherwise(org.apache.james.mime4j.dom.Message mimeMessage, MetaDataWithContent message) {

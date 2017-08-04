@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import javax.mail.Flags;
+
 import org.apache.james.jmap.methods.GetMessagesMethod;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
 import org.apache.james.mailbox.model.MailboxId;
@@ -41,6 +43,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 @JsonDeserialize(builder = Message.Builder.class)
 @JsonFilter(JmapResponseWriterImpl.PROPERTIES_FILTER)
@@ -57,10 +60,6 @@ public class Message {
         private String threadId;
         private ImmutableList<MailboxId> mailboxIds;
         private String inReplyToMessageId;
-        private boolean isUnread;
-        private boolean isFlagged;
-        private boolean isAnswered;
-        private boolean isDraft;
         private ImmutableMap<String, String> headers;
         private Emailer from;
         private final ImmutableList.Builder<Emailer> to;
@@ -75,6 +74,7 @@ public class Message {
         private Optional<String> htmlBody = Optional.empty();
         private final ImmutableList.Builder<Attachment> attachments;
         private final ImmutableMap.Builder<BlobId, SubMessage> attachedMessages;
+        private Optional<Flags> flags = Optional.empty();
 
         private Builder() {
             to = ImmutableList.builder();
@@ -120,23 +120,8 @@ public class Message {
             return this;
         }
 
-        public Builder isUnread(boolean isUnread) {
-            this.isUnread = isUnread;
-            return this;
-        }
-
-        public Builder isFlagged(boolean isFlagged) {
-            this.isFlagged = isFlagged;
-            return this;
-        }
-
-        public Builder isAnswered(boolean isAnswered) {
-            this.isAnswered = isAnswered;
-            return this;
-        }
-
-        public Builder isDraft(boolean isDraft) {
-            this.isDraft = isDraft;
+        public Builder flags(Flags flags) {
+            this.flags = Optional.ofNullable(flags);
             return this;
         }
 
@@ -222,10 +207,14 @@ public class Message {
             ImmutableList<Attachment> attachments = this.attachments.build();
             ImmutableMap<BlobId, SubMessage> attachedMessages = this.attachedMessages.build();
             Preconditions.checkState(areAttachedMessagesKeysInAttachments(attachments, attachedMessages), "'attachedMessages' keys must be in 'attachements'");
+            OldKeyword oldKeyword = OldKeyword.fromFlags(flags);
             boolean hasAttachment = hasAttachment(attachments);
 
-            return new Message(id, blobId, threadId, mailboxIds, Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, hasAttachment, headers, Optional.ofNullable(from),
-                    to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, size, preview, textBody, htmlBody, attachments, attachedMessages);
+            return new Message(id, blobId, threadId, mailboxIds, Optional.ofNullable(inReplyToMessageId),
+                    oldKeyword.isUnread(), oldKeyword.isFlagged(), oldKeyword.isAnswered(), oldKeyword.isDraft(),
+                    hasAttachment, headers, Optional.ofNullable(from),
+                    to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, size, preview, textBody, htmlBody, attachments, attachedMessages,
+                    flags.map(f -> Optional.of(ImmutableSet.copyOf(Keyword.fromFlags(f)))).orElse(Optional.empty()));
         }
     }
 
@@ -274,6 +263,7 @@ public class Message {
     private final Optional<String> htmlBody;
     private final ImmutableList<Attachment> attachments;
     private final ImmutableMap<BlobId, SubMessage> attachedMessages;
+    private final Optional<ImmutableSet<Keyword>> keywords;
 
     @VisibleForTesting Message(MessageId id,
                                BlobId blobId,
@@ -298,7 +288,8 @@ public class Message {
                                Optional<String> textBody,
                                Optional<String> htmlBody,
                                ImmutableList<Attachment> attachments,
-                               ImmutableMap<BlobId, SubMessage> attachedMessages) {
+                               ImmutableMap<BlobId, SubMessage> attachedMessages,
+                               Optional<ImmutableSet<Keyword>> keywords) {
         this.id = id;
         this.blobId = blobId;
         this.threadId = threadId;
@@ -323,6 +314,7 @@ public class Message {
         this.htmlBody = htmlBody;
         this.attachments = attachments;
         this.attachedMessages = attachedMessages;
+        this.keywords = keywords;
     }
 
     public MessageId getId() {
@@ -421,4 +413,7 @@ public class Message {
         return attachedMessages;
     }
 
+    public Optional<ImmutableSet<Keyword>> getKeywords() {
+        return keywords;
+    }
 }

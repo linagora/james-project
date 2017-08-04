@@ -142,6 +142,7 @@ public class MessageProperties {
         htmlBody("htmlBody"),
         attachments("attachments"),
         attachedMessages("attachedMessages"),
+        keywords("keywords"),
         body("body", PropertyType.INPUTONLY);
     
         private final String property;

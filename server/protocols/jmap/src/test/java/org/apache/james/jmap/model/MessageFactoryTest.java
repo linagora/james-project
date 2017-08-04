@@ -19,19 +19,16 @@
 package org.apache.james.jmap.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.Optional;
-
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.james.jmap.model.MessageFactory.MetaDataWithContent;
 import org.apache.james.jmap.utils.HtmlTextExtractor;
 import org.apache.james.jmap.utils.JsoupHtmlTextExtractor;
+import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.model.AttachmentId;
@@ -39,14 +36,18 @@ import org.apache.james.mailbox.model.Cid;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.util.mime.MessageContentExtractor;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import org.junit.Before;
+import org.junit.Test;
+
 public class MessageFactoryTest {
+    private final static String FORWARDED = "forwarded";
     private static final InMemoryId MAILBOX_ID = InMemoryId.of(18L);
     private static final Instant INTERNAL_DATE = Instant.parse("2012-02-03T14:30:42Z");
 
@@ -107,6 +108,9 @@ public class MessageFactoryTest {
 
     @Test
     public void headersShouldBeSetIntoMessage() throws Exception {
+        Flags flags = FlagsBuilder.builder()
+                .add(Flag.SEEN)
+                .build();
         String headers = "From: user <user@domain>\n"
                 + "Subject: test subject\n"
                 + "To: user1 <user1@domain>, user2 <user2@domain>\n"
@@ -118,7 +122,7 @@ public class MessageFactoryTest {
                 + "Other-header: other header value";
         MetaDataWithContent testMail = MetaDataWithContent.builder()
                 .uid(MessageUid.of(2))
-                .flags(new Flags(Flag.SEEN))
+                .flags(flags)
                 .size(headers.length())
                 .internalDate(INTERNAL_DATE)
                 .content(new ByteArrayInputStream(headers.getBytes(Charsets.UTF_8)))
@@ -145,6 +149,7 @@ public class MessageFactoryTest {
                 .put("Date", "Tue, 14 Jul 2015 12:30:42 +0000")
                 .put("MIME-Version", "1.0")
                 .build();
+
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         Message expected = Message.builder()
                 .id(TestMessageId.of(2))
@@ -164,12 +169,16 @@ public class MessageFactoryTest {
                 .preview("(Empty)")
                 .textBody(Optional.of(""))
                 .htmlBody(Optional.empty())
+                .flags(flags)
                 .build();
         assertThat(testee).isEqualToComparingFieldByField(expected);
     }
 
     @Test
     public void headersShouldBeUnfoldedAndDecoded() throws Exception {
+        Flags flags = FlagsBuilder.builder()
+                .add(Flag.SEEN)
+                .build();
         String headers = "From: user <user@domain>\n"
             + "Subject: test subject\n"
             + "To: user1 <user1@domain>,\r\n"
@@ -177,7 +186,7 @@ public class MessageFactoryTest {
             + "Cc: =?UTF-8?Q?Beno=c3=aet_TELLIER?= <tellier@linagora.com>";
         MetaDataWithContent testMail = MetaDataWithContent.builder()
             .uid(MessageUid.of(2))
-            .flags(new Flags(Flag.SEEN))
+            .flags(flags)
             .size(headers.length())
             .internalDate(INTERNAL_DATE)
             .content(new ByteArrayInputStream(headers.getBytes(Charsets.UTF_8)))
@@ -213,7 +222,9 @@ public class MessageFactoryTest {
             .preview("(Empty)")
             .textBody(Optional.of(""))
             .htmlBody(Optional.empty())
+            .flags(flags)
             .build();
+
         assertThat(testee).isEqualToComparingFieldByField(expected);
     }
 
@@ -673,5 +684,67 @@ public class MessageFactoryTest {
         assertThat(testee)
             .extracting(Message::getPreview, Message::getHtmlBody, Message::getTextBody)
             .containsExactly("My plain message", Optional.of("<html></html>"), Optional.of("My plain message"));
+    }
+
+    @Test
+    public void keywordShouldBeSetIntoMessage() throws Exception {
+        Flags flags = new Flags();
+        flags.add(Flag.ANSWERED);
+        flags.add(Flag.DRAFT);
+        MetaDataWithContent testMail = MetaDataWithContent.builder()
+                .uid(MessageUid.of(2))
+                .flags(flags)
+                .size(0)
+                .internalDate(INTERNAL_DATE)
+                .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
+                .attachments(ImmutableList.of())
+                .mailboxId(MAILBOX_ID)
+                .messageId(TestMessageId.of(2))
+                .build();
+        Message testee = messageFactory.fromMetaDataWithContent(testMail);
+        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, Keyword.DRAFT);
+    }
+
+    @Test
+    public void keywordWithUserFlagShouldBeSetIntoMessage() throws Exception {
+        Flags flags = FlagsBuilder.builder()
+            .add(Flag.ANSWERED)
+            .add(FORWARDED)
+            .build();
+        MetaDataWithContent testMail = MetaDataWithContent.builder()
+            .uid(MessageUid.of(2))
+            .flags(flags)
+            .size(0)
+            .internalDate(INTERNAL_DATE)
+            .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
+            .attachments(ImmutableList.of())
+            .mailboxId(MAILBOX_ID)
+            .messageId(TestMessageId.of(2))
+            .build();
+        Message testee = messageFactory.fromMetaDataWithContent(testMail);
+        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED));
+    }
+
+    @Test
+    public void fromMetaDataWithContentShouldRemoveUnsupportedKeyword() throws Exception {
+        Flags flags = FlagsBuilder.builder()
+            .add(Flag.ANSWERED)
+            .add(Flag.DELETED)
+            .add(Flag.RECENT)
+            .add(FORWARDED)
+            .build();
+
+        MetaDataWithContent testMail = MetaDataWithContent.builder()
+                .uid(MessageUid.of(2))
+                .flags(flags)
+                .size(0)
+                .internalDate(INTERNAL_DATE)
+                .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
+                .attachments(ImmutableList.of())
+                .mailboxId(MAILBOX_ID)
+                .messageId(TestMessageId.of(2))
+                .build();
+        Message testee = messageFactory.fromMetaDataWithContent(testMail);
+        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED));
     }
 }
