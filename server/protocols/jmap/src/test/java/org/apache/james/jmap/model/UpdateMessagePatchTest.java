@@ -20,15 +20,22 @@
 package org.apache.james.jmap.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Arrays;
 import java.util.List;
-
 import javax.mail.Flags;
 
+import org.apache.james.mailbox.FlagsBuilder;
+
+import com.google.common.collect.ImmutableSet;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class UpdateMessagePatchTest {
+    private final static String FORWARDED = "forwarded";
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void UnsetUpdatePatchShouldBeValid() {
@@ -80,7 +87,116 @@ public class UpdateMessagePatchTest {
     }
 
     @Test
-    public void isIdentityShouldReturnTrueWhenNoFlags() {
+    public void applyStateShouldThrowWhenBothIsFlagAndKeywords() {
+        expectedException.expect(IllegalArgumentException.class);
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .isUnread(false)
+            .keywords(ImmutableSet.of())
+            .build();
+
+        testee.applyToState(new Flags());
+    }
+
+    @Test
+    public void applyStateShouldReturnNewFlagsWhenKeywords() {
+        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, Keyword.FLAGGED);
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(keywords)
+            .build();
+        Flags isSeen = new Flags(Flags.Flag.SEEN);
+        assertThat(testee.applyToState(isSeen).getSystemFlags())
+            .containsExactly(Flags.Flag.ANSWERED, Flags.Flag.FLAGGED);
+    }
+
+    @Test
+    public void applyStateShouldReturnRemoveFlagsWhenKeywords() {
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(ImmutableSet.of())
+            .build();
+        Flags isSeen = new Flags(Flags.Flag.SEEN);
+        assertThat(testee.applyToState(isSeen).getSystemFlags()).isEmpty();
+    }
+
+    @Test
+    public void applyStateShouldThrowWhenKeywordsContainDeletedFlag() {
+        expectedException.expect(IllegalArgumentException.class);
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(ImmutableSet.of(Keyword.DELETED))
+            .build();
+
+        Flags currentFlags = new Flags(Flags.Flag.SEEN);
+
+        testee.applyToState(currentFlags);
+    }
+
+    @Test
+    public void applyStateShouldThrowWhenKeywordsContainRecentFlag() {
+        expectedException.expect(IllegalArgumentException.class);
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(ImmutableSet.of(Keyword.RECENT))
+            .build();
+
+        Flags currentFlags = new Flags(Flags.Flag.SEEN);
+
+        testee.applyToState(currentFlags);
+    }
+
+    @Test
+    public void applyStateShouldReturnFlagsWithoutUserFlagWhenKeywordsContainForwarded() {
+        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED));
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(keywords)
+            .build();
+        Flags isSeen = new Flags(Flags.Flag.SEEN);
+        assertThat(testee.applyToState(isSeen).getSystemFlags())
+            .doesNotContain(Flags.Flag.USER);
+    }
+
+    @Test
+    public void applyStateShouldReturnFlagsWithUserFlagStringWhenKeywordsContainForwarded() {
+        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED));
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(keywords)
+            .build();
+        Flags isSeen = new Flags(Flags.Flag.SEEN);
+        assertThat(testee.applyToState(isSeen).getUserFlags())
+            .containsExactly(FORWARDED);
+    }
+
+    @Test
+    public void applyStateShouldReturnFlagsWithDeletedFlagWhenKeywordsDoNotContainDeletedButOriginFlagsHaveDeleted() {
+        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED);
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(keywords)
+            .build();
+        Flags isSeen = new Flags(Flags.Flag.DELETED);
+        assertThat(testee.applyToState(isSeen).getSystemFlags())
+            .containsOnly(Flags.Flag.DELETED, Flags.Flag.ANSWERED);
+    }
+
+    @Test
+    public void applyStateShouldReturnFlagsWithRecentFlagWhenKeywordsDoNotContainDeletedButOriginFlagsHaveDeleted() {
+        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED);
+
+        UpdateMessagePatch testee = UpdateMessagePatch.builder()
+            .keywords(keywords)
+            .build();
+        Flags flags = FlagsBuilder.builder()
+            .add(Flags.Flag.DELETED)
+            .add(Flags.Flag.RECENT)
+            .build();
+        assertThat(testee.applyToState(flags).getSystemFlags())
+            .containsOnly(Flags.Flag.DELETED, Flags.Flag.RECENT, Flags.Flag.ANSWERED);
+    }
+
+    @Test
+    public void isIdentityShouldReturnTrueWhenNoFlagsAndEmptyKeywords() {
         UpdateMessagePatch messagePatch = UpdateMessagePatch.builder().build();
 
         assertThat(messagePatch.isFlagsIdentity()).isTrue();
@@ -113,4 +229,35 @@ public class UpdateMessagePatchTest {
         assertThat(messagePatch.isFlagsIdentity()).isFalse();
     }
 
+    @Test
+    public void isIdentityShouldReturnFalseWhenKeywords() {
+        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, Keyword.FLAGGED);
+
+        UpdateMessagePatch messagePatch = UpdateMessagePatch.builder()
+                .keywords(keywords)
+                .build();
+
+        assertThat(messagePatch.isFlagsIdentity()).isFalse();
+    }
+
+    @Test
+    public void isIdentityShouldReturnFalseWhenEmptyKeywords() {
+        UpdateMessagePatch messagePatch = UpdateMessagePatch.builder()
+                .keywords(ImmutableSet.of())
+                .build();
+
+        assertThat(messagePatch.isFlagsIdentity()).isFalse();
+    }
+
+    @Test
+    public void isIdentityShouldThrowWhenBothIsFlagAndKeywords() {
+        expectedException.expect(IllegalArgumentException.class);
+
+        UpdateMessagePatch messagePatch = UpdateMessagePatch.builder()
+                .keywords(ImmutableSet.of())
+                .isAnswered(false)
+                .build();
+
+        messagePatch.isFlagsIdentity();
+    }
 }
