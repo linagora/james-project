@@ -22,5 +22,6 @@
     "textBody": "myTextBody",
     "htmlBody": "<h1>myHtmlBody</h1>",
     "attachments": [ ],
-    "attachedMessages": { }
+    "attachedMessages": { },
+    "keywords": ["$Draft", "$Flagged", "$Answered"]
 }
