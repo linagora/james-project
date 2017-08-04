@@ -22,13 +22,18 @@ package org.apache.james.mailbox.store.probe;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
+import com.google.common.base.Optional;
 
 public interface MailboxProbe {
 
@@ -54,4 +59,6 @@ public interface MailboxProbe {
     void reIndexAll() throws Exception;
 
     Collection<String> listSubscriptions(String user) throws Exception;
+
+    List<MessageResult> getMessages(MessageId messageId, String user) throws MailboxException;
 }

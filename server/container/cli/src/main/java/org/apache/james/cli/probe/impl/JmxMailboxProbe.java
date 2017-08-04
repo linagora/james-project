@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
-
+import java.util.List;
 import javax.mail.Flags;
 import javax.management.MalformedObjectNameException;
 
@@ -33,8 +33,12 @@ import org.apache.james.adapter.mailbox.ReIndexerManagementMBean;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
+
+import com.google.common.base.Optional;
 
 public class JmxMailboxProbe implements MailboxProbe, JmxProbe {
     
@@ -117,4 +121,8 @@ public class JmxMailboxProbe implements MailboxProbe, JmxProbe {
         return null;
     }
 
+    @Override
+    public List<MessageResult> getMessages(MessageId messageId, String user) throws MailboxException {
+        throw new UnsupportedOperationException();
+    }
 }

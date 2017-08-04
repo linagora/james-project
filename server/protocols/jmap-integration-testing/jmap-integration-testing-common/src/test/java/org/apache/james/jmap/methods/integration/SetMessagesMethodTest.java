@@ -56,7 +56,9 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.DefaultMailboxes;
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.jmap.model.Keyword;
 import org.apache.james.jmap.model.mailbox.Role;
+import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
@@ -64,6 +66,7 @@ import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
@@ -94,6 +97,7 @@ import com.jayway.restassured.specification.ResponseSpecification;
 
 public abstract class SetMessagesMethodTest {
 
+    private final static String FORWARDED = "forwarded";
     private static final int _1MB = 1024*1024;
     private static final String NAME = "[0][0]";
     private static final String ARGUMENTS = "[0][1]";
@@ -103,6 +107,7 @@ public abstract class SetMessagesMethodTest {
     private static final String USERNAME = "username@" + USERS_DOMAIN;
     public static final MailboxPath USER_MAILBOX = new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
     private static final String NOT_UPDATED = ARGUMENTS + ".notUpdated";
+    private static final String NOT_CREATED = ARGUMENTS + ".notCreated";
 
     private ConditionFactory calmlyAwait;
 
@@ -185,7 +190,7 @@ public abstract class SetMessagesMethodTest {
     }
 
     @Test
-    public void setMessagesShouldReturnErrorNotSupportedWhenRequestContainsNonNullAccountId() throws Exception {
+    public void setMessagesShouldReturnAnErrorNotSupportedWhenRequestContainsNonNullAccountId() throws Exception {
         given()
             .header("Authorization", accessToken.serialize())
             .body("[[\"setMessages\", {\"accountId\": \"1\"}, \"#0\"]]")
@@ -199,7 +204,7 @@ public abstract class SetMessagesMethodTest {
     }
 
     @Test
-    public void setMessagesShouldReturnErrorNotSupportedWhenRequestContainsNonNullIfInState() throws Exception {
+    public void setMessagesShouldReturnAnErrorNotSupportedWhenRequestContainsNonNullIfInState() throws Exception {
         given()
             .header("Authorization", accessToken.serialize())
             .body("[[\"setMessages\", {\"ifInState\": \"1\"}, \"#0\"]]")
@@ -407,6 +412,311 @@ public abstract class SetMessagesMethodTest {
         .then()
             .log().ifValidationFails()
             .spec(getSetMessagesUpdateOKResponseAssertions(serializedMessageId));
+    }
+
+    @Test
+    public void setMessagesWithUpdateShouldReturnAnErrorWhenBothIsFlagAndKeywordsArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags());
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false, \"keywords\": [\"$Seen\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .body(NOT_UPDATED, hasKey(messageId))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("keywords"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].description", equalTo("keywords: Does not support both is* and keywords"))
+            .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldUpdateKeywordsWhenKeywordsArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags());
+        await();
+
+        String serializedMessageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\", \"$Flagged\"] } } }, \"#0\"]]", serializedMessageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .spec(getSetMessagesUpdateOKResponseAssertions(serializedMessageId));
+
+        with()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + serializedMessageId + "\"]}, \"#0\"]]")
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].keywords", containsInAnyOrder("$Seen", "$Flagged"));
+    }
+
+    @Test
+    public void setMessagesShouldAddForwardedFlagWhenKeywordsWithForwardedIsPassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags());
+        await();
+
+        String serializedMessageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\", \"$Forwarded\"] } } }, \"#0\"]]", serializedMessageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .spec(getSetMessagesUpdateOKResponseAssertions(serializedMessageId));
+
+        with()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + serializedMessageId + "\"]}, \"#0\"]]")
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].keywords", containsInAnyOrder("$Seen", "$Forwarded"));
+    }
+
+    @Test
+    public void setMessagesShouldRemoveForwardedFlagWhenKeywordsWithoutForwardedIsPassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        Flags flags = FlagsBuilder.builder()
+                .add(Flags.Flag.SEEN)
+                .add(FORWARDED)
+                .build();
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, flags);
+        await();
+
+        String serializedMessageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\"] } } }, \"#0\"]]", serializedMessageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .spec(getSetMessagesUpdateOKResponseAssertions(serializedMessageId));
+
+        with()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + serializedMessageId + "\"]}, \"#0\"]]")
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].keywords", contains("$Seen"));
+    }
+
+    @Test
+    public void setMessagesShouldReturnAnErrorWhenKeywordsWithAddingDraftArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags(Flags.Flag.ANSWERED));
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Draft\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .body(NOT_UPDATED, hasKey(messageId))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("keywords"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].description", equalTo("keywords: Cannot add or remove draft flag"))
+            .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldReturnAnErrorWhenKeywordsWithDeletedArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags(Flags.Flag.ANSWERED));
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Deleted\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .body(NOT_UPDATED, hasKey(messageId))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("keywords"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].description", equalTo("keywords: Does not allow to update 'Deleted' or 'Recent' flag"))
+            .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldReturnAnErrorWhenKeywordsWithRecentArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags(Flags.Flag.ANSWERED));
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Recent\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .body(NOT_UPDATED, hasKey(messageId))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("keywords"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].description", equalTo("keywords: Does not allow to update 'Deleted' or 'Recent' flag"))
+            .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldNotChangeOriginDeletedFlag() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags(Flags.Flag.DELETED));
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Forwarded\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .spec(getSetMessagesUpdateOKResponseAssertions(messageId));
+
+        List<MessageResult> messages = mailboxProbe.getMessages(message.getMessageId(), USERNAME);
+
+        assertThat(messages).hasSize(1);
+        assertThat(messages.get(0).getFlags().contains(Flags.Flag.DELETED)).isTrue();
+    }
+
+    @Test
+    public void setMessagesShouldNotChangeOriginRecentFlag() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+        Flags flags = FlagsBuilder.builder()
+            .add(Flags.Flag.DELETED)
+            .add(Flags.Flag.RECENT)
+            .build();
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, flags);
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Forwarded\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .spec(getSetMessagesUpdateOKResponseAssertions(messageId));
+
+        List<MessageResult> messages = mailboxProbe.getMessages(message.getMessageId(), USERNAME);
+
+        assertThat(messages).hasSize(1);
+        assertThat(messages.get(0).getFlags().getSystemFlags()).contains(Flags.Flag.RECENT, Flags.Flag.DELETED);
+    }
+
+    @Test
+    public void setMessagesShouldReturnAnErrorWhenKeywordsWithRemoveDraftArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags(Flags.Flag.DRAFT));
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .body(NOT_UPDATED, hasKey(messageId))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].type", equalTo("invalidProperties"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].properties[0]", equalTo("keywords"))
+            .body(NOT_UPDATED + "[\""+messageId+"\"].description", equalTo("keywords: Cannot add or remove draft flag"))
+            .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessagesShouldReturnNewKeywordsWhenKeywordsArePassedToRemoveAndAddFlag() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        Flags currentFlags = FlagsBuilder.builder()
+                .add(Flags.Flag.DRAFT)
+                .add(Flags.Flag.ANSWERED)
+                .build();
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, currentFlags);
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Draft\", \"$Flagged\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .spec(getSetMessagesUpdateOKResponseAssertions(messageId));
+
+        with()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessages\", {\"ids\": [\"" + messageId + "\"]}, \"#0\"]]")
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messages"))
+            .body(ARGUMENTS + ".list", hasSize(1))
+            .body(ARGUMENTS + ".list[0].keywords", contains("$Draft", "$Flagged"));
     }
 
     private ResponseSpecification getSetMessagesUpdateOKResponseAssertions(String messageId) {
@@ -717,7 +1027,7 @@ public abstract class SetMessagesMethodTest {
                 hasEntry(equalTo("threadId"), not(isEmptyOrNullString())),
                 hasEntry(equalTo("size"), not(isEmptyOrNullString()))
             )))
-            // assert that message flags are all unset
+            // assert that message FLAGS are all unset
             .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
                 hasEntry(equalTo("isDraft"), equalTo(false)),
                 hasEntry(equalTo("isUnread"), equalTo(false)),
@@ -829,6 +1139,76 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].subject", equalTo("تصور واضح للعلاقة بين النموذج الرياضي المثالي ومنظومة الظواهر"));
     }
 
+    @Test
+    public void setMessageWithCreatedMessageShouldReturnAnErrorWhenBothIsFlagAndKeywordsPresent() {
+        String messageCreationId = "creationId1337";
+        String fromAddress = USERNAME;
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"subject\": \"subject\"," +
+                "        \"isDraft\": true," +
+                "        \"keywords\": [\"$Draft\"]," +
+                "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messagesSet"))
+            .body(NOT_CREATED + "[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
+            .body(NOT_CREATED + "[\""+messageCreationId+"\"].properties[0]", equalTo("keywords"))
+            .body(NOT_CREATED + "[\""+messageCreationId+"\"].description", equalTo("keywords: Does not support keyword and is* at the same time"))
+            .body(ARGUMENTS + ".created", aMapWithSize(0));
+    }
+
+    @Test
+    public void setMessageWithCreatedMessageShouldSupportKeywordsForFlags() {
+        String messageCreationId = "creationId1337";
+        String fromAddress = USERNAME;
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"subject\": \"subject\"," +
+                "        \"keywords\": [\"$Draft\", \"$Flagged\"]," +
+                "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messagesSet"))
+            .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
+            .body(ARGUMENTS + ".created", aMapWithSize(1))
+            .body(ARGUMENTS + ".created", hasKey(messageCreationId))
+            .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].keywords", contains("$Draft", "$Flagged"));
+    }
     @Test
     public void setMessageShouldSupportArbitraryMessageId() {
         String messageCreationId = "1717fcd1-603e-44a5-b2a6-1234dbcd5723";
@@ -3209,5 +3589,60 @@ public abstract class SetMessagesMethodTest {
             .body(secondAttachment + ".size", equalTo((int) attachment2.getSize()))
             .body(secondAttachment + ".cid", nullValue())
             .body(secondAttachment + ".isInline", equalTo(true));
+    }
+
+    @Test
+    public void setMessageWithUpdateShouldBeOKWhenKeywordsWithCustomFlagArePassed() throws MailboxException {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
+                new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), new Date(), false, new Flags());
+        await();
+
+        String messageId = message.getMessageId().serialize();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\", \"$Unknown\"] } } }, \"#0\"]]", messageId))
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .spec(getSetMessagesUpdateOKResponseAssertions(messageId));
+    }
+
+    @Test
+    public void setMessageWithCreationShouldBeOKWhenKeywordsWithCustomFlagArePassed() {
+        String messageCreationId = "creationId1337";
+        String fromAddress = USERNAME;
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"subject\": \"subject\"," +
+                "        \"keywords\": [\"$Draft\", \"$Unknown\"]," +
+                "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body(requestBody)
+        .when()
+            .post("/jmap")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body(NAME, equalTo("messagesSet"))
+            .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
+            .body(ARGUMENTS + ".created", aMapWithSize(1))
+        ;
     }
 }

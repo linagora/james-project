@@ -32,14 +32,18 @@ import javax.mail.Flags;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.FetchGroupImpl;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -48,21 +52,26 @@ import org.apache.james.utils.GuiceProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MailboxProbeImpl.class);
     private final MailboxManager mailboxManager;
+    private final MessageIdManager messageIdManager;
     private final MailboxMapperFactory mailboxMapperFactory;
     private final SubscriptionManager subscriptionManager;
     public static final boolean RECENT = true;
 
     @Inject
-    private MailboxProbeImpl(MailboxManager mailboxManager, MailboxMapperFactory mailboxMapperFactory, SubscriptionManager subscriptionManager) {
+    private MailboxProbeImpl(MailboxManager mailboxManager, MailboxMapperFactory mailboxMapperFactory, SubscriptionManager subscriptionManager,
+                             MessageIdManager messageIdManager) {
         this.mailboxManager = mailboxManager;
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.subscriptionManager = subscriptionManager;
+        this.messageIdManager = messageIdManager;
     }
 
     @Override
@@ -192,5 +201,12 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
     public Collection<String> listSubscriptions(String user) throws Exception {
         MailboxSession mailboxSession = mailboxManager.createSystemSession(user, LOGGER);
         return subscriptionManager.subscriptions(mailboxSession);
+    }
+
+    @Override
+    public List<MessageResult> getMessages(MessageId messageId, String user) throws MailboxException {
+        MailboxSession mailboxSession = mailboxManager.createSystemSession(user, LOGGER);
+
+        return messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.FULL_CONTENT, mailboxSession);
     }
 }
