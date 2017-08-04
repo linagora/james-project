@@ -40,6 +40,7 @@ import org.apache.james.jmap.model.Attachment;
 import org.apache.james.jmap.model.BlobId;
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.CreationMessageId;
+import org.apache.james.jmap.model.Keyword;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageFactory;
 import org.apache.james.jmap.model.MessageFactory.MetaDataWithContent;
@@ -79,6 +80,7 @@ import com.github.fge.lambdas.predicates.ThrowingPredicate;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
@@ -297,9 +299,9 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
         return MetaDataWithContent.builder()
                 .uid(message.getUid())
                 .flags(flags)
-                .size(messageContent.length)
                 .internalDate(internalDate.toInstant())
                 .sharedContent(content)
+                .size(messageContent.length)
                 .attachments(messageAttachments)
                 .mailboxId(outbox.getId())
                 .messageId(message.getMessageId())
@@ -333,19 +335,41 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
     }
 
     private Flags getMessageFlags(CreationMessage message) {
+        Preconditions.checkState(!(hasKeywords(message) && isFlag(message)),
+                "Does not support both keywords and is*");
+        if (hasKeywords(message)) {
+            return Keyword.fromKeywordsWithFilterUnsupportedKeywords(message.getKeywords().get());
+        } else {
+            return buildFlagsFromIsFlag(message);
+        }
+    }
+
+    private boolean isFlag(CreationMessage message) {
+        return message.isIsAnswered().isPresent()
+            || message.isIsDraft().isPresent()
+            || message.isIsFlagged().isPresent()
+            || message.isIsUnread().isPresent();
+    }
+
+    private boolean hasKeywords(CreationMessage message) {
+        return message.getKeywords().isPresent();
+    }
+
+    private Flags buildFlagsFromIsFlag(CreationMessage message) {
         Flags result = new Flags();
-        if (!message.isIsUnread()) {
+        if (!message.isIsUnread().orElse(false)) {
             result.add(Flags.Flag.SEEN);
         }
-        if (message.isIsFlagged()) {
+        if (message.isIsFlagged().orElse(false)) {
             result.add(Flags.Flag.FLAGGED);
         }
-        if (message.isIsAnswered() || message.getInReplyToMessageId().isPresent()) {
+        if (message.isIsAnswered().orElse(false) || message.getInReplyToMessageId().isPresent()) {
             result.add(Flags.Flag.ANSWERED);
         }
-        if (message.isIsDraft()) {
+        if (message.isIsDraft().orElse(false)) {
             result.add(Flags.Flag.DRAFT);
         }
+
         return result;
     }
 

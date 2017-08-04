@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
@@ -43,6 +43,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 @JsonDeserialize(builder = CreationMessage.Builder.class)
 public class CreationMessage {
@@ -59,10 +60,10 @@ public class CreationMessage {
     public static class Builder {
         private ImmutableList<String> mailboxIds;
         private String inReplyToMessageId;
-        private boolean isUnread;
-        private boolean isFlagged;
-        private boolean isAnswered;
-        private boolean isDraft;
+        private Optional<Boolean> isUnread = Optional.empty();
+        private Optional<Boolean> isFlagged = Optional.empty();
+        private Optional<Boolean> isAnswered = Optional.empty();
+        private Optional<Boolean> isDraft = Optional.empty();
         private final ImmutableMap.Builder<String, String> headers;
         private Optional<DraftEmailer> from = Optional.empty();
         private final ImmutableList.Builder<DraftEmailer> to;
@@ -75,6 +76,7 @@ public class CreationMessage {
         private String htmlBody;
         private final ImmutableList.Builder<Attachment> attachments;
         private final ImmutableMap.Builder<BlobId, SubMessage> attachedMessages;
+        private Optional<ImmutableSet<Keyword>> keywords = Optional.empty();
 
         private Builder() {
             to = ImmutableList.builder();
@@ -101,22 +103,22 @@ public class CreationMessage {
             return this;
         }
 
-        public Builder isUnread(boolean isUnread) {
+        public Builder isUnread(Optional<Boolean> isUnread) {
             this.isUnread = isUnread;
             return this;
         }
 
-        public Builder isFlagged(boolean isFlagged) {
+        public Builder isFlagged(Optional<Boolean> isFlagged) {
             this.isFlagged = isFlagged;
             return this;
         }
 
-        public Builder isAnswered(boolean isAnswered) {
+        public Builder isAnswered(Optional<Boolean> isAnswered) {
             this.isAnswered = isAnswered;
             return this;
         }
 
-        public Builder isDraft(boolean isDraft) {
+        public Builder isDraft(Optional<Boolean> isDraft) {
             this.isDraft = isDraft;
             return this;
         }
@@ -186,6 +188,11 @@ public class CreationMessage {
             return this;
         }
 
+        public Builder keywords(Set<Keyword> keywords) {
+            this.keywords = Optional.of(ImmutableSet.copyOf(keywords));
+            return this;
+        }
+
         private static boolean areAttachedMessagesKeysInAttachments(ImmutableList<Attachment> attachments, ImmutableMap<BlobId, SubMessage> attachedMessages) {
             return attachedMessages.isEmpty() || attachedMessages.keySet().stream()
                     .anyMatch(inAttachments(attachments));
@@ -211,16 +218,17 @@ public class CreationMessage {
             }
 
             return new CreationMessage(mailboxIds, Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, headers.build(), from,
-                    to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, Optional.ofNullable(textBody), Optional.ofNullable(htmlBody), attachments, attachedMessages);
+                    to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, Optional.ofNullable(textBody), Optional.ofNullable(htmlBody),
+                    attachments, attachedMessages, keywords);
         }
     }
 
     private final ImmutableList<String> mailboxIds;
     private final Optional<String> inReplyToMessageId;
-    private final boolean isUnread;
-    private final boolean isFlagged;
-    private final boolean isAnswered;
-    private final boolean isDraft;
+    private final Optional<Boolean> isUnread;
+    private final Optional<Boolean> isFlagged;
+    private final Optional<Boolean> isAnswered;
+    private final Optional<Boolean> isDraft;
     private final ImmutableMap<String, String> headers;
     private final Optional<DraftEmailer> from;
     private final ImmutableList<DraftEmailer> to;
@@ -233,11 +241,12 @@ public class CreationMessage {
     private final Optional<String> htmlBody;
     private final ImmutableList<Attachment> attachments;
     private final ImmutableMap<BlobId, SubMessage> attachedMessages;
+    private final Optional<ImmutableSet<Keyword>> keywords;
 
     @VisibleForTesting
-    CreationMessage(ImmutableList<String> mailboxIds, Optional<String> inReplyToMessageId, boolean isUnread, boolean isFlagged, boolean isAnswered, boolean isDraft, ImmutableMap<String, String> headers, Optional<DraftEmailer> from,
+    CreationMessage(ImmutableList<String> mailboxIds, Optional<String> inReplyToMessageId, Optional<Boolean> isUnread, Optional<Boolean> isFlagged, Optional<Boolean> isAnswered, Optional<Boolean> isDraft, ImmutableMap<String, String> headers, Optional<DraftEmailer> from,
                     ImmutableList<DraftEmailer> to, ImmutableList<DraftEmailer> cc, ImmutableList<DraftEmailer> bcc, ImmutableList<DraftEmailer> replyTo, String subject, ZonedDateTime date, Optional<String> textBody, Optional<String> htmlBody, ImmutableList<Attachment> attachments,
-                    ImmutableMap<BlobId, SubMessage> attachedMessages) {
+                    ImmutableMap<BlobId, SubMessage> attachedMessages, Optional<ImmutableSet<Keyword>> keywords) {
         this.mailboxIds = mailboxIds;
         this.inReplyToMessageId = inReplyToMessageId;
         this.isUnread = isUnread;
@@ -256,6 +265,7 @@ public class CreationMessage {
         this.htmlBody = htmlBody;
         this.attachments = attachments;
         this.attachedMessages = attachedMessages;
+        this.keywords = keywords;
     }
 
     public ImmutableList<String> getMailboxIds() {
@@ -266,19 +276,19 @@ public class CreationMessage {
         return inReplyToMessageId;
     }
 
-    public boolean isIsUnread() {
+    public Optional<Boolean> isIsUnread() {
         return isUnread;
     }
 
-    public boolean isIsFlagged() {
+    public Optional<Boolean> isIsFlagged() {
         return isFlagged;
     }
 
-    public boolean isIsAnswered() {
+    public Optional<Boolean> isIsAnswered() {
         return isAnswered;
     }
 
-    public boolean isIsDraft() {
+    public Optional<Boolean> isIsDraft() {
         return isDraft;
     }
 
@@ -334,11 +344,38 @@ public class CreationMessage {
         return validate().isEmpty();
     }
 
+    public Optional<ImmutableSet<Keyword>> getKeywords() {
+        return keywords;
+    }
+
     public List<ValidationResult> validate() {
         ImmutableList.Builder<ValidationResult> errors = ImmutableList.builder();
         assertValidFromProvided(errors);
         assertAtLeastOneValidRecipient(errors);
+        assertFlagsAndKeywords(errors);
         return errors.build();
+    }
+
+    private void assertFlagsAndKeywords(ImmutableList.Builder<ValidationResult> errors) {
+        ValidationResult invalidPropertyKeywords = ValidationResult.builder()
+                .property(MessageProperty.keywords.asFieldName())
+                .message("Does not support keyword and is* at the same time")
+                .build();
+        if (isBothKeywordsAndIsFlagProperties()) {
+            errors.add(invalidPropertyKeywords);
+        }
+    }
+
+    private boolean isBothKeywordsAndIsFlagProperties() {
+        return isKeywordsProperty() && isIsFlagProperties();
+    }
+
+    private boolean isKeywordsProperty() {
+        return keywords.isPresent();
+    }
+
+    private boolean isIsFlagProperties() {
+        return isAnswered.isPresent() || isFlagged.isPresent() || isUnread.isPresent() || isDraft.isPresent();
     }
 
     private void assertAtLeastOneValidRecipient(ImmutableList.Builder<ValidationResult> errors) {
