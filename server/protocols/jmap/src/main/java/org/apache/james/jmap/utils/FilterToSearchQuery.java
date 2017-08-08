@@ -20,12 +20,16 @@
 package org.apache.james.jmap.utils;
 
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Stream;
 
+import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
 import org.apache.james.jmap.model.Filter;
 import org.apache.james.jmap.model.FilterCondition;
 import org.apache.james.jmap.model.FilterOperator;
+import org.apache.james.jmap.model.Keyword;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
@@ -75,7 +79,37 @@ public class FilterToSearchQuery {
         filter.getMaxSize().ifPresent(maxSize -> searchQuery.andCriteria(SearchQuery.sizeLessThan(maxSize)));
         filter.getMinSize().ifPresent(minSize -> searchQuery.andCriteria(SearchQuery.sizeGreaterThan(minSize)));
         filter.getHasAttachment().ifPresent(hasAttachment -> searchQuery.andCriteria(SearchQuery.hasAttachment(hasAttachment)));
+        filter.getHasKeyword().ifPresent(keywords -> {
+            getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), true)
+                .stream()
+                .reduce(searchQuery, this::accumulator, this::combiner);
+        });
+        filter.getNotKeyword().ifPresent(keywords -> {
+            getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), false)
+                .stream()
+                .reduce(searchQuery, this::accumulator, this::combiner);
+        });
+
         return searchQuery;
+    }
+
+    public SearchQuery accumulator(SearchQuery searchQuery, Criterion criterion) {
+        searchQuery.andCriteria(criterion);
+        return searchQuery;
+    }
+
+    public SearchQuery combiner(SearchQuery firstBuilder, SearchQuery secondBuilder) {
+        firstBuilder.andCriteria(secondBuilder.getCriterias());
+        return firstBuilder;
+    }
+
+    private List<Criterion> getFlagCriterion(Flags flags, boolean isSet) {
+        return Stream.concat(
+            Stream.of(flags.getSystemFlags())
+                .map(flag -> SearchQuery.flagSet(flag, isSet)),
+            Stream.of(flags.getUserFlags())
+                .map(flag -> SearchQuery.flagSet(flag, isSet))
+        ).collect(Guavate.toImmutableList());
     }
 
     private Criterion convertOperator(FilterOperator filter) {

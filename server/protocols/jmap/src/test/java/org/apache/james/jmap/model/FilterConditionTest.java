@@ -23,10 +23,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.ZonedDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 
@@ -89,9 +91,13 @@ public class FilterConditionTest {
         String subject = "subject";
         String body = "body";
         Header header = Header.from(ImmutableList.of("name", "value"));
-        FilterCondition expectedFilterCondition = new FilterCondition(Optional.of(ImmutableList.of("1")), Optional.of(ImmutableList.of("2")), Optional.of(before), Optional.of(after), Optional.of(minSize), Optional.of(maxSize), 
+        Optional<Set<Keyword>> hasKeyword = Optional.of(ImmutableSet.of(Keyword.DRAFT));
+        Optional<Set<Keyword>> notKeyword = Optional.of(ImmutableSet.of(Keyword.FLAGGED));
+
+        FilterCondition expectedFilterCondition = new FilterCondition(Optional.of(ImmutableList.of("1")), Optional.of(ImmutableList.of("2")), Optional.of(before), Optional.of(after), Optional.of(minSize), Optional.of(maxSize),
                 Optional.of(isFlagged), Optional.of(isUnread), Optional.of(isAnswered), Optional.of(isDraft), Optional.of(hasAttachment), Optional.of(text), Optional.of(from), 
-                Optional.of(to), Optional.of(cc), Optional.of(bcc), Optional.of(subject), Optional.of(body), Optional.of(header));
+                Optional.of(to), Optional.of(cc), Optional.of(bcc), Optional.of(subject), Optional.of(body), Optional.of(header),
+                hasKeyword, notKeyword);
 
         FilterCondition filterCondition = FilterCondition.builder()
                 .inMailboxes(Optional.of(ImmutableList.of("1")))
@@ -113,6 +119,8 @@ public class FilterConditionTest {
                 .subject(subject)
                 .body(body)
                 .header(header)
+                .hasKeyword(hasKeyword)
+                .notKeyword(notKeyword)
                 .build();
 
         assertThat(filterCondition).isEqualToComparingFieldByField(expectedFilterCondition);
@@ -122,4 +130,30 @@ public class FilterConditionTest {
     public void shouldRespectJavaBeanContract() {
         EqualsVerifier.forClass(FilterCondition.class).verify();
     }
+
+    @Test
+    public void buildShouldWorkWhenGivenHasKeywords() {
+        FilterCondition filterCondition = FilterCondition.builder()
+            .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
+            .build();
+        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED));
+    }
+
+    @Test
+    public void buildShouldNotCareAboutInvalidKeywordWhenGivenKeywordsWithUnknownValue() {
+        FilterCondition filterCondition = FilterCondition.builder()
+                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid"))))
+                .build();
+
+        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid")));
+    }
+
+    @Test
+    public void buildShouldWorkWhenGivenNotKeyword() {
+        FilterCondition filterCondition = FilterCondition.builder()
+                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
+                .build();
+        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED));
+    }
+
 }
