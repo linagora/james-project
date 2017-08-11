@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.ByteArrayInputStream;
 import java.util.Date;
 import java.util.List;
@@ -33,19 +32,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import javax.mail.Flags;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.GetMessagesRequest;
 import org.apache.james.jmap.model.GetMessagesResponse;
+import org.apache.james.jmap.model.Keyword;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageFactory;
 import org.apache.james.jmap.model.MessagePreviewGenerator;
 import org.apache.james.jmap.model.MessageProperties.MessageProperty;
 import org.apache.james.jmap.utils.HtmlTextExtractor;
 import org.apache.james.jmap.utils.JsoupHtmlTextExtractor;
+import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
@@ -60,11 +59,7 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.util.mime.MessageContentExtractor;
-import org.assertj.core.api.Condition;
-import org.assertj.core.data.MapEntry;
-import org.assertj.core.groups.Tuple;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.commons.lang.NotImplementedException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
@@ -72,11 +67,18 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.jayway.jsonpath.JsonPath;
 
-public class GetMessagesMethodTest {
+import org.assertj.core.api.Condition;
+import org.assertj.core.data.MapEntry;
+import org.assertj.core.groups.Tuple;
+import org.junit.Before;
+import org.junit.Test;
 
+public class GetMessagesMethodTest {
+    private final static String FORWARDED = "forwarded";
     public static final Flags FLAGS = null;
     public static final boolean NOT_RECENT = false;
     private MessageIdManager messageIdManager;
@@ -505,5 +507,121 @@ public class GetMessagesMethodTest {
         assertThat(response).isInstanceOf(GetMessagesResponse.class);
         GetMessagesResponse getMessagesResponse = (GetMessagesResponse) response;
         assertThat(getMessagesResponse.list()).hasSize(1);
+    }
+
+    @Test
+    public void processShouldReturnKeywordsForMessageFlags() throws MailboxException {
+        Flags flags = FlagsBuilder.builder()
+            .add(Flags.Flag.ANSWERED)
+            .add(Flags.Flag.DRAFT)
+            .build();
+        MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
+        Date now = new Date();
+        ByteArrayInputStream message1Content = new ByteArrayInputStream("Subject: message 1 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message1 = inbox.appendMessage(message1Content, now, session, false, flags);
+        ByteArrayInputStream message2Content = new ByteArrayInputStream("Subject: message 2 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message2 = inbox.appendMessage(message2Content, now, session, false, flags);
+        ByteArrayInputStream message3Content = new ByteArrayInputStream("Great-Header: message 3 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message3 = inbox.appendMessage(message3Content, now, session, false, flags);
+
+        GetMessagesRequest request = GetMessagesRequest.builder()
+            .ids(ImmutableList.of(message1.getMessageId(),
+                message2.getMessageId(),
+                message3.getMessageId()))
+            .build();
+
+        List<JmapResponse> result = testee.process(request, clientId, session).collect(Collectors.toList());
+
+        assertThat(result).hasSize(1)
+            .extracting(JmapResponse::getResponse)
+            .hasOnlyElementsOfType(GetMessagesResponse.class)
+            .extracting(GetMessagesResponse.class::cast)
+            .flatExtracting(GetMessagesResponse::list)
+            .extracting(Message::getKeywords)
+            .extracting(Optional::get)
+            .containsOnly(
+                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
+                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
+                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT));
+
+    }
+
+
+    @Test
+    public void processShouldReturnKeywordsWithoutUnsupportedKeywordsForMessageFlags() throws MailboxException {
+        Flags flags1 = FlagsBuilder.builder()
+            .add(Flags.Flag.ANSWERED)
+            .add(Flags.Flag.DRAFT)
+            .add(Flags.Flag.DELETED)
+            .build();
+        Flags flags2 = FlagsBuilder.builder()
+            .add(Flags.Flag.ANSWERED)
+            .add(Flags.Flag.DRAFT)
+            .build();
+        Flags flags3 = FlagsBuilder.builder()
+            .add(Flags.Flag.ANSWERED)
+            .add(Flags.Flag.DRAFT)
+            .add(Flags.Flag.RECENT)
+            .build();
+        MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
+        Date now = new Date();
+        ByteArrayInputStream message1Content = new ByteArrayInputStream("Subject: message 1 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message1 = inbox.appendMessage(message1Content, now, session, false, flags1);
+        ByteArrayInputStream message2Content = new ByteArrayInputStream("Subject: message 2 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message2 = inbox.appendMessage(message2Content, now, session, false, flags2);
+        ByteArrayInputStream message3Content = new ByteArrayInputStream("Great-Header: message 3 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message3 = inbox.appendMessage(message3Content, now, session, false, flags3);
+
+        GetMessagesRequest request = GetMessagesRequest.builder()
+            .ids(ImmutableList.of(message1.getMessageId(),
+                message2.getMessageId(),
+                message3.getMessageId()))
+            .build();
+
+        List<JmapResponse> result = testee.process(request, clientId, session).collect(Collectors.toList());
+
+        assertThat(result).hasSize(1)
+            .extracting(JmapResponse::getResponse)
+            .hasOnlyElementsOfType(GetMessagesResponse.class)
+            .extracting(GetMessagesResponse.class::cast)
+            .flatExtracting(GetMessagesResponse::list)
+            .extracting(Message::getKeywords)
+            .extracting(Optional::get)
+            .containsOnly(
+                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
+                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
+                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT));
+
+    }
+
+    @Test
+    public void processShouldReturnKeywordsWithoutForwarededWhenForwarededUserFlagsMessages() throws MailboxException {
+        Flags flags = FlagsBuilder.builder()
+            .add(Flags.Flag.ANSWERED)
+            .add(Flags.Flag.DELETED)
+            .add(FORWARDED)
+            .add("CustomUser")
+            .build();
+        MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
+        Date now = new Date();
+        ByteArrayInputStream message1Content = new ByteArrayInputStream("Subject: message 1 subject\r\n\r\nmy message".getBytes(Charsets.UTF_8));
+        ComposedMessageId message1 = inbox.appendMessage(message1Content, now, session, false, flags);
+
+        GetMessagesRequest request = GetMessagesRequest.builder()
+            .ids(ImmutableList.of(message1.getMessageId()))
+            .build();
+
+        List<JmapResponse> result = testee.process(request, clientId, session).collect(Collectors.toList());
+
+        assertThat(result).hasSize(1)
+            .extracting(JmapResponse::getResponse)
+            .hasOnlyElementsOfType(GetMessagesResponse.class)
+            .extracting(GetMessagesResponse.class::cast)
+            .flatExtracting(GetMessagesResponse::list)
+            .extracting(Message::getKeywords)
+            .extracting(Optional::get)
+            .containsOnly(
+                ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED)));
+
     }
 }

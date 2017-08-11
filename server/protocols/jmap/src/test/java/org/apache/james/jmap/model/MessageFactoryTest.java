@@ -688,19 +688,20 @@ public class MessageFactoryTest {
 
     @Test
     public void keywordShouldBeSetIntoMessage() throws Exception {
-        Flags flags = new Flags();
-        flags.add(Flag.ANSWERED);
-        flags.add(Flag.DRAFT);
+        Flags flags = FlagsBuilder.builder()
+            .add(Flag.ANSWERED)
+            .add(Flag.DRAFT)
+            .build();
         MetaDataWithContent testMail = MetaDataWithContent.builder()
-                .uid(MessageUid.of(2))
-                .flags(flags)
-                .size(0)
-                .internalDate(INTERNAL_DATE)
-                .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
-                .attachments(ImmutableList.of())
-                .mailboxId(MAILBOX_ID)
-                .messageId(TestMessageId.of(2))
-                .build();
+            .uid(MessageUid.of(2))
+            .flags(flags)
+            .size(0)
+            .internalDate(INTERNAL_DATE)
+            .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
+            .attachments(ImmutableList.of())
+            .mailboxId(MAILBOX_ID)
+            .messageId(TestMessageId.of(2))
+            .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, Keyword.DRAFT);
     }
@@ -735,15 +736,15 @@ public class MessageFactoryTest {
             .build();
 
         MetaDataWithContent testMail = MetaDataWithContent.builder()
-                .uid(MessageUid.of(2))
-                .flags(flags)
-                .size(0)
-                .internalDate(INTERNAL_DATE)
-                .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
-                .attachments(ImmutableList.of())
-                .mailboxId(MAILBOX_ID)
-                .messageId(TestMessageId.of(2))
-                .build();
+            .uid(MessageUid.of(2))
+            .flags(flags)
+            .size(0)
+            .internalDate(INTERNAL_DATE)
+            .content(new ByteArrayInputStream("".getBytes(Charsets.UTF_8)))
+            .attachments(ImmutableList.of())
+            .mailboxId(MAILBOX_ID)
+            .messageId(TestMessageId.of(2))
+            .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
         assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED));
     }
