@@ -26,6 +26,7 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.FlagsBuilder;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import org.junit.Rule;
@@ -87,20 +88,10 @@ public class UpdateMessagePatchTest {
     }
 
     @Test
-    public void applyStateShouldThrowWhenBothIsFlagAndKeywords() {
-        expectedException.expect(IllegalArgumentException.class);
-
-        UpdateMessagePatch testee = UpdateMessagePatch.builder()
-            .isUnread(false)
-            .keywords(ImmutableSet.of())
-            .build();
-
-        testee.applyToState(new Flags());
-    }
-
-    @Test
     public void applyStateShouldReturnNewFlagsWhenKeywords() {
-        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, Keyword.FLAGGED);
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Answered", true,
+                "$Flagged", true);
 
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
             .keywords(keywords)
@@ -113,7 +104,7 @@ public class UpdateMessagePatchTest {
     @Test
     public void applyStateShouldReturnRemoveFlagsWhenKeywords() {
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
-            .keywords(ImmutableSet.of())
+            .keywords(ImmutableMap.of())
             .build();
         Flags isSeen = new Flags(Flags.Flag.SEEN);
         assertThat(testee.applyToState(isSeen).getSystemFlags()).isEmpty();
@@ -122,8 +113,11 @@ public class UpdateMessagePatchTest {
     @Test
     public void applyStateShouldThrowWhenKeywordsContainDeletedFlag() {
         expectedException.expect(IllegalArgumentException.class);
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Deleted", true);
+
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
-            .keywords(ImmutableSet.of(Keyword.DELETED))
+            .keywords(keywords)
             .build();
 
         Flags currentFlags = new Flags(Flags.Flag.SEEN);
@@ -135,8 +129,10 @@ public class UpdateMessagePatchTest {
     public void applyStateShouldThrowWhenKeywordsContainRecentFlag() {
         expectedException.expect(IllegalArgumentException.class);
 
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Recent", true);
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
-            .keywords(ImmutableSet.of(Keyword.RECENT))
+            .keywords(keywords)
             .build();
 
         Flags currentFlags = new Flags(Flags.Flag.SEEN);
@@ -146,7 +142,9 @@ public class UpdateMessagePatchTest {
 
     @Test
     public void applyStateShouldReturnFlagsWithoutUserFlagWhenKeywordsContainForwarded() {
-        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED));
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Answered", Keyword.FLAG_VALUE,
+                FORWARDED, Keyword.FLAG_VALUE);
 
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
             .keywords(keywords)
@@ -158,7 +156,9 @@ public class UpdateMessagePatchTest {
 
     @Test
     public void applyStateShouldReturnFlagsWithUserFlagStringWhenKeywordsContainForwarded() {
-        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED));
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Answered", Keyword.FLAG_VALUE,
+                FORWARDED, Keyword.FLAG_VALUE);
 
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
             .keywords(keywords)
@@ -170,7 +170,8 @@ public class UpdateMessagePatchTest {
 
     @Test
     public void applyStateShouldReturnFlagsWithDeletedFlagWhenKeywordsDoNotContainDeletedButOriginFlagsHaveDeleted() {
-        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED);
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Answered", Keyword.FLAG_VALUE);
 
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
             .keywords(keywords)
@@ -182,7 +183,8 @@ public class UpdateMessagePatchTest {
 
     @Test
     public void applyStateShouldReturnFlagsWithRecentFlagWhenKeywordsDoNotContainDeletedButOriginFlagsHaveDeleted() {
-        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED);
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+                "$Answered", Keyword.FLAG_VALUE);
 
         UpdateMessagePatch testee = UpdateMessagePatch.builder()
             .keywords(keywords)
@@ -231,7 +233,9 @@ public class UpdateMessagePatchTest {
 
     @Test
     public void isIdentityShouldReturnFalseWhenKeywords() {
-        ImmutableSet<Keyword> keywords = ImmutableSet.of(Keyword.ANSWERED, Keyword.FLAGGED);
+        ImmutableMap<String, Boolean> keywords = ImmutableMap.of(
+            "$Answered", Keyword.FLAG_VALUE,
+            "$Flagged", Keyword.FLAG_VALUE);
 
         UpdateMessagePatch messagePatch = UpdateMessagePatch.builder()
                 .keywords(keywords)
@@ -243,7 +247,7 @@ public class UpdateMessagePatchTest {
     @Test
     public void isIdentityShouldReturnFalseWhenEmptyKeywords() {
         UpdateMessagePatch messagePatch = UpdateMessagePatch.builder()
-                .keywords(ImmutableSet.of())
+                .keywords(ImmutableMap.of())
                 .build();
 
         assertThat(messagePatch.isFlagsIdentity()).isFalse();
@@ -254,7 +258,7 @@ public class UpdateMessagePatchTest {
         expectedException.expect(IllegalArgumentException.class);
 
         UpdateMessagePatch messagePatch = UpdateMessagePatch.builder()
-                .keywords(ImmutableSet.of())
+                .keywords(ImmutableMap.of())
                 .isAnswered(false)
                 .build();
 

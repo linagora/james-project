@@ -20,6 +20,7 @@
 package org.apache.james.jmap.model;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -33,6 +34,7 @@ import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
@@ -49,7 +51,7 @@ public class UpdateMessagePatch {
         private Optional<Boolean> isFlagged = Optional.empty();
         private Optional<Boolean> isUnread = Optional.empty();
         private Optional<Boolean> isAnswered = Optional.empty();
-        private Optional<Set<Keyword>> keywords = Optional.empty();
+        private Optional<Map<String, Boolean>> keywords = Optional.empty();
         private Set<ValidationResult> validationResult = Sets.newHashSet();
 
         public Builder mailboxIds(List<String> mailboxIds) {
@@ -57,8 +59,8 @@ public class UpdateMessagePatch {
             return this;
         }
 
-        public Builder keywords(Set<Keyword> keywords) {
-            this.keywords = Optional.of(ImmutableSet.copyOf(keywords));
+        public Builder keywords(Map<String, Boolean> keywords) {
+            this.keywords = Optional.of(ImmutableMap.copyOf(keywords));
             return this;
         }
 
@@ -89,7 +91,8 @@ public class UpdateMessagePatch {
                     .message("mailboxIds property is not supposed to be empty")
                     .build()));
             }
-            UpdateMessagePatch updateMessagePatch = new UpdateMessagePatch(mailboxIds, isUnread, isFlagged, isAnswered, keywords, ImmutableList.copyOf(validationResult));
+            UpdateMessagePatch updateMessagePatch = new UpdateMessagePatch(mailboxIds, isUnread, isFlagged, isAnswered,
+                    Keyword.buildKeywords(keywords), ImmutableList.copyOf(validationResult));
             if (updateMessagePatch.isBothKeywordsAndIsFlagProperties()) {
                 validationResult(ImmutableSet.of(ValidationResult.builder()
                     .property("keywords")
@@ -106,7 +109,7 @@ public class UpdateMessagePatch {
     private final Optional<Boolean> isUnread;
     private final Optional<Boolean> isFlagged;
     private final Optional<Boolean> isAnswered;
-    private final Optional<Set<Keyword>> keywords;
+    private final Optional<ImmutableSet<Keyword>> keywords;
 
     private final ImmutableList<ValidationResult> validationErrors;
 
@@ -115,7 +118,7 @@ public class UpdateMessagePatch {
                        Optional<Boolean> isUnread,
                        Optional<Boolean> isFlagged,
                        Optional<Boolean> isAnswered,
-                       Optional<Set<Keyword>> keywords,
+                       Optional<ImmutableSet<Keyword>> keywords,
                        ImmutableList<ValidationResult> validationResults) {
 
         this.mailboxIds = mailboxIds;
@@ -142,7 +145,7 @@ public class UpdateMessagePatch {
         return isAnswered;
     }
 
-    public Optional<Set<Keyword>> getKeywords() {
+    public Optional<ImmutableSet<Keyword>> getKeywords() {
         return keywords;
     }
 
@@ -167,8 +170,6 @@ public class UpdateMessagePatch {
     }
 
     public Flags applyToState(Flags currentFlags) {
-        Preconditions.checkArgument(!isBothKeywordsAndIsFlagProperties(),
-            "Does not support both is* and keywords");
         if (keywords.isPresent()) {
             return getFlagsFromKeywords(currentFlags);
         }
