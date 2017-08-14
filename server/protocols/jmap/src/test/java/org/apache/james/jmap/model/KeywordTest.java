@@ -20,10 +20,14 @@
 package org.apache.james.jmap.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.util.Optional;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.FlagsBuilder;
 
+import org.apache.commons.lang3.StringUtils;
+
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -40,6 +44,36 @@ public class KeywordTest {
     @Test
     public void shouldRespectBeanContract() {
         EqualsVerifier.forClass(Keyword.class).verify();
+    }
+
+    @Test
+    public void keywordShouldThrowWhenFalseValue() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        new Keyword("Anyvalue", false);
+    }
+
+    @Test
+    public void keywordShouldThrowWhenFlagNameLengthLessThenMinLength() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        new Keyword("", false);
+    }
+
+    @Test
+    public void keywordShouldThrowWhenFlagNameLengthMoreThenMaxLength() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        new Keyword(StringUtils.repeat("a", Keyword.FLAG_NAME_MAX_LENTH + 1), true);
+    }
+
+    @Test
+    public void keywordShouldThrowWhenFlagNameContainInvalidCharacter() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        new Keyword("a%", true);
+    }
+
+    @Test
+    public void keywordShouldThrowWhenFlagNameContainSpaceCharacter() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        new Keyword("a b", true);
     }
 
     @Test
@@ -60,7 +94,7 @@ public class KeywordTest {
                 .add(FORWARDED)
                 .build();
 
-        assertThat(Keyword.fromFlags(flags)).containsOnly(Keyword.FLAGGED, Keyword.DRAFT, new Keyword(FORWARDED));
+        assertThat(Keyword.fromFlags(flags)).containsOnly(Keyword.FLAGGED, Keyword.DRAFT, new Keyword(FORWARDED, true));
     }
 
     @Test
@@ -70,7 +104,7 @@ public class KeywordTest {
                 .add(Flags.Flag.DRAFT)
                 .add("Unknown")
                 .build();
-        assertThat(Keyword.fromFlags(flags)).containsOnly(Keyword.FLAGGED, Keyword.DRAFT, new Keyword("Unknown"));
+        assertThat(Keyword.fromFlags(flags)).containsOnly(Keyword.FLAGGED, Keyword.DRAFT, new Keyword("Unknown", true));
     }
 
     @Test
@@ -82,7 +116,7 @@ public class KeywordTest {
                 .add(FORWARDED)
                 .build();
 
-        assertThat(Keyword.fromFlags(flags)).containsOnly(Keyword.DRAFT, new Keyword(FORWARDED));
+        assertThat(Keyword.fromFlags(flags)).containsOnly(Keyword.DRAFT, new Keyword(FORWARDED, true));
     }
 
     @Test
@@ -113,7 +147,7 @@ public class KeywordTest {
             .add(Flags.Flag.DRAFT)
             .add(FORWARDED)
             .build();
-        Flags imapFlags = Keyword.fromKeywordsWithFilterUnsupportedKeywords(ImmutableSet.of(Keyword.DRAFT, new Keyword(FORWARDED)));
+        Flags imapFlags = Keyword.fromKeywordsWithFilterUnsupportedKeywords(ImmutableSet.of(Keyword.DRAFT, new Keyword(FORWARDED, true)));
 
         assertThat(imapFlags).isEqualToComparingFieldByField(expectedFlags);
     }
@@ -124,7 +158,7 @@ public class KeywordTest {
                 .add(Flags.Flag.FLAGGED)
                 .add(FORWARDED)
                 .build();
-        assertThat(Keyword.fromKeywordsWithFilterUnsupportedKeywords(ImmutableSet.of(Keyword.FLAGGED, new Keyword(FORWARDED))))
+        assertThat(Keyword.fromKeywordsWithFilterUnsupportedKeywords(ImmutableSet.of(Keyword.FLAGGED, new Keyword(FORWARDED, true))))
             .isEqualTo(expected);
     }
 
@@ -136,5 +170,36 @@ public class KeywordTest {
                 .build();
         assertThat(Keyword.fromKeywordsWithFilterUnsupportedKeywords("$Flagged", FORWARDED))
                 .isEqualTo(expected);
+    }
+
+    @Test
+    public void buildKeywordsReturnEmptyWhenEmpty() throws Exception {
+        assertThat(Keyword.buildKeywords(Optional.empty())).isEmpty();
+    }
+
+    @Test
+    public void buildKeywordsShouldThrowWhenWrongFlagValue() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+
+        Keyword.buildKeywords(Optional.of(ImmutableMap.of("AnyKey", false)));
+    }
+
+    @Test
+    public void buildKeywordsShouldThrowWhenWrongFlagName() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+
+        Keyword.buildKeywords(Optional.of(ImmutableMap.of("Any Key", true)));
+    }
+
+    @Test
+    public void buildKeywordsShouldReturnSetOfKeywords() throws Exception {
+        Optional<ImmutableSet<Keyword>> keywords = Keyword.buildKeywords(
+            Optional.of(
+                ImmutableMap.of(
+                    "AnyKey", true,
+                    "OtherKey", true)));
+
+        assertThat(keywords).isPresent();
+        assertThat(keywords.get()).containsOnly(new Keyword("AnyKey", true), new Keyword("OtherKey", true));
     }
 }

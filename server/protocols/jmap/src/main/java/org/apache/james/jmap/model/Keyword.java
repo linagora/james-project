@@ -19,59 +19,90 @@
 
 package org.apache.james.jmap.model;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.FlagsBuilder;
+import org.apache.commons.lang.StringUtils;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.steveash.guavate.Guavate;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 @JsonSerialize(using = KeywordSerialization.class)
 public class Keyword {
-    public final static Keyword DRAFT = new Keyword("$Draft");
-    public final static Keyword SEEN = new Keyword("$Seen");
-    public final static Keyword FLAGGED = new Keyword("$Flagged");
-    public final static Keyword ANSWERED = new Keyword("$Answered");
-    public final static Keyword DELETED = new Keyword("$Deleted");
-    public final static Keyword RECENT = new Keyword("$Recent");
+    public final static boolean FLAG_VALUE = true;
+    private final static int FLAG_NAME_MIN_LENTH = 1;
+    protected final static int FLAG_NAME_MAX_LENTH = 255;
+    private static final CharMatcher FLAG_NAME_PATTERN = CharMatcher.JAVA_LETTER_OR_DIGIT
+            .or(CharMatcher.is('$'));
+
+    public final static Keyword DRAFT = new Keyword("$Draft", FLAG_VALUE);
+    public final static Keyword SEEN = new Keyword("$Seen", FLAG_VALUE);
+    public final static Keyword FLAGGED = new Keyword("$Flagged", FLAG_VALUE);
+    public final static Keyword ANSWERED = new Keyword("$Answered", FLAG_VALUE);
+    public final static Keyword DELETED = new Keyword("$Deleted", FLAG_VALUE);
+    public final static Keyword RECENT = new Keyword("$Recent", FLAG_VALUE);
 
     public static final ImmutableList<Keyword> UNSUPPORTED_KEYWORDS = ImmutableList.of(Keyword.RECENT, Keyword.DELETED);
 
-    public static final ImmutableMap<Flags.Flag, Keyword> IMAP_SYSTEM_FLAGS = ImmutableMap.<Flags.Flag, Keyword>builder()
-            .put(Flags.Flag.DRAFT, DRAFT)
-            .put(Flags.Flag.SEEN, SEEN)
-            .put(Flags.Flag.FLAGGED, FLAGGED)
-            .put(Flags.Flag.ANSWERED, ANSWERED)
-            .put(Flags.Flag.RECENT, RECENT)
-            .put(Flags.Flag.DELETED, DELETED)
+    public static final ImmutableBiMap<Flags, Keyword> IMAP_SYSTEM_FLAGS = ImmutableBiMap.<Flags, Keyword>builder()
+            .put(new Flags(Flags.Flag.DRAFT), DRAFT)
+            .put(new Flags(Flags.Flag.SEEN), SEEN)
+            .put(new Flags(Flags.Flag.FLAGGED), FLAGGED)
+            .put(new Flags(Flags.Flag.ANSWERED), ANSWERED)
+            .put(new Flags(Flags.Flag.RECENT), RECENT)
+            .put(new Flags(Flags.Flag.DELETED), DELETED)
             .build();
 
-    private final String flag;
+    private final String flagName;
+    private final boolean flagValue;
 
-    public Keyword(String flag) {
-        Preconditions.checkNotNull(flag);
-        this.flag = flag;
+    public Keyword(String flagName) {
+        this(flagName, FLAG_VALUE);
+    }
+    public Keyword(String flagName, Boolean flagValue) {
+        this.flagName = flagName;
+        this.flagValue = flagValue;
+
+        Preconditions.checkArgument(flagValue, "Flag value must be true");
+        Preconditions.checkArgument(isValid(),
+                "Flagname must not be null or empty, must have length form 1-255, must not contain charater with hex from '\u0000' to '\u00019' or {'(' ')' '{' ']' '%' '*' '\"' '\\'} ");
     }
 
-    public String getFlag() {
-        return flag;
+    private boolean isValid() {
+        if (StringUtils.isBlank(flagName)) {
+            return false;
+        }
+        if (flagName.length() < FLAG_NAME_MIN_LENTH || flagName.length() > FLAG_NAME_MAX_LENTH) {
+            return false;
+        }
+        if (!FLAG_NAME_PATTERN.matchesAllOf(flagName)) {
+            return false;
+        }
+        return true;
+    }
+
+    public String getFlagName() {
+        return flagName;
+    }
+
+    public Boolean getFlagValue() {
+        return flagValue;
     }
 
     public static FlagsBuilder accumulator(FlagsBuilder accumulator, Keyword keyword) {
-        return accumulator.add(IMAP_SYSTEM_FLAGS.entrySet()
-            .stream()
-            .filter(entry -> entry.getValue().equals(keyword))
-            .map(entry -> new Flags(entry.getKey()))
-            .findAny()
-            .orElse(new Flags(keyword.getFlag())));
+        return accumulator.add(IMAP_SYSTEM_FLAGS.inverse()
+                .getOrDefault(keyword, new Flags(keyword.getFlagName())));
     }
 
     public static FlagsBuilder combiner(FlagsBuilder firstBuilder, FlagsBuilder secondBuilder) {
@@ -81,17 +112,17 @@ public class Keyword {
     public static Set<Keyword> fromFlags(Flags flags) {
         return Stream.concat(
             Stream.of(flags.getUserFlags())
-                .map(Keyword::new),
+                .map(flag -> new Keyword(flag, FLAG_VALUE)),
             Stream.of(flags.getSystemFlags())
-                .map(flag -> IMAP_SYSTEM_FLAGS.get(flag))
+                .map(flag -> IMAP_SYSTEM_FLAGS.get(new Flags(flag)))
                 .filter(jmapFlag -> !UNSUPPORTED_KEYWORDS.contains(jmapFlag))
         ).collect(Guavate.toImmutableSet());
     }
 
     public static Set<Keyword> fromSystemFlags(Flags flags) {
         return Stream.of(flags.getSystemFlags())
-                    .map(flag -> IMAP_SYSTEM_FLAGS.get(flag))
-                    .collect(Guavate.toImmutableSet());
+                .map(flag -> IMAP_SYSTEM_FLAGS.get(new Flags(flag)))
+                .collect(Guavate.toImmutableSet());
     }
 
     public static Flags fromKeywordsWithFilterUnsupportedKeywords(Set<Keyword> keywords) {
@@ -110,27 +141,38 @@ public class Keyword {
     public static Flags fromKeywordsWithFilterUnsupportedKeywords(String... keywords) {
         return fromKeywordsWithFilterUnsupportedKeywords(ImmutableSet.copyOf(keywords)
             .stream()
-            .map(Keyword::new)
+            .map(keyword -> new Keyword(keyword, FLAG_VALUE))
             .collect(Guavate.toImmutableSet()));
+    }
+
+    public static Optional<ImmutableSet<Keyword>> buildKeywords(Optional<Map<String, Boolean>> keywords) {
+        return Optional.of(keywords.map(allKeywords -> allKeywords.entrySet()
+            .stream()
+            .map(entry -> new Keyword(entry.getKey(), entry.getValue()))
+            .collect(Guavate.toImmutableSet())))
+            .orElse(Optional.empty());
     }
 
     @Override
     public final boolean equals(Object other) {
         if (other instanceof Keyword) {
-            return Objects.equal(flag, ((Keyword) other).flag);
+            Keyword otherKeyword = (Keyword) other;
+            return Objects.equal(flagName, otherKeyword.flagName)
+                && Objects.equal(flagValue, otherKeyword.flagValue);
         }
         return false;
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hashCode(flag);
+        return Objects.hashCode(flagName, flagValue);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("flag", flag)
+            .add("flagName", flagName)
+            .add("flagValue", flagValue)
             .toString();
     }
 

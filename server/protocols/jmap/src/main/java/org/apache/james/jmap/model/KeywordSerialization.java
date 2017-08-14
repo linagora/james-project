@@ -35,7 +35,7 @@ public class KeywordSerialization extends StdSerializer<Keyword> {
 
     @Override
     public void serialize(Keyword value, JsonGenerator jgen, SerializerProvider provider) throws IOException {
-        jgen.writeString(value.getFlag());
+        jgen.writeString(value.getFlagName());
     }
 
 }
