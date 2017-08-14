@@ -600,7 +600,6 @@ public class GetMessagesMethodTest {
             .add(Flags.Flag.ANSWERED)
             .add(Flags.Flag.DELETED)
             .add(FORWARDED)
-            .add("CustomUser")
             .build();
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
         Date now = new Date();
@@ -621,7 +620,7 @@ public class GetMessagesMethodTest {
             .extracting(Message::getKeywords)
             .extracting(Optional::get)
             .containsOnly(
-                ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED)));
+                ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED, true)));
 
     }
 }

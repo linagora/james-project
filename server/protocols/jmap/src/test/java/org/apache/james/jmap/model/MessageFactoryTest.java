@@ -723,7 +723,7 @@ public class MessageFactoryTest {
             .messageId(TestMessageId.of(2))
             .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
-        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED));
+        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED, Keyword.FLAG_VALUE));
     }
 
     @Test
@@ -746,6 +746,6 @@ public class MessageFactoryTest {
             .messageId(TestMessageId.of(2))
             .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
-        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED));
+        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED, Keyword.FLAG_VALUE));
     }
 }
