@@ -80,36 +80,23 @@ public class FilterToSearchQuery {
         filter.getMinSize().ifPresent(minSize -> searchQuery.andCriteria(SearchQuery.sizeGreaterThan(minSize)));
         filter.getHasAttachment().ifPresent(hasAttachment -> searchQuery.andCriteria(SearchQuery.hasAttachment(hasAttachment)));
         filter.getHasKeyword().ifPresent(keywords -> {
-            getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), true)
-                .stream()
-                .reduce(searchQuery, this::accumulator, this::combiner);
+            searchQuery.andCriteria(getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), true));
         });
         filter.getNotKeyword().ifPresent(keywords -> {
-            getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), false)
-                .stream()
-                .reduce(searchQuery, this::accumulator, this::combiner);
+            searchQuery.andCriteria(getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), false));
         });
 
         return searchQuery;
     }
 
-    public SearchQuery accumulator(SearchQuery searchQuery, Criterion criterion) {
-        searchQuery.andCriteria(criterion);
-        return searchQuery;
-    }
-
-    public SearchQuery combiner(SearchQuery firstBuilder, SearchQuery secondBuilder) {
-        firstBuilder.andCriteria(secondBuilder.getCriterias());
-        return firstBuilder;
-    }
-
-    private List<Criterion> getFlagCriterion(Flags flags, boolean isSet) {
-        return Stream.concat(
-            Stream.of(flags.getSystemFlags())
-                .map(flag -> SearchQuery.flagSet(flag, isSet)),
-            Stream.of(flags.getUserFlags())
-                .map(flag -> SearchQuery.flagSet(flag, isSet))
-        ).collect(Guavate.toImmutableList());
+    private Criterion getFlagCriterion(Flags flags, boolean isSet) {
+        return SearchQuery.and(
+            Stream.concat(
+                Stream.of(flags.getSystemFlags())
+                    .map(flag -> SearchQuery.flagSet(flag, isSet)),
+                Stream.of(flags.getUserFlags())
+                    .map(flag -> SearchQuery.flagSet(flag, isSet))
+            ).collect(Guavate.toImmutableList()));
     }
 
     private Criterion convertOperator(FilterOperator filter) {

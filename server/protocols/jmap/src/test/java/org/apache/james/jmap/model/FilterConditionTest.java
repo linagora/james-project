@@ -142,10 +142,10 @@ public class FilterConditionTest {
     @Test
     public void buildShouldNotCareAboutInvalidKeywordWhenGivenKeywordsWithUnknownValue() {
         FilterCondition filterCondition = FilterCondition.builder()
-                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid"))))
+                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid", Keyword.FLAG_VALUE))))
                 .build();
 
-        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid")));
+        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid", Keyword.FLAG_VALUE)));
     }
 
     @Test

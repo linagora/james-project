@@ -484,8 +484,10 @@ public class FilterToSearchQueryTest {
     @Test
     public void filterConditionShouldMapWhenHasKeyword() {
         SearchQuery expectedSearchQuery = new SearchQuery();
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsSet(Flag.DRAFT));
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsSet(Flag.FLAGGED));
+        expectedSearchQuery.andCriteria(SearchQuery.and(
+            ImmutableList.of(
+                SearchQuery.flagIsSet(Flag.DRAFT),
+                SearchQuery.flagIsSet(Flag.FLAGGED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
                 .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
@@ -497,12 +499,14 @@ public class FilterToSearchQueryTest {
     @Test
     public void filterConditionShouldMapWhenHasKeywordWithUserFlag() {
         SearchQuery expectedSearchQuery = new SearchQuery();
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsSet(Flag.DRAFT));
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsSet(Flag.FLAGGED));
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsSet(FORWARDED));
+        expectedSearchQuery.andCriteria(SearchQuery.and(
+            ImmutableList.of(
+                SearchQuery.flagIsSet(Flag.DRAFT),
+                SearchQuery.flagIsSet(Flag.FLAGGED),
+                SearchQuery.flagIsSet(FORWARDED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
-                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED, new Keyword(FORWARDED))))
+                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED, new Keyword(FORWARDED, Keyword.FLAG_VALUE))))
                 .build());
 
         assertThat(searchQuery).isEqualTo(expectedSearchQuery);
@@ -511,8 +515,10 @@ public class FilterToSearchQueryTest {
     @Test
     public void filterConditionShouldMapWhenNotKeyword() {
         SearchQuery expectedSearchQuery = new SearchQuery();
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsUnSet(Flag.DRAFT));
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsUnSet(Flag.FLAGGED));
+        expectedSearchQuery.andCriteria(SearchQuery.and(
+            ImmutableList.of(
+                SearchQuery.flagIsUnSet(Flag.DRAFT),
+                SearchQuery.flagIsUnSet(Flag.FLAGGED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
                 .notKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
@@ -524,12 +530,14 @@ public class FilterToSearchQueryTest {
     @Test
     public void filterConditionShouldMapWhenNotKeywordWithUserFlag() {
         SearchQuery expectedSearchQuery = new SearchQuery();
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsUnSet(Flag.DRAFT));
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsUnSet(Flag.FLAGGED));
-        expectedSearchQuery.andCriteria(SearchQuery.flagIsUnSet(FORWARDED));
+        expectedSearchQuery.andCriteria(SearchQuery.and(
+                ImmutableList.of(
+                        SearchQuery.flagIsUnSet(Flag.DRAFT),
+                        SearchQuery.flagIsUnSet(Flag.FLAGGED),
+                        SearchQuery.flagIsUnSet(FORWARDED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
-                .notKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED, new Keyword(FORWARDED))))
+                .notKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED, new Keyword(FORWARDED, Keyword.FLAG_VALUE))))
                 .build());
 
         assertThat(searchQuery).isEqualTo(expectedSearchQuery);
