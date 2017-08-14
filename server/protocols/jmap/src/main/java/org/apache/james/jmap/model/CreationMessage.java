@@ -37,6 +37,7 @@ import org.apache.james.mailbox.MessageManager;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
@@ -76,7 +77,7 @@ public class CreationMessage {
         private String htmlBody;
         private final ImmutableList.Builder<Attachment> attachments;
         private final ImmutableMap.Builder<BlobId, SubMessage> attachedMessages;
-        private Optional<ImmutableSet<Keyword>> keywords = Optional.empty();
+        private Optional<Map<String, Boolean>> keywords = Optional.empty();
 
         private Builder() {
             to = ImmutableList.builder();
@@ -188,8 +189,8 @@ public class CreationMessage {
             return this;
         }
 
-        public Builder keywords(Set<Keyword> keywords) {
-            this.keywords = Optional.of(ImmutableSet.copyOf(keywords));
+        public Builder keywords(Map<String, Boolean> keywords) {
+            this.keywords = Optional.of(ImmutableMap.copyOf(keywords));
             return this;
         }
 
@@ -219,8 +220,9 @@ public class CreationMessage {
 
             return new CreationMessage(mailboxIds, Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, headers.build(), from,
                     to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, Optional.ofNullable(textBody), Optional.ofNullable(htmlBody),
-                    attachments, attachedMessages, keywords);
+                    attachments, attachedMessages, Keyword.buildKeywords(keywords));
         }
+
     }
 
     private final ImmutableList<String> mailboxIds;

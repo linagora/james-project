@@ -75,6 +75,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 public class SetMessagesCreationProcessorTest {
@@ -163,7 +164,7 @@ public class SetMessagesCreationProcessorTest {
                         creationMessageBuilder
                                 .mailboxId(OUTBOX_ID.serialize())
                                 .isAnswered(Optional.of(true))
-                                .keywords(ImmutableSet.of(Keyword.ANSWERED))
+                                .keywords(ImmutableMap.of("$Answered", true))
                                 .build())
                 .build();
 
@@ -180,7 +181,7 @@ public class SetMessagesCreationProcessorTest {
                         creationMessageId,
                         creationMessageBuilder
                                 .mailboxId(OUTBOX_ID.serialize())
-                                .keywords(ImmutableSet.of(Keyword.ANSWERED))
+                                .keywords(ImmutableMap.of("$Answered", true))
                                 .build())
                 .build();
 
