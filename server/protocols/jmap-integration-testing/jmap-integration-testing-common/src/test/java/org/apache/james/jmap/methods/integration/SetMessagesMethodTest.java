@@ -426,7 +426,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false, \"keywords\": [\"$Seen\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false, \"keywords\": {\"$Seen\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -450,7 +450,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\", \"$Flagged\"] } } }, \"#0\"]]", serializedMessageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Seen\": true, \"$Flagged\": true} } } }, \"#0\"]]", serializedMessageId))
         .when()
             .post("/jmap")
         .then()
@@ -481,7 +481,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\", \"$Forwarded\"] } } }, \"#0\"]]", serializedMessageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Seen\": true, \"$Forwarded\": true} } } }, \"#0\"]]", serializedMessageId))
         .when()
             .post("/jmap")
         .then()
@@ -516,7 +516,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\"] } } }, \"#0\"]]", serializedMessageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Seen\": true} } } }, \"#0\"]]", serializedMessageId))
         .when()
             .post("/jmap")
         .then()
@@ -547,7 +547,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Draft\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Draft\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -571,7 +571,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Deleted\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Answered\": true, \"$Deleted\" : true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -595,7 +595,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Recent\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Answered\": true, \"$Recent\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -619,7 +619,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Forwarded\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Answered\": true, \"$Forwarded\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -647,7 +647,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Answered\", \"$Forwarded\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Answered\": true, \"$Forwarded\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -672,7 +672,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -700,7 +700,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Draft\", \"$Flagged\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Draft\": true, \"$Flagged\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -1152,7 +1152,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"subject\": \"subject\"," +
                 "        \"isDraft\": true," +
-                "        \"keywords\": [\"$Draft\"]," +
+                "        \"keywords\": {\"$Draft\": true}," +
                 "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
@@ -1187,7 +1187,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"subject\": \"subject\"," +
-                "        \"keywords\": [\"$Draft\", \"$Flagged\"]," +
+                "        \"keywords\": {\"$Draft\": true, \"$Flagged\": true}," +
                 "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
@@ -3603,7 +3603,7 @@ public abstract class SetMessagesMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": [\"$Seen\", \"$Unknown\"] } } }, \"#0\"]]", messageId))
+            .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"keywords\": {\"$Seen\": true, \"$Unknown\": true} } } }, \"#0\"]]", messageId))
         .when()
             .post("/jmap")
         .then()
@@ -3624,7 +3624,7 @@ public abstract class SetMessagesMethodTest {
                 "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"subject\": \"subject\"," +
-                "        \"keywords\": [\"$Draft\", \"$Unknown\"]," +
+                "        \"keywords\": {\"$Draft\": true, \"$Unknown\": true}," +
                 "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
                 "      }}" +
                 "    }," +
