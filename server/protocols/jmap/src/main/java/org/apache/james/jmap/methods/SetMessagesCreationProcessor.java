@@ -338,7 +338,7 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
         Preconditions.checkState(!(hasKeywords(message) && isFlag(message)),
                 "Does not support both keywords and is*");
         if (hasKeywords(message)) {
-            return Keyword.fromKeywordsWithFilterUnsupportedKeywords(message.getKeywords().get());
+            return Keyword.toFlagsWithFilterUnsupportedKeywords(message.getKeywords().get());
         } else {
             return buildFlagsFromIsFlag(message);
         }
