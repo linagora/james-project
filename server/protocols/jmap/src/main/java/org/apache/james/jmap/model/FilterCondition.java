@@ -62,8 +62,8 @@ public class FilterCondition implements Filter {
         private String subject;
         private String body;
         private Header header;
-        private Optional<Set<Keyword>> hasKeyword;
-        private Optional<Set<Keyword>> notKeyword;
+        private Optional<String> hasKeyword;
+        private Optional<String> notKeyword;
 
         private Builder() {
             inMailboxes = Optional.empty();
@@ -95,14 +95,14 @@ public class FilterCondition implements Filter {
         }
 
         @JsonDeserialize
-        public Builder hasKeyword(Optional<Set<Keyword>> hasKeyword) {
-            this.hasKeyword = hasKeyword.map(ImmutableSet::copyOf);
+        public Builder hasKeyword(Optional<String> hasKeyword) {
+            this.hasKeyword = hasKeyword;
             return this;
         }
 
         @JsonDeserialize
-        public Builder notKeyword(Optional<Set<Keyword>> notKeyword) {
-            this.notKeyword = notKeyword.map(ImmutableSet::copyOf);
+        public Builder notKeyword(Optional<String> notKeyword) {
+            this.notKeyword = notKeyword;
             return this;
         }
 
@@ -218,13 +218,13 @@ public class FilterCondition implements Filter {
     private final Optional<String> subject;
     private final Optional<String> body;
     private final Optional<Header> header;
-    private final Optional<Set<Keyword>> hasKeyword;
-    private final Optional<Set<Keyword>> notKeyword;
+    private final Optional<String> hasKeyword;
+    private final Optional<String> notKeyword;
 
     @VisibleForTesting FilterCondition(Optional<List<String>> inMailboxes, Optional<List<String>> notInMailboxes, Optional<ZonedDateTime> before, Optional<ZonedDateTime> after, Optional<Integer> minSize, Optional<Integer> maxSize,
                                        Optional<Boolean> isFlagged, Optional<Boolean> isUnread, Optional<Boolean> isAnswered, Optional<Boolean> isDraft, Optional<Boolean> hasAttachment,
                                        Optional<String> text, Optional<String> from, Optional<String> to, Optional<String> cc, Optional<String> bcc, Optional<String> subject,
-                                       Optional<String> body, Optional<Header> header, Optional<Set<Keyword>> hasKeyword, Optional<Set<Keyword>> notKeyword) {
+                                       Optional<String> body, Optional<Header> header, Optional<String> hasKeyword, Optional<String> notKeyword) {
 
         this.inMailboxes = inMailboxes;
         this.notInMailboxes = notInMailboxes;
@@ -325,11 +325,11 @@ public class FilterCondition implements Filter {
         return header;
     }
 
-    public Optional<Set<Keyword>> getHasKeyword() {
+    public Optional<String> getHasKeyword() {
         return hasKeyword;
     }
 
-    public Optional<Set<Keyword>> getNotKeyword() {
+    public Optional<String> getNotKeyword() {
         return notKeyword;
     }
 

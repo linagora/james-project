@@ -91,8 +91,8 @@ public class FilterConditionTest {
         String subject = "subject";
         String body = "body";
         Header header = Header.from(ImmutableList.of("name", "value"));
-        Optional<Set<Keyword>> hasKeyword = Optional.of(ImmutableSet.of(Keyword.DRAFT));
-        Optional<Set<Keyword>> notKeyword = Optional.of(ImmutableSet.of(Keyword.FLAGGED));
+        Optional<String> hasKeyword = Optional.of("$Draft");
+        Optional<String> notKeyword = Optional.of("$Flagged");
 
         FilterCondition expectedFilterCondition = new FilterCondition(Optional.of(ImmutableList.of("1")), Optional.of(ImmutableList.of("2")), Optional.of(before), Optional.of(after), Optional.of(minSize), Optional.of(maxSize),
                 Optional.of(isFlagged), Optional.of(isUnread), Optional.of(isAnswered), Optional.of(isDraft), Optional.of(hasAttachment), Optional.of(text), Optional.of(from), 
@@ -133,27 +133,33 @@ public class FilterConditionTest {
 
     @Test
     public void buildShouldWorkWhenGivenHasKeywords() {
+        String hasKeyword = "$Draft AND $Flagged";
+
         FilterCondition filterCondition = FilterCondition.builder()
-            .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
+            .hasKeyword(Optional.of(hasKeyword))
             .build();
-        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED));
+        assertThat(filterCondition.getHasKeyword().get()).isEqualTo(hasKeyword);
     }
 
     @Test
     public void buildShouldNotCareAboutInvalidKeywordWhenGivenKeywordsWithUnknownValue() {
+        String hasKeyword = "$Draft AND NotValid";
+
         FilterCondition filterCondition = FilterCondition.builder()
-                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid", Keyword.FLAG_VALUE))))
+                .hasKeyword(Optional.of(hasKeyword))
                 .build();
 
-        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, new Keyword("NotValid", Keyword.FLAG_VALUE)));
+        assertThat(filterCondition.getHasKeyword().get()).isEqualTo(hasKeyword);
     }
 
     @Test
     public void buildShouldWorkWhenGivenNotKeyword() {
+        String hasKeyword = "$Draft AND $Flagged";
+
         FilterCondition filterCondition = FilterCondition.builder()
-                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
+                .hasKeyword(Optional.of(hasKeyword))
                 .build();
-        assertThat(filterCondition.getHasKeyword()).contains(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED));
+        assertThat(filterCondition.getHasKeyword().get()).isEqualTo(hasKeyword);
     }
 
 }

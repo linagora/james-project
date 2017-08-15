@@ -79,17 +79,27 @@ public class FilterToSearchQuery {
         filter.getMaxSize().ifPresent(maxSize -> searchQuery.andCriteria(SearchQuery.sizeLessThan(maxSize)));
         filter.getMinSize().ifPresent(minSize -> searchQuery.andCriteria(SearchQuery.sizeGreaterThan(minSize)));
         filter.getHasAttachment().ifPresent(hasAttachment -> searchQuery.andCriteria(SearchQuery.hasAttachment(hasAttachment)));
-        filter.getHasKeyword().ifPresent(keywords -> {
-            searchQuery.andCriteria(getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), true));
+        filter.getHasKeyword().ifPresent(hasKeyword -> {
+            keywordQuery(searchQuery, hasKeyword, true);
         });
-        filter.getNotKeyword().ifPresent(keywords -> {
-            searchQuery.andCriteria(getFlagCriterion(Keyword.fromKeywordsWithFilterUnsupportedKeywords(keywords), false));
+        filter.getNotKeyword().ifPresent(notKeyword -> {
+            keywordQuery(searchQuery, notKeyword, false);
         });
 
         return searchQuery;
     }
 
-    private Criterion getFlagCriterion(Flags flags, boolean isSet) {
+    private void keywordQuery(SearchQuery searchQuery, String hasKeyword, boolean isSet) {
+        Keyword keyword = new Keyword(hasKeyword);
+        if (!Keyword.UNSUPPORTED_KEYWORDS.contains(keyword)) {
+            searchQuery.andCriteria(getFlagCriterion(keyword, isSet));
+        }
+    }
+
+    private Criterion getFlagCriterion(Keyword keyword, boolean isSet) {
+        Flags flags = Keyword.IMAP_SYSTEM_FLAGS.inverse()
+                .getOrDefault(keyword, new Flags(keyword.getFlagName()));
+
         return SearchQuery.and(
             Stream.concat(
                 Stream.of(flags.getSystemFlags())

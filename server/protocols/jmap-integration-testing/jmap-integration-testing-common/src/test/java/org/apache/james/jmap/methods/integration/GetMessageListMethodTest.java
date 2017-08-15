@@ -1347,7 +1347,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":[\"$Flagged\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":\"$Flagged\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1376,7 +1376,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":[\"$Flagged\", \"$Forwarded\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"operator\":\"AND\",\"conditions\":[{\"hasKeyword\":\"$Flagged\"},{\"hasKeyword\":\"$Forwarded\"}]}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1400,7 +1400,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":[\"$Flagged\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":\"$Flagged\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1429,7 +1429,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":[\"$Flagged\", \"$Forwarded\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"operator\":\"AND\",\"conditions\":[{\"notKeyword\":\"$Flagged\"},{\"notKeyword\":\"$Forwarded\"}]}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1438,6 +1438,34 @@ public abstract class GetMessageListMethodTest {
             .body(ARGUMENTS + ".messageIds", allOf(
                 containsInAnyOrder(messageNotFlagged.getMessageId().serialize()),
                 not(containsInAnyOrder(messageFlagged.getMessageId().serialize()))));
+    }
+
+    @Test
+    public void getMessageListNotKeywordFilterShouldWorkWhenMultipleNotKeywordAndFilterOperator() throws Exception {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "mailbox");
+
+        Flags flags = FlagsBuilder.builder()
+            .add(FORWARDED)
+            .add(Flags.Flag.DRAFT)
+            .build();
+
+        ComposedMessageId messageNotFlagged = mailboxProbe.appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.FLAGGED));
+        ComposedMessageId messageFlagged = mailboxProbe.appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "mailbox"),
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, flags);
+
+        await();
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMessageList\", {\"filter\":{\"operator\":\"OR\",\"conditions\":[{\"notKeyword\":\"$Flagged\"},{\"notKeyword\":\"$Forwarded\"}]}}, \"#0\"]]")
+            .when()
+            .post("/jmap")
+            .then()
+            .statusCode(200)
+            .body(NAME, equalTo("messageList"))
+            .body(ARGUMENTS + ".messageIds", allOf(
+                containsInAnyOrder(messageNotFlagged.getMessageId().serialize(), messageFlagged.getMessageId().serialize())));
     }
 
     @Test
@@ -1453,7 +1481,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":[\"$Flagged\"], \"notKeyword\":[\"$Draft\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":\"$Flagged\", \"notKeyword\":\"$Draft\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1477,7 +1505,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":[\"$Deleted\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":\"$Deleted\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1500,7 +1528,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":[\"$Recent\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"hasKeyword\":\"$Recent\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1523,7 +1551,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":[\"$Deleted\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":\"$Deleted\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -1546,7 +1574,7 @@ public abstract class GetMessageListMethodTest {
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":[\"$Recent\"]}}, \"#0\"]]")
+            .body("[[\"getMessageList\", {\"filter\":{\"notKeyword\":\"$Recent\"}}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()

@@ -486,11 +486,10 @@ public class FilterToSearchQueryTest {
         SearchQuery expectedSearchQuery = new SearchQuery();
         expectedSearchQuery.andCriteria(SearchQuery.and(
             ImmutableList.of(
-                SearchQuery.flagIsSet(Flag.DRAFT),
                 SearchQuery.flagIsSet(Flag.FLAGGED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
-                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
+                .hasKeyword(Optional.of("$Flagged"))
                 .build());
 
         assertThat(searchQuery).isEqualTo(expectedSearchQuery);
@@ -501,12 +500,10 @@ public class FilterToSearchQueryTest {
         SearchQuery expectedSearchQuery = new SearchQuery();
         expectedSearchQuery.andCriteria(SearchQuery.and(
             ImmutableList.of(
-                SearchQuery.flagIsSet(Flag.DRAFT),
-                SearchQuery.flagIsSet(Flag.FLAGGED),
                 SearchQuery.flagIsSet(FORWARDED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
-                .hasKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED, new Keyword(FORWARDED, Keyword.FLAG_VALUE))))
+                .hasKeyword(Optional.of(FORWARDED))
                 .build());
 
         assertThat(searchQuery).isEqualTo(expectedSearchQuery);
@@ -517,12 +514,11 @@ public class FilterToSearchQueryTest {
         SearchQuery expectedSearchQuery = new SearchQuery();
         expectedSearchQuery.andCriteria(SearchQuery.and(
             ImmutableList.of(
-                SearchQuery.flagIsUnSet(Flag.DRAFT),
                 SearchQuery.flagIsUnSet(Flag.FLAGGED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
-                .notKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED)))
-                .build());
+            .notKeyword(Optional.of("$Flagged"))
+            .build());
 
         assertThat(searchQuery).isEqualTo(expectedSearchQuery);
     }
@@ -532,12 +528,10 @@ public class FilterToSearchQueryTest {
         SearchQuery expectedSearchQuery = new SearchQuery();
         expectedSearchQuery.andCriteria(SearchQuery.and(
                 ImmutableList.of(
-                        SearchQuery.flagIsUnSet(Flag.DRAFT),
-                        SearchQuery.flagIsUnSet(Flag.FLAGGED),
                         SearchQuery.flagIsUnSet(FORWARDED))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
-                .notKeyword(Optional.of(ImmutableSet.of(Keyword.DRAFT, Keyword.FLAGGED, new Keyword(FORWARDED, Keyword.FLAG_VALUE))))
+                .notKeyword(Optional.of(FORWARDED))
                 .build());
 
         assertThat(searchQuery).isEqualTo(expectedSearchQuery);
