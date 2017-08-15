@@ -92,7 +92,7 @@ public class UpdateMessagePatch {
                     .build()));
             }
             UpdateMessagePatch updateMessagePatch = new UpdateMessagePatch(mailboxIds, isUnread, isFlagged, isAnswered,
-                    Keyword.buildKeywords(keywords), ImmutableList.copyOf(validationResult));
+                    Keyword.toSetOfKeywords(keywords), ImmutableList.copyOf(validationResult));
             if (updateMessagePatch.isBothKeywordsAndIsFlagProperties()) {
                 validationResult(ImmutableSet.of(ValidationResult.builder()
                     .property("keywords")
@@ -199,7 +199,7 @@ public class UpdateMessagePatch {
             throw new IllegalArgumentException("Cannot add or remove draft flag");
         }
 
-        return Keyword.fromKeywords(Stream.concat(
+        return Keyword.toFlags(Stream.concat(
                 Keyword.fromSystemFlags(currentFlags)
                     .stream()
                     .filter(keyword -> Keyword.UNSUPPORTED_KEYWORDS.contains(keyword)),
