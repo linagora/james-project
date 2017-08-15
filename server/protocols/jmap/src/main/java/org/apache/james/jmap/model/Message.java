@@ -43,7 +43,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 @JsonDeserialize(builder = Message.Builder.class)
 @JsonFilter(JmapResponseWriterImpl.PROPERTIES_FILTER)
@@ -214,7 +213,7 @@ public class Message {
                     oldKeyword.isUnread(), oldKeyword.isFlagged(), oldKeyword.isAnswered(), oldKeyword.isDraft(),
                     hasAttachment, headers, Optional.ofNullable(from),
                     to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, size, preview, textBody, htmlBody, attachments, attachedMessages,
-                    flags.map(f -> Optional.of(ImmutableSet.copyOf(Keyword.fromFlags(f)))).orElse(Optional.empty()));
+                    Keyword.toMapOfStringKeywords(flags));
         }
     }
 
@@ -263,7 +262,7 @@ public class Message {
     private final Optional<String> htmlBody;
     private final ImmutableList<Attachment> attachments;
     private final ImmutableMap<BlobId, SubMessage> attachedMessages;
-    private final Optional<ImmutableSet<Keyword>> keywords;
+    private final Optional<ImmutableMap<String, Boolean>> keywords;
 
     @VisibleForTesting Message(MessageId id,
                                BlobId blobId,
@@ -289,7 +288,7 @@ public class Message {
                                Optional<String> htmlBody,
                                ImmutableList<Attachment> attachments,
                                ImmutableMap<BlobId, SubMessage> attachedMessages,
-                               Optional<ImmutableSet<Keyword>> keywords) {
+                               Optional<ImmutableMap<String, Boolean>> keywords) {
         this.id = id;
         this.blobId = blobId;
         this.threadId = threadId;
@@ -413,7 +412,7 @@ public class Message {
         return attachedMessages;
     }
 
-    public Optional<ImmutableSet<Keyword>> getKeywords() {
+    public Optional<ImmutableMap<String, Boolean>> getKeywords() {
         return keywords;
     }
 }

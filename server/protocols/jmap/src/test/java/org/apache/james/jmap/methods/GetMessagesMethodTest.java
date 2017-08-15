@@ -67,6 +67,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.jayway.jsonpath.JsonPath;
@@ -540,9 +541,16 @@ public class GetMessagesMethodTest {
             .extracting(Message::getKeywords)
             .extracting(Optional::get)
             .containsOnly(
-                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
-                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
-                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT));
+                ImmutableMap.of(
+                    "$Answered", true,
+                    "$Draft", true),
+                ImmutableMap.of(
+                    "$Answered", true,
+                    "$Draft", true),
+                ImmutableMap.of(
+                    "$Answered", true,
+                    "$Draft", true)
+                    );
 
     }
 
@@ -588,9 +596,15 @@ public class GetMessagesMethodTest {
             .extracting(Message::getKeywords)
             .extracting(Optional::get)
             .containsOnly(
-                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
-                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT),
-                ImmutableSet.of(Keyword.ANSWERED, Keyword.DRAFT));
+                ImmutableMap.of(
+                    "$Answered", true,
+                    "$Draft", true),
+                ImmutableMap.of(
+                    "$Answered", true,
+                    "$Draft", true),
+                ImmutableMap.of(
+                    "$Answered", true,
+                    "$Draft", true));
 
     }
 
@@ -620,7 +634,9 @@ public class GetMessagesMethodTest {
             .extracting(Message::getKeywords)
             .extracting(Optional::get)
             .containsOnly(
-                ImmutableSet.of(Keyword.ANSWERED, new Keyword(FORWARDED, true)));
+                ImmutableMap.of(
+                    "$Answered", true,
+                    FORWARDED, true));
 
     }
 }

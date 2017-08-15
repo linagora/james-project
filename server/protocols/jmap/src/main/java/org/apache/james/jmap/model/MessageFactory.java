@@ -110,10 +110,6 @@ public class MessageFactory {
                 .build();
     }
 
-    private Set<Keyword> getKeywords(MetaDataWithContent message) {
-        return Keyword.fromFlags(message.getFlags());
-    }
-
     private Instant getDateFromHeaderOrInternalDateOtherwise(org.apache.james.mime4j.dom.Message mimeMessage, MetaDataWithContent message) {
         return Optional.ofNullable(mimeMessage.getDate())
             .map(Date::toInstant)

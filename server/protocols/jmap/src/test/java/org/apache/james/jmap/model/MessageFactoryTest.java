@@ -692,6 +692,8 @@ public class MessageFactoryTest {
             .add(Flag.ANSWERED)
             .add(Flag.DRAFT)
             .build();
+        ImmutableMap<String, Boolean> keywords = Keyword.toMapOfStringKeywords(Optional.of(flags)).get();
+
         MetaDataWithContent testMail = MetaDataWithContent.builder()
             .uid(MessageUid.of(2))
             .flags(flags)
@@ -703,7 +705,7 @@ public class MessageFactoryTest {
             .messageId(TestMessageId.of(2))
             .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
-        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, Keyword.DRAFT);
+        assertThat(testee.getKeywords().get()).containsAllEntriesOf(keywords);
     }
 
     @Test
@@ -712,6 +714,7 @@ public class MessageFactoryTest {
             .add(Flag.ANSWERED)
             .add(FORWARDED)
             .build();
+        ImmutableMap<String, Boolean> keywords = Keyword.toMapOfStringKeywords(Optional.of(flags)).get();
         MetaDataWithContent testMail = MetaDataWithContent.builder()
             .uid(MessageUid.of(2))
             .flags(flags)
@@ -723,7 +726,7 @@ public class MessageFactoryTest {
             .messageId(TestMessageId.of(2))
             .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
-        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED, Keyword.FLAG_VALUE));
+        assertThat(testee.getKeywords().get()).containsAllEntriesOf(keywords);
     }
 
     @Test
@@ -734,6 +737,7 @@ public class MessageFactoryTest {
             .add(Flag.RECENT)
             .add(FORWARDED)
             .build();
+        ImmutableMap<String, Boolean> keywords = Keyword.toMapOfStringKeywords(Optional.of(flags)).get();
 
         MetaDataWithContent testMail = MetaDataWithContent.builder()
             .uid(MessageUid.of(2))
@@ -746,6 +750,6 @@ public class MessageFactoryTest {
             .messageId(TestMessageId.of(2))
             .build();
         Message testee = messageFactory.fromMetaDataWithContent(testMail);
-        assertThat(testee.getKeywords().get()).containsOnly(Keyword.ANSWERED, new Keyword(FORWARDED, Keyword.FLAG_VALUE));
+        assertThat(testee.getKeywords().get()).containsAllEntriesOf(keywords);
     }
 }

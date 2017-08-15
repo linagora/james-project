@@ -32,7 +32,6 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 public class MessageTest {
 
@@ -168,7 +167,7 @@ public class MessageTest {
             .add(Flags.Flag.ANSWERED)
             .add(Flags.Flag.FLAGGED)
             .build();
-        Optional<ImmutableSet<Keyword>> keywords = Optional.of(ImmutableSet.copyOf(Keyword.fromFlags(flags)));
+        Optional<ImmutableMap<String, Boolean>> keywords = Keyword.toMapOfStringKeywords(Optional.of(flags));
         Message expected = new Message(
                 TestMessageId.of(1),
                 BlobId.of("blobId"),
