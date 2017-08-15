@@ -466,7 +466,8 @@ public abstract class SetMessagesMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messages"))
             .body(ARGUMENTS + ".list", hasSize(1))
-            .body(ARGUMENTS + ".list[0].keywords", containsInAnyOrder("$Seen", "$Flagged"));
+            .body(ARGUMENTS + ".list[0].keywords.$Seenđd", equalTo(true))
+            .body(ARGUMENTS + ".list[0].keywords.$Flagged", equalTo(true));
     }
 
     @Test
@@ -497,7 +498,9 @@ public abstract class SetMessagesMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messages"))
             .body(ARGUMENTS + ".list", hasSize(1))
-            .body(ARGUMENTS + ".list[0].keywords", containsInAnyOrder("$Seen", "$Forwarded"));
+            .body(ARGUMENTS + ".list[0].keywords.$Seen", equalTo(true))
+            .body(ARGUMENTS + ".list[0].keywords.$Forwarded", equalTo(true))
+            ;
     }
 
     @Test
@@ -532,7 +535,7 @@ public abstract class SetMessagesMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messages"))
             .body(ARGUMENTS + ".list", hasSize(1))
-            .body(ARGUMENTS + ".list[0].keywords", contains("$Seen"));
+            .body(ARGUMENTS + ".list[0].keywords.$Seen", equalTo(true));
     }
 
     @Test
@@ -716,7 +719,9 @@ public abstract class SetMessagesMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messages"))
             .body(ARGUMENTS + ".list", hasSize(1))
-            .body(ARGUMENTS + ".list[0].keywords", contains("$Draft", "$Flagged"));
+            .body(ARGUMENTS + ".list[0].keywords.$Draft", equalTo(true))
+            .body(ARGUMENTS + ".list[0].keywords.$Flagged", equalTo(true))
+            ;
     }
 
     private ResponseSpecification getSetMessagesUpdateOKResponseAssertions(String messageId) {
@@ -1207,7 +1212,9 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
             .body(ARGUMENTS + ".created", aMapWithSize(1))
             .body(ARGUMENTS + ".created", hasKey(messageCreationId))
-            .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].keywords", contains("$Draft", "$Flagged"));
+            .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].keywords.$Draft", equalTo(true))
+            .body(ARGUMENTS + ".created[\""+messageCreationId+"\"].keywords.$Flagged", equalTo(true))
+            ;
     }
     @Test
     public void setMessageShouldSupportArbitraryMessageId() {
