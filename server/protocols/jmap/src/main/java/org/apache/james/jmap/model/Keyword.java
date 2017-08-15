@@ -22,13 +22,13 @@ package org.apache.james.jmap.model;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.commons.lang.StringUtils;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.MoreObjects;
@@ -36,9 +36,9 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-@JsonSerialize(using = KeywordSerialization.class)
 public class Keyword {
     public final static boolean FLAG_VALUE = true;
     private final static int FLAG_NAME_MIN_LENTH = 1;
@@ -109,15 +109,6 @@ public class Keyword {
         return firstBuilder.add(secondBuilder.build());
     }
 
-    public static Set<Keyword> fromFlags(Flags flags) {
-        return Stream.concat(
-            Stream.of(flags.getUserFlags())
-                .map(flag -> new Keyword(flag, FLAG_VALUE)),
-            Stream.of(flags.getSystemFlags())
-                .map(flag -> IMAP_SYSTEM_FLAGS.get(new Flags(flag)))
-                .filter(jmapFlag -> !UNSUPPORTED_KEYWORDS.contains(jmapFlag))
-        ).collect(Guavate.toImmutableSet());
-    }
 
     public static Set<Keyword> fromSystemFlags(Flags flags) {
         return Stream.of(flags.getSystemFlags())
@@ -125,32 +116,50 @@ public class Keyword {
                 .collect(Guavate.toImmutableSet());
     }
 
-    public static Flags fromKeywordsWithFilterUnsupportedKeywords(Set<Keyword> keywords) {
+    public static Flags toFlagsWithFilterUnsupportedKeywords(Set<Keyword> keywords) {
         return keywords.stream()
             .filter(keyword -> !UNSUPPORTED_KEYWORDS.contains(keyword))
             .reduce(FlagsBuilder.builder(), Keyword::accumulator, Keyword::combiner)
             .build();
     }
 
-    public static Flags fromKeywords(Set<Keyword> keywords) {
+    public static Flags toFlags(Set<Keyword> keywords) {
         return keywords.stream()
             .reduce(FlagsBuilder.builder(), Keyword::accumulator, Keyword::combiner)
             .build();
     }
 
-    public static Flags fromKeywordsWithFilterUnsupportedKeywords(String... keywords) {
-        return fromKeywordsWithFilterUnsupportedKeywords(ImmutableSet.copyOf(keywords)
+    public static Flags toFlags(String... keywords) {
+        return toFlags(
+            ImmutableSet.copyOf(keywords)
             .stream()
             .map(keyword -> new Keyword(keyword, FLAG_VALUE))
             .collect(Guavate.toImmutableSet()));
     }
 
-    public static Optional<ImmutableSet<Keyword>> buildKeywords(Optional<Map<String, Boolean>> keywords) {
+    public static Optional<ImmutableSet<Keyword>> toSetOfKeywords(Optional<Map<String, Boolean>> keywords) {
         return Optional.of(keywords.map(allKeywords -> allKeywords.entrySet()
             .stream()
             .map(entry -> new Keyword(entry.getKey(), entry.getValue()))
             .collect(Guavate.toImmutableSet())))
             .orElse(Optional.empty());
+    }
+
+    public static Optional<ImmutableMap<String, Boolean>> toMapOfStringKeywords(Optional<Flags> flags) {
+        return Optional.of(flags.map(allFlags -> fromFlags(allFlags)
+            .stream()
+            .collect(Guavate.toImmutableMap(Keyword::getFlagName, Keyword::getFlagValue))))
+            .orElse(Optional.empty());
+    }
+
+    private static Set<Keyword> fromFlags(Flags flags) {
+        return Stream.concat(
+            Stream.of(flags.getUserFlags())
+                .map(flag -> new Keyword(flag, FLAG_VALUE)),
+            Stream.of(flags.getSystemFlags())
+                .map(flag -> IMAP_SYSTEM_FLAGS.get(new Flags(flag)))
+                .filter(jmapFlag -> !UNSUPPORTED_KEYWORDS.contains(jmapFlag))
+        ).collect(Guavate.toImmutableSet());
     }
 
     @Override
