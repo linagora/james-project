@@ -328,7 +328,7 @@ Feature: GetMessages method
 
     Examples:
             |flags                 |keyword                 |
-            |"$Flagged,$Answered"  |$Flagged, $Answered     |
+            |"$Flagged,$Answered"  |$Answered,$Flagged      |
 
   Scenario Outline: Retrieving message should display keywords without unsupported jmap flag
     Given the user has a message "m1" in the "inbox" mailbox with Recent and Deleted flags <flags>
@@ -339,7 +339,7 @@ Feature: GetMessages method
 
     Examples:
             |flags                                  |keyword                 |
-            |"$Flagged,$Answered,$Deleted,$Recent"  |$Flagged, $Answered     |
+            |"$Flagged,$Answered,$Deleted,$Recent"  |$Answered,$Flagged      |
 
   Scenario Outline: Retrieving message should display keywords with forwarded jmap flag
     Given the user has a message "m1" in the "inbox" mailbox with forwarded jmap flag <flags>
@@ -350,4 +350,4 @@ Feature: GetMessages method
 
     Examples:
             |flags                    |keyword                 |
-            |"$Flagged,$Forwarded"    |$Flagged, $Forwarded    |
+            |"$Flagged,$Forwarded"    |$Forwarded,$Flagged     |

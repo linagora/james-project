@@ -249,17 +249,17 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in the \"([^\"]*)\" mailbox with flags \"([^\"]*)\"$")
     public void appendMessageWithFlags(String messageName, String mailbox, String flags) throws Exception {
-        appendMessage(messageName, Keyword.fromKeywordsWithFilterUnsupportedKeywords(StringUtils.split(flags, ",")));
+        appendMessage(messageName, Keyword.toFlags(StringUtils.split(flags, ",")));
     }
 
     @Given("^the user has a message \"([^\"]*)\" in the \"([^\"]*)\" mailbox with Recent and Deleted flags \"([^\"]*)\"$")
     public void appendMessageWithUnsupportedJmapFlags(String messageName, String mailbox, String flags) throws Exception {
-        appendMessage(messageName, Keyword.fromKeywordsWithFilterUnsupportedKeywords(StringUtils.split(flags, ",")));
+        appendMessage(messageName, Keyword.toFlags(StringUtils.split(flags, ",")));
     }
 
     @Given("^the user has a message \"([^\"]*)\" in the \"([^\"]*)\" mailbox with forwarded jmap flag \"([^\"]*)\"$")
     public void appendMessageWithForwardedJmapFlags(String messageName, String mailbox, String flags) throws Exception {
-        appendMessage(messageName, Keyword.fromKeywordsWithFilterUnsupportedKeywords(StringUtils.split(flags, ",")));
+        appendMessage(messageName, Keyword.toFlags(StringUtils.split(flags, ",")));
     }
 
     private void appendMessage(String messageName, Flags flags) throws Exception {
@@ -529,11 +529,18 @@ public class GetMessagesMethodStepdefs {
         assertThat(actual).contains(preview);
     }
 
-    @Then("^the keywords of the message is (.*)$")
+    @Then("^the keywords of the message is (.*)$")//(.*)
     public void assertKeywordsOfMessageShouldDisplay(List<String> keywords) throws Exception {
-        assertThat(jsonPath.<JSONArray>read(FIRST_MESSAGE + ".keywords"))
-                .hasSize(2)
-                .containsOnlyElementsOf(keywords);
+        assertThat(jsonPath.<Map<String, Boolean>>read(FIRST_MESSAGE + ".keywords").keySet())
+            .hasSize(2)
+            .containsExactlyElementsOf(keywords);
+    }
+
+    public static void main(String[] agrs) {
+        String abc = "{\"$Flagged\": true, \"$Seen\": true}";
+
+        DocumentContext doc = JsonPath.parse(abc);
+        System.out.println("" + doc.jsonString());
     }
 
     private void assertAttachment(String attachment, DataTable attachmentProperties) {
