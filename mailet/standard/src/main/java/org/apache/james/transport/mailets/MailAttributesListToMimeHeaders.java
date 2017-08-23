@@ -26,17 +26,13 @@ import java.util.Map.Entry;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.GenericMailet;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.base.Strings;
 
 /**
- * <p>Convert attributes of type String to headers</p>
+ * <p>Convert attributes of type List&lt;String&gt; to headers</p>
  *
  * <p>Sample configuration:</p>
  * <pre><code>
@@ -47,36 +43,39 @@ import com.google.common.collect.ImmutableMap.Builder;
  * headerName2&lt;/simplemapping&gt; &lt;/mailet&gt;
  * </code></pre>
  */
-public class MailAttributesToMimeHeaders extends GenericMailet {
+public class MailAttributesListToMimeHeaders extends GenericMailet {
 
-    private static final String CONFIGURATION_ERROR_MESSAGE = "Invalid config. Please use \"attributeName; headerName\"";
-    private Map<String, String> mappings;
+    private Map<String, String> attributeNameToHeader;
 
     @Override
     public void init() throws MessagingException {
         String simpleMappings = getInitParameter("simplemapping");
-
         if (Strings.isNullOrEmpty(simpleMappings)) {
             throw new MessagingException("simplemapping is required");
         }
 
-        mappings = MappingArgument.parse(simpleMappings);
+        attributeNameToHeader = MappingArgument.parse(simpleMappings);
     }
 
     @Override
     public void service(Mail mail) {
         try {
             MimeMessage message = mail.getMessage();
-            for (Entry<String, String> entry : mappings.entrySet()) {
-                String value = (String) mail.getAttribute(entry.getKey());
-                if (value != null) {
-                    String headerName = entry.getValue();
-                    message.addHeader(headerName, value);
-                }
+            for (Entry<String, String> entry : attributeNameToHeader.entrySet()) {
+                List<String> values = (List<String>) mail.getAttribute(entry.getKey());
+                addHeaders(message, entry.getValue(), values);
             }
             message.saveChanges();
         } catch (MessagingException e) {
-            log(e.getMessage());
+            log("Exception while adding headers", e);
+        }
+    }
+
+    private void addHeaders(MimeMessage message, String headerName, List<String> values) throws MessagingException {
+        if (values != null) {
+            for(String value : values) {
+                message.addHeader(headerName, value);
+            }
         }
     }
 

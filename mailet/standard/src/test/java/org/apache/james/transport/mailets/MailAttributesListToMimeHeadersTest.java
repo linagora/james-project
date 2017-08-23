@@ -21,7 +21,6 @@ package org.apache.james.transport.mailets;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 import javax.mail.MessagingException;
 
@@ -35,24 +34,32 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class MailAttributesToMimeHeadersTest {
+import com.google.common.collect.ImmutableList;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MailAttributesListToMimeHeadersTest {
 
     @Rule public ExpectedException expectedException = ExpectedException.none();
-    
+
     private Mailet mailet;
 
     private final String HEADER_NAME1 = "JUNIT";
     private final String HEADER_NAME2 = "JUNIT2";
 
-    private final String MAIL_ATTRIBUTE_VALUE1 = "test1";
-    private final String MAIL_ATTRIBUTE_VALUE2 = "test2";
+    private final ImmutableList<String> MAIL_ATTRIBUTE_VALUE1 = ImmutableList.of("test1.1", "test1.2");
+    private final ImmutableList<String> MAIL_ATTRIBUTE_VALUE2 = ImmutableList.of("test2.1", "test2.2");
+
+    private final String[] MAIL_ATTRIBUTE_VALUE1_AS_ARRAY = MAIL_ATTRIBUTE_VALUE1.toArray(new String[MAIL_ATTRIBUTE_VALUE1.size()]);
+    private final String[] MAIL_ATTRIBUTE_VALUE2_AS_ARRAY = MAIL_ATTRIBUTE_VALUE2.toArray(new String[MAIL_ATTRIBUTE_VALUE1.size()]);
 
     private final String MAIL_ATTRIBUTE_NAME1 = "org.apache.james.test";
     private final String MAIL_ATTRIBUTE_NAME2 = "org.apache.james.test2";
 
     @Before
     public void setup() {
-        mailet = new MailAttributesToMimeHeaders();
+        mailet = new MailAttributesListToMimeHeaders();
     }
 
     @Test
@@ -110,20 +117,46 @@ public class MailAttributesToMimeHeadersTest {
         mockedMail.setAttribute(MAIL_ATTRIBUTE_NAME1, MAIL_ATTRIBUTE_VALUE1);
 
         mailet.service(mockedMail);
-        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1)).containsExactly(MAIL_ATTRIBUTE_VALUE1);
+
+        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1))
+            .containsExactly(MAIL_ATTRIBUTE_VALUE1_AS_ARRAY);
+    }
+
+    @Test
+    public void shouldIgnoreNullValueInsideList() throws MessagingException {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .mailetName("Test")
+            .setProperty("simplemapping",
+                MAIL_ATTRIBUTE_NAME1 + "; " + HEADER_NAME1)
+            .build();
+
+        mailet.init(mailetConfig);
+
+        FakeMail mockedMail = MailUtil.createMockMail2Recipients(MailUtil.createMimeMessage());
+
+        ArrayList<String> listWithNull = new ArrayList<String>();
+        listWithNull.add("1");
+        listWithNull.add(null);
+        listWithNull.add("2");
+        mockedMail.setAttribute(MAIL_ATTRIBUTE_NAME1, listWithNull);
+
+        mailet.service(mockedMail);
+
+        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1))
+            .containsExactly("1", "2");
     }
 
     @Test
     public void shouldPutAttributesIntoHeadersWhenMappingDefined() throws MessagingException {
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .mailetName("Test")
-                .setProperty("simplemapping", 
+                .setProperty("simplemapping",
                         MAIL_ATTRIBUTE_NAME1 + "; " + HEADER_NAME1 +
-                        "," + MAIL_ATTRIBUTE_NAME2 + "; " + HEADER_NAME2 + 
+                        "," + MAIL_ATTRIBUTE_NAME2 + "; " + HEADER_NAME2 +
                         "," + "another.attribute" + "; " + "Another-Header")
                 .build();
         mailet.init(mailetConfig);
-        
+
         FakeMail mockedMail = MailUtil.createMockMail2Recipients(MailUtil.createMimeMessage());
         mockedMail.setAttribute(MAIL_ATTRIBUTE_NAME1, MAIL_ATTRIBUTE_VALUE1);
         mockedMail.setAttribute(MAIL_ATTRIBUTE_NAME2, MAIL_ATTRIBUTE_VALUE2);
@@ -131,12 +164,15 @@ public class MailAttributesToMimeHeadersTest {
 
         mailet.service(mockedMail);
 
-        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1)).containsExactly(MAIL_ATTRIBUTE_VALUE1);
-        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME2)).containsExactly(MAIL_ATTRIBUTE_VALUE2);
+        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1))
+            .containsExactly(MAIL_ATTRIBUTE_VALUE1_AS_ARRAY);
+
+        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME2))
+            .containsExactly(MAIL_ATTRIBUTE_VALUE2_AS_ARRAY);
     }
 
     @Test
-    public void shouldAddAttributeIntoHeadersWhenHeaderAlreadyPresent() throws MessagingException {
+    public void shouldNotRemovePreviousAttributeValueWhenAttributeAlreadyPresent() throws MessagingException {
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .mailetName("Test")
                 .setProperty("simplemapping", MAIL_ATTRIBUTE_NAME1 + "; " + HEADER_NAME1)
@@ -147,39 +183,51 @@ public class MailAttributesToMimeHeadersTest {
             .addHeader(HEADER_NAME1, "first value")
             .build());
         mockedMail.setAttribute(MAIL_ATTRIBUTE_NAME1, MAIL_ATTRIBUTE_VALUE1);
-        
+
         mailet.service(mockedMail);
 
-        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1)).containsExactly("first value", MAIL_ATTRIBUTE_VALUE1);
+        List<String> expectedHeaderValues = ImmutableList
+            .<String>builder()
+            .addAll(MAIL_ATTRIBUTE_VALUE1)
+            .add("first value" )
+            .build();
+
+        assertThat(mockedMail.getMessage().getHeader(HEADER_NAME1))
+            .containsOnly(expectedHeaderValues.toArray(new String[expectedHeaderValues.size()]));
     }
 
-    
     @Test
     public void shouldThrowAtInitWhenNoSemicolumnInConfigurationEntry() throws MessagingException {
+        expectedException.expect(MessagingException.class);
+
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .mailetName("Test")
                 .setProperty("simplemapping", "invalidConfigEntry")
                 .build();
-        expectedException.expect(MessagingException.class);
+
         mailet.init(mailetConfig);
     }
 
     @Test
     public void shouldThrowAtInitWhenTwoSemicolumnsInConfigurationEntry() throws MessagingException {
+        expectedException.expect(MessagingException.class);
+
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .mailetName("Test")
                 .setProperty("simplemapping", "first;second;third")
                 .build();
-        expectedException.expect(MessagingException.class);
+
         mailet.init(mailetConfig);
     }
 
     @Test
     public void shouldThrowAtInitWhenNoConfigurationEntry() throws MessagingException {
+        expectedException.expect(MessagingException.class);
+
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .mailetName("Test")
                 .build();
-        expectedException.expect(MessagingException.class);
+
         mailet.init(mailetConfig);
     }
 }
