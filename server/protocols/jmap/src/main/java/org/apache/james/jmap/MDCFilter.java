@@ -17,21 +17,40 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.ai.classic;
+package org.apache.james.jmap;
 
-/**
- * Logs naively to system out. Not recommended for production.
- */
-public class SystemLog implements Log {
-    
+import java.io.Closeable;
+import java.io.IOException;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
+import org.apache.james.util.MDCBuilder;
+
+public class MDCFilter implements Filter {
     @Override
-    public void log(String errorString) {
-        System.err.println("[AI Classic] " + errorString);
+    public void init(FilterConfig filterConfig) throws ServletException {
+
     }
 
     @Override
-    public void log(String errorString, Throwable t) {
-        System.err.println("[AI Classic] " + errorString);
-        t.printStackTrace();
-    } 
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        try (Closeable closeable =
+                 MDCBuilder.create()
+                     .addContext(MDCBuilder.PROTOCOL, "JMAP")
+                     .addContext(MDCBuilder.IP, request.getRemoteAddr())
+                     .addContext(MDCBuilder.HOST, request.getRemoteHost())
+                     .build()) {
+            chain.doFilter(request, response);
+        }
+    }
+
+    @Override
+    public void destroy() {
+
+    }
 }

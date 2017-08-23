@@ -42,6 +42,8 @@ import org.apache.james.rrt.lib.Mappings;
 import org.apache.james.rrt.lib.MappingsImpl;
 import org.apache.james.util.sql.JDBCUtil;
 import org.apache.james.util.sql.SqlResources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class responsible to implement the Virtual User Table in database with JDBC
@@ -51,6 +53,7 @@ import org.apache.james.util.sql.SqlResources;
  */
 @Deprecated
 public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(JDBCRecipientRewriteTable.class);
 
     private DataSource dataSource = null;
 
@@ -72,18 +75,14 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
     /**
      * The JDBCUtil helper class
      */
-    private final JDBCUtil theJDBCUtil = new JDBCUtil() {
-        protected void delegatedLog(String logString) {
-            getLogger().debug("JDBCRecipientRewriteTable: " + logString);
-        }
-    };
+    private final JDBCUtil theJDBCUtil = new JDBCUtil();
 
     @PostConstruct
     public void init() throws Exception {
 
         StringBuffer logBuffer;
-        if (getLogger().isDebugEnabled()) {
-            getLogger().debug(this.getClass().getName() + ".initialize()");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(this.getClass().getName() + ".initialize()");
         }
 
         // Test the connection to the database, by getting the DatabaseMetaData.
@@ -98,13 +97,13 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             try {
                 sqlFile = fileSystem.getResource(sqlFileName);
             } catch (Exception e) {
-                getLogger().error(e.getMessage(), e);
+                LOGGER.error(e.getMessage(), e);
                 throw e;
             }
 
-            if (getLogger().isDebugEnabled()) {
+            if (LOGGER.isDebugEnabled()) {
                 logBuffer = new StringBuffer(128).append("Reading SQL resources from file: ").append(sqlFileName).append(", section ").append(this.getClass().getName()).append(".");
-                getLogger().debug(logBuffer.toString());
+                LOGGER.debug(logBuffer.toString());
             }
 
             // Build the statement parameters
@@ -128,9 +127,9 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
                 createStatement = conn.prepareStatement(sqlQueries.getSqlString("createTable", true));
                 createStatement.execute();
 
-                if (getLogger().isInfoEnabled()) {
+                if (LOGGER.isInfoEnabled()) {
                     logBuffer = new StringBuffer(64).append("JdbcVirtalUserTable: Created table '").append(tableName).append("'.");
-                    getLogger().info(logBuffer.toString());
+                    LOGGER.info(logBuffer.toString());
                 }
             }
 
@@ -185,9 +184,9 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             tableName = urlParams.get(1);
         }
 
-        if (getLogger().isDebugEnabled()) {
+        if (LOGGER.isDebugEnabled()) {
             String logBuffer = "Parsed URL: table = '" + tableName + "'";
-            getLogger().debug(logBuffer);
+            LOGGER.debug(logBuffer);
         }
 
         sqlFileName = conf.getString("sqlFile");
@@ -234,7 +233,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             }
 
         } catch (SQLException sqle) {
-            getLogger().error("Error accessing database", sqle);
+            LOGGER.error("Error accessing database", sqle);
             throw new RecipientRewriteTableException("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
@@ -266,7 +265,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
                 theJDBCUtil.closeJDBCResultSet(mappingRS);
             }
         } catch (SQLException sqle) {
-            getLogger().error("Error accessing database", sqle);
+            LOGGER.error("Error accessing database", sqle);
             throw new RecipientRewriteTableException("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
@@ -302,7 +301,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             }
 
         } catch (SQLException sqle) {
-            getLogger().error("Error accessing database", sqle);
+            LOGGER.error("Error accessing database", sqle);
             throw new RecipientRewriteTableException("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
@@ -362,7 +361,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             }
 
         } catch (SQLException sqle) {
-            getLogger().error("Error accessing database", sqle);
+            LOGGER.error("Error accessing database", sqle);
             throw new RecipientRewriteTableException("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
@@ -403,7 +402,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             }
 
         } catch (SQLException sqle) {
-            getLogger().error("Error accessing database", sqle);
+            LOGGER.error("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
             theJDBCUtil.closeJDBCConnection(conn);
@@ -444,7 +443,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             }
 
         } catch (SQLException sqle) {
-            getLogger().error("Error accessing database", sqle);
+            LOGGER.error("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
             theJDBCUtil.closeJDBCConnection(conn);

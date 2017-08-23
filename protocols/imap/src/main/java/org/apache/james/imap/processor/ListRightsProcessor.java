@@ -19,6 +19,7 @@
 
 package org.apache.james.imap.processor;
 
+import java.io.Closeable;
 import java.util.List;
 
 import org.apache.james.imap.api.ImapCommand;
@@ -41,6 +42,9 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.SimpleMailboxACL.SimpleMailboxACLEntryKey;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.util.MDCBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -50,6 +54,7 @@ import com.google.common.collect.ImmutableList;
  * @author Peter Palaga
  */
 public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequest> implements CapabilityImplementingProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListRightsProcessor.class);
 
     private static final List<String> CAPABILITIES = ImmutableList.of(ImapConstants.SUPPORTS_ACL);
 
@@ -118,7 +123,7 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
         } catch (MailboxNotFoundException e) {
             no(command, tag, responder, HumanReadableText.MAILBOX_NOT_FOUND);
         } catch (MailboxException e) {
-            session.getLog().error(command.getName() + " failed for mailbox " + mailboxName, e);
+            LOGGER.error(command.getName() + " failed for mailbox " + mailboxName, e);
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }
 
@@ -134,4 +139,12 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
         return CAPABILITIES;
     }
 
+    @Override
+    protected Closeable addContextToMDC(ListRightsRequest message) {
+        return MDCBuilder.create()
+            .addContext(MDCBuilder.ACTION, "LIST_RIGHTS")
+            .addContext("mailbox", message.getMailboxName())
+            .addContext("identifier", message.getIdentifier())
+            .build();
+    }
 }

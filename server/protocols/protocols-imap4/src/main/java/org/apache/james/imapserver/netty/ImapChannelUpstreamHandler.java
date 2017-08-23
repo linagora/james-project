@@ -18,9 +18,9 @@
  ****************************************************************/
 package org.apache.james.imapserver.netty;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.function.Supplier;
 
 import javax.net.ssl.SSLContext;
 
@@ -34,8 +34,6 @@ import org.apache.james.imap.encode.ImapResponseComposer;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.main.ResponseEncoder;
 import org.apache.james.metrics.api.Metric;
-import org.apache.james.protocols.api.logger.ContextualLogger;
-import org.apache.james.protocols.imap.IMAPSession;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -47,13 +45,13 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link SimpleChannelUpstreamHandler} which handles IMAP
  */
 public class ImapChannelUpstreamHandler extends SimpleChannelUpstreamHandler implements NettyConstants{
-
-    private final Logger logger;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImapChannelUpstreamHandler.class);
 
     private final String hello;
 
@@ -74,15 +72,14 @@ public class ImapChannelUpstreamHandler extends SimpleChannelUpstreamHandler imp
     private final Metric imapConnectionsMetric;
     private final Metric imapCommandsMetric;
     
-    public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, Logger logger, boolean compress,
+    public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, boolean compress,
                                       boolean plainAuthDisallowed, ImapMetrics imapMetrics) {
-        this(hello, processor, encoder, logger, compress, plainAuthDisallowed, null, null, imapMetrics);
+        this(hello, processor, encoder, compress, plainAuthDisallowed, null, null, imapMetrics);
     }
 
-    public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, Logger logger, boolean compress,
+    public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, boolean compress,
                                       boolean plainAuthDisallowed, SSLContext context, String[] enabledCipherSuites,
                                       ImapMetrics imapMetrics) {
-        this.logger = logger;
         this.hello = hello;
         this.processor = processor;
         this.encoder = encoder;
@@ -94,150 +91,130 @@ public class ImapChannelUpstreamHandler extends SimpleChannelUpstreamHandler imp
         this.imapCommandsMetric = imapMetrics.getCommandsMetric();
     }
 
-    private Logger getLogger(final ChannelHandlerContext ctx) {
-        return new ContextualLogger(
-                getUserSupplier(ctx),
-                String.valueOf(ctx.getChannel().getId()),
-                logger);
-    }
-
-    private Supplier<String> getUserSupplier(final ChannelHandlerContext ctx) {
-        return () -> {
-            Object o = attributes.get(ctx.getChannel());
-            if (o instanceof IMAPSession) {
-                IMAPSession session = (IMAPSession) o;
-                return session.getUser();
-            }
-            return null;
-        };
-    }
-
     @Override
     public void channelBound(final ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ImapSession imapsession = new NettyImapSession(ctx.getChannel(), toLogSupplier(ctx), context, enabledCipherSuites, compress, plainAuthDisallowed);
-        attributes.set(ctx.getChannel(), imapsession);
-        super.channelBound(ctx, e);
-    }
-
-    private Supplier<Logger> toLogSupplier(final ChannelHandlerContext ctx) {
-        return () -> getLogger(ctx);
+        try (Closeable closeable = IMAPMDCContext.from(ctx, attributes)) {
+            ImapSession imapsession = new NettyImapSession(ctx.getChannel(), context, enabledCipherSuites, compress, plainAuthDisallowed);
+            attributes.set(ctx.getChannel(), imapsession);
+            super.channelBound(ctx, e);
+        }
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        
-        InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-        getLogger(ctx).info("Connection closed for " + address.getAddress().getHostAddress());
+        try (Closeable closeable = IMAPMDCContext.from(ctx, attributes)) {
+            InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
+            LOGGER.info("Connection closed for " + address.getAddress().getHostAddress());
 
-        // remove the stored attribute for the channel to free up resources
-        // See JAMES-1195
-        ImapSession imapSession = (ImapSession) attributes.remove(ctx.getChannel());
-        if (imapSession != null)
-            imapSession.logout();
-        imapConnectionsMetric.decrement();
+            // remove the stored attribute for the channel to free up resources
+            // See JAMES-1195
+            ImapSession imapSession = (ImapSession) attributes.remove(ctx.getChannel());
+            if (imapSession != null)
+                imapSession.logout();
+            imapConnectionsMetric.decrement();
 
-        super.channelClosed(ctx, e);
+            super.channelClosed(ctx, e);
+        }
     }
 
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        
-        InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-        getLogger(ctx).info("Connection established from " + address.getAddress().getHostAddress());
-        imapConnectionsMetric.increment();
+        try (Closeable closeable = IMAPMDCContext.from(ctx, attributes)) {
+            InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
+            LOGGER.info("Connection established from " + address.getAddress().getHostAddress());
+            imapConnectionsMetric.increment();
 
-        ImapResponseComposer response = new ImapResponseComposerImpl(new ChannelImapResponseWriter(ctx.getChannel()));
-        ctx.setAttachment(response);
+            ImapResponseComposer response = new ImapResponseComposerImpl(new ChannelImapResponseWriter(ctx.getChannel()));
+            ctx.setAttachment(response);
 
-        // write hello to client
-        response.untagged().message("OK").message(hello).end();
-        super.channelConnected(ctx, e);
-
+            // write hello to client
+            response.untagged().message("OK").message(hello).end();
+            super.channelConnected(ctx, e);
+        }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        
-        getLogger(ctx).warn("Error while processing imap request", e.getCause());
+        try (Closeable closeable = IMAPMDCContext.from(ctx, attributes)) {
+            LOGGER.warn("Error while processing imap request", e.getCause());
 
-        if (e.getCause() instanceof TooLongFrameException) {
+            if (e.getCause() instanceof TooLongFrameException) {
 
-            // Max line length exceeded
-            // See RFC 2683 section 3.2.1
-            //
-            // "For its part, a server should allow for a command line of at
-            // least
-            // 8000 octets. This provides plenty of leeway for accepting
-            // reasonable
-            // length commands from clients. The server should send a BAD
-            // response
-            // to a command that does not end within the server's maximum
-            // accepted
-            // command length."
-            //
-            // See also JAMES-1190
-            ImapResponseComposer composer = (ImapResponseComposer) ctx.getAttachment();
-            composer.untaggedResponse(ImapConstants.BAD + " failed. Maximum command line length exceeded");
-            
-        } else {
+                // Max line length exceeded
+                // See RFC 2683 section 3.2.1
+                //
+                // "For its part, a server should allow for a command line of at
+                // least
+                // 8000 octets. This provides plenty of leeway for accepting
+                // reasonable
+                // length commands from clients. The server should send a BAD
+                // response
+                // to a command that does not end within the server's maximum
+                // accepted
+                // command length."
+                //
+                // See also JAMES-1190
+                ImapResponseComposer composer = (ImapResponseComposer) ctx.getAttachment();
+                composer.untaggedResponse(ImapConstants.BAD + " failed. Maximum command line length exceeded");
 
-            // logout on error not sure if that is the best way to handle it
-            final ImapSession imapSession = (ImapSession) attributes.get(ctx.getChannel());
-            if (imapSession != null)
-                imapSession.logout();
-
-            // Make sure we close the channel after all the buffers were flushed out
-            Channel channel = ctx.getChannel();
-            if (channel.isConnected()) {
-                channel.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-            }
-
-        }
-
-    }
-
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-
-        imapCommandsMetric.increment();
-        ImapSession session = (ImapSession) attributes.get(ctx.getChannel());
-        ImapResponseComposer response = (ImapResponseComposer) ctx.getAttachment();
-        ImapMessage message = (ImapMessage) e.getMessage();
-        ChannelPipeline cp = ctx.getPipeline();
-
-        try {
-            if (cp.get(NettyConstants.EXECUTION_HANDLER) != null) {
-                cp.addBefore(NettyConstants.EXECUTION_HANDLER, NettyConstants.HEARTBEAT_HANDLER, heartbeatHandler);
             } else {
-                cp.addBefore(NettyConstants.CORE_HANDLER, NettyConstants.HEARTBEAT_HANDLER, heartbeatHandler);
 
-            }
-            final ResponseEncoder responseEncoder = new ResponseEncoder(encoder, response, session);
-            processor.process(message, responseEncoder, session);
+                // logout on error not sure if that is the best way to handle it
+                final ImapSession imapSession = (ImapSession) attributes.get(ctx.getChannel());
+                if (imapSession != null)
+                    imapSession.logout();
 
-            if (session.getState() == ImapSessionState.LOGOUT) {
                 // Make sure we close the channel after all the buffers were flushed out
                 Channel channel = ctx.getChannel();
                 if (channel.isConnected()) {
                     channel.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
                 }
-            }
-            final IOException failure = responseEncoder.getFailure();
 
-            if (failure != null) {
-                final Logger logger = session.getLog();
-                logger.info(failure.getMessage());
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Failed to write " + message, failure);
-                }
-                throw failure;
             }
-        } finally {
-            ctx.getPipeline().remove(NettyConstants.HEARTBEAT_HANDLER);
         }
+    }
 
-        super.messageReceived(ctx, e);
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        try (Closeable closeable = IMAPMDCContext.from(ctx, attributes)) {
+            imapCommandsMetric.increment();
+            ImapSession session = (ImapSession) attributes.get(ctx.getChannel());
+            ImapResponseComposer response = (ImapResponseComposer) ctx.getAttachment();
+            ImapMessage message = (ImapMessage) e.getMessage();
+            ChannelPipeline cp = ctx.getPipeline();
 
+            try {
+                if (cp.get(NettyConstants.EXECUTION_HANDLER) != null) {
+                    cp.addBefore(NettyConstants.EXECUTION_HANDLER, NettyConstants.HEARTBEAT_HANDLER, heartbeatHandler);
+                } else {
+                    cp.addBefore(NettyConstants.CORE_HANDLER, NettyConstants.HEARTBEAT_HANDLER, heartbeatHandler);
+
+                }
+                final ResponseEncoder responseEncoder = new ResponseEncoder(encoder, response, session);
+                processor.process(message, responseEncoder, session);
+
+                if (session.getState() == ImapSessionState.LOGOUT) {
+                    // Make sure we close the channel after all the buffers were flushed out
+                    Channel channel = ctx.getChannel();
+                    if (channel.isConnected()) {
+                        channel.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                    }
+                }
+                final IOException failure = responseEncoder.getFailure();
+
+                if (failure != null) {
+                    LOGGER.info(failure.getMessage());
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Failed to write " + message, failure);
+                    }
+                    throw failure;
+                }
+            } finally {
+                ctx.getPipeline().remove(NettyConstants.HEARTBEAT_HANDLER);
+            }
+
+            super.messageReceived(ctx, e);
+        }
     }
 
 }

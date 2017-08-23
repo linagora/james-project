@@ -21,6 +21,7 @@ package org.apache.james.imap.processor;
 
 import static org.apache.james.imap.api.ImapConstants.SUPPORTS_IDLE;
 
+import java.io.Closeable;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -46,10 +47,14 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.util.MDCBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
 public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> implements CapabilityImplementingProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(IdleProcessor.class);
 
     private final static List<String> CAPS = ImmutableList.of(SUPPORTS_IDLE);
     public final static int DEFAULT_SCHEDULED_POOL_CORE_SIZE = 5;
@@ -112,7 +117,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
                         try {
                             mailboxManager.removeListener(sm.getPath(), idleListener, mailboxSession);
                         } catch (MailboxException e) {
-                                session.getLog().error("Unable to remove idle listener for mailbox {0}", sm.getPath(), e);
+                                LOGGER.error("Unable to remove idle listener for mailbox {0}", sm.getPath(), e);
                         }
                     }
                     session.popLineHandler();
@@ -160,7 +165,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
 
 
         } catch (MailboxException e) {
-            session.getLog().error("Enable idle for " + session.getSelected().getPath() + " failed", e);
+            LOGGER.error("Enable idle for " + session.getSelected().getPath() + " failed", e);
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }
     }
@@ -198,5 +203,12 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
         public ExecutionMode getExecutionMode() {
             return ExecutionMode.ASYNCHRONOUS;
         }
+    }
+
+    @Override
+    protected Closeable addContextToMDC(IdleRequest message) {
+        return MDCBuilder.create()
+            .addContext(MDCBuilder.ACTION, "IDLE")
+            .build();
     }
 }

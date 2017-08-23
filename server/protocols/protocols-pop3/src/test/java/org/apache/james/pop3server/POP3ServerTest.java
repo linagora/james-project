@@ -65,8 +65,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class POP3ServerTest {
 
@@ -216,7 +214,7 @@ public class POP3ServerTest {
 
         pop3Client.disconnect();
         MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo", "INBOX");
-        MailboxSession session = mailboxManager.login("foo", "bar", LoggerFactory.getLogger("Test"));
+        MailboxSession session = mailboxManager.login("foo", "bar");
         if (!mailboxManager.mailboxExists(mailboxPath, session)) {
             mailboxManager.createMailbox(mailboxPath, session);
         }
@@ -301,7 +299,7 @@ public class POP3ServerTest {
         usersRepository.addUser("foo2", "bar2");
 
         MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo2", "INBOX");
-        MailboxSession session = mailboxManager.login("foo2", "bar2", LoggerFactory.getLogger("Test"));
+        MailboxSession session = mailboxManager.login("foo2", "bar2");
 
         if (!mailboxManager.mailboxExists(mailboxPath, session)) {
             mailboxManager.createMailbox(mailboxPath, session);
@@ -390,7 +388,7 @@ public class POP3ServerTest {
         usersRepository.addUser("foo2", "bar2");
 
         MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo2", "INBOX");
-        MailboxSession session = mailboxManager.login("foo2", "bar2", LoggerFactory.getLogger("Test"));
+        MailboxSession session = mailboxManager.login("foo2", "bar2");
 
         if (!mailboxManager.mailboxExists(mailboxPath, session)) {
             mailboxManager.createMailbox(mailboxPath, session);
@@ -440,7 +438,7 @@ public class POP3ServerTest {
         usersRepository.addUser("foo2", "bar2");
 
         MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, "foo2", "INBOX");
-        MailboxSession session = mailboxManager.login("foo2", "bar2", LoggerFactory.getLogger("Test"));
+        MailboxSession session = mailboxManager.login("foo2", "bar2");
 
         if (!mailboxManager.mailboxExists(mailboxPath, session)) {
             mailboxManager.createMailbox(mailboxPath, session);
@@ -646,7 +644,7 @@ public class POP3ServerTest {
         pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
 
         usersRepository.addUser("foo6", "bar6");
-        MailboxSession session = mailboxManager.login("foo6", "bar6", LoggerFactory.getLogger("Test"));
+        MailboxSession session = mailboxManager.login("foo6", "bar6");
 
         MailboxPath mailboxPath = MailboxPath.inbox(session);
 
@@ -707,11 +705,6 @@ public class POP3ServerTest {
         pop3Server = createPOP3Server();
         pop3Server.setFileSystem(fileSystem);
         pop3Server.setProtocolHandlerLoader(protocolHandlerChain);
-    
-        Logger log = LoggerFactory.getLogger("Mock");
-        // slf4j can't set programmatically any log level. It's just a facade
-        // log.setLevel(SimpleLog.LOG_LEVEL_DEBUG);
-        pop3Server.setLog(log);
     }
 
     protected void finishSetUp(POP3TestConfiguration testConfiguration) throws Exception {

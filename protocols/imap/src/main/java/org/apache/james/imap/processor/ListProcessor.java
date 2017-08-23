@@ -19,6 +19,7 @@
 
 package org.apache.james.imap.processor;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,8 +47,12 @@ import org.apache.james.mailbox.model.MailboxMetaData.Children;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.util.MDCBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListProcessor.class);
 
     public ListProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
             MetricFactory metricFactory) {
@@ -175,7 +180,7 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
 
             okComplete(command, tag, responder);
         } catch (MailboxException e) {
-            session.getLog().error("List failed for mailboxName " + mailboxName + " and user" + user, e);
+            LOGGER.error("List failed for mailboxName " + mailboxName + " and user" + user, e);
             no(command, tag, responder, HumanReadableText.SEARCH_FAILED);
         }
     }
@@ -229,5 +234,14 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
 
     protected boolean isAcceptable(ImapMessage message) {
         return ListRequest.class.equals(message.getClass());
+    }
+
+    @Override
+    protected Closeable addContextToMDC(ListRequest message) {
+        return MDCBuilder.create()
+            .addContext(MDCBuilder.ACTION, "LIST")
+            .addContext("base", message.getBaseReferenceName())
+            .addContext("pattern", message.getMailboxPattern())
+            .build();
     }
 }

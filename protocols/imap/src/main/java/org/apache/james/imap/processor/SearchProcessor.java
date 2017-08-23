@@ -19,6 +19,7 @@
 
 package org.apache.james.imap.processor;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -62,11 +63,15 @@ import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.DateResolution;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.util.MDCBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
 public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> implements CapabilityImplementingProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SearchProcessor.class);
 
     protected final static String SEARCH_MODSEQ = "SEARCH_MODSEQ";
     private final static List<String> CAPS = ImmutableList.of("WITHIN", "ESEARCH", "SEARCHRES");
@@ -198,12 +203,12 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
             unsolicitedResponses(session, responder, omitExpunged, useUids);
             okComplete(command, tag, responder);
         } catch (MessageRangeException e) {
-            if (session.getLog().isDebugEnabled()) {
-                session.getLog().debug("Search failed in mailbox " + session.getSelected().getPath() + " because of an invalid sequence-set ", e);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Search failed in mailbox " + session.getSelected().getPath() + " because of an invalid sequence-set ", e);
             }
             taggedBad(command, tag, responder, HumanReadableText.INVALID_MESSAGESET);
         } catch (MailboxException e) {
-            session.getLog().error("Search failed in mailbox " + session.getSelected().getPath(), e);
+            LOGGER.error("Search failed in mailbox " + session.getSelected().getPath(), e);
             no(command, tag, responder, HumanReadableText.SEARCH_FAILED);
             
             if (resultOptions.contains(SearchResultOption.SAVE)) {
@@ -363,7 +368,7 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
             long modSeq = key.getModSeq();
             return SearchQuery.or(SearchQuery.modSeqEquals(modSeq), SearchQuery.modSeqGreaterThan(modSeq));
         default:
-            session.getLog().warn("Ignoring unknown search key {}", type);
+            LOGGER.warn("Ignoring unknown search key {}", type);
             return SearchQuery.all();
         }
     }
@@ -496,5 +501,14 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
      */
     public List<String> getImplementedCapabilities(ImapSession session) {
         return CAPS;
+    }
+
+    @Override
+    protected Closeable addContextToMDC(SearchRequest message) {
+        return MDCBuilder.create()
+            .addContext(MDCBuilder.ACTION, "SEARCH")
+            .addContext("useUid", message.isUseUids())
+            .addContext("searchOperation", message.getSearchOperation())
+            .build();
     }
 }

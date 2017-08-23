@@ -20,21 +20,18 @@
 package org.apache.james.protocols.api;
 
 import org.apache.james.protocols.api.handler.ProtocolHandlerChain;
-import org.slf4j.Logger;
 
 /**
  * Basic {@link Protocol} implementation 
  *
  */
-public class ProtocolImpl implements Protocol{
+public abstract class ProtocolImpl implements Protocol{
     private final ProtocolHandlerChain chain;
     private final ProtocolConfiguration config;
-    protected final Logger logger;
 
-    public ProtocolImpl(ProtocolHandlerChain chain, ProtocolConfiguration config, Logger logger) {
+    public ProtocolImpl(ProtocolHandlerChain chain, ProtocolConfiguration config) {
         this.chain = chain;
         this.config = config;
-        this.logger = logger;
     }
     
     /*
@@ -50,7 +47,7 @@ public class ProtocolImpl implements Protocol{
      * @see org.apache.james.protocols.api.Protocol#newSession(org.apache.james.protocols.api.ProtocolTransport)
      */
     public ProtocolSession newSession(ProtocolTransport transport) {
-        return new ProtocolSessionImpl(logger, transport, config);
+        return new ProtocolSessionImpl(transport, config);
     }
 
     /*
@@ -59,9 +56,5 @@ public class ProtocolImpl implements Protocol{
      */
     public ProtocolConfiguration getConfiguration() {
         return config;
-    }
-
-    public Logger getProtocolLogger() {
-        return logger;
     }
 }

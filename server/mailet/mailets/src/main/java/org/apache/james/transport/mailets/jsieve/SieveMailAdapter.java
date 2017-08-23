@@ -33,8 +33,6 @@ import javax.mail.Header;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.james.mime4j.dom.address.AddressList;
 import org.apache.james.mime4j.dom.address.Mailbox;
 import org.apache.james.mime4j.dom.address.MailboxList;
@@ -54,20 +52,20 @@ import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.MailetContext;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+
 /**
  * <p>
  * Class <code>SieveMailAdapter</code> implements a <code>MailAdapter</code>
  * for use in a Mailet environment.
  * </p>
  */
-public class SieveMailAdapter implements MailAdapter, EnvelopeAccessors, ActionContext
-{
-    private static final Log LOG = LogFactory.getLog(SieveMailAdapter.class);
-    
-    private Log log = LOG;
-    
+public class SieveMailAdapter implements MailAdapter, EnvelopeAccessors, ActionContext {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SieveMailAdapter.class);
+
     /**
      * The Mail being adapted.
      */
@@ -116,10 +114,6 @@ public class SieveMailAdapter implements MailAdapter, EnvelopeAccessors, ActionC
 
     public MailAddress getRecipient() {
         return recipient;
-    }
-
-    public void setLog(Log log) {
-        this.log = log;
     }
 
     /**
@@ -180,7 +174,7 @@ public class SieveMailAdapter implements MailAdapter, EnvelopeAccessors, ActionC
     {
         final List<Action> actions = getActions();
         for (final Action action: actions) {
-            getMailetContext().log(MailetContext.LogLevel.INFO, "Executing action: " + action.toString());
+            LOGGER.info("Executing action: " + action.toString());
             try
             {
                 dispatcher.execute(action, getMail(), this);
@@ -434,10 +428,6 @@ public class SieveMailAdapter implements MailAdapter, EnvelopeAccessors, ActionC
         }
     }
 
-    public Log getLog() {
-        return log;
-    }
-    
     public String getServerInfo() {
         return getMailetContext().getServerInfo();
     }

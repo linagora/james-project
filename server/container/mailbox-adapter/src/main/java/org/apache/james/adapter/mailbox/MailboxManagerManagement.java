@@ -18,7 +18,9 @@
  ****************************************************************/
 package org.apache.james.adapter.mailbox;
 
+import java.io.Closeable;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,7 +32,6 @@ import javax.mail.Flags;
 import javax.management.NotCompliantMBeanException;
 import javax.management.StandardMBean;
 
-import org.apache.james.lifecycle.api.LogEnabled;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
@@ -39,18 +40,21 @@ import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 
 /**
  * JMX managmenent for Mailboxes
  */
-public class MailboxManagerManagement extends StandardMBean implements MailboxManagerManagementMBean, LogEnabled {
+public class MailboxManagerManagement extends StandardMBean implements MailboxManagerManagementMBean {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MailboxManagerManagement.class);
 
     private MailboxManager mailboxManager;
-    private Logger log;
     private static final boolean RECENT = true;
 
     @Inject
@@ -69,8 +73,13 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
     public boolean deleteMailboxes(String username) {
         checkString(username, "Username");
         MailboxSession session = null;
-        try {
-            session = mailboxManager.createSystemSession(username, log);
+        try (Closeable closeable =
+                 MDCBuilder.create()
+                     .addContext(MDCBuilder.PROTOCOL, "CLI")
+                     .addContext(MDCBuilder.ACTION, "deleteMailboxes")
+                     .addContext("concernedUser", username)
+                     .build()) {
+            session = mailboxManager.createSystemSession(username);
             mailboxManager.startProcessingRequest(session);
             List<MailboxMetaData> mList = retrieveAllUserMailboxes(username, session);
             for (MailboxMetaData aMList : mList) {
@@ -78,19 +87,13 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
             }
             return true;
         } catch (MailboxException e) {
-            log.error("Error while remove mailboxes for user " + username, e);
+            LOGGER.error("Error while remove mailboxes for user " + username, e);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
         } finally {
             closeSession(session);
         }
         return false;
-    }
-
-    /**
-     * @see org.apache.james.lifecycle.api.LogEnabled#setLog(org.slf4j.Logger)
-     */
-    @Override
-    public void setLog(Logger log) {
-        this.log = log;
     }
 
     /**
@@ -103,8 +106,13 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
         checkString(username, "Username");
         List<String> boxes = new ArrayList<>();
         MailboxSession session = null;
-        try {
-            session = mailboxManager.createSystemSession(username, log);
+        try (Closeable closeable =
+                 MDCBuilder.create()
+                     .addContext(MDCBuilder.PROTOCOL, "CLI")
+                     .addContext(MDCBuilder.ACTION, "listMailboxes")
+                     .addContext("concernedUser", username)
+                     .build()) {
+            session = mailboxManager.createSystemSession(username);
             mailboxManager.startProcessingRequest(session);
             List<MailboxMetaData> mList = retrieveAllUserMailboxes(username, session);
             boxes = mList.stream()
@@ -112,7 +120,9 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
                 .sorted()
                 .collect(Guavate.toImmutableList());
         } catch (MailboxException e) {
-            log.error("Error list mailboxes for user " + username, e);
+            LOGGER.error("Error list mailboxes for user " + username, e);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
         } finally {
             closeSession(session);
         }
@@ -123,12 +133,18 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
     public void createMailbox(String namespace, String user, String name) {
         checkMailboxArguments(namespace, user, name);
         MailboxSession session = null;
-        try {
-            session = mailboxManager.createSystemSession(user, log);
+        MailboxPath mailboxPath = new MailboxPath(namespace, user, name);
+        try (Closeable closeable =
+                 MDCBuilder.create()
+                     .addContext(MDCBuilder.PROTOCOL, "CLI")
+                     .addContext(MDCBuilder.ACTION, "createMailbox")
+                     .addContext("mailboxPath", mailboxPath.asString())
+                     .build()) {
+            session = mailboxManager.createSystemSession(user);
             mailboxManager.startProcessingRequest(session);
-            mailboxManager.createMailbox(new MailboxPath(namespace, user, name), session);
+            mailboxManager.createMailbox(mailboxPath, session);
         } catch (Exception e) {
-            log.error("Unable to create mailbox", e);
+            LOGGER.error("Unable to create mailbox", e);
         } finally {
             closeSession(session);
         }
@@ -138,12 +154,18 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
     public void deleteMailbox(String namespace, String user, String name) {
         checkMailboxArguments(namespace, user, name);
         MailboxSession session = null;
-        try {
-            session = mailboxManager.createSystemSession(user, log);
+        MailboxPath mailboxPath = new MailboxPath(namespace, user, name);
+        try (Closeable closeable =
+                 MDCBuilder.create()
+                     .addContext(MDCBuilder.PROTOCOL, "CLI")
+                     .addContext(MDCBuilder.ACTION, "deleteMailbox")
+                     .addContext("mailboxPath", mailboxPath.asString())
+                     .build()) {
+            session = mailboxManager.createSystemSession(user);
             mailboxManager.startProcessingRequest(session);
-            mailboxManager.deleteMailbox(new MailboxPath(namespace, user, name), session);
+            mailboxManager.deleteMailbox(mailboxPath, session);
         } catch (Exception e) {
-            log.error("Unable to create mailbox", e);
+            LOGGER.error("Unable to create mailbox", e);
         } finally {
             closeSession(session);
         }
@@ -155,15 +177,22 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
         checkString(emlPath, "email file path name");
 
         MailboxSession session = null;
-        try {
-            session = mailboxManager.createSystemSession(user, log);
+        MailboxPath mailboxPath = new MailboxPath(namespace, user, name);
+        try (Closeable closeable =
+                 MDCBuilder.create()
+                     .addContext(MDCBuilder.PROTOCOL, "CLI")
+                     .addContext(MDCBuilder.ACTION, "importEmlFileToMailbox")
+                     .addContext("mailboxPath", mailboxPath.asString())
+                     .addContext("emlPath", emlPath)
+                     .build()) {
+            session = mailboxManager.createSystemSession(user);
             mailboxManager.startProcessingRequest(session);
-            MessageManager messageManager = mailboxManager.getMailbox(new MailboxPath(namespace, user, name), session);
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, session);
             InputStream emlFileAsStream = new FileInputStream(emlPath);
             messageManager.appendMessage(emlFileAsStream, new Date(),
                     session, RECENT, new Flags());
         } catch (Exception e) {
-            log.error("Unable to create mailbox", e);
+            LOGGER.error("Unable to create mailbox", e);
         } finally {
             closeSession(session);
         }
@@ -175,7 +204,7 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
             try {
                 mailboxManager.logout(session, true);
             } catch (MailboxException e) {
-                log.error("Can not log session out", e);
+                LOGGER.error("Can not log session out", e);
             }
         }
     }

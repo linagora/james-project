@@ -19,6 +19,7 @@
 
 package org.apache.james.imap.processor;
 
+import java.io.Closeable;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,9 @@ import org.apache.james.imap.message.request.IRAuthenticateRequest;
 import org.apache.james.imap.message.response.AuthenticateResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.util.MDCBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -44,6 +48,7 @@ import com.google.common.collect.ImmutableList;
  *
  */
 public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateRequest> implements CapabilityImplementingProcessor{
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticateProcessor.class);
     private final static String PLAIN = "PLAIN";
     
     public AuthenticateProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
@@ -82,8 +87,8 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
                 }
             }
         } else {
-            if (session.getLog().isDebugEnabled()) {
-                session.getLog().debug  ("Unsupported authentication mechanism '" + authType + "'");
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug  ("Unsupported authentication mechanism '" + authType + "'");
             }
             no(command, tag, responder, HumanReadableText.UNSUPPORTED_AUTHENTICATION_MECHANISM);
         }
@@ -160,4 +165,11 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
         return ImmutableList.copyOf(caps);
     }
 
+    @Override
+    protected Closeable addContextToMDC(AuthenticateRequest message) {
+        return MDCBuilder.create()
+            .addContext(MDCBuilder.ACTION, "AUTHENTICATE")
+            .addContext("authType", message.getAuthType())
+            .build();
+    }
 }

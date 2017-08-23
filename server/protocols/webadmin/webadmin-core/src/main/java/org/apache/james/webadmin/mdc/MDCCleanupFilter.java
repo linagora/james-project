@@ -17,30 +17,28 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.ai.classic;
+package org.apache.james.webadmin.mdc;
 
-/**
- * A simple logging mechanism.
- */
-public interface Log {
-    
-    /**
-     * An abstract method which child classes override to handle logging of
-     * errors in their particular environments.
-     * 
-     * @param errorString
-     *            the error message generated
-     */
-    void log(String errorString);
+import java.io.Closeable;
 
-    /**
-     * An abstract method which child classes override to handle logging of
-     * errors in their particular environments.
-     * 
-     * @param errorString
-     *            the error message generated
-     * @param t 
-     *            exception 
-     */
-    void log(String errorString, Throwable t);
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import spark.Filter;
+import spark.Request;
+import spark.Response;
+
+public class MDCCleanupFilter implements Filter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MDCCleanupFilter.class);
+
+    @Override
+    public void handle(Request request, Response response) throws Exception {
+        Object attribute = request.attribute(MDCFilter.MDC_CLOSEABLE);
+        if (attribute instanceof Closeable) {
+            Closeable closeable = (Closeable) attribute;
+            closeable.close();
+        } else {
+            LOGGER.error("Invalid MDC closeable {} of class {}", attribute, attribute.getClass());
+        }
+    }
 }
