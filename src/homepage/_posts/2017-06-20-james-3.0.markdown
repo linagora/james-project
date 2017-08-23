@@ -1,0 +1,36 @@
+---
+layout: post
+title:  "Apache James 3.0 release"
+date:   2017-06-20 11:30:00 +0700
+categories: james update
+---
+
+**Apache James version 3.0** have been released.
+
+After several years of efforts from the community, the Apache James developers are delighted to announce you the release
+of the **3.0 version** of the Apache James server.
+
+This release brings:
+ - **New protocols**: IMAP (stable), [JMAP](https://jmap.io/) (experimental).
+ - **New administration interface**: [WebAdmin](https://james.apache.org/server/manage-webadmin.html) is a REST administration interface.
+ - **New back-ends**: [Cassandra](https://cassandra.apache.org/) mailbox, [ElasticSearch](https://www.elastic.co/fr/products/elasticsearch)
+ search index, [Lucene](https://lucene.apache.org/) search index amongst others.
+ - [Docker images](https://www.docker.com/what-docker) were contributed for common tasks and for most available packaging.
+ - **New [wiring](https://james.apache.org/server/wiring.html)** with [Guice](https://github.com/google/guice), which ease development.
+ - **Improved system administration**: [Grafana](https://james.apache.org/server/metrics.html) reporting,
+ [Kibana](https://www.elastic.co/fr/products/kibana) log collection...
+ - **Community enhancements**: New [welcoming website](https://james.apache.org/index.html), as well as documentation re-work.
+ Also we introduced a [community chat](https://gitter.im/apache/james-project). All of this aims
+ at getting a more living community and being more attractive to newcomers.
+
+Special care have been took with testing. The team works in a Test Driven Development fashion, and improved the test coverage of the project.
+We wrote many integration tests with [MPT](https://james.apache.org/mpt/index.html), but also using HTTP, IMAP and SMTP libraries. We
+also developed tools for load testing, based on [Gatling](https://gatling.io/): [Gatling JMAP](https://github.com/linagora/james-gatling),
+[Gatling IMAP](https://github.com/linagora/gatling-imap) and [Gatling SMTP](https://github.com/linagora/james-gatling/tree/master/src/main/scala-2.11/org/apache/james/gatling/smtp).
+
+**Apache James version 3.0** can then be used as a **Mail Delivery Agent**, but also as a **Mail Transfer Agent** allowing you to easily integrate emails with
+your applications. Read [more](https://james.apache.org/index.html#intro).
+
+If you encounter any problem with this release, please contact us [on gitter](https://gitter.im/apache/james-project), on the
+ [mailing lists](https://james.apache.org/mail.html) and open tickets on [our bug tracker](https://issues.apache.org/jira/browse/JAMES).
+
