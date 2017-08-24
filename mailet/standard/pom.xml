@@ -31,28 +31,26 @@
     <packaging>bundle</packaging>
 
     <name>Apache James :: Standard Mailets</name>
-    <description>
-        Apache James Standard Mailets is a rich collection of general purpose mailets
-        with limited dependencies. These mailets can be used in any mailet container.
-    </description>
+    <description>Apache James Standard Mailets is a rich collection of general purpose mailets
+        with limited dependencies. These mailets can be used in any mailet container.</description>
     <url>http://james.apache.org/mailet/standard/</url>
     <inceptionYear>2008</inceptionYear>
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.james</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-mailet-base</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-mailet-base</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-mime4j-dom</artifactId>
-            <version>${mime4j.version}</version>
+            <version>${apache-mime4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -103,7 +101,7 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.james</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>maven-mailetdocs-plugin</artifactId>
             </plugin>
         </plugins>

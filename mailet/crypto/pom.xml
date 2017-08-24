@@ -31,14 +31,21 @@
     <packaging>bundle</packaging>
 
     <name>Apache James :: Crypto Mailets</name>
-    <description>
-        Apache James Cryptographic Mailets is a collection of mailets which use cryptography.
-        This includes matching signatures, decrypting, encrypting and signing.
-    </description>
+    <description>Apache James Cryptographic Mailets is a collection of mailets which use cryptography.
+        This includes matching signatures, decrypting, encrypting and signing.</description>
     <url>http://james.apache.org/mailet/crypto/</url>
     <inceptionYear>2008</inceptionYear>
 
     <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>apache-mailet-base</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-data-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.sun.mail</groupId>
             <artifactId>javax.mail</artifactId>
@@ -48,21 +55,12 @@
             <artifactId>javax.inject</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcmail-jdk15on</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-io</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
-            <artifactId>apache-mailet-base</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.james</groupId>
-            <artifactId>james-server-data-api</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcmail-jdk15on</artifactId>
         </dependency>
     </dependencies>
 
@@ -73,14 +71,12 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
-                        <Export-Package>
-                            org.apache.james.mailet.crypto.*
-                        </Export-Package>
+                        <Export-Package>org.apache.james.mailet.crypto.*</Export-Package>
                     </instructions>
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.james</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>maven-mailetdocs-plugin</artifactId>
             </plugin>
         </plugins>

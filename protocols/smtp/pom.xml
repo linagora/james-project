@@ -21,8 +21,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>protocols</artifactId>
         <groupId>org.apache.james</groupId>
+        <artifactId>protocols</artifactId>
         <version>3.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -35,26 +35,18 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.james</groupId>
-            <artifactId>james-server-util</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.james.protocols</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>protocols-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.james.protocols</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>protocols-api</artifactId>
-            <scope>test</scope>
             <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.james.protocols</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>protocols-netty</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.james</groupId>
-            <artifactId>metrics-api</artifactId>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -63,6 +55,11 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>commons-codec</groupId>
@@ -88,9 +85,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>javax.mail</artifactId>
-            <scope>test</scope>
+            <groupId>org.apache.james</groupId>
+            <artifactId>james-server-util</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.james</groupId>
+            <artifactId>metrics-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
@@ -106,10 +106,10 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <phase>package</phase>
                         <configuration>
                             <artifactSet>
                                 <includes>
@@ -130,7 +130,7 @@
                             <relocations>
                                 <relocation>
                                     <pattern>org.apache.commons.codec.binary</pattern>
-                                    <shadedPattern>org.apache.james.protocols.smtp.util</shadedPattern>
+                                    <shadedPattern>${project.groupId}.smtp.util</shadedPattern>
                                 </relocation>
                             </relocations>
                             <transformers>

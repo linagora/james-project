@@ -18,30 +18,30 @@
     under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>james-server</artifactId>
         <groupId>org.apache.james</groupId>
+        <artifactId>james-server</artifactId>
         <version>3.1.0-SNAPSHOT</version>
         <relativePath>../../../pom.xml</relativePath>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
 
     <artifactId>metrics-es-reporter</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.james</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-james-backends-es</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
-            <artifactId>metrics-dropwizard</artifactId>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-util-java8</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
-            <artifactId>james-server-util-java8</artifactId>
-            <type>test-jar</type>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>metrics-dropwizard</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -68,12 +68,12 @@
         </dependency>
         <dependency>
             <groupId>org.elasticsearch</groupId>
-            <artifactId>metrics-elasticsearch-reporter</artifactId>
+            <artifactId>elasticsearch</artifactId>
+            <version>2.2.1</version>
         </dependency>
         <dependency>
             <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <version>2.2.1</version>
+            <artifactId>metrics-elasticsearch-reporter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>

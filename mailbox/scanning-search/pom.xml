@@ -21,16 +21,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>apache-james-mailbox</artifactId>
         <groupId>org.apache.james</groupId>
+        <artifactId>apache-james-mailbox</artifactId>
         <version>3.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>apache-james-mailbox-scanning-search</artifactId>
-    <description>Apache James Mailbox IMAP search implementation using scanning</description>
     <name>Apache James :: Mailbox :: Scanning</name>
-
+    <description>Apache James Mailbox IMAP search implementation using scanning</description>
 
     <dependencies>
         <dependency>
@@ -38,12 +37,12 @@
             <artifactId>apache-james-mailbox-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-james-mailbox-memory</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.james</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-james-mailbox-store</artifactId>
         </dependency>
         <dependency>
