@@ -19,32 +19,47 @@
 
 package org.apache.james.backends.cassandra.init;
 
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.components.CassandraTable;
+import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
+import org.apache.james.util.FluentFutureStream;
+import org.apache.james.util.streams.JamesCollectors;
+
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import org.apache.james.backends.cassandra.components.CassandraModule;
 
 public class CassandraTableManager {
 
-    private final Session session;
+    public static final int TABLE_MANAGEMENT_PARRALLEL_OPERATION_COUNT = 4;
+    private final CassandraAsyncExecutor executor;
     private final CassandraModule module;
 
     public CassandraTableManager(CassandraModule module, Session session) {
-        this.session = session;
+        this.executor = new CassandraAsyncExecutor(session);
         this.module = module;
     }
 
     public CassandraTableManager ensureAllTables() {
         module.moduleTables()
-            .forEach(table -> session.execute(table.getCreateStatement()));
+            .stream()
+            .map(CassandraTable::getCreateStatement)
+            .collect(JamesCollectors.chunker(TABLE_MANAGEMENT_PARRALLEL_OPERATION_COUNT))
+            .map(statementBatch -> statementBatch.stream()
+                .map(executor::executeVoid))
+            .map(FluentFutureStream::of)
+            .forEach(FluentFutureStream::join);
         return this;
     }
 
     public void clearAllTables() {
         module.moduleTables()
-            .forEach(table -> clearTable(table.getName()));
-    }
-
-    private void clearTable(String tableName) {
-        session.execute(QueryBuilder.truncate(tableName));
+            .stream()
+            .map(CassandraTable::getName)
+            .map(QueryBuilder::truncate)
+            .collect(JamesCollectors.chunker(TABLE_MANAGEMENT_PARRALLEL_OPERATION_COUNT))
+            .map(statementBatch -> statementBatch.stream()
+                .map(executor::executeVoid))
+            .map(FluentFutureStream::of)
+            .forEach(FluentFutureStream::join);
     }
 }
