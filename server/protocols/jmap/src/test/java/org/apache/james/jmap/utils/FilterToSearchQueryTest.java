@@ -161,6 +161,19 @@ public class FilterToSearchQueryTest {
     }
 
     @Test
+    public void filterConditionShouldMapWhenAttachments() {
+        String attachments = "attachments";
+        SearchQuery expectedSearchQuery = new SearchQuery();
+        expectedSearchQuery.andCriteria(SearchQuery.attachmentContains(attachments));
+
+        SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
+                .attachments(attachments)
+                .build());
+
+        assertThat(searchQuery).isEqualTo(expectedSearchQuery);
+    }
+
+    @Test
     public void filterConditionShouldMapWhenText() {
         String text = "text";
         SearchQuery expectedSearchQuery = new SearchQuery();
@@ -170,7 +183,8 @@ public class FilterToSearchQueryTest {
                 SearchQuery.address(AddressType.Cc, text),
                 SearchQuery.address(AddressType.Bcc, text),
                 SearchQuery.headerContains("Subject", text),
-                SearchQuery.bodyContains(text))));
+                SearchQuery.bodyContains(text),
+                SearchQuery.attachmentContains(text))));
 
         SearchQuery searchQuery = new FilterToSearchQuery().convert(FilterCondition.builder()
                 .text(text)

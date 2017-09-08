@@ -120,7 +120,7 @@ public class MimePart {
             Optional<ParsedContent> parsedContent = parseContent(textExtractor);
             return new MimePart(
                 headerCollectionBuilder.build(),
-                parsedContent.map(ParsedContent::getTextualContent),
+                parsedContent.map(ParsedContent::getTextualContent).map(Optional::get),
                 mediaType,
                 subType,
                 fileName,

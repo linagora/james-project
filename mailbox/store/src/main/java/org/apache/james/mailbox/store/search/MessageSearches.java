@@ -35,11 +35,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.stream.Stream;
+
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.UnsupportedSearchException;
+import org.apache.james.mailbox.extractor.TextExtractor;
+import org.apache.james.mailbox.model.Attachment;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageResult.Header;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.AddressType;
@@ -90,18 +95,14 @@ public class MessageSearches implements Iterable<SimpleMessageSearchIndex.Search
         .setMaxLineLen(-1)
         .build();
 
-    private Iterator<MailboxMessage> messages;
-    private SearchQuery query;
+    private final Iterator<MailboxMessage> messages;
+    private final SearchQuery query;
+    private final TextExtractor textExtractor;
 
-    public MessageSearches(Iterator<MailboxMessage> messages, SearchQuery query) {
+    public MessageSearches(Iterator<MailboxMessage> messages, SearchQuery query, TextExtractor textExtractor) {
         this.messages = messages;
         this.query = query;
-    }
-
-    /**
-     * Empty constructor only for tests (which test isMatch())
-     */
-    public MessageSearches() {
+        this.textExtractor = textExtractor;
     }
 
     @Override
@@ -207,6 +208,8 @@ public class MessageSearches implements Iterable<SimpleMessageSearchIndex.Search
                 return textContains(value, message);
             case FULL:
                 return messageContains(value, message);
+            case ATTACHMENTS:
+                return attachmentsContain(value, message);
             }
             throw new UnsupportedSearchException();
         } catch (IOException | MimeException e) {
@@ -237,6 +240,34 @@ public class MessageSearches implements Iterable<SimpleMessageSearchIndex.Search
     private boolean textContains(String value, MailboxMessage message) throws IOException, MimeException, MailboxException {
         InputStream bodyContent = message.getBodyContent();
         return isInMessage(value, new SequenceInputStream(textHeaders(message), bodyContent), true);
+    }
+
+    private boolean attachmentsContain(String value, MailboxMessage message) throws IOException, MimeException {
+        List<MessageAttachment> attachments = message.getAttachments();
+        return isInAttachments(value, attachments);
+    }
+
+    private boolean isInAttachments(String value, List<MessageAttachment> attachments) {
+        return attachments.stream()
+            .map(MessageAttachment::getAttachment)
+            .flatMap(this::toAttachmentContent)
+            .anyMatch(string -> string.contains(value));
+    }
+
+    private Stream<String> toAttachmentContent(Attachment attachment) {
+        try {
+            Stream.Builder<String> streamBuilder = Stream.builder();
+            textExtractor
+                .extractContent(
+                    attachment.getStream(),
+                    attachment.getType())
+                .getTextualContent()
+                .ifPresent(text -> streamBuilder.add(text));
+            return streamBuilder.build();
+        } catch (Exception e) {
+            LOGGER.error("Error while parsing attachment content", e);
+            return Stream.of();
+        }
     }
 
     private InputStream textHeaders(MailboxMessage message) throws MimeIOException, IOException {

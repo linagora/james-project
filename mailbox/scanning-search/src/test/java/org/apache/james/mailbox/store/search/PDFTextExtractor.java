@@ -16,31 +16,44 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.store.search;
 
-package org.apache.james.mailbox.inmemory;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
+import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.extractor.ParsedContent;
 import org.apache.james.mailbox.extractor.TextExtractor;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 
-public class JsoupTextExtractorTest {
-    private TextExtractor textExtractor;
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 
-    @Before
-    public void setUp() {
-        textExtractor = new JsoupTextExtractor();
+public class PDFTextExtractor implements TextExtractor {
+
+    static final String PDF_TYPE = "application/pdf";
+
+    @Override
+    public ParsedContent extractContent(InputStream inputStream, String contentType) throws Exception {
+        Preconditions.checkNotNull(inputStream);
+        Preconditions.checkNotNull(contentType);
+
+        if (isPDF(contentType)) {
+            return extractTextFromPDF(inputStream);
+        }
+        return new ParsedContent(IOUtils.toString(inputStream, Charsets.UTF_8), ImmutableMap.of());
     }
 
-    @Test
-    public void extractedTextFromHtmlShouldNotContainTheContentOfTitleTag() throws Exception {
-        InputStream inputStream = ClassLoader.getSystemResourceAsStream("documents/html.txt");
-
-        assertThat(textExtractor.extractContent(inputStream, "text/html").getTextualContent().get())
-                .doesNotContain("*|MC:SUBJECT|*");
+    private boolean isPDF(String contentType) {
+        return contentType.equals(PDF_TYPE);
     }
 
+    private ParsedContent extractTextFromPDF(InputStream inputStream) throws IOException {
+        return new ParsedContent(
+            new PDFTextStripper().getText(
+                PDDocument.load(inputStream)),
+            ImmutableMap.of());
+    }
 }

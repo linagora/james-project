@@ -21,6 +21,7 @@ package org.apache.james.jmap.utils;
 
 import java.util.Date;
 import java.util.Optional;
+
 import javax.mail.Flags.Flag;
 
 import org.apache.james.jmap.model.Filter;
@@ -58,6 +59,7 @@ public class FilterToSearchQuery {
                         SearchQuery.address(AddressType.Cc, text),
                         SearchQuery.address(AddressType.Bcc, text),
                         SearchQuery.headerContains("Subject", text),
+                        SearchQuery.attachmentContains(text),
                         SearchQuery.bodyContains(text)))
                 ));
         filter.getFrom().ifPresent(from -> searchQuery.andCriteria(SearchQuery.address(AddressType.From, from)));
@@ -65,6 +67,7 @@ public class FilterToSearchQuery {
         filter.getCc().ifPresent(cc -> searchQuery.andCriteria(SearchQuery.address(AddressType.Cc, cc)));
         filter.getBcc().ifPresent(bcc -> searchQuery.andCriteria(SearchQuery.address(AddressType.Bcc, bcc)));
         filter.getSubject().ifPresent(subject -> searchQuery.andCriteria(SearchQuery.headerContains("Subject", subject)));
+        filter.getAttachments().ifPresent(attachments ->  searchQuery.andCriteria(SearchQuery.attachmentContains(attachments)));
         filter.getBody().ifPresent(body ->  searchQuery.andCriteria(SearchQuery.bodyContains(body)));
         filter.getAfter().ifPresent(after -> searchQuery.andCriteria(SearchQuery.sentDateAfter(Date.from(after.toInstant()), DateResolution.Second)));
         filter.getBefore().ifPresent(before -> searchQuery.andCriteria(SearchQuery.sentDateBefore(Date.from(before.toInstant()), DateResolution.Second)));
