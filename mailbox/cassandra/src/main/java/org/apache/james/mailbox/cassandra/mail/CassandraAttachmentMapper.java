@@ -19,9 +19,11 @@
 
 package org.apache.james.mailbox.cassandra.mail;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.add;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.update;
 import static org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable.FIELDS;
 import static org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable.ID;
 import static org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable.PAYLOAD;
@@ -38,10 +40,13 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
+import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.table.CassandraAttachmentMessageIdTable;
 import org.apache.james.mailbox.exception.AttachmentNotFoundException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.OptionalUtils;
@@ -52,6 +57,8 @@ import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.ThrownByLambdaException;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,10 +66,12 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAttachmentMapper.class);
     private final CassandraAsyncExecutor cassandraAsyncExecutor;
+    private MessageId.Factory messageIdFactory;
 
     @Inject
     public CassandraAttachmentMapper(Session session) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
+        this.messageIdFactory = new CassandraMessageId.Factory();
     }
 
     @Override
@@ -147,15 +156,49 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
         );
     }
 
+    private CompletableFuture<Void> asyncStoreAttachmentForMessageId(Attachment attachment, MessageId ownerMessageId) throws IOException {
+        return cassandraAsyncExecutor.executeVoid(
+            update(CassandraAttachmentMessageIdTable.TABLE_NAME)
+                .with(add(CassandraAttachmentMessageIdTable.MESSAGE_IDS, ownerMessageId.serialize()))
+                .where(eq(CassandraAttachmentMessageIdTable.ATTACHMENT_ID, attachment.getAttachmentId().getId())));
+    }
+
     @Override
-    public void storeAttachments(Collection<Attachment> attachments) throws MailboxException {
+    public void storeAttachmentsForMessage(Collection<Attachment> attachments, MessageId ownerMessageId) throws MailboxException {
         try {
             FluentFutureStream.of(
-                attachments.stream()
-                    .map(Throwing.function(this::asyncStoreAttachment)))
+                Stream.concat(
+                    attachments.stream()
+                        .map(Throwing.function(this::asyncStoreAttachment)),
+                    attachments.stream()
+                        .map(Throwing.function(attachment -> asyncStoreAttachmentForMessageId(attachment, ownerMessageId)))))
                 .join();
         } catch (ThrownByLambdaException e) {
             throw new MailboxException(e.getCause().getMessage(), e.getCause());
         }
+    }
+
+    @Override
+    public Collection<MessageId> getOwnerMessageIds(AttachmentId attachmentId) throws MailboxException {
+        return getOwnerMessageIdsAsFuture(attachmentId).join();
+    }
+
+    public CompletableFuture<Collection<MessageId>> getOwnerMessageIdsAsFuture(AttachmentId attachmentId) throws MailboxException {
+        String id = attachmentId.getId();
+
+        return cassandraAsyncExecutor.executeSingleRow(
+            select(CassandraAttachmentMessageIdTable.FIELDS)
+                .from(CassandraAttachmentMessageIdTable.TABLE_NAME)
+                .where(eq(CassandraAttachmentMessageIdTable.ATTACHMENT_ID, id)))
+            .thenApply(optional ->
+                optional.map(this::messageIdSet)
+                    .orElse(ImmutableSet.of()));
+    }
+
+    private Collection<MessageId> messageIdSet(Row row) {
+        return row.getSet(CassandraAttachmentMessageIdTable.MESSAGE_IDS, String.class)
+            .stream()
+            .map(messageIdFactory::fromString)
+            .collect(Guavate.toImmutableSet());
     }
 }

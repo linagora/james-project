@@ -21,6 +21,7 @@ package org.apache.james.mailbox.cassandra.modules;
 
 import static com.datastax.driver.core.DataType.bigint;
 import static com.datastax.driver.core.DataType.blob;
+import static com.datastax.driver.core.DataType.set;
 import static com.datastax.driver.core.DataType.text;
 
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.List;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.components.CassandraTable;
 import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.mailbox.cassandra.table.CassandraAttachmentMessageIdTable;
 import org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
@@ -48,7 +50,14 @@ public class CassandraAttachmentModule implements CassandraModule {
                     .addColumn(CassandraAttachmentTable.TYPE, text())
                     .addColumn(CassandraAttachmentTable.SIZE, bigint())
                     .withOptions()
-                    .comment("Holds attachment for fast attachment retrieval")));
+                    .comment("Holds attachment for fast attachment retrieval")),
+            new CassandraTable(CassandraAttachmentMessageIdTable.TABLE_NAME,
+                SchemaBuilder.createTable(CassandraAttachmentMessageIdTable.TABLE_NAME)
+                    .ifNotExists()
+                    .addPartitionKey(CassandraAttachmentMessageIdTable.ATTACHMENT_ID, text())
+                    .addColumn(CassandraAttachmentMessageIdTable.MESSAGE_IDS, set(text()))
+                    .withOptions()
+                    .comment("Holds ids of messages owning the attachment")));
         types = ImmutableList.of();
     }
 

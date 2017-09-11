@@ -73,7 +73,7 @@ public class InMemoryMapperProvider implements MapperProvider {
 
     @Override
     public AttachmentMapper createAttachmentMapper() throws MailboxException {
-        return inMemoryMailboxSessionMapperFactory.createAttachmentMapper(new MockMailboxSession("user"));
+        return inMemoryMailboxSessionMapperFactory.getAttachmentMapper(new MockMailboxSession("user"));
     }
 
     @Override

@@ -56,6 +56,7 @@ public class DockerCassandraRule implements TestRule {
     private final CreateVolumeCmd createTmpsFsCmd;
     private final RemoveVolumeCmd deleteTmpsFsCmd;
 
+    @SuppressWarnings("resource")
     public DockerCassandraRule() {
         String tmpFsName = "cassandraData" + RandomStringUtils.randomAlphabetic(10);
         client = DockerClientFactory.instance().client();

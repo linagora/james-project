@@ -46,7 +46,7 @@ import org.apache.james.mailbox.cassandra.user.CassandraSubscriptionMapper;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
@@ -59,7 +59,7 @@ import com.datastax.driver.core.Session;
  * Cassandra implementation of {@link MailboxSessionMapperFactory}
  * 
  */
-public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFactory {
+public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFactory implements AttachmentMapperFactory {
     private final Session session;
     private final CassandraUidProvider uidProvider;
     private final CassandraModSeqProvider modSeqProvider;
@@ -133,7 +133,7 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
                                           uidProvider,
                                           modSeqProvider,
                                           null,
-                                          (CassandraAttachmentMapper) createAttachmentMapper(mailboxSession),
+                                          getAttachmentMapper(mailboxSession),
             messageDAO,
                                           messageIdDAO,
                                           imapUidDAO,
@@ -160,7 +160,7 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
     }
 
     @Override
-    public AttachmentMapper createAttachmentMapper(MailboxSession mailboxSession) {
+    public CassandraAttachmentMapper getAttachmentMapper(MailboxSession mailboxSession) {
         return new CassandraAttachmentMapper(session);
     }
 
