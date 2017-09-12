@@ -16,34 +16,21 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package org.apache.james.mailbox.exception;
 
-import org.junit.Test;
+import org.apache.james.mailbox.model.BlobId;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class BlobNotFoundException extends RuntimeException {
 
-public class BlobIdTest {
+    private final BlobId blobId;
 
-    @Test
-    public void shouldNotAllowEmptyString() {
-        assertThatThrownBy(() -> BlobId.of("")).isInstanceOf(IllegalArgumentException.class);
+    public BlobNotFoundException(BlobId blobId) {
+        super("Could not retrieve " + blobId.asString());
+        this.blobId = blobId;
     }
 
-    @Test
-    public void shouldNotAllowNullInput() {
-        assertThatThrownBy(() -> BlobId.of((String) null)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void shouldCreateInstanceWhenSimpleString() {
-        assertThat(BlobId.of("simple string")).extracting(BlobId::getRawValue).containsExactly("simple string");
-    }
-    
-    @Test
-    public void shouldRespectJavaBeanContract() {
-        EqualsVerifier.forClass(BlobId.class).verify();
+    public BlobId getBlobId() {
+        return blobId;
     }
 }

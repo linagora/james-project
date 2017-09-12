@@ -27,6 +27,7 @@ import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
@@ -34,13 +35,16 @@ import javax.mail.Flags;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.model.AttachmentAccessToken;
+import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mime4j.codec.DecoderUtil;
 import org.apache.james.modules.MailboxProbeImpl;
 
@@ -70,20 +74,34 @@ public class DownloadStepdefs {
 
     private final UserStepdefs userStepdefs;
     private final MainStepdefs mainStepdefs;
+    private final GetMessagesMethodStepdefs getMessagesMethodStepdefs;
     private HttpResponse response;
     private Multimap<String, String> attachmentsByMessageId;
     private Map<String, String> blobIdByAttachmentId;
+    private Map<String, MessageId> inputToMessageId;
     private Map<AttachmentAccessTokenKey, AttachmentAccessToken> attachmentAccessTokens;
 
     @Inject
-    private DownloadStepdefs(MainStepdefs mainStepdefs, UserStepdefs userStepdefs) {
+    private DownloadStepdefs(MainStepdefs mainStepdefs, UserStepdefs userStepdefs, GetMessagesMethodStepdefs getMessagesMethodStepdefs) {
         this.mainStepdefs = mainStepdefs;
         this.userStepdefs = userStepdefs;
+        this.getMessagesMethodStepdefs = getMessagesMethodStepdefs;
         this.attachmentsByMessageId = ArrayListMultimap.create();
         this.blobIdByAttachmentId = new HashMap<>();
         this.attachmentAccessTokens = new HashMap<>();
+        this.inputToMessageId = new HashMap<>();
     }
-    
+
+    @Given("^\"([^\"]*)\" mailbox \"([^\"]*)\" contains a message \"([^\"]*)\"$")
+    public void appendMessageToMailbox(String user, String mailbox, String messageId) throws Throwable {
+        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, user, mailbox);
+
+        ComposedMessageId composedMessageId = mainStepdefs.jmapServer.getProbe(MailboxProbeImpl.class).appendMessage(user, mailboxPath,
+            ClassLoader.getSystemResourceAsStream("eml/oneAttachment.eml"), new Date(), false, new Flags());
+
+        inputToMessageId.put(messageId, composedMessageId.getMessageId());
+    }
+
     @Given("^\"([^\"]*)\" mailbox \"([^\"]*)\" contains a message \"([^\"]*)\" with an attachment \"([^\"]*)\"$")
     public void appendMessageWithAttachmentToMailbox(String user, String mailbox, String messageId, String attachmentId) throws Throwable {
         MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, user, mailbox);
@@ -129,8 +147,21 @@ public class DownloadStepdefs {
     }
 
     @When("^\"([^\"]*)\" downloads \"([^\"]*)\"$")
-    public void downloads(String username, String attachmentId) throws Throwable {
-        String blobId = blobIdByAttachmentId.get(attachmentId);
+    public void downloads(String username, String blobId) throws Throwable {
+        String attachmentIdOrMessageId = Optional.ofNullable(blobIdByAttachmentId.get(blobId))
+            .orElse(Optional.ofNullable(inputToMessageId.get(blobId))
+                .map(MessageId::serialize)
+                .orElse(null));
+
+        downLoad(username, attachmentIdOrMessageId);
+    }
+
+    @When("^\"([^\"]*)\" downloads the message by its blobId$")
+    public void downloads(String username) throws Throwable {
+        downLoad(username, getMessagesMethodStepdefs.getBlobId());
+    }
+
+    private void downLoad(String username, String blobId) throws IOException, ClientProtocolException, URISyntaxException {
         URIBuilder uriBuilder = mainStepdefs.baseUri().setPath("/download/" + blobId);
         response = authenticatedDownloadRequest(uriBuilder, blobId, username).execute().returnResponse();
     }
@@ -324,7 +355,7 @@ public class DownloadStepdefs {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
     }
 
-    @Then("^the user should receive that attachment$")
+    @Then("^the user should receive that blob")
     public void httpOkStatusAndExpectedContent() throws IOException {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
         assertThat(IOUtils.toString(response.getEntity().getContent(), Charsets.UTF_8)).isNotEmpty();
@@ -351,7 +382,7 @@ public class DownloadStepdefs {
         }
     }
 
-    @Then("^the attachment size is (\\d+)$")
+    @Then("^the blob size is (\\d+)$")
     public void assertContentLength(int size) throws IOException {
         assertThat(response.getFirstHeader("Content-Length").getValue()).isEqualTo(String.valueOf(size));
     }

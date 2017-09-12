@@ -16,7 +16,8 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
+
+package org.apache.james.mailbox.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,22 +29,27 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 public class BlobIdTest {
 
     @Test
-    public void shouldNotAllowEmptyString() {
-        assertThatThrownBy(() -> BlobId.of("")).isInstanceOf(IllegalArgumentException.class);
+    public void shouldMatchBeanContact() {
+        EqualsVerifier.forClass(BlobId.class)
+            .allFieldsShouldBeUsed()
+            .verify();
     }
 
     @Test
-    public void shouldNotAllowNullInput() {
-        assertThatThrownBy(() -> BlobId.of((String) null)).isInstanceOf(IllegalArgumentException.class);
+    public void fromStringShouldThrowOnNull() {
+        assertThatThrownBy(() -> BlobId.fromString(null))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void shouldCreateInstanceWhenSimpleString() {
-        assertThat(BlobId.of("simple string")).extracting(BlobId::getRawValue).containsExactly("simple string");
+    public void fromStringShouldThrowOnEmpty() {
+        assertThatThrownBy(() -> BlobId.fromString(""))
+            .isInstanceOf(IllegalArgumentException.class);
     }
-    
+
     @Test
-    public void shouldRespectJavaBeanContract() {
-        EqualsVerifier.forClass(BlobId.class).verify();
+    public void asStringShouldReturnUnderlyingId() {
+        assertThat(BlobId.fromString("abc").asString())
+            .isEqualTo("abc");
     }
 }

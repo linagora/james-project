@@ -16,34 +16,51 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package org.apache.james.mailbox.model;
 
-import org.junit.Test;
+import java.util.Objects;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-public class BlobIdTest {
-
-    @Test
-    public void shouldNotAllowEmptyString() {
-        assertThatThrownBy(() -> BlobId.of("")).isInstanceOf(IllegalArgumentException.class);
+public class BlobId {
+    public static BlobId fromString(String raw) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(raw));
+        return new BlobId(raw);
     }
 
-    @Test
-    public void shouldNotAllowNullInput() {
-        assertThatThrownBy(() -> BlobId.of((String) null)).isInstanceOf(IllegalArgumentException.class);
+    private final String id;
+
+    private BlobId(String id) {
+        this.id = id;
     }
 
-    @Test
-    public void shouldCreateInstanceWhenSimpleString() {
-        assertThat(BlobId.of("simple string")).extracting(BlobId::getRawValue).containsExactly("simple string");
+    public String asString() {
+        return id;
     }
-    
-    @Test
-    public void shouldRespectJavaBeanContract() {
-        EqualsVerifier.forClass(BlobId.class).verify();
+
+    @Override
+    public final boolean equals(Object o) {
+        if (o instanceof BlobId) {
+            BlobId blobId = (BlobId) o;
+
+            return Objects.equals(this.id, blobId.id);
+        }
+        return false;
+    }
+
+    @Override
+    public final int hashCode() {
+        return Objects.hash(id);
+    }
+
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("id", id)
+            .toString();
     }
 }

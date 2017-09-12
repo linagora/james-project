@@ -16,34 +16,17 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package org.apache.james.mailbox;
 
-import org.junit.Test;
+import org.apache.james.mailbox.exception.BlobNotFoundException;
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Blob;
+import org.apache.james.mailbox.model.BlobId;
+import org.apache.james.mailbox.model.MessageId;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public interface BlobManager {
+    BlobId toBlobId(MessageId messageId);
 
-public class BlobIdTest {
-
-    @Test
-    public void shouldNotAllowEmptyString() {
-        assertThatThrownBy(() -> BlobId.of("")).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void shouldNotAllowNullInput() {
-        assertThatThrownBy(() -> BlobId.of((String) null)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    public void shouldCreateInstanceWhenSimpleString() {
-        assertThat(BlobId.of("simple string")).extracting(BlobId::getRawValue).containsExactly("simple string");
-    }
-    
-    @Test
-    public void shouldRespectJavaBeanContract() {
-        EqualsVerifier.forClass(BlobId.class).verify();
-    }
+    Blob retrieve(BlobId blobId, MailboxSession mailboxSession) throws MailboxException, BlobNotFoundException;
 }
