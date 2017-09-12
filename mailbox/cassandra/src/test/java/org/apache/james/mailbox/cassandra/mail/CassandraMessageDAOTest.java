@@ -21,6 +21,8 @@ package org.apache.james.mailbox.cassandra.mail;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -34,14 +36,18 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO.MessageIdAttachmentIds;
 import org.apache.james.mailbox.cassandra.mail.utils.Limit;
 import org.apache.james.mailbox.cassandra.modules.CassandraBlobModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
+import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
+import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
@@ -53,6 +59,7 @@ import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Bytes;
 
 public class CassandraMessageDAOTest {
@@ -60,6 +67,7 @@ public class CassandraMessageDAOTest {
     private static final CassandraId MAILBOX_ID = CassandraId.timeBased();
     private static final String CONTENT = "Subject: Test7 \n\nBody7\n.\n";
     private static final MessageUid messageUid = MessageUid.of(1);
+    private static final List<MessageAttachment> NO_ATTACHMENT = ImmutableList.of();
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
 
@@ -80,7 +88,7 @@ public class CassandraMessageDAOTest {
         messageIdFactory = new CassandraMessageId.Factory();
         messageId = messageIdFactory.generate();
         blobsDAO = new CassandraBlobsDAO(cassandra.getConf());
-        testee = new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider(), blobsDAO);
+        testee = new CassandraMessageDAO(cassandra.getConf(), cassandra.getTypesProvider(), blobsDAO, CassandraUtils.WITH_DEFAULT_CONFIGURATION, new CassandraMessageId.Factory());
 
         composedMessageId = new ComposedMessageId(MAILBOX_ID, messageId, messageUid);
 
@@ -98,7 +106,7 @@ public class CassandraMessageDAOTest {
 
     @Test
     public void saveShouldSaveNullValueForTextualLineCountAsZero() throws Exception {
-        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder());
+        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), NO_ATTACHMENT);
 
         testee.save(message).join();
 
@@ -114,7 +122,7 @@ public class CassandraMessageDAOTest {
         long textualLineCount = 10L;
         PropertyBuilder propertyBuilder = new PropertyBuilder();
         propertyBuilder.setTextualLineCount(textualLineCount);
-        message = createMessage(messageId, CONTENT, BODY_START, propertyBuilder);
+        message = createMessage(messageId, CONTENT, BODY_START, propertyBuilder, NO_ATTACHMENT);
 
         testee.save(message).join();
 
@@ -126,7 +134,7 @@ public class CassandraMessageDAOTest {
 
     @Test
     public void saveShouldStoreMessageWithFullContent() throws Exception {
-        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder());
+        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), NO_ATTACHMENT);
 
         testee.save(message).join();
 
@@ -139,7 +147,7 @@ public class CassandraMessageDAOTest {
 
     @Test
     public void saveShouldStoreMessageWithBodyContent() throws Exception {
-        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder());
+        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), NO_ATTACHMENT);
 
         testee.save(message).join();
 
@@ -155,7 +163,7 @@ public class CassandraMessageDAOTest {
 
     @Test
     public void saveShouldStoreMessageWithHeaderContent() throws Exception {
-        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder());
+        message = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), NO_ATTACHMENT);
 
         testee.save(message).join();
 
@@ -166,7 +174,7 @@ public class CassandraMessageDAOTest {
             .isEqualTo(CONTENT.substring(0, BODY_START));
     }
 
-    private SimpleMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder) {
+    private SimpleMailboxMessage createMessage(MessageId messageId, String content, int bodyStart, PropertyBuilder propertyBuilder, Collection<MessageAttachment> attachments) {
         return SimpleMailboxMessage.builder()
             .messageId(messageId)
             .mailboxId(MAILBOX_ID)
@@ -177,6 +185,7 @@ public class CassandraMessageDAOTest {
             .content(new SharedByteArrayInputStream(content.getBytes(Charsets.UTF_8)))
             .flags(new Flags())
             .propertyBuilder(propertyBuilder)
+            .addAttachments(attachments)
             .build();
     }
 
@@ -188,4 +197,133 @@ public class CassandraMessageDAOTest {
             .orElseThrow(() -> new IllegalStateException("Collection is not supposed to be empty"));
     }
 
+    @Test
+    public void retrieveAllMessageIdAttachmentIdsShouldReturnEmptyWhenNone() {
+        Stream<MessageIdAttachmentIds> actual = testee.retrieveAllMessageIdAttachmentIds().join();
+        
+        assertThat(actual).isEmpty();
+    }
+
+    @Test
+    public void retrieveAllMessageIdAttachmentIdsShouldReturnOneWhenStored() throws Exception {
+        //Given
+        MessageAttachment attachment = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        SimpleMailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), ImmutableList.of(attachment));
+        testee.save(message1).join();
+        MessageIdAttachmentIds expected = new MessageIdAttachmentIds(messageId, ImmutableSet.of(attachment.getAttachmentId()));
+        
+        //When
+        Stream<MessageIdAttachmentIds> actual = testee.retrieveAllMessageIdAttachmentIds().join();
+        
+        //Then
+        assertThat(actual).containsOnly(expected);
+    }
+
+    @Test
+    public void retrieveAllMessageIdAttachmentIdsShouldReturnOneWhenStoredWithTwoAttachments() throws Exception {
+        //Given
+        MessageAttachment attachment1 = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        MessageAttachment attachment2 = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("other content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        SimpleMailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), ImmutableList.of(attachment1, attachment2));
+        testee.save(message1).join();
+        MessageIdAttachmentIds expected = new MessageIdAttachmentIds(messageId, ImmutableSet.of(attachment1.getAttachmentId(), attachment2.getAttachmentId()));
+        
+        //When
+        Stream<MessageIdAttachmentIds> actual = testee.retrieveAllMessageIdAttachmentIds().join();
+        
+        //Then
+        assertThat(actual).containsOnly(expected);
+    }
+    
+    @Test
+    public void retrieveAllMessageIdAttachmentIdsShouldReturnAllWhenStoredWithAttachment() throws Exception {
+        //Given
+        MessageId messageId1 = messageIdFactory.generate();
+        MessageId messageId2 = messageIdFactory.generate();
+        MessageAttachment attachment1 = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        MessageAttachment attachment2 = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("other content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        SimpleMailboxMessage message1 = createMessage(messageId1, CONTENT, BODY_START, new PropertyBuilder(), ImmutableList.of(attachment1));
+        SimpleMailboxMessage message2 = createMessage(messageId2, CONTENT, BODY_START, new PropertyBuilder(), ImmutableList.of(attachment2));
+        testee.save(message1).join();
+        testee.save(message2).join();
+        MessageIdAttachmentIds expected1 = new MessageIdAttachmentIds(messageId1, ImmutableSet.of(attachment1.getAttachmentId()));
+        MessageIdAttachmentIds expected2 = new MessageIdAttachmentIds(messageId2, ImmutableSet.of(attachment2.getAttachmentId()));
+        
+        //When
+        Stream<MessageIdAttachmentIds> actual = testee.retrieveAllMessageIdAttachmentIds().join();
+        
+        //Then
+        assertThat(actual).containsOnly(expected1, expected2);
+    }
+    
+    @Test
+    public void retrieveAllMessageIdAttachmentIdsShouldReturnEmtpyWhenStoredWithoutAttachment() throws Exception {
+        //Given
+        SimpleMailboxMessage message1 = createMessage(messageId, CONTENT, BODY_START, new PropertyBuilder(), NO_ATTACHMENT);
+        testee.save(message1).join();
+        
+        //When
+        Stream<MessageIdAttachmentIds> actual = testee.retrieveAllMessageIdAttachmentIds().join();
+        
+        //Then
+        assertThat(actual).isEmpty();
+    }
+    
+    @Test
+    public void retrieveAllMessageIdAttachmentIdsShouldFilterMessagesWithoutAttachment() throws Exception {
+        //Given
+        MessageId messageId1 = messageIdFactory.generate();
+        MessageId messageId2 = messageIdFactory.generate();
+        MessageId messageId3 = messageIdFactory.generate();
+        MessageAttachment attachmentFor1 = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        MessageAttachment attachmentFor3 = MessageAttachment.builder()
+                .attachment(Attachment.builder()
+                        .bytes("other content".getBytes(StandardCharsets.UTF_8))
+                        .type("type")
+                        .build())
+                .build();
+        SimpleMailboxMessage message1 = createMessage(messageId1, CONTENT, BODY_START, new PropertyBuilder(), ImmutableList.of(attachmentFor1));
+        SimpleMailboxMessage message2 = createMessage(messageId2, CONTENT, BODY_START, new PropertyBuilder(), NO_ATTACHMENT);
+        SimpleMailboxMessage message3 = createMessage(messageId3, CONTENT, BODY_START, new PropertyBuilder(), ImmutableList.of(attachmentFor3));
+        testee.save(message1).join();
+        testee.save(message2).join();
+        testee.save(message3).join();
+        
+        //When
+        Stream<MessageIdAttachmentIds> actual = testee.retrieveAllMessageIdAttachmentIds().join();
+        
+        //Then
+        assertThat(actual).extracting(MessageIdAttachmentIds::getMessageId)
+            .containsOnly(messageId1, messageId3);
+    }
 }
