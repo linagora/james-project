@@ -27,7 +27,9 @@ import java.nio.charset.StandardCharsets;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.cassandra.ids.BlobId;
+import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.modules.CassandraAttachmentModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraBlobModule;
 import org.apache.james.mailbox.exception.AttachmentNotFoundException;
@@ -52,6 +54,7 @@ public class CassandraAttachmentFallbackTest {
     private CassandraAttachmentDAO attachmentDAO;
     private CassandraAttachmentMapper attachmentMapper;
     private CassandraBlobsDAO blobsDAO;
+    private CassandraAttachmentMessageIdDAO attachmentMessageIdDAO;
 
     @Before
     public void setUp() throws Exception {
@@ -67,7 +70,8 @@ public class CassandraAttachmentFallbackTest {
         attachmentDAOV2 = new CassandraAttachmentDAOV2(cassandra.getConf());
         attachmentDAO = new CassandraAttachmentDAO(cassandra.getConf());
         blobsDAO = new CassandraBlobsDAO(cassandra.getConf());
-        attachmentMapper = new CassandraAttachmentMapper(attachmentDAO, attachmentDAOV2, blobsDAO);
+        attachmentMessageIdDAO = new CassandraAttachmentMessageIdDAO(cassandra.getConf(), new CassandraMessageId.Factory(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
+        attachmentMapper = new CassandraAttachmentMapper(attachmentDAO, attachmentDAOV2, blobsDAO, attachmentMessageIdDAO);
     }
 
     @After

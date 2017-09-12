@@ -17,43 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.mail;
+package org.apache.james.mailbox.cassandra.table;
 
-import java.util.Collection;
-import java.util.List;
+public interface CassandraAttachmentMessageIdTable {
 
-import org.apache.james.mailbox.exception.AttachmentNotFoundException;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.Attachment;
-import org.apache.james.mailbox.model.AttachmentId;
+    String TABLE_NAME = "attachmentMessageId";
+    String ATTACHMENT_ID_AS_UUID = "attachmentIdAsUUID";
+    String ATTACHMENT_ID = "attachmentId";
+    String MESSAGE_ID = "messageId";
+    String[] FIELDS = { ATTACHMENT_ID_AS_UUID, ATTACHMENT_ID, MESSAGE_ID };
 
-public class NoopAttachmentMapper implements AttachmentMapper {
-
-    @Override
-    public void endRequest() {
-
-    }
-
-    @Override
-    public <T> T execute(Transaction<T> transaction) throws MailboxException {
-        return transaction.run();
-    }
-
-    @Override
-    public Attachment getAttachment(AttachmentId attachmentId) throws AttachmentNotFoundException {
-        return null;
-    }
-
-    @Override
-    public List<Attachment> getAttachments(Collection<AttachmentId> attachmentIds) {
-        return null;
-    }
-
-    @Override
-    public void storeAttachment(Attachment attachment) throws MailboxException {
-    }
-
-    @Override
-    public void storeAttachments(Collection<Attachment> attachments) throws MailboxException {
-    }
 }
