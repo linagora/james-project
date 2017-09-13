@@ -238,7 +238,7 @@ public class CassandraConfigurationTest {
         int expungeChunkSize = 9;
         int blobPartSize = 10;
         int attachmentV2MigrationReadTimeout = 11;
-        int messageAttachmentIdReadTimeout = 10;
+        int messageAttachmentIdReadTimeout = 12;
 
         CassandraConfiguration configuration = CassandraConfiguration.builder()
             .aclMaxRetry(aclMaxRetry)
