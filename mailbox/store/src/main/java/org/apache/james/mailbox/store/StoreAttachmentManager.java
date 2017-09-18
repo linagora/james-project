@@ -30,17 +30,21 @@ import org.apache.james.mailbox.exception.AttachmentNotFoundException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.AttachmentMapperFactory;
+import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 
 public class StoreAttachmentManager implements AttachmentManager {
 
     private final AttachmentMapperFactory attachmentMapperFactory;
+    private final MailboxMapperFactory mailboxMapperFactory;
 
     @Inject
-    public StoreAttachmentManager(AttachmentMapperFactory attachmentMapperFactory) {
+    public StoreAttachmentManager(AttachmentMapperFactory attachmentMapperFactory, MailboxMapperFactory mailboxMapperFactory) {
         this.attachmentMapperFactory = attachmentMapperFactory;
+        this.mailboxMapperFactory = mailboxMapperFactory;
     }
 
     protected AttachmentMapperFactory getAttachmentMapperFactory() {
@@ -74,5 +78,12 @@ public class StoreAttachmentManager implements AttachmentManager {
     @Override
     public Collection<MessageId> getOwnerMessageIds(AttachmentId attachmentId, MailboxSession mailboxSession) throws MailboxException {
         return getAttachmentMapper(mailboxSession).getOwnerMessageIds(attachmentId);
+    }
+
+    @Override
+    public String getOwnerMailbox(MailboxId mailboxId, MailboxSession mailboxSession) throws MailboxException {
+        return mailboxMapperFactory.getMailboxMapper(mailboxSession)
+            .findMailboxById(mailboxId)
+            .getUser();
     }
 }

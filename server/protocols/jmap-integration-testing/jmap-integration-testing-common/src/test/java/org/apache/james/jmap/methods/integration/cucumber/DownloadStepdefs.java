@@ -41,6 +41,7 @@ import org.apache.http.client.fluent.Response;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.model.AttachmentAccessToken;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -340,6 +341,11 @@ public class DownloadStepdefs {
             .returnResponse();
     }
 
+    @When("^\"([^\"]*)\" delete mailbox \"([^\"]*)\"$")
+    public void deleteMailboxButNotAttachment(String username, String mailboxName) throws Exception {
+        mainStepdefs.jmapServer.getProbe(MailboxProbeImpl.class).deleteMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+    }
+
     @Then("^the user should be authorized$")
     public void httpStatusDifferentFromUnauthorized() throws IOException {
         assertThat(response.getStatusLine().getStatusCode()).isIn(200, 404);
@@ -385,6 +391,12 @@ public class DownloadStepdefs {
     @Then("^the blob size is (\\d+)$")
     public void assertContentLength(int size) throws IOException {
         assertThat(response.getFirstHeader("Content-Length").getValue()).isEqualTo(String.valueOf(size));
+    }
+
+    @Then("^user \"([^\"]*)\" request the attachment \"([^\"]*)\" is still there$")
+    public void assertAttachment(String username, String attachmentId) throws Exception {
+        assertThat(mainStepdefs.jmapServer.getProbe(MailboxProbeImpl.class)
+            .getOwnerMessageIds(AttachmentId.from(attachmentId), username)).isNotNull();
     }
 
     private void assertEncodedFilenameMatches(String name) {

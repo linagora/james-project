@@ -20,6 +20,8 @@
 package org.apache.james.mailbox.store;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -32,7 +34,6 @@ import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.exception.AttachmentNotFoundException;
 import org.apache.james.mailbox.exception.BlobNotFoundException;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.Blob;
 import org.apache.james.mailbox.model.BlobId;
@@ -70,12 +71,40 @@ public class StoreBlobManager implements BlobManager {
 
     private Optional<Blob> getBlobFromAttachment(BlobId blobId, MailboxSession mailboxSession) throws MailboxException {
         try {
-            Attachment attachment = attachmentManager.getAttachment(
-                AttachmentId.from(blobId.asString()),
-                mailboxSession);
-            return Optional.of(attachment.toBlob());
+            AttachmentId attachmentId = AttachmentId.from(blobId.asString());
+            if (hasMessageAndIsOwnerMailbox(mailboxSession, attachmentId)) {
+                return Optional.empty();
+            }
+            return Optional.of(attachmentManager.getAttachment(attachmentId, mailboxSession).toBlob());
         } catch (AttachmentNotFoundException e) {
             return Optional.empty();
+        }
+    }
+
+    private boolean hasMessageAndIsOwnerMailbox(MailboxSession mailboxSession, AttachmentId attachmentId) throws MailboxException {
+        Collection<MessageId> ownerMessageIds = attachmentManager.getOwnerMessageIds(attachmentId, mailboxSession);
+        return !ownerMessageIds.isEmpty() && noMessageOrNotMailboxOnwer(mailboxSession, ownerMessageIds);
+    }
+
+    private boolean noMessageOrNotMailboxOnwer(MailboxSession mailboxSession, Collection<MessageId> ownerMessageIds) throws MailboxException {
+        List<MessageResult> messageResults = messageIdManager.getMessages(ImmutableList.copyOf(ownerMessageIds), FetchGroupImpl.MINIMAL, mailboxSession);
+        return messageResults.isEmpty() || !isOwnerMailbox(messageResults, mailboxSession);
+    }
+
+    private boolean belongsToCurrentUser(String mailboxOwner, MailboxSession session) {
+        return session.getUser().isSameUser(mailboxOwner);
+    }
+
+    private boolean isOwnerMailbox(List<MessageResult> messageResults, MailboxSession mailboxSession) throws MailboxException {
+        return messageResults.stream()
+            .allMatch(messageResult -> checkUserBelongingToSession(mailboxSession, messageResult));
+    }
+
+    private boolean checkUserBelongingToSession(MailboxSession mailboxSession, MessageResult messageResult) {
+        try {
+            return belongsToCurrentUser(attachmentManager.getOwnerMailbox(messageResult.getMailboxId(), mailboxSession), mailboxSession);
+        } catch (MailboxException e) {
+            return false;
         }
     }
 

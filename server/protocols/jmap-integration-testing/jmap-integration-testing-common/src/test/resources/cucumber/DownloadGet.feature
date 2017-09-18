@@ -42,3 +42,18 @@ Feature: Download GET
     When "username@domain.tld" downloads the message by its blobId
     Then the user should receive that blob
     And the blob size is 36
+
+  Scenario: Getting an attachment should be security
+    Given "username@domain.tld" mailbox "INBOX" contains a message "1" with an attachment "2"
+    When "username@domain.tld" delete mailbox "INBOX"
+    Then user "username@domain.tld" request the attachment "2" is still there
+    And "username@domain.tld" downloads "2"
+    And the user should receive a not found response
+
+  Scenario: User cannot download attachment of another user
+    Given "username@domain.tld" mailbox "INBOX" contains a message "1" with an attachment "2"
+    And a connected user "username1@domain.tld"
+    And "username1@domain.tld" has a mailbox "INBOX"
+    And  "username1@domain.tld" mailbox "INBOX" contains a message "11" with an attachment "22"
+    When "username1@domain.tld" downloads "2"
+    Then the user should receive a not found response
