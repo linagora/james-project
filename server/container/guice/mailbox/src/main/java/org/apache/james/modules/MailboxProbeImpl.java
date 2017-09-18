@@ -30,16 +30,19 @@ import javax.inject.Inject;
 import javax.mail.Flags;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.mailbox.AttachmentManager;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -53,13 +56,16 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
     private final MailboxManager mailboxManager;
     private final MailboxMapperFactory mailboxMapperFactory;
     private final SubscriptionManager subscriptionManager;
+    private final AttachmentManager attachmentManager;
     public static final boolean RECENT = true;
 
     @Inject
-    private MailboxProbeImpl(MailboxManager mailboxManager, MailboxMapperFactory mailboxMapperFactory, SubscriptionManager subscriptionManager) {
+    private MailboxProbeImpl(MailboxManager mailboxManager, MailboxMapperFactory mailboxMapperFactory,
+             SubscriptionManager subscriptionManager, AttachmentManager attachmentManager) {
         this.mailboxManager = mailboxManager;
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.subscriptionManager = subscriptionManager;
+        this.attachmentManager = attachmentManager;
     }
 
     @Override
@@ -189,5 +195,12 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
     public Collection<String> listSubscriptions(String user) throws Exception {
         MailboxSession mailboxSession = mailboxManager.createSystemSession(user);
         return subscriptionManager.subscriptions(mailboxSession);
+    }
+
+    @Override
+    public Collection<MessageId> getOwnerMessageIds(AttachmentId attachmentId, String username) throws Exception {
+        MailboxSession mailboxSession = mailboxManager.createSystemSession(username);
+
+        return attachmentManager.getOwnerMessageIds(attachmentId, mailboxSession);
     }
 }
