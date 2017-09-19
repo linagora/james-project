@@ -23,15 +23,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
+
 import javax.mail.Flags;
 import javax.management.MalformedObjectNameException;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.adapter.mailbox.MailboxCopierManagementMBean;
 import org.apache.james.adapter.mailbox.MailboxManagerManagementMBean;
 import org.apache.james.adapter.mailbox.ReIndexerManagementMBean;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
 

@@ -16,36 +16,20 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.mail;
+
+package org.apache.james.cli.probe.impl;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 
-import javax.mail.Flags;
-
-import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxId;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.mailbox.store.probe.MessageProbe;
 
-public interface MessageIdMapper {
+public class JmxMessageProbe implements MessageProbe {
 
-    List<MailboxMessage> find(Collection<MessageId> messageIds, FetchType fetchType);
-
-    List<MailboxId> findMailboxes(MessageId messageId);
-
-    void save(MailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
-
-    void copyInMailbox(MailboxMessage mailboxMessage) throws MailboxNotFoundException, MailboxException;
-
-    void delete(MessageId messageId);
-
-    void delete(MessageId messageId, List<MailboxId> mailboxIds);
-
-    Map<MailboxId, UpdatedFlags> setFlags(MessageId messageId, List<MailboxId> mailboxIds, Flags newState, MessageManager.FlagsUpdateMode updateMode) throws MailboxException;
+    @Override
+    public Collection<MessageId> getRelatedMessageIds(AttachmentId attachmentId, String user) throws Exception {
+        throw new NotImplementedException();
+    }
 }

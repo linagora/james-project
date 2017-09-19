@@ -17,30 +17,37 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox;
+package org.apache.james.modules;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Set;
 
-import javax.mail.Flags;
+import javax.inject.Inject;
 
-import org.apache.james.mailbox.MessageManager.FlagsUpdateMode;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.AttachmentManager;
+import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.SubscriptionManager;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.model.MessageResult.FetchGroup;
+import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
+import org.apache.james.mailbox.store.probe.MessageProbe;
+import org.apache.james.utils.GuiceProbe;
 
-public interface MessageIdManager {
+public class MessageProbeImpl implements GuiceProbe, MessageProbe {
 
-    Set<MessageId> accessibleMessages(Collection<MessageId> messageIds, final MailboxSession mailboxSession) throws MailboxException;
+    private final MailboxManager mailboxManager;
+    private final AttachmentManager attachmentManager;
 
-    void setFlags(Flags newState, FlagsUpdateMode replace, MessageId messageId, List<MailboxId> mailboxIds, MailboxSession mailboxSession) throws MailboxException;
+    @Inject
+    private MessageProbeImpl(MailboxManager mailboxManager, AttachmentManager attachmentManager) {
+        this.mailboxManager = mailboxManager;
+        this.attachmentManager = attachmentManager;
+    }
 
-    List<MessageResult> getMessages(List<MessageId> messageId, FetchGroup minimal, MailboxSession mailboxSession) throws MailboxException;
+    @Override
+    public Collection<MessageId> getRelatedMessageIds(AttachmentId attachmentId, String user) throws Exception {
+        MailboxSession mailboxSession = mailboxManager.createSystemSession(user);
+        return attachmentManager.getRelatedMessageIds(attachmentId, mailboxSession);
+    }
 
-    void delete(MessageId messageId, List<MailboxId> mailboxIds, MailboxSession mailboxSession) throws MailboxException;
-
-    void setInMailboxes(MessageId messageId, List<MailboxId> mailboxIds, MailboxSession mailboxSession) throws MailboxException;
 }

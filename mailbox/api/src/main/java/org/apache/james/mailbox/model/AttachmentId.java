@@ -32,12 +32,17 @@ import com.google.common.base.Strings;
 public class AttachmentId {
 
     public static AttachmentId forPayload(byte[] payload) {
-        Preconditions.checkArgument(payload != null);
+        Preconditions.checkNotNull(payload);
         return new AttachmentId(DigestUtils.sha1Hex(payload));
     }
 
+    public static AttachmentId from(BlobId blobId) {
+        return new AttachmentId(blobId.asString());
+    }
+
     public static AttachmentId from(String id) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(id));
+        Preconditions.checkNotNull(id);
+        Preconditions.checkArgument(!id.isEmpty());
         return new AttachmentId(id);
     }
 

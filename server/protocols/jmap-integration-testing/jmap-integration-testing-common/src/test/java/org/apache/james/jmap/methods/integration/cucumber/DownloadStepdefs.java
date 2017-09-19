@@ -41,6 +41,7 @@ import org.apache.http.client.fluent.Response;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.model.AttachmentAccessToken;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -338,6 +339,11 @@ public class DownloadStepdefs {
                 .build())
             .execute()
             .returnResponse();
+    }
+
+    @When("^\"([^\"]*)\" delete mailbox \"([^\"]*)\"$")
+    public void deleteMailboxButNotAttachment(String username, String mailboxName) throws Exception {
+        mainStepdefs.jmapServer.getProbe(MailboxProbeImpl.class).deleteMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
     }
 
     @Then("^the user should be authorized$")

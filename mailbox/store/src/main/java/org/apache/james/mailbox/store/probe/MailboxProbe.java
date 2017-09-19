@@ -26,8 +26,10 @@ import java.util.Date;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 public interface MailboxProbe {
@@ -54,4 +56,5 @@ public interface MailboxProbe {
     void reIndexAll() throws Exception;
 
     Collection<String> listSubscriptions(String user) throws Exception;
+
 }

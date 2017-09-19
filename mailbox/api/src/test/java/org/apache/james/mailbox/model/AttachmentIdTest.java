@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
 
@@ -34,25 +35,39 @@ public class AttachmentIdTest {
         assertThat(attachmentId.getId()).isEqualTo(expectedId);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void forPayloadShouldThrowWhenPayloadIsNull() {
-        AttachmentId.forPayload(null);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void fromShouldThrowWhenIdIsNull() {
-        AttachmentId.from(null);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void fromShouldThrowWhenIdIsEmpty() {
-        AttachmentId.from("");
+        assertThatThrownBy(() -> AttachmentId.forPayload(null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
-    public void fromShouldWork() {
+    public void fromShouldThrowWhenIdIsNull() {
+        String value = null;
+        assertThatThrownBy(() -> AttachmentId.from(value)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void fromShouldThrowWhenBlobIdIsNull() {
+        BlobId value = null;
+        assertThatThrownBy(() -> AttachmentId.from(value)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void fromShouldThrowWhenIdIsEmpty() {
+        assertThatThrownBy(() -> AttachmentId.from("")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void fromStringShouldWork() {
         String expectedId = "f07e5a815613c5abeddc4b682247a4c42d8a95df";
         AttachmentId attachmentId = AttachmentId.from(expectedId);
+        assertThat(attachmentId.getId()).isEqualTo(expectedId);
+    }
+
+    @Test
+    public void fromBlobIdShouldWork() {
+        String expectedId = "f07e5a815613c5abeddc4b682247a4c42d8a95df";
+        AttachmentId attachmentId = AttachmentId.from(BlobId.fromString(expectedId));
         assertThat(attachmentId.getId()).isEqualTo(expectedId);
     }
 
