@@ -54,4 +54,6 @@ public interface MailboxProbe {
     void reIndexAll() throws Exception;
 
     Collection<String> listSubscriptions(String user) throws Exception;
+
+    void setMailboxACL(String namespace, String user, String mailboxName, String targetUser, String rights) throws MailboxException;
 }

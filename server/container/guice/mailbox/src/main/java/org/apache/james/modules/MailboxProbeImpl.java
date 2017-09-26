@@ -36,6 +36,10 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.MailboxACL.ACLCommand;
+import org.apache.james.mailbox.model.MailboxACL.EditMode;
+import org.apache.james.mailbox.model.MailboxACL.EntryKey;
+import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -49,7 +53,6 @@ import org.apache.james.utils.GuiceProbe;
 import com.google.common.base.Throwables;
 
 public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
-
     private final MailboxManager mailboxManager;
     private final MailboxMapperFactory mailboxMapperFactory;
     private final SubscriptionManager subscriptionManager;
@@ -192,4 +195,12 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
         return subscriptionManager.subscriptions(mailboxSession);
     }
 
+    @Override
+    public void setMailboxACL(String namespace, String user, String mailboxName, String targetUser, String rights) throws MailboxException {
+        MailboxSession mailboxSession = mailboxManager.createSystemSession(user);
+        MailboxPath mailboxPath = new MailboxPath(namespace, user, mailboxName);
+        EntryKey key = EntryKey.createUser(targetUser);
+        ACLCommand mailboxACLCommand = new ACLCommand(key, EditMode.REPLACE, new Rfc4314Rights(rights));
+        mailboxManager.setRights(mailboxPath, mailboxACLCommand, mailboxSession);
+    }
 }

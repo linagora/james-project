@@ -62,7 +62,6 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
-import org.apache.james.mailbox.model.SimpleMailboxACL;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.event.DefaultDelegatingMailboxListener;
@@ -82,7 +81,6 @@ import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.store.search.SimpleMessageSearchIndex;
 import org.apache.james.mailbox.store.transaction.Mapper;
-import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -552,13 +550,7 @@ public class StoreMailboxManager implements MailboxManager {
                     if (!mailboxExists(mailbox, mailboxSession)) {
                         final Mailbox m = doCreateMailbox(mailbox, mailboxSession);
                         final MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(mailboxSession);
-                        mapper.execute(new TransactionalMapper.VoidTransaction() {
-
-                            public void runVoid() throws MailboxException {
-                                mailboxIds.add(mapper.save(m));
-                            }
-
-                        });
+                        mapper.execute(Mapper.toTransaction(() -> mailboxIds.add(mapper.save(m))));
 
                         // notify listeners
                         dispatcher.mailboxAdded(mailboxSession, m);
@@ -606,41 +598,38 @@ public class StoreMailboxManager implements MailboxManager {
         }
 
         final MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
-        mapper.execute(new Mapper.VoidTransaction() {
-
-            public void runVoid() throws MailboxException {
-                // TODO put this into a serilizable transaction
-                final Mailbox mailbox = mapper.findMailboxByPath(from);
-                if (mailbox == null) {
-                    throw new MailboxNotFoundException(from);
-                }
-                mailbox.setNamespace(to.getNamespace());
-                mailbox.setUser(to.getUser());
-                mailbox.setName(to.getName());
-                mapper.save(mailbox);
-
-                dispatcher.mailboxRenamed(session, from, mailbox);
-
-                // rename submailboxes
-                final MailboxPath children = new MailboxPath(MailboxConstants.USER_NAMESPACE, from.getUser(), from.getName() + getDelimiter() + "%");
-                locker.executeWithLock(session, children, (LockAwareExecution<Void>) () -> {
-                    final List<Mailbox> subMailboxes = mapper.findMailboxWithPathLike(children);
-                    for (Mailbox sub : subMailboxes) {
-                        final String subOriginalName = sub.getName();
-                        final String subNewName = to.getName() + subOriginalName.substring(from.getName().length());
-                        final MailboxPath fromPath = new MailboxPath(children, subOriginalName);
-                        sub.setName(subNewName);
-                        mapper.save(sub);
-                        dispatcher.mailboxRenamed(session, fromPath, sub);
-
-                        if (log.isDebugEnabled())
-                            log.debug("Rename mailbox sub-mailbox " + subOriginalName + " to " + subNewName);
-                    }
-                    return null;
-
-                }, true);
+        mapper.execute(Mapper.toTransaction(() -> {
+            // TODO put this into a serilizable transaction
+            final Mailbox mailbox = mapper.findMailboxByPath(from);
+            if (mailbox == null) {
+                throw new MailboxNotFoundException(from);
             }
-        });
+            mailbox.setNamespace(to.getNamespace());
+            mailbox.setUser(to.getUser());
+            mailbox.setName(to.getName());
+            mapper.save(mailbox);
+
+            dispatcher.mailboxRenamed(session, from, mailbox);
+
+            // rename submailboxes
+            final MailboxPath children = new MailboxPath(MailboxConstants.USER_NAMESPACE, from.getUser(), from.getName() + getDelimiter() + "%");
+            locker.executeWithLock(session, children, (LockAwareExecution<Void>) () -> {
+                final List<Mailbox> subMailboxes = mapper.findMailboxWithPathLike(children);
+                for (Mailbox sub : subMailboxes) {
+                    final String subOriginalName = sub.getName();
+                    final String subNewName = to.getName() + subOriginalName.substring(from.getName().length());
+                    final MailboxPath fromPath = new MailboxPath(children, subOriginalName);
+                    sub.setName(subNewName);
+                    mapper.save(sub);
+                    dispatcher.mailboxRenamed(session, fromPath, sub);
+
+                    if (log.isDebugEnabled())
+                        log.debug("Rename mailbox sub-mailbox " + subOriginalName + " to " + subNewName);
+                }
+                return null;
+
+            }, true);
+        }));
     }
 
 
@@ -800,7 +789,7 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
-    public boolean hasRight(MailboxPath mailboxPath, MailboxACL.MailboxACLRight right, MailboxSession session) throws MailboxException {
+    public boolean hasRight(MailboxPath mailboxPath, MailboxACL.Right right, MailboxSession session) throws MailboxException {
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
         MailboxSession.User user = session.getUser();
@@ -809,35 +798,35 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
-    public MailboxACL.MailboxACLRights myRights(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+    public MailboxACL.Rfc4314Rights myRights(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
         MailboxSession.User user = session.getUser();
         if (user != null) {
             return aclResolver.resolveRights(user.getUserName(), groupMembershipResolver, mailbox.getACL(), mailbox.getUser(), new GroupFolderResolver(session).isGroupFolder(mailbox));
         } else {
-            return SimpleMailboxACL.NO_RIGHTS;
+            return MailboxACL.NO_RIGHTS;
         }
     }
 
-    public MailboxACL.MailboxACLRights[] listRigths(MailboxPath mailboxPath, MailboxACL.MailboxACLEntryKey key, MailboxSession session) throws MailboxException {
-        final MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
+    public MailboxACL.Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxACL.EntryKey key, MailboxSession session) throws MailboxException {
+        MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
         return aclResolver.listRights(key, groupMembershipResolver, mailbox.getUser(), new GroupFolderResolver(session).isGroupFolder(mailbox));
     }
 
     @Override
-    public void setRights(MailboxPath mailboxPath, final MailboxACL.MailboxACLCommand mailboxACLCommand, MailboxSession session) throws MailboxException {
-        final MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
-        final Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
-        mapper.execute(
-            new Mapper.VoidTransaction() {
-                @Override
-                public void runVoid() throws MailboxException {
-                    mapper.updateACL(mailbox, mailboxACLCommand);
-                }
-            }
-        );
+    public void setRights(MailboxPath mailboxPath, MailboxACL.ACLCommand mailboxACLCommand, MailboxSession session) throws MailboxException {
+        MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
+        Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
+        mapper.execute(Mapper.toTransaction(() -> mapper.updateACL(mailbox, mailboxACLCommand)));
+    }
+    
+    @Override
+    public void resetRights(MailboxPath mailboxPath, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+        MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
+        Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
+        mapper.execute(Mapper.toTransaction(() -> mapper.resetACL(mailbox, mailboxACL)));
     }
 
     @Override
@@ -865,18 +854,15 @@ public class StoreMailboxManager implements MailboxManager {
         final AnnotationMapper annotationMapper = mailboxSessionMapperFactory.getAnnotationMapper(session);
         final MailboxId mailboxId = getMailbox(mailboxPath, session).getId();
 
-        annotationMapper.execute(new Mapper.VoidTransaction() {
-            @Override
-            public void runVoid() throws MailboxException {
-                for (MailboxAnnotation annotation : mailboxAnnotations) {
-                    if (annotation.isNil()) {
-                        annotationMapper.deleteAnnotation(mailboxId, annotation.getKey());
-                    } else if (canInsertOrUpdate(mailboxId, annotation, annotationMapper)) {
-                        annotationMapper.insertAnnotation(mailboxId, annotation);
-                    }
+        annotationMapper.execute(Mapper.toTransaction(() -> {
+            for (MailboxAnnotation annotation : mailboxAnnotations) {
+                if (annotation.isNil()) {
+                    annotationMapper.deleteAnnotation(mailboxId, annotation.getKey());
+                } else if (canInsertOrUpdate(mailboxId, annotation, annotationMapper)) {
+                    annotationMapper.insertAnnotation(mailboxId, annotation);
                 }
             }
-        });
+        }));
     }
 
     private boolean canInsertOrUpdate(MailboxId mailboxId, MailboxAnnotation annotation, AnnotationMapper annotationMapper) throws AnnotationException {

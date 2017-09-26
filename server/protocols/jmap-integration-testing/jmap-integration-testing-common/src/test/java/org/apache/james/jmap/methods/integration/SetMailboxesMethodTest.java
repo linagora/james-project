@@ -49,8 +49,8 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
-import org.apache.james.utils.JmapGuiceProbe;
 import org.apache.james.utils.DataProbeImpl;
+import org.apache.james.utils.JmapGuiceProbe;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -1141,6 +1141,36 @@ public abstract class SetMailboxesMethodTest {
                     "    \"#0\"" +
                     "  ]" +
                     "]";
+
+        given()
+            .header("Authorization", this.accessToken.serialize())
+            .body(requestBody)
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxesSet"))
+            .body(ARGUMENTS + ".updated", contains(mailboxId));
+    }
+
+    @Test
+    public void updateShouldReturnOkWhenClearingSharedWith() {
+        jmapServer.getProbe(MailboxProbeImpl.class).createMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox");
+        Mailbox mailbox = jmapServer.getProbe(MailboxProbeImpl.class).getMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox");
+        String mailboxId = mailbox.getMailboxId().serialize();
+        String requestBody =
+            "[" +
+                "  [ \"setMailboxes\"," +
+                "    {" +
+                "      \"update\": {" +
+                "        \"" + mailboxId + "\" : {" +
+                "          \"sharedWith\" : {\"user\":[]}" +
+                "        }" +
+                "      }" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
 
         given()
             .header("Authorization", this.accessToken.serialize())

@@ -124,7 +124,7 @@ public class JCRProperty implements JCRImapConstants, Persistent, Property {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.james.mailbox.store.mail.model.Property#getValue()
+     * @see org.apache.james.mailbox.store.mail.model.Property#asCharacter()
      */
     public String getValue() {
         if (isPersistent()) {

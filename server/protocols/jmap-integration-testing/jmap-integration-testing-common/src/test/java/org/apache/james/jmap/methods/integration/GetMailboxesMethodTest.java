@@ -24,9 +24,11 @@ import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -50,14 +52,15 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
-import org.apache.james.utils.JmapGuiceProbe;
 import org.apache.james.utils.DataProbeImpl;
+import org.apache.james.utils.JmapGuiceProbe;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.RequestSpecBuilder;
 import com.jayway.restassured.http.ContentType;
@@ -229,11 +232,73 @@ public abstract class GetMailboxesMethodTest {
             .body("[[\"getMailboxes\", {\"ids\": null}, \"#0\"]]")
         .when()
             .post("/jmap")
+            .prettyPeek()
         .then()
             .statusCode(200)
             .body(NAME, equalTo("mailboxes"))
             .body(ARGUMENTS + ".list", hasSize(7))
             .body(ARGUMENTS + ".list.name", hasItems(expectedMailboxes.toArray()));
+    }
+
+    @Test
+    public void getMailboxesShouldReturnSharedWithProperty() throws Exception {
+        String mailboxName = "myMailbox";
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        String targetUser1 = "toUser1@domain.com";
+        mailboxProbe.setMailboxACL(MailboxConstants.USER_NAMESPACE, username,  mailboxName, targetUser1, "rtews");
+        String targetUser2 = "toUser2@domain.com";
+        mailboxProbe.setMailboxACL(MailboxConstants.USER_NAMESPACE, username,  mailboxName, targetUser2, "awse");
+        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailbox.getMailboxId().serialize() + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list[0].name", equalTo(mailboxName))
+            .body(ARGUMENTS + ".list[0].sharedWith", hasEntry(targetUser1, ImmutableList.of("e", "r", "s", "t", "w")))
+            .body(ARGUMENTS + ".list[0].sharedWith", hasEntry(targetUser2, ImmutableList.of("a", "e", "s", "w")));
+    }
+
+    @Test
+    public void getMailboxShouldReturnEmptySharedWithWhenNoDelegation() throws Exception {
+        String mailboxName = "myMailbox";
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailbox.getMailboxId().serialize() + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list[0].name", equalTo(mailboxName))
+            .body(ARGUMENTS + ".list[0].sharedWith", is(ImmutableMap.of()));
+    }
+
+    @Test
+    public void nonHandledRightsShouldBeFilteredOut() throws Exception {
+        String mailboxName = "myMailbox";
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        String targetUser1 = "toUser1@domain.com";
+        mailboxProbe.setMailboxACL(MailboxConstants.USER_NAMESPACE, username,  mailboxName, targetUser1, "rtewskxp");
+        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+
+        given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailbox.getMailboxId().serialize() + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list[0].name", equalTo(mailboxName))
+            .body(ARGUMENTS + ".list[0].sharedWith", hasEntry(targetUser1, ImmutableList.of("e", "r", "s", "t", "w")));
     }
     
     @Test

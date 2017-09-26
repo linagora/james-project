@@ -20,11 +20,21 @@
 
 package org.apache.james.mailbox.model;
 
+import static org.apache.james.mailbox.model.MailboxACL.Right.Administer;
+import static org.apache.james.mailbox.model.MailboxACL.Right.CreateMailbox;
+import static org.apache.james.mailbox.model.MailboxACL.Right.DeleteMailbox;
+import static org.apache.james.mailbox.model.MailboxACL.Right.Insert;
+import static org.apache.james.mailbox.model.MailboxACL.Right.Lookup;
+import static org.apache.james.mailbox.model.MailboxACL.Right.PerformExpunge;
+import static org.apache.james.mailbox.model.MailboxACL.Right.Post;
+import static org.apache.james.mailbox.model.MailboxACL.Right.Read;
+import static org.apache.james.mailbox.model.MailboxACL.Right.Write;
+import static org.apache.james.mailbox.model.MailboxACL.Right.WriteSeenFlag;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL.MailboxACLRights;
-import org.apache.james.mailbox.model.SimpleMailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,27 +46,27 @@ public class Rfc4314RightsTest {
     private Rfc4314Rights aeik;
     private Rfc4314Rights lprs;
     private Rfc4314Rights twx;
-    private MailboxACLRights full;
-    private MailboxACLRights none;
+    private Rfc4314Rights full;
+    private Rfc4314Rights none;
     
     @Before
     public void setUp() throws Exception {
-        aeik = new SimpleMailboxACL.Rfc4314Rights("aeik");
-        lprs = new SimpleMailboxACL.Rfc4314Rights("lprs");
-        twx = new SimpleMailboxACL.Rfc4314Rights("twx");
-        full = SimpleMailboxACL.FULL_RIGHTS;
-        none = SimpleMailboxACL.NO_RIGHTS;
+        aeik = new MailboxACL.Rfc4314Rights("aeik");
+        lprs = new MailboxACL.Rfc4314Rights("lprs");
+        twx = new MailboxACL.Rfc4314Rights("twx");
+        full = MailboxACL.FULL_RIGHTS;
+        none = MailboxACL.NO_RIGHTS;
     }
     
     @Test(expected=NullPointerException.class)
     public void newInstanceShouldThrowWhenNullString() throws UnsupportedRightException {
-        new SimpleMailboxACL.Rfc4314Rights((String) null);
+        new MailboxACL.Rfc4314Rights((String) null);
     }
     
     @Test
     public void newInstanceShouldHaveNoRightsWhenEmptyString() throws UnsupportedRightException {
-        Rfc4314Rights rights = new SimpleMailboxACL.Rfc4314Rights("");
-        assertThat(rights).isEmpty();
+        Rfc4314Rights rights = new MailboxACL.Rfc4314Rights("");
+        assertThat(rights.list()).isEmpty();
     }
     
     @Test
@@ -84,9 +94,10 @@ public class Rfc4314RightsTest {
         assertThat(aeik.except(lprs)).isEqualTo(aeik);
     }
 
-    @Test(expected=UnsupportedRightException.class)
+    @Test
     public void rfc4314RightsShouldThrowWhenUnknownFlag() throws UnsupportedRightException {
-        new SimpleMailboxACL.Rfc4314Rights("z");
+        assertThatThrownBy(() -> new MailboxACL.Rfc4314Rights("z"))
+            .isInstanceOf(UnsupportedRightException.class);
     }
     
     @Test
@@ -96,69 +107,69 @@ public class Rfc4314RightsTest {
     
     @Test
     public void fullRightsShouldContainsAllRights() {
-        assertThat(full).containsOnly(
-                Rfc4314Rights.a_Administer_RIGHT, 
-                Rfc4314Rights.e_PerformExpunge_RIGHT, 
-                Rfc4314Rights.i_Insert_RIGHT, 
-                Rfc4314Rights.k_CreateMailbox_RIGHT,
-                Rfc4314Rights.l_Lookup_RIGHT,
-                Rfc4314Rights.p_Post_RIGHT,
-                Rfc4314Rights.r_Read_RIGHT,
-                Rfc4314Rights.s_WriteSeenFlag_RIGHT,
-                Rfc4314Rights.t_DeleteMessages_RIGHT,
-                Rfc4314Rights.w_Write_RIGHT,
-                Rfc4314Rights.x_DeleteMailbox_RIGHT);
+        assertThat(full.list()).containsOnly(
+            Administer,
+            PerformExpunge,
+            Insert,
+            CreateMailbox,
+            Lookup,
+            Post,
+            Read,
+            WriteSeenFlag,
+            MailboxACL.Right.DeleteMessages,
+            MailboxACL.Right.Write,
+            MailboxACL.Right.DeleteMailbox);
     }
     
     @Test
     public void noneRightsShouldContainsNoRights() {
-        assertThat(none).isEmpty();
+        assertThat(none.list()).isEmpty();
     }
     
     @Test
     public void rightsShouldContainsSpecificRightsWhenAEIK() {
-        assertThat(aeik).containsOnly(
-                Rfc4314Rights.a_Administer_RIGHT, 
-                Rfc4314Rights.e_PerformExpunge_RIGHT, 
-                Rfc4314Rights.i_Insert_RIGHT, 
-                Rfc4314Rights.k_CreateMailbox_RIGHT);
+        assertThat(aeik.list()).containsOnly(
+            Administer,
+            PerformExpunge,
+            Insert,
+            CreateMailbox);
     }
     
     @Test
     public void rightsShouldContainsSpecificRightsWhenLPRS() {
-        assertThat(lprs).containsOnly(
-                Rfc4314Rights.l_Lookup_RIGHT, 
-                Rfc4314Rights.p_Post_RIGHT, 
-                Rfc4314Rights.r_Read_RIGHT, 
-                Rfc4314Rights.s_WriteSeenFlag_RIGHT);
+        assertThat(lprs.list()).containsOnly(
+            Lookup,
+            Post,
+            Read,
+            WriteSeenFlag);
     }
     
     @Test
     public void rightsShouldContainsSpecificRightsWhenTWX() {
-        assertThat(twx).containsOnly(
-                Rfc4314Rights.t_DeleteMessages_RIGHT, 
-                Rfc4314Rights.w_Write_RIGHT, 
-                Rfc4314Rights.x_DeleteMailbox_RIGHT);
+        assertThat(twx.list()).containsOnly(
+            MailboxACL.Right.DeleteMessages,
+            MailboxACL.Right.Write,
+            MailboxACL.Right.DeleteMailbox);
     }
 
     @Test
     public void getValueShouldReturnSigmaWhenAeik() throws UnsupportedRightException {
-        assertThat(aeik.getValue()).isEqualTo(Rfc4314Rights.a_Administer_MASK | Rfc4314Rights.e_PerformExpunge_MASK | Rfc4314Rights.i_Insert_MASK | Rfc4314Rights.k_CreateMailbox_MASK);
+        assertThat(aeik.list()).containsExactly(Administer, PerformExpunge, Insert, CreateMailbox);
     }
 
     @Test
     public void getValueShouldReturnSigmaWhenLprs() throws UnsupportedRightException {
-        assertThat(lprs.getValue()).isEqualTo(Rfc4314Rights.l_Lookup_MASK | Rfc4314Rights.p_Post_MASK | Rfc4314Rights.s_WriteSeenFlag_MASK | Rfc4314Rights.r_Read_MASK);
+        assertThat(lprs.list()).containsExactly(Lookup, Post, Read, WriteSeenFlag);
     }
 
     @Test
     public void getValueShouldReturnSigmaWhenTwx() throws UnsupportedRightException {
-        assertThat(twx.getValue()).isEqualTo(Rfc4314Rights.t_DeleteMessages_MASK | Rfc4314Rights.w_Write_MASK | Rfc4314Rights.x_DeleteMailbox_MASK);
+        assertThat(twx.list()).containsExactly(MailboxACL.Right.DeleteMessages, Write, DeleteMailbox);
     }
 
     @Test
     public void getValueShouldReturnEmptyWhenNone() throws UnsupportedRightException {
-        assertThat(new SimpleMailboxACL.Rfc4314Rights("").getValue()).isEqualTo(Rfc4314Rights.EMPTY_MASK);
+        assertThat(new MailboxACL.Rfc4314Rights("").list()).isEmpty();
     }
 
     @Test
@@ -196,8 +207,8 @@ public class Rfc4314RightsTest {
         assertThat(lprs.union(none)).isEqualTo(lprs);
     }
     
-    @Test(expected=NullPointerException.class)
+    @Test
     public void unionShouldThrowWhenAppliedWithNull() throws UnsupportedRightException {
-        assertThat(lprs.union(null)).isEqualTo(lprs);
+        assertThatThrownBy(() -> lprs.union(null)).isInstanceOf(NullPointerException.class);
     }
 }
