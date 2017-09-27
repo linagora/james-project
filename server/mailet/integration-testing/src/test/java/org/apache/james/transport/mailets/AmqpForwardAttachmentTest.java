@@ -23,12 +23,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.internet.MimeMessage;
 
+import org.apache.james.jmap.mailet.VacationMailet;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailets.TemporaryJamesServer;
 import org.apache.james.mailets.configuration.CommonProcessors;
 import org.apache.james.mailets.configuration.MailetConfiguration;
 import org.apache.james.mailets.configuration.MailetContainer;
 import org.apache.james.mailets.configuration.ProcessorConfiguration;
+import org.apache.james.transport.matchers.All;
+import org.apache.james.transport.matchers.RecipientIsLocal;
 import org.apache.james.utils.SMTPMessageSender;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
@@ -93,36 +96,36 @@ public class AmqpForwardAttachmentTest {
                     .state("transport")
                     .enableJmx(true)
                     .addMailet(MailetConfiguration.builder()
-                            .match("All")
-                            .clazz("RemoveMimeHeader")
+                            .match(All.class)
+                            .clazz(RemoveMimeHeader.class)
                             .addProperty("name", "bcc")
                             .build())
                     .addMailet(MailetConfiguration.builder()
-                            .match("All")
-                            .clazz("StripAttachment")
-                            .addProperty("attribute", MAIL_ATTRIBUTE)
-                            .addProperty("pattern", ".*\\.txt")
+                            .match(All.class)
+                            .clazz(StripAttachment.class)
+                            .addProperty(StripAttachment.ATTRIBUTE_PARAMETER_NAME, MAIL_ATTRIBUTE)
+                            .addProperty(StripAttachment.PATTERN_PARAMETER_NAME, ".*\\.txt")
                             .build())
                     .addMailet(MailetConfiguration.builder()
-                            .match("All")
-                            .clazz("MimeDecodingMailet")
-                            .addProperty("attribute", MAIL_ATTRIBUTE)
+                            .match(All.class)
+                            .clazz(MimeDecodingMailet.class)
+                            .addProperty(MimeDecodingMailet.ATTRIBUTE_PARAMETER_NAME, MAIL_ATTRIBUTE)
                             .build())
                     .addMailet(MailetConfiguration.builder()
-                            .match("All")
-                            .clazz("AmqpForwardAttribute")
-                            .addProperty("uri", amqpRule.getAmqpUri())
-                            .addProperty("exchange", EXCHANGE_NAME)
-                            .addProperty("attribute", MAIL_ATTRIBUTE)
-                            .addProperty("routing_key", ROUTING_KEY)
+                            .match(All.class)
+                            .clazz(AmqpForwardAttribute.class)
+                            .addProperty(AmqpForwardAttribute.URI_PARAMETER_NAME, amqpRule.getAmqpUri())
+                            .addProperty(AmqpForwardAttribute.EXCHANGE_PARAMETER_NAME, EXCHANGE_NAME)
+                            .addProperty(AmqpForwardAttribute.ATTRIBUTE_PARAMETER_NAME, MAIL_ATTRIBUTE)
+                            .addProperty(AmqpForwardAttribute.ROUTING_KEY_PARAMETER_NAME, ROUTING_KEY)
                             .build())
                     .addMailet(MailetConfiguration.builder()
-                            .match("RecipientIsLocal")
-                            .clazz("org.apache.james.jmap.mailet.VacationMailet")
+                            .match(RecipientIsLocal.class)
+                            .clazz(VacationMailet.class)
                             .build())
                     .addMailet(MailetConfiguration.builder()
-                            .match("RecipientIsLocal")
-                            .clazz("LocalDelivery")
+                            .match(RecipientIsLocal.class)
+                            .clazz(LocalDelivery.class)
                             .build())
                     .build())
             .build();

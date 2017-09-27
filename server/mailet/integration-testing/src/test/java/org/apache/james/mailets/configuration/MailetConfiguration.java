@@ -22,6 +22,9 @@ package org.apache.james.mailets.configuration;
 
 import java.util.Map;
 
+import org.apache.mailet.Mailet;
+import org.apache.mailet.Matcher;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -44,6 +47,16 @@ public class MailetConfiguration implements SerializableAsXml {
 
         public Builder match(String match) {
             this.match = match;
+            return this;
+        }
+
+        public Builder match(Class<? extends Matcher> matcher) {
+            this.match = matcher.getCanonicalName();
+            return this;
+        }
+
+        public Builder clazz(Class<? extends Mailet> clazz) {
+            this.clazz = clazz.getCanonicalName();
             return this;
         }
 
