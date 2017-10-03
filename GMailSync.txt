@@ -1,0 +1,106 @@
+Gmail Integration into James
+
+Gmail do that with Gmailify, but it doesn't apply to any IMAP account.
+
+Gmail does synchronization to provide search capabilities, sorting, etc, it's not a backend but rather a bidirectional sync tool.
+
+For James, it makes sense to be able to configure sync processes per user.
+
+It could live outside James process and access James from the outside but it would require talking IMAP or JMAP, non of which is good enough for efficient sync purpose.
+
+Let's consider that the sync process is part of james and uses mailbox-api for now. We could then extract it once mailbox-api would be exposed as REST or RPC.
+
+First, the user will need to define an external account for which it will provide :
+- username
+- OAuth grant rights
+
+Then, the synchronization process should create a new mailbox tree prefixed with external account email address.
+
+GMail doc as a guide about synchronization process (https://developers.google.com/gmail/api/guides/sync) : basically, one should start by listing + retrieving messages (full sync) and keep the historyId of the state it got.
+
+Then, history.list takes a startHistoryId and returns the list of changes (new messages as well as flag modification, etc). Very helpful for sync purpose.
+
+Google provides Pub/Sub access to Gmail events but it requires a Google Cloud account.
+
+Handling updates with polling looks like an easier integration path.
+
+There are high limits for querying API https://developers.google.com/gmail/api/v1/reference/quota and a Java library provided.
+
+Conflicts : There are always conditions that will lead to conflicts (like modifying flags from several clients). History entries are not providing anything related to time, so we can't use a classic "last change win" strategy. We then should ensure very little delay in event propagation. A way to handle that is to register the sync engine as an Event Listener. Every time a message that belongs to a gmail account is modified, it can issue the right call to Gmail API (and make sure a history call is scheduled).
+
+Tasks summary :
+James :
+- Manage externals account per user (with OAuth token storage)
+
+  OP Node stuff already manage external account and handle the OAuth tokens (auth + refresh).
+  James could just expose an endpoint to receive required informations :
+  	x account address
+	x auth token
+	x OP EndPoint to refresh the token
+	x A JWT token to use for calling OP for a given GMail account
+  James should also provide endpoints for modification and deletion of GMail accounts
+
+  (It means storage, user deletion event handling, CRUD endpoints)
+
+  Estimation : 13 points
+
+- Token refreshing
+
+  Given the registered refresh URL, call OP when needed to get an token.
+
+  Also, be careful to group calls to avoid overloading refresh API for a same token
+
+  Estimation : 5 points
+
+
+- Write a full synchronization process
+
+  There's no guarantee that history will be available. That means James must be able to
+  init its mailboxes from GMail when the association if first created (list messages + download raw)
+  but it should also be able to sync existing mailboxes with GMail state by calling messages.list.
+
+  James can leverage immutable message.id for applying changes that way.
+
+  Estimation : 20 points
+
+- Write process that handles incremental sync with polling and historyId storage
+
+  This process is supposed to be run at a configured frequency with a scheduler.
+  Each time it's triggered, it should call history.list with last historyId it knows.
+  For each GMail event type, it then applies modifications to James mailbox. On new message, it requires downloading the raw email.
+
+  Estimation : 20 points
+
+- Test env
+
+  To write the GMail connector, we need to put in place some test accounts on GMail and build some automated process for the developper to check his/her code. We don't try to reach CI automation for that.
+
+  Estimation : 8 points
+
+- Propagate James events to GMail
+
+  The sync component should register to events on the mailboxes in sync with GMail and call GMail APIs to remotely apply local modifications.
+  A failed command would mean GMail data changed in an incompatible way.
+  In any cases, right after a GMail command, it should schedule a incremental sync.
+
+  Estimation : 13 points
+
+- Implement a durable Mailbox Pub/Sub with an MQ to replace in-memory event dispatch
+
+  Estimation : 13 points
+
+- Find a way to run mailets on synchronized emails
+
+  Estimation : (very poor) 40 points
+
+
+OP :
+- Expose an endpoint to allow an external process to trigger a Google OAuth token refresh
+
+  OP should call required GMail API and then store the new token. It should also trigger a call to James to notify the new token.
+
+- Call James APIs to notify about GMail account creation/modification/deletion
+
+  GMail account CRUD must handle the calls to James in order to configure the GMail sync.
+
+
