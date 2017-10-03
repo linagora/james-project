@@ -27,7 +27,7 @@ import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.imap.encode.ImapResponseComposer;
 
 /**
- * Abstract base class for chained {@link ImapEncoder} implementations.
+ * Abstract searchBase class for chained {@link ImapEncoder} implementations.
  * Implementations of this will check if the {@link ImapMessage} should get
  * encoded by this Implementation or should get passed to the next
  * {@link ImapEncoder} in the chain

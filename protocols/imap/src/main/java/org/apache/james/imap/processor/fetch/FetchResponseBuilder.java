@@ -311,7 +311,7 @@ public final class FetchResponseBuilder {
         // so check if there is a content for it. If not we MUST NOT write the empty line in any case
         // as stated in rfc3501
         if (result.size() == 2) {
-            // Check if its base as this can give use a more  correctly working check
+            // Check if its searchBase as this can give use a more  correctly working check
             // to see if we need to write the newline out to the client. 
             // This is related to IMAP-298
             if (isBase) {
@@ -334,7 +334,7 @@ public final class FetchResponseBuilder {
     }
     private FetchResponse.BodyElement headers(MessageResult messageResult, String name, int[] path, boolean isBase) throws MailboxException {      
         if (isBase) {
-            // if its base we can just return the raw headers without parsing
+            // if its searchBase we can just return the raw headers without parsing
             // them. See MAILBOX-311 and IMAP-?
             HeadersBodyElement element = new HeadersBodyElement(name, messageResult.getHeaders());
             try {

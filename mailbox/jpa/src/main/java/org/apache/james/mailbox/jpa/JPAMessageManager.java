@@ -47,7 +47,7 @@ import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
 /**
- * Abstract base class which should be used from JPA implementations.
+ * Abstract searchBase class which should be used from JPA implementations.
  */
 public class JPAMessageManager extends StoreMessageManager {
     

@@ -343,9 +343,9 @@ public class MaildirMessageName {
     }
     
     /**
-     * Composes the base name consisting of timestamp, unique string and host name
+     * Composes the searchBase name consisting of timestamp, unique string and host name
      * witout the size and flags.
-     * @return The base name
+     * @return The searchBase name
      */
     public String getBaseName() {
         split();

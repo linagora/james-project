@@ -98,7 +98,7 @@ import com.google.common.collect.ImmutableMap;
  * Base class for {@link org.apache.james.mailbox.MessageManager}
  * implementations.
  * 
- * This base class take care of dispatching events to the registered
+ * This searchBase class take care of dispatching events to the registered
  * {@link MailboxListener} and so help with handling concurrent
  * {@link MailboxSession}'s.
  * 

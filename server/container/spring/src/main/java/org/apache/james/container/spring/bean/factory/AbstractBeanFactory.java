@@ -24,7 +24,7 @@ import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 
 /**
- * Simple abstract base class which BeanFactory, FactoryBeanPostProcessors and
+ * Simple abstract searchBase class which BeanFactory, FactoryBeanPostProcessors and
  * BeanPostProcessors implementations should extend if they want to access the
  * context's beanFactory.
  */

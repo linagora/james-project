@@ -711,7 +711,7 @@ public class MaildirFolder {
     }
     
     /**
-     * Takes the name of a message file and returns only the base name.
+     * Takes the name of a message file and returns only the searchBase name.
      * @param fileName The name of the message file
      * @return the file name without meta data, the unmodified name if it doesn't have meta data
      */

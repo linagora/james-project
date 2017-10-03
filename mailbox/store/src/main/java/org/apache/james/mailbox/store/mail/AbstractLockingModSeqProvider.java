@@ -28,7 +28,7 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 
 /**
- * Abstract base implementation of {@link ModSeqProvider} which uses the given {@link MailboxPathLocker} to lock the {@link Mailbox} during the mod-seq generation.
+ * Abstract searchBase implementation of {@link ModSeqProvider} which uses the given {@link MailboxPathLocker} to lock the {@link Mailbox} during the mod-seq generation.
  * 
  *
  */

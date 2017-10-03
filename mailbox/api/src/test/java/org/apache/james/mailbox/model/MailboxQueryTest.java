@@ -1196,7 +1196,7 @@ public class MailboxQueryTest {
     public void buildShouldMatchAllValuesWhenMatchesAll() throws Exception {
         //When
         MailboxQuery actual = MailboxQuery.builder()
-                .base(mailboxPath)
+                .searchBase(mailboxPath)
                 .matchesAll()
                 .pathDelimiter('.')
                 .build();
@@ -1260,7 +1260,7 @@ public class MailboxQueryTest {
     public void builderShouldThrowWhenBaseAndUsernameGiven() throws Exception {
         //Given
         Builder testee = MailboxQuery.builder()
-                .base(mailboxPath)
+                .searchBase(mailboxPath)
                 .username("user");
         //When
         testee.build();
@@ -1270,7 +1270,7 @@ public class MailboxQueryTest {
     public void builderShouldThrowWhenBaseGiven() throws Exception {
         //Given
         Builder testee = MailboxQuery.builder()
-                .base(mailboxPath)
+                .searchBase(mailboxPath)
                 .privateUserMailboxes();
         //When
         testee.build();
@@ -1289,7 +1289,7 @@ public class MailboxQueryTest {
     public void builderShouldUseBaseWhenGiven() throws Exception {
         //When
         MailboxQuery actual = MailboxQuery.builder()
-                .base(mailboxPath)
+                .searchBase(mailboxPath)
                 .build();
         //Then
         assertThat(actual.getBase()).isSameAs(mailboxPath);

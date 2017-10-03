@@ -29,7 +29,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 
 /**
- * Abstract base class which load JAMES files based on the prefix. This can be
+ * Abstract searchBase class which load JAMES files based on the prefix. This can be
  * used in different {@link ApplicationContext} implementations
  */
 public class DefaultJamesResourceLoader extends DefaultResourceLoader implements JamesResourceLoader {

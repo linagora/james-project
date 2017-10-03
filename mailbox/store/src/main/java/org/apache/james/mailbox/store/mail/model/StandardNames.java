@@ -34,17 +34,17 @@ package org.apache.james.mailbox.store.mail.model;
  * would be based in the <code>http://james.apache.org/rfc2045</code> space.
  * </p><ul>
  * <li>
- * <strong>For unstructured fields</strong> this base is used directly as the namespace.
+ * <strong>For unstructured fields</strong> this searchBase is used directly as the namespace.
  * </li><li>
  * <strong>For structure fields</strong>, the capitalised name (as used in the RFC text)
- * is suffixed to this base.
+ * is suffixed to this searchBase.
  * <ul>
  * <li>
  * <strong>Elements</strong> are named from the grammar.
  * </li>
  * <li>
  * <strong>Parameters of structured fields</strong> use a namespace rooted in this 
- * base suffixed with <em>params</em>. This namespace should contains only those 
+ * searchBase suffixed with <em>params</em>. This namespace should contains only those
  * parameters. The name of each property is the name of the parameter, converted 
  * to lower case. So, by iterating through all properties in the sufffixed namespace, 
  * every parameter can be named and value.

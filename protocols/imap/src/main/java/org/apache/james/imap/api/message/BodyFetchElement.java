@@ -97,7 +97,7 @@ public class BodyFetchElement {
     /**
      * Gets the MIME path.
      * 
-     * @return the path, or null if the section is the base message
+     * @return the path, or null if the section is the searchBase message
      */
     public final int[] getPath() {
         return path;

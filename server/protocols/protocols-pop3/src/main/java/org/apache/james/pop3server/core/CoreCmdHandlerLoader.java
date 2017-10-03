@@ -69,7 +69,7 @@ public class CoreCmdHandlerLoader implements HandlersPackage {
     private final List<String> commands = new LinkedList<>();
 
     public CoreCmdHandlerLoader() {
-        // Insert the base commands in the Map
+        // Insert the searchBase commands in the Map
         commands.add(WELCOMEMESSAGEHANDLER);
         commands.add(COMMANDDISPATCHER);
         commands.add(CAPACMDHANDLER);

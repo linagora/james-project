@@ -114,7 +114,7 @@ public abstract class AbstractCombinationManagerTest {
         query.andCriteria(SearchQuery.all());
 
         MailboxQuery mailboxQuery = MailboxQuery.builder()
-            .base(MailboxManagerFixture.MAILBOX_PATH1)
+            .searchBase(MailboxManagerFixture.MAILBOX_PATH1)
             .build();
         MessageId messageId = messageManager1.appendMessage(new ByteArrayInputStream(MAIL_CONTENT), new Date(), session, false, FLAGS).getMessageId();
 

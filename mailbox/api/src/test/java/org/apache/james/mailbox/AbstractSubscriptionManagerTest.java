@@ -25,7 +25,7 @@ import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.junit.Test;
 
 /**
- * Abstract base class to test {@link SubscriptionManager} implementations
+ * Abstract searchBase class to test {@link SubscriptionManager} implementations
  * 
  *
  */

@@ -46,14 +46,14 @@ import org.apache.james.smtpserver.JamesRcptCmdHandler;
 import org.apache.james.smtpserver.fastfail.ValidRcptHandler;
 
 /**
- * This class represent the base command handlers which are shipped with james.
+ * This class represent the searchBase command handlers which are shipped with james.
  */
 public class CoreCmdHandlerLoader implements HandlersPackage {
 
     private final List<String> commands = new LinkedList<>();
 
     public CoreCmdHandlerLoader() {
-        // Insert the base commands in the Map
+        // Insert the searchBase commands in the Map
         String WELCOMEMESSAGEHANDLER = WelcomeMessageHandler.class.getName();
         commands.add(WELCOMEMESSAGEHANDLER);
         String COMMANDDISPATCHER = CommandDispatcher.class.getName();

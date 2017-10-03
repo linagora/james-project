@@ -28,7 +28,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 
 /**
- * Abstract base class which BeanPostProcessors should extend if they provide an
+ * Abstract searchBase class which BeanPostProcessors should extend if they provide an
  * LifeCycle handling.
  * 
  * @param <T>

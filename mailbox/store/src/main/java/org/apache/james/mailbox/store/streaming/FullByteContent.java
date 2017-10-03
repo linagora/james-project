@@ -31,7 +31,7 @@ import java.io.SequenceInputStream;
 import java.util.List;
 
 /**
- * Abstract base class for {@link Content} implementations which hold the headers and 
+ * Abstract searchBase class for {@link Content} implementations which hold the headers and
  * the body a email
  *
  */

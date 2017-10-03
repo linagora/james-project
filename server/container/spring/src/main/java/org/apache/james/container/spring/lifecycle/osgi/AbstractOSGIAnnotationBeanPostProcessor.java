@@ -45,7 +45,7 @@ import org.springframework.osgi.service.importer.support.OsgiServiceProxyFactory
 import org.springframework.util.ReflectionUtils;
 
 /**
- * Abstract base class for {@link BeanPostProcessor} implementations which need to wire stuff via annotations and need to be functional via OSGI.
+ * Abstract searchBase class for {@link BeanPostProcessor} implementations which need to wire stuff via annotations and need to be functional via OSGI.
  * 
  * Many of this code is borrowed from the spring-dm's class <code>org.springframework.osgi.extensions.annotation.ServiceReferenceInjectionBeanPostProcessor.</code>
  *  * 

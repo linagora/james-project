@@ -29,7 +29,7 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 
 /**
- * Abstract base implementation of {@link UidProvider} which used the given {@link MailboxPathLocker} to 
+ * Abstract searchBase implementation of {@link UidProvider} which used the given {@link MailboxPathLocker} to
  * lock the {@link Mailbox} while the next uid is generated
  * 
  *

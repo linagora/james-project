@@ -55,7 +55,7 @@ public class QuotaRootResponseEncoder extends AbstractChainedImapEncoder {
      * (non-Javadoc)
      *
      * @see
-     * org.apache.james.imap.encode.base.AbstractChainedImapEncoder#isAcceptable
+     * org.apache.james.imap.encode.searchBase.AbstractChainedImapEncoder#isAcceptable
      * (org.apache.james.imap.api.ImapMessage)
      */
     public boolean isAcceptable(ImapMessage message) {

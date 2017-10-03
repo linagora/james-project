@@ -50,7 +50,7 @@ public class ResourceLoaderFileSystem implements FileSystem, ResourceLoaderAware
         try {
             return loader.getResource(".").getFile();
         } catch (IOException e) {
-            throw new FileNotFoundException("Could not access base directory");
+            throw new FileNotFoundException("Could not access searchBase directory");
         }
     }
 

@@ -28,7 +28,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 
 /**
- * Abstract base class for Mapper's which support scaling. This supports Level 1 Implementations of JCR. So no real transaction management is used. 
+ * Abstract searchBase class for Mapper's which support scaling. This supports Level 1 Implementations of JCR. So no real transaction management is used.
  * 
  * The Session.save() will get called on commit() method,  session.refresh(false) on rollback, and session.refresh(true) on begin()
  *

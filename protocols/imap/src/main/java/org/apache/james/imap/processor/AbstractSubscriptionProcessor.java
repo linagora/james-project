@@ -30,7 +30,7 @@ import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.metrics.api.MetricFactory;
 
 /**
- * Abstract base class which should be used by implementations which need to
+ * Abstract searchBase class which should be used by implementations which need to
  * access the {@link SubscriptionManager}
  */
 public abstract class AbstractSubscriptionProcessor<M extends ImapRequest> extends AbstractMailboxProcessor<M> {

@@ -39,7 +39,7 @@ import org.apache.james.mailbox.store.transaction.TransactionalMapper;
 import com.google.common.collect.Iterators;
 
 /**
- * Abstract base class for {@link MessageMapper} implementation
+ * Abstract searchBase class for {@link MessageMapper} implementation
  * which already takes care of most uid / mod-seq handling.
  *
  */

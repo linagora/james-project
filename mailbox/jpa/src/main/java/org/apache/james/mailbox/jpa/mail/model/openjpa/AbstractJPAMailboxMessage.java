@@ -67,7 +67,7 @@ import org.apache.openjpa.persistence.jdbc.Index;
 import com.google.common.base.Objects;
 
 /**
- * Abstract base class for JPA based implementations of
+ * Abstract searchBase class for JPA based implementations of
  * {@link DelegatingMailboxMessage}
  */
 @IdClass(AbstractJPAMailboxMessage.MailboxIdUidKey.class)

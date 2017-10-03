@@ -188,15 +188,15 @@ public class SearchUtil {
     
     
     /**
-     * Extract the base subject from the given subject. 
+     * Extract the searchBase subject from the given subject.
      * 
      * See rfc5256 2.1 Base Subject
      * 
-     * Subject sorting and threading use the "base subject", which has
+     * Subject sorting and threading use the "searchBase subject", which has
      * specific subject artifacts removed.  Due to the complexity of these
      * artifacts, the formal syntax for the subject extraction rules is
      * ambiguous.  The following procedure is followed to determine the
-     * "base subject", using the [ABNF] formal syntax rules described in
+     * "searchBase subject", using the [ABNF] formal syntax rules described in
      * section 5:
      * <p>
      *    (1) Convert any RFC 2047 encoded-words in the subject to [UTF-8]
@@ -215,7 +215,7 @@ public class SearchUtil {
      * <p>
      *    (4) If there is prefix text of the subject that matches the subj-
      *        blob ABNF, and removing that prefix leaves a non-empty subj-
-     *        base, then remove the prefix text.
+     *        searchBase, then remove the prefix text.
      * </p>
      * <p>
      *    (5) Repeat (3) and (4) until no matches remain.
@@ -229,7 +229,7 @@ public class SearchUtil {
      *        subj-fwd-trl and repeat from step (2).
      * </p>
      * <p>
-     *    (7) The resulting text is the "base subject" used in the SORT.
+     *    (7) The resulting text is the "searchBase subject" used in the SORT.
      * </p>
      *
      *
@@ -279,7 +279,7 @@ public class SearchUtil {
 
                     //    (4) If there is prefix text of the subject that matches the subj-
                     //    blob ABNF, and removing that prefix leaves a non-empty subj-
-                    //    base, then remove the prefix text.
+                    //    searchBase, then remove the prefix text.
                     decodedSubjectLength = decodedSubject.length();
                     String subj = removeBlob(decodedSubject);
 
@@ -312,7 +312,7 @@ public class SearchUtil {
                 }
                
             }
-            // (7) The resulting text is the "base subject" used in the SORT.
+            // (7) The resulting text is the "searchBase subject" used in the SORT.
             return decodedSubject;
     }
  
