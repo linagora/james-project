@@ -38,7 +38,6 @@ import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
 import org.apache.james.mailbox.model.MailboxACL.EntryKey;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.api.NoopMetricFactory;
@@ -99,7 +98,7 @@ public class DeleteACLProcessorTest {
 
     @Before
     public void setUp() throws Exception {
-        path = new MailboxPath("#private", USER_1, MAILBOX_NAME);
+        path = MailboxPath.forUser(USER_1, MAILBOX_NAME);
         statusResponseFactory = new UnpooledStatusResponseFactory();
         mailboxManagerStub = mockery.mock(MailboxManager.class);
         subject = new DeleteACLProcessor(mockery.mock(ImapProcessor.class), mailboxManagerStub, statusResponseFactory, new NoopMetricFactory());
@@ -199,7 +198,7 @@ public class DeleteACLProcessorTest {
         expectations.allowing(mailboxManagerStub).hasRight(expectations.with(path), expectations.with(Expectations.equal(MailboxACL.Right.Administer)), expectations.with(Expectations.same(mailboxSessionStub)));
         expectations.will(Expectations.returnValue(true));
         
-        expectations.allowing(mailboxManagerStub).applyRightsCommand(expectations.with(path), expectations.with(new MailboxACL.ACLCommand(user1Key, EditMode.REPLACE, null)), expectations.with(mailboxSessionStub));
+        expectations.allowing(mailboxManagerStub).applyRightsCommand(expectations.with(path), expectations.with(MailboxACL.command().key(user1Key).noRights().asReplacement()), expectations.with(mailboxSessionStub));
 
         expectations.allowing(metaDataStub).getACL();
         expectations.will(Expectations.returnValue(acl));

@@ -436,13 +436,13 @@ public abstract class AuthenticatedState extends BasicImapCommands {
 
     @Test
     public void listShouldNotListMailboxWithOtherUserUS() throws Exception {
-        system.createMailbox(new MailboxPath("#namespace", USER + "2", "Other"));
+        system.createMailbox(MailboxPath.forUser(USER + "2", "Other"));
         simpleScriptedTestProtocol.run("ListMailboxes");
     }
 
     @Test
     public void listShouldNotListMailboxWithOtherUserITALY() throws Exception {
-        system.createMailbox(new MailboxPath("#namespace", USER + "2", "Other"));
+        system.createMailbox(MailboxPath.forUser(USER + "2", "Other"));
         simpleScriptedTestProtocol
             .withLocale(Locale.ITALY)
             .run("ListMailboxes");
@@ -450,7 +450,7 @@ public abstract class AuthenticatedState extends BasicImapCommands {
 
     @Test
     public void listShouldNotListMailboxWithOtherUserKOREA() throws Exception {
-        system.createMailbox(new MailboxPath("#namespace", USER + "2", "Other"));
+        system.createMailbox(MailboxPath.forUser(USER + "2", "Other"));
         simpleScriptedTestProtocol
             .withLocale(Locale.KOREA)
             .run("ListMailboxes");

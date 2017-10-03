@@ -28,6 +28,7 @@ import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.init.CassandraConfiguration;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -42,7 +43,7 @@ import org.junit.Test;
 public class CassandraMailboxMapperConcurrencyTest {
 
     private static final int UID_VALIDITY = 52;
-    private static final MailboxPath MAILBOX_PATH = new MailboxPath("#private", "user", "name");
+    private static final MailboxPath MAILBOX_PATH = MailboxPath.forUser("user", "name");
     private static final int THREAD_COUNT = 10;
     private static final int OPERATION_COUNT = 10;
 
@@ -57,7 +58,15 @@ public class CassandraMailboxMapperConcurrencyTest {
         cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
         CassandraMailboxDAO mailboxDAO = new CassandraMailboxDAO(cassandra.getConf(), cassandra.getTypesProvider());
         CassandraMailboxPathDAO mailboxPathDAO = new CassandraMailboxPathDAO(cassandra.getConf(), cassandra.getTypesProvider());
-        testee = new CassandraMailboxMapper(cassandra.getConf(), mailboxDAO, mailboxPathDAO, CassandraConfiguration.DEFAULT_CONFIGURATION);
+        CassandraUserMailboxRightsDAO userMailboxRightsDAO = new CassandraUserMailboxRightsDAO(cassandra.getConf(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
+        testee = new CassandraMailboxMapper(
+            mailboxDAO,
+            mailboxPathDAO,
+            userMailboxRightsDAO,
+            new CassandraACLMapper(cassandra.getConf(),
+                userMailboxRightsDAO,
+                CassandraConfiguration.DEFAULT_CONFIGURATION),
+            CassandraConfiguration.DEFAULT_CONFIGURATION);
     }
 
     @After

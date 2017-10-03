@@ -19,11 +19,13 @@
 package org.apache.james.mailbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxManager.MailboxCapabilities;
@@ -31,9 +33,9 @@ import org.apache.james.mailbox.exception.AnnotationException;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxManager;
+import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
-import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -56,7 +58,7 @@ import com.google.common.collect.ImmutableSet;
  * 
  */
 public abstract class MailboxManagerTest {
-    
+
     public final static String USER_1 = "USER_1";
     public final static String USER_2 = "USER_2";
 
@@ -111,7 +113,7 @@ public abstract class MailboxManagerTest {
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
 
-        MailboxPath mailboxPath = new MailboxPath(MailboxConstants.USER_NAMESPACE, USER_1, "name.subfolder");
+        MailboxPath mailboxPath = MailboxPath.forUser(USER_1, "name.subfolder");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(mailboxPath, session);
         MessageManager retrievedMailbox = mailboxManager.getMailbox(mailboxPath, session);
 
@@ -218,7 +220,7 @@ public abstract class MailboxManagerTest {
     @Test
     public void user2ShouldBeAbleToCreateRootlessFolder() throws BadCredentialsException, MailboxException {
         session = mailboxManager.createSystemSession(USER_2);
-        MailboxPath trash = new MailboxPath(MailboxConstants.USER_NAMESPACE, USER_2, "Trash");
+        MailboxPath trash = MailboxPath.forUser(USER_2, "Trash");
         mailboxManager.createMailbox(trash, session);
         
         assertThat(mailboxManager.mailboxExists(trash, session)).isTrue();
@@ -227,7 +229,7 @@ public abstract class MailboxManagerTest {
     @Test
     public void user2ShouldBeAbleToCreateNestedFoldersWithoutTheirParents() throws BadCredentialsException, MailboxException {
         session = mailboxManager.createSystemSession(USER_2);
-        MailboxPath nestedFolder = new MailboxPath(MailboxConstants.USER_NAMESPACE, USER_2, "INBOX.testfolder");
+        MailboxPath nestedFolder = MailboxPath.forUser(USER_2, "INBOX.testfolder");
         mailboxManager.createMailbox(nestedFolder, session);
         
         assertThat(mailboxManager.mailboxExists(nestedFolder, session)).isTrue();
@@ -238,9 +240,15 @@ public abstract class MailboxManagerTest {
     public void searchShouldNotReturnResultsFromOtherNamespaces() throws Exception {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Namespace));
         session = mailboxManager.createSystemSession(USER_1);
-        mailboxManager.createMailbox(new MailboxPath("#namespace", USER_1, "Other"), session);
+        mailboxManager.createMailbox(new MailboxPath("other_namespace", USER_1, "Other"), session);
         mailboxManager.createMailbox(MailboxPath.inbox(session), session);
-        List<MailboxMetaData> metaDatas = mailboxManager.search(new MailboxQuery(new MailboxPath("#private", USER_1, ""), "*", '.'), session);
+        List<MailboxMetaData> metaDatas = mailboxManager.search(
+                MailboxQuery.builder()
+                    .base(MailboxPath.forUser(USER_1, ""))
+                    .expression("*")
+                    .mailboxSession(session)
+                    .build(), 
+                session);
         assertThat(metaDatas).hasSize(1);
         assertThat(metaDatas.get(0).getPath()).isEqualTo(MailboxPath.inbox(session));
     }
@@ -248,9 +256,15 @@ public abstract class MailboxManagerTest {
     @Test
     public void searchShouldNotReturnResultsFromOtherUsers() throws Exception {
         session = mailboxManager.createSystemSession(USER_1);
-        mailboxManager.createMailbox(new MailboxPath("#namespace", USER_2, "Other"), session);
+        mailboxManager.createMailbox(MailboxPath.forUser(USER_2, "Other"), session);
         mailboxManager.createMailbox(MailboxPath.inbox(session), session);
-        List<MailboxMetaData> metaDatas = mailboxManager.search(new MailboxQuery(new MailboxPath("#private", USER_1, ""), "*", '.'), session);
+        List<MailboxMetaData> metaDatas = mailboxManager.search(
+                MailboxQuery.builder()
+                .base(MailboxPath.forUser(USER_1, ""))
+                .expression("*")
+                    .mailboxSession(session)
+                .build(), 
+            session);
         assertThat(metaDatas).hasSize(1);
         assertThat(metaDatas.get(0).getPath()).isEqualTo(MailboxPath.inbox(session));
     }
@@ -423,4 +437,29 @@ public abstract class MailboxManagerTest {
         builder.add(MailboxAnnotation.newInstance(new MailboxAnnotationKey("/private/comment4"), "AnyValue"));
 
         mailboxManager.updateAnnotations(inbox, session, builder.build());
-    }}
+    }
+
+    @Test
+    public void searchShouldIncludeDelegatedMailboxes() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.RightSearch));
+        MailboxSession session1 = mailboxManager.createSystemSession(USER_1);
+        MailboxSession session2 = mailboxManager.createSystemSession(USER_2);
+        MailboxPath inbox1 = MailboxPath.inbox(session1);
+        mailboxManager.createMailbox(inbox1, session1);
+        mailboxManager.setRights(inbox1,
+            new MailboxACL(
+                new MailboxACL.Entry(MailboxACL.EntryKey.createUser(USER_2), new MailboxACL.Rfc4314Rights(MailboxACL.Right.Read))),
+            session1);
+
+        MailboxQuery mailboxQuery = MailboxQuery.builder()
+            .mailboxSession(session2)
+            .matchesAll()
+            .build();
+
+        List<MailboxMetaData> mailboxMetaData = mailboxManager.search(mailboxQuery, session2);
+
+        assertThat(mailboxMetaData)
+            .extracting(MailboxMetaData::getPath)
+            .containsOnly(inbox1);
+    }
+}

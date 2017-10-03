@@ -23,6 +23,7 @@ import org.apache.james.backends.cassandra.init.CassandraConfiguration;
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
+import org.apache.james.mailbox.cassandra.mail.CassandraACLMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentDAOV2;
@@ -40,6 +41,7 @@ import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdToImapUidDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
+import org.apache.james.mailbox.cassandra.mail.CassandraUserMailboxRightsDAO;
 
 import com.datastax.driver.core.Session;
 
@@ -66,6 +68,10 @@ public class TestCassandraMailboxSessionMapperFactory {
             cassandraBlobsDAO,
             new CassandraAttachmentMessageIdDAO(session, factory, CassandraUtils.WITH_DEFAULT_CONFIGURATION),
             new CassandraAttachmentOwnerDAO(session, CassandraUtils.WITH_DEFAULT_CONFIGURATION),
+            new CassandraACLMapper(session,
+                new CassandraUserMailboxRightsDAO(session, CassandraUtils.WITH_DEFAULT_CONFIGURATION),
+                CassandraConfiguration.DEFAULT_CONFIGURATION),
+            new CassandraUserMailboxRightsDAO(session, CassandraUtils.WITH_DEFAULT_CONFIGURATION),
             CassandraUtils.WITH_DEFAULT_CONFIGURATION,
             CassandraConfiguration.DEFAULT_CONFIGURATION);
     }

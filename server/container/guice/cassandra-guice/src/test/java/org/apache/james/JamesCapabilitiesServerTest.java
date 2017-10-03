@@ -1,5 +1,4 @@
 /****************************************************************
- * Licensed to the Apache Software Foundation (ASF) under one   *
  * or more contributor license agreements.  See the NOTICE file *
  * distributed with this work for additional information        *
  * regarding copyright ownership.  The ASF licenses this file   *
@@ -75,6 +74,21 @@ public class JamesCapabilitiesServerTest {
         MailboxManager mailboxManager = mock(MailboxManager.class);
         when(mailboxManager.getSupportedMailboxCapabilities())
             .thenReturn(EnumSet.complementOf(EnumSet.of(MailboxManager.MailboxCapabilities.Move)));
+        when(mailboxManager.getSupportedMessageCapabilities())
+            .thenReturn(EnumSet.allOf(MailboxManager.MessageCapabilities.class));
+        when(mailboxManager.getSupportedSearchCapabilities())
+            .thenReturn(EnumSet.allOf(MailboxManager.SearchCapabilities.class));
+
+        server = createCassandraJamesServer(mailboxManager);
+        
+        assertThatThrownBy(() -> server.start()).isInstanceOf(IllegalArgumentException.class);
+    }
+    
+    @Test
+    public void startShouldFailWhenNoRightSearchCapability() throws Exception {
+        MailboxManager mailboxManager = mock(MailboxManager.class);
+        when(mailboxManager.getSupportedMailboxCapabilities())
+            .thenReturn(EnumSet.complementOf(EnumSet.of(MailboxManager.MailboxCapabilities.RightSearch)));
         when(mailboxManager.getSupportedMessageCapabilities())
             .thenReturn(EnumSet.allOf(MailboxManager.MessageCapabilities.class));
         when(mailboxManager.getSupportedSearchCapabilities())

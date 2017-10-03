@@ -24,6 +24,7 @@ import javax.inject.Inject;
 import org.apache.james.backends.cassandra.init.CassandraConfiguration;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.cassandra.mail.CassandraACLMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraAnnotationMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraApplicableFlagDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentDAO;
@@ -47,6 +48,7 @@ import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdToImapUidDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageMapper;
 import org.apache.james.mailbox.cassandra.mail.CassandraModSeqProvider;
 import org.apache.james.mailbox.cassandra.mail.CassandraUidProvider;
+import org.apache.james.mailbox.cassandra.mail.CassandraUserMailboxRightsDAO;
 import org.apache.james.mailbox.cassandra.user.CassandraSubscriptionMapper;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
@@ -86,6 +88,8 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
     private final CassandraBlobsDAO blobsDAO;
     private final CassandraAttachmentMessageIdDAO attachmentMessageIdDAO;
     private final CassandraAttachmentOwnerDAO ownerDAO;
+    private final CassandraACLMapper aclMapper;
+    private final CassandraUserMailboxRightsDAO userMailboxRightsDAO;
     private final CassandraUtils cassandraUtils;
     private final CassandraConfiguration cassandraConfiguration;
 
@@ -97,7 +101,9 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
                                                 CassandraMailboxPathDAO mailboxPathDAO, CassandraFirstUnseenDAO firstUnseenDAO, CassandraApplicableFlagDAO applicableFlagDAO,
                                                 CassandraAttachmentDAO attachmentDAO, CassandraAttachmentDAOV2 attachmentDAOV2, CassandraDeletedMessageDAO deletedMessageDAO,
                                                 CassandraBlobsDAO blobsDAO, CassandraAttachmentMessageIdDAO attachmentMessageIdDAO,
-                                                CassandraAttachmentOwnerDAO ownerDAO, CassandraUtils cassandraUtils, CassandraConfiguration cassandraConfiguration) {
+                                                CassandraAttachmentOwnerDAO ownerDAO, CassandraACLMapper aclMapper,
+                                                CassandraUserMailboxRightsDAO userMailboxRightsDAO,
+                                                CassandraUtils cassandraUtils, CassandraConfiguration cassandraConfiguration) {
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
         this.session = session;
@@ -115,6 +121,8 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
         this.applicableFlagDAO = applicableFlagDAO;
         this.blobsDAO = blobsDAO;
         this.attachmentMessageIdDAO = attachmentMessageIdDAO;
+        this.aclMapper = aclMapper;
+        this.userMailboxRightsDAO = userMailboxRightsDAO;
         this.cassandraUtils = cassandraUtils;
         this.ownerDAO = ownerDAO;
         this.cassandraConfiguration = cassandraConfiguration;
@@ -148,14 +156,14 @@ public class CassandraMailboxSessionMapperFactory extends MailboxSessionMapperFa
     @Override
     public MessageIdMapper createMessageIdMapper(MailboxSession mailboxSession) throws MailboxException {
         return new CassandraMessageIdMapper(getMailboxMapper(mailboxSession), mailboxDAO,
-                (CassandraAttachmentMapper) createAttachmentMapper(mailboxSession),
+                createAttachmentMapper(mailboxSession),
                 imapUidDAO, messageIdDAO, messageDAO, indexTableHandler, modSeqProvider, mailboxSession,
                 cassandraConfiguration);
     }
 
     @Override
     public MailboxMapper createMailboxMapper(MailboxSession mailboxSession) {
-        return new CassandraMailboxMapper(session, mailboxDAO, mailboxPathDAO, cassandraConfiguration);
+        return new CassandraMailboxMapper(mailboxDAO, mailboxPathDAO, userMailboxRightsDAO, aclMapper, cassandraConfiguration);
     }
 
     @Override

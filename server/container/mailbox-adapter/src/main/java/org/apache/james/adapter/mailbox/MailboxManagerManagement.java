@@ -36,7 +36,7 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MailboxQuery;
@@ -130,7 +130,7 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
     }
 
     @Override
-    public void createMailbox(String namespace, String user, String name) {
+    public MailboxId createMailbox(String namespace, String user, String name) {
         checkMailboxArguments(namespace, user, name);
         MailboxSession session = null;
         MailboxPath mailboxPath = new MailboxPath(namespace, user, name);
@@ -142,9 +142,11 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
                      .build()) {
             session = mailboxManager.createSystemSession(user);
             mailboxManager.startProcessingRequest(session);
-            mailboxManager.createMailbox(mailboxPath, session);
+            return mailboxManager.createMailbox(mailboxPath, session)
+                .orElseThrow(() -> new MailboxException("mailbox name is probably empty"));
         } catch (Exception e) {
             LOGGER.error("Unable to create mailbox", e);
+            throw Throwables.propagate(e);
         } finally {
             closeSession(session);
         }
@@ -211,9 +213,11 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
 
     private List<MailboxMetaData> retrieveAllUserMailboxes(String username, MailboxSession session) throws MailboxException {
         return mailboxManager.search(
-            new MailboxQuery(new MailboxPath(MailboxConstants.USER_NAMESPACE, username, ""),
-                "*",
-                session.getPathDelimiter()),
+            MailboxQuery.builder()
+                .base(MailboxPath.forUser(username, ""))
+                .expression("*")
+                .mailboxSession(session)
+                .build(),
             session);
     }
 

@@ -22,6 +22,7 @@ package org.apache.james.jmap.methods.integration;
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -37,6 +38,7 @@ import java.io.ByteArrayInputStream;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.mail.Flags;
 
@@ -81,7 +83,9 @@ public abstract class GetMailboxesMethodTest {
     protected abstract GuiceJamesServer createJmapServer();
 
     private AccessToken accessToken;
-    private String username;
+    private String alice;
+    private String bob;
+    private String cedric;
     private GuiceJamesServer jmapServer;
     private MailboxProbe mailboxProbe;
     private ACLProbe aclProbe;
@@ -99,14 +103,18 @@ public abstract class GetMailboxesMethodTest {
                 .setConfig(newConfig().encoderConfig(encoderConfig().defaultContentCharset(Charsets.UTF_8)))
                 .setPort(jmapServer.getProbe(JmapGuiceProbe.class).getJmapPort())
                 .build();
+        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
         String domain = "domain.tld";
-        username = "username@" + domain;
-        String password = "password";
+        alice = "alice@" + domain;
+        String alicePassword = "aliceSecret";
+        bob = "bob@" + domain;
+        cedric = "cedric@" + domain;
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         dataProbe.addDomain(domain);
-        dataProbe.addUser(username, password);
-        accessToken = HttpJmapAuthentication.authenticateJamesUser(baseUri(), username, password);
+        dataProbe.addUser(alice, alicePassword);
+        dataProbe.addUser(bob, "bobSecret");
+        accessToken = HttpJmapAuthentication.authenticateJamesUser(baseUri(), alice, alicePassword);
     }
 
     private URIBuilder baseUri() {
@@ -138,10 +146,9 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnEmptyWhenIdsDoesntMatch() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "quicklyRemoved");
-        String removedId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, "quicklyRemoved").getMailboxId().serialize();
-        mailboxProbe.deleteMailbox(MailboxConstants.USER_NAMESPACE, username, "quicklyRemoved");
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "name");
+        String removedId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "quicklyRemoved").serialize();
+        mailboxProbe.deleteMailbox(MailboxConstants.USER_NAMESPACE, alice, "quicklyRemoved");
 
         given()
             .header("Authorization", accessToken.serialize())
@@ -169,14 +176,8 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWhenIdsMatch() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX);
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
-
-        Mailbox mailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX);
-        Mailbox mailbox2 = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
-
-        String mailboxId = mailbox.getMailboxId().serialize();
-        String mailboxId2 = mailbox2.getMailboxId().serialize();
+        String mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, DefaultMailboxes.INBOX).serialize();
+        String mailboxId2 = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "myMailbox").serialize();
 
         given()
             .header("Authorization", accessToken.serialize())
@@ -193,12 +194,8 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnOnlyMatchingMailboxesWhenIdsGiven() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX);
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
-
-        Mailbox mailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX);
-
-        String mailboxId = mailbox.getMailboxId().serialize();
+        String mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, DefaultMailboxes.INBOX).serialize();
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "myMailbox");
 
         given()
             .header("Authorization", accessToken.serialize())
@@ -214,7 +211,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnEmptyWhenIdsIsEmpty() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX);
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, DefaultMailboxes.INBOX);
 
         given()
             .header("Authorization", accessToken.serialize())
@@ -229,8 +226,8 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnAllMailboxesWhenIdsIsNull() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox");
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "myMailbox2");
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "myMailbox");
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "myMailbox2");
 
         List<String> expectedMailboxes = ImmutableList.<String> builder()
                 .addAll(DefaultMailboxes.DEFAULT_MAILBOXES)
@@ -253,16 +250,16 @@ public abstract class GetMailboxesMethodTest {
     @Test
     public void getMailboxesShouldReturnSharedWithProperty() throws Exception {
         String mailboxName = "myMailbox";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        String myMailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, mailboxName).serialize();
         String targetUser1 = "toUser1@domain.com";
         String targetUser2 = "toUser2@domain.com";
-        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, alice, mailboxName);
         aclProbe.replaceRights(myMailbox.generateAssociatedPath(), targetUser1, new Rfc4314Rights(Right.Read, Right.Administer));
         aclProbe.replaceRights(myMailbox.generateAssociatedPath(), targetUser2, new Rfc4314Rights(Right.Read, Right.Lookup));
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailbox.getMailboxId().serialize() + "\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailboxId + "\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -276,12 +273,11 @@ public abstract class GetMailboxesMethodTest {
     @Test
     public void getMailboxShouldReturnEmptySharedWithWhenNoDelegation() throws Exception {
         String mailboxName = "myMailbox";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
-        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        String myMailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, mailboxName).serialize();
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailbox.getMailboxId().serialize() + "\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailboxId + "\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -294,14 +290,14 @@ public abstract class GetMailboxesMethodTest {
     @Test
     public void nonHandledRightsShouldBeFilteredOut() throws Exception {
         String mailboxName = "myMailbox";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        String myMailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, mailboxName).serialize();
         String targetUser1 = "toUser1@domain.com";
-        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, mailboxName);
+        Mailbox myMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, alice, mailboxName);
         aclProbe.replaceRights(myMailbox.generateAssociatedPath(), targetUser1, new Rfc4314Rights(Right.Read, Right.Post));
 
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailbox.getMailboxId().serialize() + "\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailboxId + "\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -367,9 +363,9 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWhenAvailable() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "name");
 
-        mailboxProbe.appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "name"),
+        mailboxProbe.appendMessage(alice, MailboxPath.forUser(alice, "name"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         given()
@@ -385,15 +381,14 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxPropertiesWhenAvailable() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        String myMailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "name").serialize();
 
-        mailboxProbe.appendMessage(username, new MailboxPath(MailboxConstants.USER_NAMESPACE, username, "name"),
+        mailboxProbe.appendMessage(alice, MailboxPath.forUser(alice, "name"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        MailboxId mailboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, "name").getMailboxId();
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId.serialize() + "\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailboxId + "\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -417,12 +412,11 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnFilteredMailboxesPropertiesWhenRequestContainsFilterProperties() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        String myMailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "name").serialize();
 
-        MailboxId mailboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, "name").getMailboxId();
         given()
             .header("Authorization", accessToken.serialize())
-            .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId.serialize() + "\"], \"properties\" : [\"unreadMessages\", \"sortOrder\"]}, \"#0\"]]")
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + myMailboxId + "\"], \"properties\" : [\"unreadMessages\", \"sortOrder\"]}, \"#0\"]]")
         .when()
             .post("/jmap")
         .then()
@@ -447,7 +441,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnIdWhenRequestContainsEmptyPropertyListFilter() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "name");
 
         given()
             .header("Authorization", accessToken.serialize())
@@ -463,7 +457,7 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldIgnoreUnknownPropertiesWhenRequestContainsUnknownPropertyListFilter() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "name");
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, "name");
 
         given()
             .header("Authorization", accessToken.serialize())
@@ -479,11 +473,9 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWithSortOrder() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX);
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.TRASH);
+        MailboxId inboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, DefaultMailboxes.INBOX);
+        MailboxId trashId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, DefaultMailboxes.TRASH);
 
-        MailboxId inboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.INBOX).getMailboxId();
-        MailboxId trashId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.TRASH).getMailboxId();
         given()
             .header("Authorization", accessToken.serialize())
             .body("[[\"getMailboxes\", {\"ids\": [\"" + inboxId.serialize() + "\", \"" + trashId.serialize() + "\"]}, \"#0\"]]")
@@ -501,9 +493,8 @@ public abstract class GetMailboxesMethodTest {
 
     @Test
     public void getMailboxesShouldReturnMailboxesWithRolesInLowerCase() throws Exception {
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.OUTBOX);
+        MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, DefaultMailboxes.OUTBOX);
 
-        MailboxId mailboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, username, DefaultMailboxes.OUTBOX).getMailboxId();
         given()
             .header("Authorization", accessToken.serialize())
             .body("[[\"getMailboxes\", {\"ids\": [\"" + mailboxId.serialize() + "\"]}, \"#0\"]]")
@@ -516,4 +507,51 @@ public abstract class GetMailboxesMethodTest {
             .body(FIRST_MAILBOX + ".role", equalTo(DefaultMailboxes.OUTBOX.toLowerCase(Locale.US)));
     }
 
+    @Test
+    public void getMailboxesShouldReturnMailboxesWithFilteredSharedWithWhenShared() throws Exception {
+        String mailboxName = "name";
+        MailboxId bobMailbox = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, bob, mailboxName);
+        MailboxPath bobMailboxPath = MailboxPath.forUser(bob, mailboxName);
+        aclProbe.replaceRights(bobMailboxPath, alice, new Rfc4314Rights(Right.Read));
+        aclProbe.replaceRights(bobMailboxPath, cedric, new Rfc4314Rights(Right.Read));
+
+        Map<String, String> sharedWith = given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + bobMailbox.serialize() + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list.name", hasSize(1))
+        .extract()
+            .jsonPath()
+            .get(FIRST_MAILBOX + ".sharedWith");
+
+        assertThat(sharedWith).containsOnlyKeys(alice);
+    }
+
+    @Test
+    public void getMailboxesShouldReturnMailboxesWithFullSharedWithWhenHasAdminRight() throws Exception {
+        String mailboxName = "name";
+        MailboxId bobMailbox = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, bob, mailboxName);
+        MailboxPath bobMailboxPath = MailboxPath.forUser(bob, mailboxName);
+        aclProbe.replaceRights(bobMailboxPath, alice, new Rfc4314Rights(Right.Read, Right.Administer));
+        aclProbe.replaceRights(bobMailboxPath, cedric, new Rfc4314Rights(Right.Read));
+
+        Map<String, String> sharedWith = given()
+            .header("Authorization", accessToken.serialize())
+            .body("[[\"getMailboxes\", {\"ids\": [\"" + bobMailbox.serialize() + "\"]}, \"#0\"]]")
+        .when()
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .body(NAME, equalTo("mailboxes"))
+            .body(ARGUMENTS + ".list.name", hasSize(1))
+        .extract()
+            .jsonPath()
+            .get(FIRST_MAILBOX + ".sharedWith");
+
+        assertThat(sharedWith).containsOnlyKeys(alice, cedric);
+    }
 }

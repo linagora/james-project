@@ -20,6 +20,7 @@ package org.apache.james.mailbox.inmemory.mail;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -28,6 +29,7 @@ import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
@@ -105,7 +107,7 @@ public class InMemoryMailboxMapper implements MailboxMapper {
         InMemoryId id = (InMemoryId) mailbox.getMailboxId();
         if (id == null) {
             id = InMemoryId.of(mailboxIdGenerator.incrementAndGet());
-            ((SimpleMailbox) mailbox).setMailboxId(id);
+            mailbox.setMailboxId(id);
         } else {
             try {
                 Mailbox mailboxWithPreviousName = findMailboxById(id);
@@ -162,5 +164,15 @@ public class InMemoryMailboxMapper implements MailboxMapper {
     @Override
     public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
         mailboxesByPath.get(mailbox.generateAssociatedPath()).setACL(mailboxACL);
+    }
+
+    @Override
+    public List<Mailbox> findMailboxes(String userName, Right right) throws MailboxException {
+        return mailboxesByPath.values()
+            .stream()
+            .filter(mailbox -> Optional.ofNullable(mailbox.getACL().usersACL().get(userName))
+                .map(rights -> rights.contains(right))
+                .orElse(false))
+            .collect(Guavate.toImmutableList());
     }
 }

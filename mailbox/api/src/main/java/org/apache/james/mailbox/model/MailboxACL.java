@@ -52,6 +52,10 @@ import com.google.common.collect.ImmutableMap;
  */
 public class MailboxACL {
 
+    public static ACLCommand.Builder command() {
+        return new ACLCommand.Builder();
+    }
+
     private static EnumSet<Right> copyOf(Collection<Right> collection) {
         if (collection.isEmpty()) {
             return EnumSet.noneOf(Right.class);
@@ -348,19 +352,19 @@ public class MailboxACL {
      *
      */
     public static class EntryKey {
-        public static EntryKey createGroup(String name) {
+        public static EntryKey createGroupEntryKey(String name) {
             return new EntryKey(name, NameType.group, false);
         }
 
-        public static EntryKey createGroup(String name, boolean negative) {
+        public static EntryKey createGroupEntryKey(String name, boolean negative) {
             return new EntryKey(name, NameType.group, negative);
         }
 
-        public static EntryKey createUser(String name) {
+        public static EntryKey createUserEntryKey(String name) {
             return new EntryKey(name, NameType.user, false);
         }
 
-        public static EntryKey createUser(String name, boolean negative) {
+        public static EntryKey createUserEntryKey(String name, boolean negative) {
             return new EntryKey(name, NameType.user, negative);
         }
 
@@ -499,15 +503,92 @@ public class MailboxACL {
         public String toString() {
             return serialize();
         }
+
+        public boolean isUser() {
+            return nameType.equals(NameType.user);
+        }
     }
 
 
     public static class ACLCommand {
+
+        public static class Builder {
+
+            private EntryKey key;
+            private EditMode editMode;
+            private Rfc4314Rights rights;
+
+            private Builder() {
+            }
+
+            public Builder forUser(String user) {
+                key = EntryKey.createUserEntryKey(user);
+                return this;
+            }
+
+            public Builder forGroup(String group) {
+                key = EntryKey.createGroupEntryKey(group);
+                return this;
+            }
+
+            public Builder key(EntryKey key) {
+                this.key = key;
+                return this;
+            }
+
+            public Builder rights(Rfc4314Rights rights) {
+                this.rights = rights;
+                return this;
+            }
+
+            public Builder rights(Right... rights) throws UnsupportedRightException {
+                this.rights =
+                    Optional.ofNullable(this.rights)
+                        .orElse(new Rfc4314Rights())
+                        .union(new Rfc4314Rights(rights));
+                return this;
+            }
+
+            public Builder noRights() {
+                this.rights = new Rfc4314Rights();
+                return this;
+            }
+
+
+            public Builder mode(EditMode mode) {
+                editMode = mode;
+                return this;
+            }
+
+            public ACLCommand asReplacement() {
+                editMode = EditMode.REPLACE;
+                return build();
+            }
+
+            public ACLCommand asAddition() {
+                editMode = EditMode.ADD;
+                return build();
+            }
+
+            public ACLCommand asRemoval() {
+                editMode = EditMode.REMOVE;
+                return build();
+            }
+
+            public ACLCommand build() {
+                Preconditions.checkState(key != null);
+                Preconditions.checkState(editMode != null);
+                Preconditions.checkState(rights != null);
+                return new ACLCommand(key, editMode, rights);
+            }
+
+        }
+
         private final EntryKey key;
         private final EditMode editMode;
         private final Rfc4314Rights rights;
 
-        public ACLCommand(EntryKey key, EditMode editMode, Rfc4314Rights rights) {
+        private ACLCommand(EntryKey key, EditMode editMode, Rfc4314Rights rights) {
             this.key = key;
             this.editMode = editMode;
             this.rights = rights;
@@ -744,6 +825,7 @@ public class MailboxACL {
                     .collect(Guavate.toImmutableMap(Pair::getKey, Pair::getValue)));
         } else {
             return Optional.ofNullable(replacement)
+                .filter(rights -> !rights.isEmpty())
                 .map(replacementValue ->  new MailboxACL(
                     ImmutableMap.<EntryKey, Rfc4314Rights>builder()
                         .putAll(entries)
@@ -800,4 +882,10 @@ public class MailboxACL {
         return union(new MailboxACL(new Entry(key, mailboxACLRights)));
     }
 
+    public Map<String, Rfc4314Rights> usersACL() {
+        return this.entries.entrySet().stream()
+            .filter(entry -> entry.getKey().isUser())
+            .map(entry -> Pair.of(entry.getKey().getName(), entry.getValue()))
+            .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+    }
 }

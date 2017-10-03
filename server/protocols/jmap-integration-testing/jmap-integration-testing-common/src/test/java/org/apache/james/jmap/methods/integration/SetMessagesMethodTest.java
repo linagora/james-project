@@ -67,11 +67,11 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.store.event.EventFactory;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
@@ -118,7 +118,7 @@ public abstract class SetMessagesMethodTest {
     private static final String USERS_DOMAIN = "domain.tld";
     private static final String USERNAME = "username@" + USERS_DOMAIN;
     private static final String PASSWORD = "password";
-    private static final MailboxPath USER_MAILBOX = new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
+    private static final MailboxPath USER_MAILBOX = MailboxPath.forUser(USERNAME, "mailbox");
     private static final String NOT_UPDATED = ARGUMENTS + ".notUpdated";
 
     private ConditionFactory calmlyAwait;
@@ -1330,7 +1330,7 @@ public abstract class SetMessagesMethodTest {
             return false;
         }
         EventFactory.AddedImpl added = (EventFactory.AddedImpl) event;
-        return added.getMailboxPath().equals(new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, DefaultMailboxes.OUTBOX))
+        return added.getMailboxPath().equals(MailboxPath.forUser(USERNAME, DefaultMailboxes.OUTBOX))
             && added.getUids().size() == 1
             && added.getMetaData(added.getUids().get(0)).getMessageId().serialize().equals(messageId);
     }
@@ -1956,8 +1956,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesWhenSavingToRegularMailboxShouldNotSendMessage() throws Exception {
         String sender = USERNAME;
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, sender, "regular");
-        Mailbox regularMailbox = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, sender, "regular");
+        MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, sender, "regular");
         String recipientAddress = "recipient" + "@" + USERS_DOMAIN;
         String recipientPassword = "password";
         dataProbe.addUser(recipientAddress, recipientPassword);
@@ -1975,7 +1974,7 @@ public abstract class SetMessagesMethodTest {
             "        \"cc\": [{ \"name\": \"ALICE\"}]," +
             "        \"subject\": \"Thank you for joining example.com!\"," +
             "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
-            "        \"mailboxIds\": [\"" + regularMailbox.getMailboxId().serialize() + "\"]" +
+            "        \"mailboxIds\": [\"" + mailboxId.serialize() + "\"]" +
             "      }}" +
             "    }," +
             "    \"#0\"" +
@@ -2078,7 +2077,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldReturnUpdatedWhenNoChange() throws Exception {
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2108,12 +2107,10 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldBeInDestinationWhenUsingForMove() throws Exception {
         String newMailboxName = "heartFolder";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        Mailbox heartFolder = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        String heartFolderId = heartFolder.getMailboxId().serialize();
+        String heartFolderId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName).serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2154,12 +2151,10 @@ public abstract class SetMessagesMethodTest {
     public void mailboxIdsShouldBeInDestinationWhenUsingForMoveWithoutTrashFolder() throws Exception {
         mailboxProbe.deleteMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, DefaultMailboxes.TRASH);
         String newMailboxName = "heartFolder";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        Mailbox heartFolder = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        String heartFolderId = heartFolder.getMailboxId().serialize();
+        String heartFolderId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName).serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2198,12 +2193,10 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldNotBeAnymoreInSourceWhenUsingForMove() throws Exception {
         String newMailboxName = "heartFolder";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        Mailbox heartFolder = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        String heartFolderId = heartFolder.getMailboxId().serialize();
+        String heartFolderId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName).serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2243,12 +2236,10 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldBeInBothMailboxWhenUsingForCopy() throws Exception {
         String newMailboxName = "heartFolder";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        Mailbox heartFolder = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        String heartFolderId = heartFolder.getMailboxId().serialize();
+        String heartFolderId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName).serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2288,7 +2279,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldBeInOriginalMailboxWhenNoChange() throws Exception {
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2328,7 +2319,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldReturnErrorWhenMovingToADeletedMailbox() throws Exception {
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any");
@@ -2367,7 +2358,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void mailboxIdsShouldReturnErrorWhenSetToEmpty() throws Exception {
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2402,12 +2393,10 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void updateShouldNotReturnErrorWithFlagsAndMailboxUpdate() throws Exception {
         String newMailboxName = "heartFolder";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        Mailbox heartFolder = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        String heartFolderId = heartFolder.getMailboxId().serialize();
+        String heartFolderId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName).serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2437,12 +2426,10 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void updateShouldWorkWithFlagsAndMailboxUpdate() throws Exception {
         String newMailboxName = "heartFolder";
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        Mailbox heartFolder = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName);
-        String heartFolderId = heartFolder.getMailboxId().serialize();
+        String heartFolderId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, newMailboxName).serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2485,7 +2472,7 @@ public abstract class SetMessagesMethodTest {
         String trashId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, DefaultMailboxes.TRASH).getMailboxId().serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();
@@ -2521,7 +2508,7 @@ public abstract class SetMessagesMethodTest {
         String trashId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, DefaultMailboxes.TRASH).getMailboxId().serialize();
 
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
-        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, new MailboxPath(MailboxConstants.USER_NAMESPACE, USERNAME, MailboxConstants.INBOX),
+        ComposedMessageId message = mailboxProbe.appendMessage(USERNAME, MailboxPath.forUser(USERNAME, MailboxConstants.INBOX),
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(Charsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         String messageToMoveId = message.getMessageId().serialize();

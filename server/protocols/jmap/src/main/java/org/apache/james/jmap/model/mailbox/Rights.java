@@ -71,7 +71,7 @@ public class Rights {
         }
 
         public static Optional<Right> forRight(MailboxACL.Right right) {
-            return OptionalUtils.peekOnEmpty(
+            return OptionalUtils.executeIfEmpty(
                 Arrays.stream(values())
                     .filter(jmapRight -> jmapRight.right == right)
                     .findAny(),
@@ -208,7 +208,7 @@ public class Rights {
             .stream()
             .map(entry -> new MailboxACL(
                 ImmutableMap.of(
-                    EntryKey.createUser(entry.getKey().value),
+                    EntryKey.createUserEntryKey(entry.getKey().value),
                     toMailboxAclRights(entry.getValue()))))
             .reduce(MailboxACL.EMPTY, union);
     }
