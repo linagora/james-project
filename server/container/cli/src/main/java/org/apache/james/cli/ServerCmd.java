@@ -118,7 +118,7 @@ public class ServerCmd {
             .executeCommandLine(cmd, printStream);
         stopWatch.split();
         print(new String[] { Joiner.on(' ')
-                .join(cmdType.getCommand(), "command executed sucessfully in", stopWatch.getSplitTime(), "ms.")},
+                .join(cmdType.getCommand(), "command executed successfully in", stopWatch.getSplitTime(), "ms.")},
             printStream);
         stopWatch.stop();
     }
