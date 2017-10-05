@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.mail.MessagingException;
 
+import org.apache.james.core.MailAddress;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
@@ -34,15 +35,14 @@ import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
 import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
+import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.model.search.Wildcard;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.mailet.Experimental;
 import org.apache.mailet.Mail;
-import org.apache.james.core.MailAddress;
 import org.apache.mailet.MailetContext;
 
 /**
@@ -125,7 +125,10 @@ abstract public class AbstractStorageQuota extends AbstractQuotaMatcher {
             // get all mailboxes for the user to calculate the size
             // TODO: See JAMES-1198
             List<MailboxMetaData> mList = manager.search(
-                    new MailboxQuery(MailboxPath.inbox(session), "", session.getPathDelimiter()), session);
+                    MailboxQuery.privateMailboxesBuilder(session)
+                        .expression(Wildcard.INSTANCE)
+                        .build(),
+                    session);
             for (MailboxMetaData aMList : mList) {
                 MessageManager mailbox = manager.getMailbox(aMList.getPath(), session);
                 Iterator<MessageResult> results = mailbox.getMessages(MessageRange.all(), FetchGroupImpl.MINIMAL,

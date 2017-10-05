@@ -32,9 +32,9 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.MessageIdManagerTestSystem;
+import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.model.search.Wildcard;
 import org.apache.james.mailbox.store.MessageManagerTestSystem;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -96,7 +96,9 @@ public class InMemoryMessageManagerTestSystem extends MessageManagerTestSystem {
     }
 
     private Optional<MailboxMetaData> retrieveMailbox(final MailboxId mailboxId, MailboxSession mailboxSession) throws MailboxException {
-        MailboxQuery userMailboxesQuery = MailboxQuery.builder(mailboxSession).expression("*").build();
+        MailboxQuery userMailboxesQuery = MailboxQuery.privateMailboxesBuilder(mailboxSession)
+            .expression(Wildcard.INSTANCE)
+            .build();
         return mailboxManager.search(userMailboxesQuery, mailboxSession)
             .stream()
             .filter(mailboxMetaData -> mailboxMetaData.getId().equals(mailboxId))

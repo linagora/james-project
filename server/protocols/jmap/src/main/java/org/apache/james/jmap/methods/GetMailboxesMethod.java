@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+
 import javax.inject.Inject;
 
 import org.apache.james.jmap.model.ClientId;
@@ -39,7 +40,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
-import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.util.MDCBuilder;
@@ -138,7 +139,9 @@ public class GetMailboxesMethod implements Method {
 
     private Stream<Mailbox> retrieveAllMailboxes(MailboxSession mailboxSession) throws MailboxException {
         List<MailboxMetaData> userMailboxes = mailboxManager.search(
-            MailboxQuery.builder(mailboxSession).privateUserMailboxes().build(),
+            MailboxQuery.privateMailboxesBuilder(mailboxSession)
+                .matchesAllMailboxNames()
+                .build(),
             mailboxSession);
         return userMailboxes
             .stream()

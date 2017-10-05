@@ -40,7 +40,8 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.model.search.PrefixedRegex;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
@@ -73,7 +74,13 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
             basePath = PathConverter.forSession(session).buildFullPath(CharsetUtil.decodeModifiedUTF7(finalReferencename));
         }
 
-        final MailboxQuery expression = new MailboxQuery(basePath, CharsetUtil.decodeModifiedUTF7(mailboxName), mailboxSession.getPathDelimiter());
+        final MailboxQuery expression = MailboxQuery.builder()
+            .userAndNamespaceFrom(basePath)
+            .expression(new PrefixedRegex(
+                basePath.getName(),
+                CharsetUtil.decodeModifiedUTF7(mailboxName),
+                mailboxSession.getPathDelimiter()))
+            .build();
         final Collection<String> mailboxResponses = new ArrayList<>();
         for (String mailbox : mailboxes) {
             respond(responder, expression, mailbox, true, mailboxes, mailboxResponses, mailboxSession.getPathDelimiter());

@@ -39,7 +39,7 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +81,7 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
                      .build()) {
             session = mailboxManager.createSystemSession(username);
             mailboxManager.startProcessingRequest(session);
-            List<MailboxMetaData> mList = retrieveAllUserMailboxes(username, session);
+            List<MailboxMetaData> mList = retrieveAllUserMailboxes(session);
             for (MailboxMetaData aMList : mList) {
                 mailboxManager.deleteMailbox(aMList.getPath(), session);
             }
@@ -114,7 +114,7 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
                      .build()) {
             session = mailboxManager.createSystemSession(username);
             mailboxManager.startProcessingRequest(session);
-            List<MailboxMetaData> mList = retrieveAllUserMailboxes(username, session);
+            List<MailboxMetaData> mList = retrieveAllUserMailboxes(session);
             boxes = mList.stream()
                 .map(aMList -> aMList.getPath().getName())
                 .sorted()
@@ -211,11 +211,11 @@ public class MailboxManagerManagement extends StandardMBean implements MailboxMa
         }
     }
 
-    private List<MailboxMetaData> retrieveAllUserMailboxes(String username, MailboxSession session) throws MailboxException {
+    private List<MailboxMetaData> retrieveAllUserMailboxes(MailboxSession session) throws MailboxException {
         return mailboxManager.search(
-            new MailboxQuery(MailboxPath.forUser(username, ""),
-                "*",
-                session.getPathDelimiter()),
+            MailboxQuery.privateMailboxesBuilder(session)
+                .matchesAllMailboxNames()
+                .build(),
             session);
     }
 

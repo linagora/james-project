@@ -39,7 +39,8 @@ import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
+import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.model.search.Wildcard;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -109,7 +110,7 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
         try {
             mailboxSession = mailboxManager.createSystemSession(user);
             mailboxManager.startProcessingRequest(mailboxSession);
-            return searchUserMailboxes(user, mailboxSession)
+            return searchUserMailboxes(mailboxSession)
                     .stream()
                     .map(MailboxMetaData::getPath)
                     .map(MailboxPath::getName)
@@ -121,11 +122,11 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
         }
     }
 
-    private List<MailboxMetaData> searchUserMailboxes(String username, MailboxSession session) throws MailboxException {
+    private List<MailboxMetaData> searchUserMailboxes(MailboxSession session) throws MailboxException {
         return mailboxManager.search(
-            new MailboxQuery(MailboxPath.forUser(username, ""),
-                "*",
-                session.getPathDelimiter()),
+            MailboxQuery.privateMailboxesBuilder(session)
+                .expression(Wildcard.INSTANCE)
+                .build(),
             session);
     }
 

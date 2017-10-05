@@ -41,11 +41,11 @@ import org.apache.james.mailbox.model.FetchGroupImpl;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
+import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.util.OptionalUtils;
 
 import com.github.fge.lambdas.Throwing;
@@ -87,7 +87,7 @@ public class InMemoryMessageIdManager implements MessageIdManager {
 
 
     @Override
-    public List<MessageResult> getMessages(List<MessageId> messages, FetchGroup fetchGroup, final MailboxSession mailboxSession) throws MailboxException {
+    public List<MessageResult> getMessages(List<MessageId> messages, FetchGroup fetchGroup, MailboxSession mailboxSession) throws MailboxException {
         return getUsersMailboxIds(mailboxSession)
             .stream()
             .flatMap(Throwing.function(mailboxId -> retrieveMailboxMessages(mailboxId, messages, FetchGroupImpl.MINIMAL, mailboxSession)))
@@ -136,7 +136,7 @@ public class InMemoryMessageIdManager implements MessageIdManager {
         }
     }
 
-    private List<MailboxId> getUsersMailboxIds(final MailboxSession mailboxSession) throws MailboxException {
+    private List<MailboxId> getUsersMailboxIds(MailboxSession mailboxSession) throws MailboxException {
         return mailboxManager.search(userMailboxes(mailboxSession), mailboxSession)
             .stream()
             .map(MailboxMetaData::getId)
@@ -144,9 +144,8 @@ public class InMemoryMessageIdManager implements MessageIdManager {
     }
 
     private MailboxQuery userMailboxes(MailboxSession mailboxSession) {
-        return MailboxQuery.builder()
-                .matchesAll()
-                .username(mailboxSession.getUser().getUserName())
+        return MailboxQuery.privateMailboxesBuilder(mailboxSession)
+                .matchesAllMailboxNames()
                 .build();
     }
 
@@ -165,7 +164,7 @@ public class InMemoryMessageIdManager implements MessageIdManager {
         }
     }
 
-    private Predicate<MailboxId> findMailboxBelongsToAnotherSession(final MailboxSession mailboxSession) {
+    private Predicate<MailboxId> findMailboxBelongsToAnotherSession(MailboxSession mailboxSession) {
         return input -> {
             try {
                 MailboxPath currentMailbox = mailboxManager.getMailbox(input, mailboxSession).getMailboxPath();
@@ -183,7 +182,7 @@ public class InMemoryMessageIdManager implements MessageIdManager {
             .findFirst();
     }
 
-    private Predicate<MessageResult> filterByMessageId(final MessageId messageId) {
+    private Predicate<MessageResult> filterByMessageId(MessageId messageId) {
         return messageResult -> messageResult.getMessageId().equals(messageId);
     }
 
