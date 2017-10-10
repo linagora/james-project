@@ -26,6 +26,7 @@ import javax.inject.Inject;
 import org.apache.james.jmap.model.mailbox.Mailbox;
 import org.apache.james.jmap.model.mailbox.MailboxNamespace;
 import org.apache.james.jmap.model.mailbox.Rights;
+import org.apache.james.jmap.model.mailbox.Rights.Username;
 import org.apache.james.jmap.model.mailbox.Role;
 import org.apache.james.jmap.model.mailbox.SortOrder;
 import org.apache.james.mailbox.MailboxManager;
@@ -103,6 +104,8 @@ public class MailboxFactory {
         MailboxCounters mailboxCounters = messageManager.getMailboxCounters(mailboxSession);
         MessageManager.MetaData metaData = messageManager.getMetaData(NO_RESET_RECENT, mailboxSession, MessageManager.MetaData.FetchGroup.NO_COUNT);
 
+        Rights rights = Rights.fromACL(metaData.getACL())
+            .removeEntriesFor(Username.forMailboxPath(messageManager.getMailboxPath()));
         return Mailbox.builder()
             .id(messageManager.getId())
             .name(getName(mailboxPath, mailboxSession))
@@ -111,7 +114,7 @@ public class MailboxFactory {
             .unreadMessages(mailboxCounters.getUnseen())
             .totalMessages(mailboxCounters.getCount())
             .sortOrder(SortOrder.getSortOrder(role))
-            .sharedWith(Rights.fromACL(metaData.getACL()))
+            .sharedWith(rights)
             .namespace(getNamespace(mailboxPath, mailboxSession))
             .build();
     }

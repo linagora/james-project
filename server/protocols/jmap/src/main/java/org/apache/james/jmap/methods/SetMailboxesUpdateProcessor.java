@@ -35,6 +35,7 @@ import org.apache.james.jmap.model.SetMailboxesResponse;
 import org.apache.james.jmap.model.SetMailboxesResponse.Builder;
 import org.apache.james.jmap.model.mailbox.Mailbox;
 import org.apache.james.jmap.model.mailbox.MailboxUpdateRequest;
+import org.apache.james.jmap.model.mailbox.Rights.Username;
 import org.apache.james.jmap.model.mailbox.Role;
 import org.apache.james.jmap.utils.MailboxUtils;
 import org.apache.james.mailbox.MailboxManager;
@@ -210,7 +211,12 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
         MailboxPath originMailboxPath = mailboxManager.getMailbox(mailbox.getId(), mailboxSession).getMailboxPath();
         MailboxPath destinationMailboxPath = computeNewMailboxPath(mailbox, originMailboxPath, updateRequest, mailboxSession);
         if (updateRequest.getSharedWith().isPresent()) {
-            mailboxManager.setRights(originMailboxPath, updateRequest.getSharedWith().get().toMailboxAcl(), mailboxSession);
+            mailboxManager.setRights(originMailboxPath,
+                updateRequest.getSharedWith()
+                    .get()
+                    .removeEntriesFor(Username.forMailboxPath(originMailboxPath))
+                    .toMailboxAcl(),
+                mailboxSession);
         }
         if (!originMailboxPath.equals(destinationMailboxPath)) {
             mailboxManager.renameMailbox(originMailboxPath, destinationMailboxPath, mailboxSession);
