@@ -28,10 +28,14 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
+import org.apache.james.mailbox.manager.ManagerTestResources;
+import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.SimpleMailboxMetaData;
+import org.assertj.core.api.JUnitSoftAssertions;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -39,17 +43,24 @@ import com.google.common.collect.ImmutableList;
 public class MailboxFactoryTest {
     public static final char DELIMITER = '.';
 
+    @Rule
+    public final JUnitSoftAssertions softly = new JUnitSoftAssertions();
+
     private MailboxManager mailboxManager;
     private MailboxSession mailboxSession;
+    private MailboxSession otherMailboxSession;
     private String user;
+    private String otherUser;
     private MailboxFactory sut;
 
     @Before
     public void setup() throws Exception {
         InMemoryIntegrationResources inMemoryIntegrationResources = new InMemoryIntegrationResources();
         mailboxManager = inMemoryIntegrationResources.createMailboxManager(inMemoryIntegrationResources.createGroupMembershipResolver());
-        user = "user@domain.org";
-        mailboxSession = mailboxManager.login(user, "pass");
+        user = ManagerTestResources.USER;
+        otherUser = ManagerTestResources.OTHER_USER;
+        mailboxSession = mailboxManager.login(user, ManagerTestResources.USER_PASS);
+        otherMailboxSession = mailboxManager.login(otherUser, ManagerTestResources.OTHER_USER_PASS);
         sut = new MailboxFactory(mailboxManager);
     }
 
@@ -162,18 +173,37 @@ public class MailboxFactoryTest {
 
     @Test
     public void getNamespaceShouldReturnPersonalNamespaceWhenUserMailboxPathAndUserMailboxSessionAreTheSame() throws Exception {
-        MailboxPath mailboxPath = MailboxPath.forUser(user, "mailboxName");
+        MailboxPath inbox = MailboxPath.forUser(user, "inbox");
+        Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
 
-        assertThat(sut.getNamespace(mailboxPath, mailboxSession))
+        Mailbox retrievedMailbox = sut.builder()
+            .id(mailboxId.get())
+            .session(mailboxSession)
+            .build()
+            .get();
+
+        assertThat(retrievedMailbox.getNamespace())
             .isEqualTo(MailboxNamespace.personal());
     }
 
     @Test
     public void getNamespaceShouldReturnDelegatedNamespaceWhenUserMailboxPathAndUserMailboxSessionAreNotTheSame() throws Exception {
-        String mailboxPathUser = "other@domain.org";
-        MailboxPath mailboxPath = MailboxPath.forUser(mailboxPathUser, "mailboxName");
+        MailboxPath inbox = MailboxPath.forUser(user, "inbox");
+        Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
+        mailboxManager.applyRightsCommand(inbox,
+            MailboxACL.command()
+                .forUser(otherUser)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .asAddition(),
+            mailboxSession);
 
-        assertThat(sut.getNamespace(mailboxPath, mailboxSession))
-            .isEqualTo(MailboxNamespace.delegated(mailboxPathUser));
+        Mailbox retrievedMailbox = sut.builder()
+            .id(mailboxId.get())
+            .session(otherMailboxSession)
+            .build()
+            .get();
+
+        assertThat(retrievedMailbox.getNamespace())
+            .isEqualTo(MailboxNamespace.delegated(user));
     }
 }
