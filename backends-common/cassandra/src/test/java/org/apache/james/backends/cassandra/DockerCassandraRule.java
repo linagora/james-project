@@ -75,16 +75,16 @@ public class DockerCassandraRule implements TestRule {
                         .from("cassandra:2.2.10")
                         .env("ENV CASSANDRA_CONFIG", "/etc/cassandra")
                         //avoiding token range computation helps starting faster
-                        .run("echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.initial_token=0\\\"\" >> " + CASSANDRA_ENV)
-                        .run("sed -i -e \"s/num_tokens/\\#num_tokens/\" " + CASSANDRA_YAML)
+                        .run("echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.initial_token=0\\\"\" >> " + CASSANDRA_ENV + " && "
+                            + "sed -i -e \"s/num_tokens/\\#num_tokens/\" " + CASSANDRA_YAML + " && "
                         //don't wait for other nodes communication to happen
-                        .run("echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.skip_wait_for_gossip_to_settle=0\\\"\" >> " + CASSANDRA_ENV)
+                            + "echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.skip_wait_for_gossip_to_settle=0\\\"\" >> " + CASSANDRA_ENV + " && "
                         //make sure commit log disk flush won't happen
-                        .run("sed -i -e \"s/commitlog_sync_period_in_ms: 10000/commitlog_sync_period_in_ms: 9999999/\" " + CASSANDRA_YAML)
+                            + "sed -i -e \"s/commitlog_sync_period_in_ms: 10000/commitlog_sync_period_in_ms: 9999999/\" " + CASSANDRA_YAML  + " && "
                         //auto_bootstrap should be useless when no existing data
-                        .run("echo auto_bootstrap: false >> " + CASSANDRA_YAML)
-                        .run("echo \"-Xms1500M\" >> " + JVM_OPTIONS)
-                        .run("echo \"-Xmx1500M\" >> " + JVM_OPTIONS)
+                            + "echo auto_bootstrap: false >> " + CASSANDRA_YAML + " && "
+                            + "echo \"-Xms1500M\" >> " + JVM_OPTIONS + " && "
+                            + "echo \"-Xmx1500M\" >> " + JVM_OPTIONS)
                         .build()))
             .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withBinds(new Binds(new Bind(tmpFsName, new Volume("/var/lib/cassandra")))))
             .withCreateContainerCmdModifier(cmd -> cmd.withMemory(2000*1024*1024L))
