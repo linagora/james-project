@@ -30,7 +30,6 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MailboxManager.MailboxCapabilities;
 import org.apache.james.mailbox.exception.AnnotationException;
-import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxManager;
 import org.apache.james.mailbox.model.MailboxACL;
@@ -39,6 +38,9 @@ import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
+import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.junit.Assume;
 import org.junit.Rule;
@@ -61,6 +63,7 @@ public abstract class MailboxManagerTest {
 
     public final static String USER_1 = "USER_1";
     public final static String USER_2 = "USER_2";
+    private static final int DEFAULT_MAXIMUM_LIMIT = 256;
 
     private static final MailboxAnnotationKey PRIVATE_KEY = new MailboxAnnotationKey("/private/comment");
     private static final MailboxAnnotationKey PRIVATE_CHILD_KEY = new MailboxAnnotationKey("/private/comment/user");
@@ -199,7 +202,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void closingSessionShouldWork() throws BadCredentialsException, MailboxException, UnsupportedEncodingException {
+    public void closingSessionShouldWork() throws MailboxException, UnsupportedEncodingException {
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
 
@@ -218,7 +221,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void user2ShouldBeAbleToCreateRootlessFolder() throws BadCredentialsException, MailboxException {
+    public void user2ShouldBeAbleToCreateRootlessFolder() throws MailboxException {
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath trash = MailboxPath.forUser(USER_2, "Trash");
         mailboxManager.createMailbox(trash, session);
@@ -227,7 +230,7 @@ public abstract class MailboxManagerTest {
     }
     
     @Test
-    public void user2ShouldBeAbleToCreateNestedFoldersWithoutTheirParents() throws BadCredentialsException, MailboxException {
+    public void user2ShouldBeAbleToCreateNestedFoldersWithoutTheirParents() throws MailboxException {
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath nestedFolder = MailboxPath.forUser(USER_2, "INBOX.testfolder");
         mailboxManager.createMailbox(nestedFolder, session);
@@ -279,7 +282,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void updateAnnotationsShouldDeleteAnnotationWithNilValue() throws BadCredentialsException, MailboxException {
+    public void updateAnnotationsShouldDeleteAnnotationWithNilValue() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -302,7 +305,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void getAnnotationsShouldReturnEmptyForNonStoredAnnotation() throws BadCredentialsException, MailboxException {
+    public void getAnnotationsShouldReturnEmptyForNonStoredAnnotation() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -312,7 +315,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void getAllAnnotationsShouldRetrieveStoredAnnotations() throws BadCredentialsException, MailboxException {
+    public void getAllAnnotationsShouldRetrieveStoredAnnotations() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -334,7 +337,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void getAnnotationsByKeysShouldRetrieveStoresAnnotationsByKeys() throws BadCredentialsException, MailboxException {
+    public void getAnnotationsByKeysShouldRetrieveStoresAnnotationsByKeys() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -357,7 +360,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void getAnnotationsByKeysWithOneDepthShouldRetriveAnnotationsWithOneDepth() throws BadCredentialsException, MailboxException {
+    public void getAnnotationsByKeysWithOneDepthShouldRetriveAnnotationsWithOneDepth() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -370,7 +373,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void getAnnotationsByKeysWithAllDepthShouldThrowExceptionWhenMailboxDoesNotExist() throws BadCredentialsException, MailboxException {
+    public void getAnnotationsByKeysWithAllDepthShouldThrowExceptionWhenMailboxDoesNotExist() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         expected.expect(MailboxException.class);
         session = mailboxManager.createSystemSession(USER_2);
@@ -380,7 +383,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void getAnnotationsByKeysWithAllDepthShouldRetriveAnnotationsWithAllDepth() throws BadCredentialsException, MailboxException {
+    public void getAnnotationsByKeysWithAllDepthShouldRetriveAnnotationsWithAllDepth() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.Annotation));
         session = mailboxManager.createSystemSession(USER_2);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -468,7 +471,7 @@ public abstract class MailboxManagerTest {
         mailboxManager.setRights(inbox1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -493,7 +496,7 @@ public abstract class MailboxManagerTest {
         mailboxManager.setRights(inbox1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -518,7 +521,7 @@ public abstract class MailboxManagerTest {
         mailboxManager.setRights(inbox1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -545,13 +548,13 @@ public abstract class MailboxManagerTest {
         mailboxManager.setRights(inbox1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
                 .asAddition()),
             session1);
         mailboxManager.setRights(mailboxPath1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -566,6 +569,265 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
+    public void searchForMessageShouldReturnMessagesFromAllMyMailboxesIfNoMailboxesArePrecised() throws MailboxException {
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+
+        MailboxPath folderForCacahuete = MailboxPath.forUser(USER_1, "CACAHUETE");
+        MailboxId mailboxIdForCacahuete = mailboxManager.createMailbox(folderForCacahuete, session).get();
+        MessageManager messageManagerForCacahuete = mailboxManager.getMailbox(mailboxIdForCacahuete, session);
+        MessageId messageIdForCacahuete = messageManagerForCacahuete.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            session,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MailboxPath folderForPirouette = MailboxPath.forUser(USER_1, "PIROUETTE");
+        MailboxId mailboxIdForPirouette = mailboxManager.createMailbox(folderForPirouette, session).get();
+        MessageManager messageManagerForPirouette = mailboxManager.getMailbox(mailboxIdForPirouette, session);
+
+        MessageId messageIdForPirouette = messageManagerForPirouette.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            session,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .build();
+
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .containsOnly(messageIdForCacahuete, messageIdForPirouette);
+    }
+
+    @Test
+    public void searchForMessageShouldReturnMessagesFromMyDelegatedMailboxes() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+        MailboxSession sessionFromDelegater = mailboxManager.createSystemSession(USER_2);
+        MailboxPath delegatedMailboxPath = MailboxPath.forUser(USER_2, "SHARED");
+        MailboxId delegatedMailboxId = mailboxManager.createMailbox(delegatedMailboxPath, sessionFromDelegater).get();
+        MessageManager delegatedMessageManager = mailboxManager.getMailbox(delegatedMailboxId, sessionFromDelegater);
+
+        MessageId messageId = delegatedMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            sessionFromDelegater,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        mailboxManager.setRights(delegatedMailboxPath,
+            MailboxACL.EMPTY.apply(MailboxACL.command()
+                .forUser(USER_1)
+                .rights(MailboxACL.Right.Read)
+                .asAddition()),
+            sessionFromDelegater);
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .containsOnly(messageId);
+    }
+
+    @Test
+    public void searchForMessageShouldNotReturnMessagesFromMyDelegatedMailboxesICanNot() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+        MailboxSession sessionFromDelegater = mailboxManager.createSystemSession(USER_2);
+        MailboxPath delegatedMailboxPath = MailboxPath.forUser(USER_2, "SHARED");
+        MailboxId delegatedMailboxId = mailboxManager.createMailbox(delegatedMailboxPath, sessionFromDelegater).get();
+        MessageManager delegatedMessageManager = mailboxManager.getMailbox(delegatedMailboxId, sessionFromDelegater);
+
+        MessageId messageId = delegatedMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            sessionFromDelegater,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        mailboxManager.setRights(delegatedMailboxPath,
+            MailboxACL.EMPTY.apply(MailboxACL.command()
+                .forUser(USER_1)
+                .rights(MailboxACL.Right.Lookup)
+                .asAddition()),
+            sessionFromDelegater);
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .isEmpty();
+    }
+
+    @Test
+    public void searchForMessageShouldOnlySearchInMailboxICanRead() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+        MailboxSession sessionFromDelegater = mailboxManager.createSystemSession(USER_2);
+        MailboxPath otherMailboxPath = MailboxPath.forUser(USER_2, "OTHER_MAILBOX");
+        MailboxId otherMailboxId = mailboxManager.createMailbox(otherMailboxPath, sessionFromDelegater).get();
+        MessageManager otherMailboxManager = mailboxManager.getMailbox(otherMailboxId, sessionFromDelegater);
+
+        MessageId messageId = otherMailboxManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            sessionFromDelegater,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .isEmpty();
+    }
+
+    @Test
+    public void searchForMessageShouldIgnoreMailboxThatICantRead() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+        MailboxSession sessionFromDelegater = mailboxManager.createSystemSession(USER_2);
+        MailboxPath otherMailboxPath = MailboxPath.forUser(USER_2, "SHARED");
+        MailboxId otherMailboxId = mailboxManager.createMailbox(otherMailboxPath, sessionFromDelegater).get();
+        MessageManager otherMessageManager = mailboxManager.getMailbox(otherMailboxId, sessionFromDelegater);
+
+        MessageId messageId = otherMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            sessionFromDelegater,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .inMailboxes(otherMailboxId)
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .isEmpty();
+    }
+
+    @Test
+    public void searchForMessageShouldCorrectlyExcludeMailbox() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+        MailboxPath otherMailboxPath = MailboxPath.forUser(USER_1, "SHARED");
+        MailboxId otherMailboxId = mailboxManager.createMailbox(otherMailboxPath, session).get();
+        MessageManager otherMessageManager = mailboxManager.getMailbox(otherMailboxId, session);
+
+        MessageId messageId = otherMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            session,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .notInMailboxes(otherMailboxId)
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .isEmpty();
+    }
+
+    @Test
+    public void searchForMessageShouldPriorizeExclusionFromInclusion() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+        MailboxPath otherMailboxPath = MailboxPath.forUser(USER_1, "SHARED");
+        MailboxId otherMailboxId = mailboxManager.createMailbox(otherMailboxPath, session).get();
+        MessageManager otherMessageManager = mailboxManager.getMailbox(otherMailboxId, session);
+
+        MessageId messageId = otherMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            session,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .inMailboxes(otherMailboxId)
+            .notInMailboxes(otherMailboxId)
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .isEmpty();
+    }
+
+    @Test
+    public void searchForMessageShouldOnlySearchInGivenMailbox() throws MailboxException {
+        Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
+        boolean isRecent = false;
+
+        session = mailboxManager.createSystemSession(USER_1);
+
+        MailboxPath searchedMailboxPath = MailboxPath.forUser(USER_1, "WANTED");
+        MailboxId searchedMailboxId = mailboxManager.createMailbox(searchedMailboxPath, session).get();
+        MessageManager searchedMessageManager = mailboxManager.getMailbox(searchedMailboxId, session);
+
+        MailboxPath otherMailboxPath = MailboxPath.forUser(USER_1, "SHARED");
+        MailboxId otherMailboxId = mailboxManager.createMailbox(otherMailboxPath, session).get();
+        MessageManager otherMessageManager = mailboxManager.getMailbox(otherMailboxId, session);
+
+        otherMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            session,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MessageId messageId = searchedMessageManager.appendMessage(
+            new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()),
+            new Date(),
+            session,
+            isRecent,
+            new Flags())
+            .getMessageId();
+
+        MultimailboxesSearchQuery multiMailboxesQuery = MultimailboxesSearchQuery
+            .from(new SearchQuery())
+            .inMailboxes(searchedMailboxId)
+            .build();
+
+        assertThat(mailboxManager.search(multiMailboxesQuery, session, DEFAULT_MAXIMUM_LIMIT))
+            .containsExactly(messageId);
+    }
+
+    @Test
     public void searchShouldNotReturnNoMoreDelegatedMailboxes() throws MailboxException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
         MailboxSession session1 = mailboxManager.createSystemSession(USER_1);
@@ -575,14 +837,14 @@ public abstract class MailboxManagerTest {
         mailboxManager.setRights(inbox1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
                 .asAddition()),
             session1);
 
         mailboxManager.setRights(inbox1,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read)
+                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
                 .asRemoval()),
             session1);
 
