@@ -16,19 +16,40 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mpt.api;
 
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mpt.api.ImapFeatures.Feature;
+package org.apache.james.mpt.imapmailbox.cassandra;
 
-public interface ImapHostSystem extends HostSystem {
+import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.mpt.api.ImapHostSystem;
+import org.apache.james.mpt.imapmailbox.suite.ListingWithSharing;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
 
-    boolean supports(Feature... features);
-    
-    void createMailbox(MailboxPath mailboxPath) throws Exception;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 
-    void setQuotaLimits(long maxMessageQuota, long maxStorageQuota) throws Exception;
+public class CassandraListingWithSharing extends ListingWithSharing {
+    @ClassRule
+    public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
 
-    void grantRights(MailboxPath mailboxPath, String userName, MailboxACL.Rfc4314Rights rights) throws Exception;
+    private ImapHostSystem system;
+
+    @Before
+    public void setUp() throws Exception {
+        Injector injector = Guice.createInjector(new CassandraMailboxTestModule(cassandraServer.getIp(), cassandraServer.getBindingPort()));
+        system = injector.getInstance(ImapHostSystem.class);
+        system.beforeTest();
+        super.setUp();
+    }
+
+    @Override
+    protected ImapHostSystem createImapHostSystem() {
+        return system;
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        system.afterTest();
+    }
 }

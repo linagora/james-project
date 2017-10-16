@@ -16,19 +16,37 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mpt.api;
 
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mpt.api.ImapFeatures.Feature;
+package org.apache.james.mpt.imapmailbox.inmemory;
 
-public interface ImapHostSystem extends HostSystem {
+import org.apache.james.mpt.api.ImapHostSystem;
+import org.apache.james.mpt.imapmailbox.suite.ListingWithSharing;
+import org.junit.After;
+import org.junit.Before;
 
-    boolean supports(Feature... features);
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+
+public class InMemoryListingWithSharing extends ListingWithSharing {
+
+    private ImapHostSystem system;
+
+    @Before
+    public void setUp() throws Exception {
+        Injector injector = Guice.createInjector(new InMemoryMailboxTestModule());
+        system = injector.getInstance(ImapHostSystem.class);
+        system.beforeTest();
+        super.setUp();
+    }
     
-    void createMailbox(MailboxPath mailboxPath) throws Exception;
+    @Override
+    protected ImapHostSystem createImapHostSystem() {
+        return system;
+    }
 
-    void setQuotaLimits(long maxMessageQuota, long maxStorageQuota) throws Exception;
-
-    void grantRights(MailboxPath mailboxPath, String userName, MailboxACL.Rfc4314Rights rights) throws Exception;
+    @After
+    public void tearDown() throws Exception {
+        system.afterTest();
+    }
+    
 }

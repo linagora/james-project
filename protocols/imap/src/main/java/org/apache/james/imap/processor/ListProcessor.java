@@ -20,7 +20,6 @@
 package org.apache.james.imap.processor;
 
 import java.io.Closeable;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.james.imap.api.ImapCommand;
@@ -51,6 +50,8 @@ import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListProcessor.class);
@@ -127,32 +128,7 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
                     isRelative = true;
                 }
                 // Get the mailbox for the reference name.
-                final MailboxPath rootPath = new MailboxPath(referenceRoot, "", "");
-                results = new ArrayList<>(1);
-                results.add(new MailboxMetaData() {
-
-                    public Children inferiors() {
-                        return Children.CHILDREN_ALLOWED_BUT_UNKNOWN;
-                    }
-
-                    public Selectability getSelectability() {
-                        return Selectability.NOSELECT;
-                    }
-                    
-                    public char getHierarchyDelimiter() {
-                        return mailboxSession.getPathDelimiter();
-                    }
-
-                    public MailboxPath getPath() {
-                        return rootPath;
-                    }
-
-                    @Override
-                    public MailboxId getId() {
-                        return null; //Will not be call in ListProcessor scope
-                    }
-                    
-                });
+                results = ImmutableList.of(noSelectMailboxMetadata(mailboxSession, referenceRoot));
             } else {
                 // If the mailboxPattern is fully qualified, ignore the
                 // reference name.
@@ -172,15 +148,22 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
                     basePath = PathConverter.forSession(session).buildFullPath(finalReferencename);
                 }
 
-                results = getMailboxManager().search(
+                if (mailboxName.equals("*")) {
+                    results = getMailboxManager().search(
                         MailboxQuery.builder()
-                            .userAndNamespaceFrom(basePath)
+                            .matchesAllMailboxNames()
+                            .build(),
+                        mailboxSession);
+                } else {
+                    results = getMailboxManager().search(
+                        MailboxQuery.builder()
                             .expression(new PrefixedRegex(
                                 basePath.getName(),
                                 CharsetUtil.decodeModifiedUTF7(mailboxName),
                                 mailboxSession.getPathDelimiter()))
                             .build()
                         , mailboxSession);
+                }
             }
 
             for (MailboxMetaData metaData : results) {
@@ -192,6 +175,34 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
             LOGGER.error("List failed for mailboxName " + mailboxName + " and user" + user, e);
             no(command, tag, responder, HumanReadableText.SEARCH_FAILED);
         }
+    }
+
+    private MailboxMetaData noSelectMailboxMetadata(MailboxSession mailboxSession, String referenceRoot) {
+        final MailboxPath rootPath = new MailboxPath(referenceRoot, "", "");
+        return new MailboxMetaData() {
+
+            public Children inferiors() {
+                return Children.CHILDREN_ALLOWED_BUT_UNKNOWN;
+            }
+
+            public Selectability getSelectability() {
+                return Selectability.NOSELECT;
+            }
+
+            public char getHierarchyDelimiter() {
+                return mailboxSession.getPathDelimiter();
+            }
+
+            public MailboxPath getPath() {
+                return rootPath;
+            }
+
+            @Override
+            public MailboxId getId() {
+                return null; //Will not be call in ListProcessor scope
+            }
+
+        };
     }
 
     void processResult(Responder responder, boolean relative, MailboxMetaData listResult, MailboxType mailboxType) {
