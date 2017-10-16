@@ -212,4 +212,19 @@ public class Rfc4314RightsTest {
     public void unionShouldThrowWhenAppliedWithNull() throws UnsupportedRightException {
         assertThatThrownBy(() -> lprs.union(null)).isInstanceOf(NullPointerException.class);
     }
+
+    @Test
+    public void containsShouldReturnFalseWhenRightNotPresent() throws UnsupportedRightException {
+        assertThat(lprs.contains(Write)).isFalse();
+    }
+
+    @Test
+    public void containsShouldReturnFalseWhenAtLeastOneRightNotPresent() throws UnsupportedRightException {
+        assertThat(lprs.contains(Lookup, Write)).isFalse();
+    }
+
+    @Test
+    public void containsShouldReturnTrueWhenAllRightsPresent() throws UnsupportedRightException {
+        assertThat(lprs.contains(Lookup, Post)).isTrue();
+    }
 }
