@@ -38,8 +38,11 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
@@ -75,16 +78,23 @@ public class StoreMessageIdManager implements MessageIdManager {
     private final MessageId.Factory messageIdFactory;
     private final QuotaManager quotaManager;
     private final QuotaRootResolver quotaRootResolver;
+    private final MailboxACLResolver aclResolver;
+    private final GroupMembershipResolver groupMembershipResolver;
 
     @Inject
     public StoreMessageIdManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, MailboxEventDispatcher dispatcher,
                                  MessageId.Factory messageIdFactory,
-                                 QuotaManager quotaManager, QuotaRootResolver quotaRootResolver) {
+                                 QuotaManager quotaManager,
+                                 QuotaRootResolver quotaRootResolver,
+                                 MailboxACLResolver aclResolver,
+                                 GroupMembershipResolver groupMembershipResolver) {
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.dispatcher = dispatcher;
         this.messageIdFactory = messageIdFactory;
         this.quotaManager = quotaManager;
         this.quotaRootResolver = quotaRootResolver;
+        this.aclResolver = aclResolver;
+        this.groupMembershipResolver = groupMembershipResolver;
     }
 
     @Override
@@ -277,12 +287,29 @@ public class StoreMessageIdManager implements MessageIdManager {
         return mailboxId -> {
             try {
                 Mailbox currentMailbox = mailboxMapper.findMailboxById(mailboxId);
-                return belongsToCurrentUser(currentMailbox, mailboxSession);
+                return assertUserHasAccessTo(currentMailbox, mailboxSession);
             } catch (MailboxException e) {
                 LOGGER.error(String.format("Can not retrieve mailboxPath associated with %s", mailboxId.serialize()), e);
                 return false;
             }
         };
+    }
+
+    private boolean assertUserHasAccessTo(Mailbox mailbox, MailboxSession session) throws MailboxException {
+        return belongsToCurrentUser(mailbox, session) || userHasLookupRightsOn(mailbox, session);
+    }
+
+    private boolean userHasLookupRightsOn(Mailbox mailbox, MailboxSession session) throws MailboxException {
+        return hasRight(mailbox, MailboxACL.Right.Lookup, session);
+    }
+
+    private boolean hasRight(Mailbox mailbox, MailboxACL.Right right, MailboxSession session) throws MailboxException {
+        MailboxSession.User user = session.getUser();
+        String userName = null;
+        if (user != null) {
+            userName = user.getUserName();
+        }
+        return aclResolver.hasRight(userName, groupMembershipResolver, right, mailbox.getACL(), mailbox.getUser(), new GroupFolderResolver(session).isGroupFolder(mailbox));
     }
 
     private Predicate<MailboxMessage> messageBelongsToUser(MailboxSession mailboxSession, MailboxMapper mailboxMapper) {

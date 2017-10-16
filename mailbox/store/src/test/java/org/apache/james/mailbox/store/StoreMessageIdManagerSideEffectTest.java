@@ -20,6 +20,8 @@
 package org.apache.james.mailbox.store;
 
 import org.apache.james.mailbox.MessageIdManager;
+import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestMessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
@@ -39,8 +41,12 @@ public class StoreMessageIdManagerSideEffectTest extends AbstractMessageIdManage
 
         TestMailboxSessionMapperFactory testMailboxSessionMapperFactory = new TestMailboxSessionMapperFactory();
         MessageId.Factory messageIdFactory = new TestMessageId.Factory();
+        MailboxACLResolver aclResolver = null;
+        GroupMembershipResolver groupMembershipResolver = null;
         MessageIdManager messageIdManager = new StoreMessageIdManager(testMailboxSessionMapperFactory, dispatcher, messageIdFactory,
-            quotaManager, new DefaultQuotaRootResolver(testMailboxSessionMapperFactory));
+            quotaManager, new DefaultQuotaRootResolver(testMailboxSessionMapperFactory),
+            aclResolver,
+            groupMembershipResolver);
 
         return new StoreMessageIdManagerTestSystem(messageIdManager,
             messageIdFactory,

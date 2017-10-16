@@ -22,6 +22,8 @@ package org.apache.james.mailbox.cassandra;
 import static org.mockito.Mockito.mock;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
+import org.apache.james.mailbox.acl.GroupMembershipResolver;
+import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.quota.CassandraCurrentQuotaManager;
 import org.apache.james.mailbox.cassandra.quota.CassandraPerUserMaxQuotaManager;
@@ -59,11 +61,15 @@ public class CassandraTestSystemFixture {
     }
 
     public static StoreMessageIdManager createMessageIdManager(CassandraMailboxSessionMapperFactory mapperFactory, QuotaManager quotaManager, MailboxEventDispatcher dispatcher) {
+        MailboxACLResolver aclResolver = null;
+        GroupMembershipResolver groupMembershipResolver = null;
         return new StoreMessageIdManager(mapperFactory,
             dispatcher,
             new CassandraMessageId.Factory(),
             quotaManager,
-            new DefaultQuotaRootResolver(mapperFactory));
+            new DefaultQuotaRootResolver(mapperFactory),
+            aclResolver,
+            groupMembershipResolver);
     }
 
     public static MaxQuotaManager createMaxQuotaManager(CassandraCluster cassandra) {

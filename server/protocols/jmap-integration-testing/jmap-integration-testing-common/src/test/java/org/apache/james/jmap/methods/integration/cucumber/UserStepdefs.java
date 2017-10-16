@@ -29,14 +29,15 @@ import javax.inject.Inject;
 
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxPath;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 
-import cucumber.api.PendingException;
 import cucumber.api.java.en.Given;
 import cucumber.runtime.java.guice.ScenarioScoped;
 
@@ -105,7 +106,13 @@ public class UserStepdefs {
     
     @Given("^\"([^\"]*)\" shares its mailbox \"([^\"]*)\" with \"([^\"]*)\"$")
     public void shareMailbox(String owner, String mailbox, String shareTo) throws Throwable {
-        throw new PendingException();
+        MailboxPath delegatedMailbox = MailboxPath.forUser(owner, mailbox);
+        mainStepdefs.aclProbe.replaceRights(delegatedMailbox, shareTo,
+            MailboxACL.command()
+                .forUser(shareTo)
+                .rights(MailboxACL.Right.Lookup, MailboxACL.Right.Read)
+                .asAddition()
+                .getRights());
     }
 
     private String generatePassword(String username) {

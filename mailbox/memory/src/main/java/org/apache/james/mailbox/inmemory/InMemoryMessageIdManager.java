@@ -140,14 +140,14 @@ public class InMemoryMessageIdManager implements MessageIdManager {
     }
 
     private List<MailboxId> getUsersMailboxIds(MailboxSession mailboxSession) throws MailboxException {
-        return mailboxManager.search(userMailboxes(mailboxSession), mailboxSession)
+        return mailboxManager.search(userMailboxes(), mailboxSession)
             .stream()
             .map(MailboxMetaData::getId)
             .collect(Guavate.toImmutableList());
     }
 
-    private MailboxQuery userMailboxes(MailboxSession mailboxSession) {
-        return MailboxQuery.privateMailboxesBuilder(mailboxSession)
+    private MailboxQuery userMailboxes() {
+        return MailboxQuery.builder()
                 .matchesAllMailboxNames()
                 .build();
     }
