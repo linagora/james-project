@@ -199,6 +199,11 @@ public class DefaultMailboxesProvisioningFilterThreadTest {
         }
 
         @Override
+        public MailboxACL.Rfc4314Rights myRights(MailboxId mailboxId, MailboxSession session) throws MailboxException {
+            return null;
+        }
+
+        @Override
         public MailboxACL.Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxACL.EntryKey identifier, MailboxSession session) throws MailboxException {
             return null;
         }
