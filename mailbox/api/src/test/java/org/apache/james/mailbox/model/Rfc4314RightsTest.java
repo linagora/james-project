@@ -227,4 +227,9 @@ public class Rfc4314RightsTest {
     public void containsShouldReturnTrueWhenAllRightsPresent() throws UnsupportedRightException {
         assertThat(lprs.contains(Lookup, Post)).isTrue();
     }
+
+    @Test
+    public void containsShouldReturnTrueWhenNonRightsPresent() throws UnsupportedRightException {
+        assertThat(lprs.contains()).isTrue();
+    }
 }
