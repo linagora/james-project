@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the            *
  * "License"); you may not use this file except in compliance   *
  * with the License.  You may obtain a copy of the License at   *
- * *
- * http://www.apache.org/licenses/LICENSE-2.0                 *
- * *
+ *                                                              *
+ *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *                                                              *
  * Unless required by applicable law or agreed to in writing,   *
  * software distributed under the License is distributed on an  *
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
@@ -16,22 +16,23 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.inmemory;
+
+package org.apache.james.mailbox.inmemory.mail;
 
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.store.AbstractCombinationManagerTest;
-import org.apache.james.mailbox.store.CombinationManagerTestSystem;
+import org.apache.james.mailbox.store.mail.model.MapperProvider;
+import org.apache.james.mailbox.store.mail.model.MessageIdMapperTest;
 import org.junit.Before;
 
-public class InMemoryCombinationManagerTest extends AbstractCombinationManagerTest {
+public class InMemoryMessageIdMapperTest extends MessageIdMapperTest{
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() throws MailboxException {
         super.setUp();
     }
-    
+
     @Override
-    public CombinationManagerTestSystem createTestingData() throws MailboxException {
-        return MessageIdManagerTestSystemProvider.createManagersTestingData();
+    protected MapperProvider provideMapper() {
+        return new InMemoryMapperProvider();
     }
 }
