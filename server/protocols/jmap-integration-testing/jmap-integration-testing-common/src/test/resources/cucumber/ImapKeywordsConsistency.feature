@@ -109,7 +109,7 @@ Feature: Impact of IMAP on JMAP keywords consistency
     And the id of the message is "m1"
     And the keywords of the message is $Flagged
 
-  Scenario: SetMessages should ignore Keywords conflict introduced via IMAP upon flags deletion with GetMessages
+  Scenario: SetMessages should ignore Keywords conflict introduced via IMAP upon flags deletion with GetMessageList
     Given the user has a message "m1" in "source" mailbox with subject "My awesome subject", content "This is the content"
     And the user copy "m1" from mailbox "source" to mailbox "mailbox"
     And the user has an open IMAP connection with mailbox "mailbox" selected
@@ -126,7 +126,7 @@ Feature: Impact of IMAP on JMAP keywords consistency
     And the message list has size 1
     And the message list contains "m1"
 
-  Scenario: SetMessages should ignore Keywords conflict introduced via IMAP upon flags deletion with GetMessageList
+  Scenario: SetMessages should ignore Keywords conflict introduced via IMAP upon flags deletion with GetMessages
     Given the user has a message "m1" in "source" mailbox with subject "My awesome subject", content "This is the content"
     And the user copy "m1" from mailbox "source" to mailbox "mailbox"
     And the user has an open IMAP connection with mailbox "mailbox" selected
