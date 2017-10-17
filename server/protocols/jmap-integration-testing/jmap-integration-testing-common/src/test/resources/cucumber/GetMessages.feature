@@ -28,8 +28,8 @@ Feature: GetMessages method
     And the id of the message is "m1"
 
   Scenario: Retrieving a message in a mailbox not delegated to me
-    Given "alice@domain.tld" has a mailbox "shared"
-    And the user has a message "m1" in "shared" mailbox with subject "my test subject", content "testmail"
+    Given "alice@domain.tld" has a mailbox "notShared"
+    And the user has a message "m1" in "notShared" mailbox with subject "my test subject", content "testmail"
     Given "bob@domain.tld" is connected
     When the user ask for messages "m1"
     Then no error is returned
