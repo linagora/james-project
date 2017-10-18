@@ -17,17 +17,22 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.probe;
+package org.apache.james.mailbox.inmemory.mail;
 
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.store.mail.model.MapperProvider;
+import org.apache.james.mailbox.store.mail.model.MessageIdMapperTest;
+import org.junit.Before;
 
-public interface ACLProbe {
-    void replaceRights(MailboxPath mailboxPath, String targetUser, Rfc4314Rights rights) throws MailboxException;
+public class InMemoryMessageIdMapperTest extends MessageIdMapperTest{
 
-    void addRights(MailboxPath mailboxPath, String targetUser, Rfc4314Rights rights) throws MailboxException;
+    @Before
+    public void setUp() throws MailboxException {
+        super.setUp();
+    }
 
-    MailboxACL retrieveRights(MailboxPath mailboxPath) throws MailboxException;
+    @Override
+    protected MapperProvider provideMapper() {
+        return new InMemoryMapperProvider();
+    }
 }
