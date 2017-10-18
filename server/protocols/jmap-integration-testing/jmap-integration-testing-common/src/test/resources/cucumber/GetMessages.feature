@@ -23,17 +23,36 @@ Feature: GetMessages method
 
   Background:
     Given a domain named "domain.tld"
-    And a connected user "username@domain.tld"
-    And "username@domain.tld" has a mailbox "INBOX"
+    And a connected user "alice@domain.tld"
+    And a user "bob@domain.tld"
+    And "alice@domain.tld" has a mailbox "INBOX"
 
   Scenario: Retrieving a message in several mailboxes should return a single message in these mailboxes
-    Given "username@domain.tld" has a mailbox "custom"
+    Given "alice@domain.tld" has a mailbox "custom"
     And the user has a message "m1" in "INBOX" and "custom" mailboxes with subject "my test subject", content "testmail"
     When the user ask for messages "m1"
     Then no error is returned
     And the list should contain 1 message
     And the id of the message is "m1"
     And the message is in "custom,INBOX" mailboxes
+
+  Scenario: Retrieving a message in a mailbox delegated to me
+    Given "alice@domain.tld" has a mailbox "shared"
+    Given "alice@domain.tld" shares its mailbox "shared" with "bob@domain.tld"
+    And the user has a message "m1" in "shared" mailbox with subject "my test subject", content "testmail"
+    Given "bob@domain.tld" is connected
+    When the user ask for messages "m1"
+    Then no error is returned
+    And the list should contain 1 message
+    And the id of the message is "m1"
+
+  Scenario: Retrieving a message in a mailbox not delegated to me
+    Given "alice@domain.tld" has a mailbox "notShared"
+    And the user has a message "m1" in "notShared" mailbox with subject "my test subject", content "testmail"
+    Given "bob@domain.tld" is connected
+    When the user ask for messages "m1"
+    Then no error is returned
+    And the list should contain 0 message
 
   Scenario: Retrieving messages with a non null accountId should return a NotSupported error
     When the user ask for messages using its accountId
