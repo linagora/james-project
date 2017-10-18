@@ -434,6 +434,11 @@ public class MailboxEventAnalyserTest {
         public MailboxSession loginAsOtherUser(String adminUserId, String passwd, String realUserId) throws BadCredentialsException, MailboxException {
             throw new UnsupportedOperationException("Not implemented");
         }
+
+        @Override
+        public void setRights(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+            throw new UnsupportedOperationException("Not implemented");
+        }
     };
     
     private final class MyMailboxSession implements MailboxSession {
