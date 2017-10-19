@@ -137,7 +137,7 @@ public class DownloadStepdefs {
 
     @When("^\"([^\"]*)\" checks for the availability of the attachment endpoint$")
     public void optionDownload(String username) throws Throwable {
-        AccessToken accessToken = userStepdefs.tokenByUser.get(username);
+        AccessToken accessToken = userStepdefs.getTokenForUser(username);
         URI target = mainStepdefs.baseUri().setPath("/download/" + ONE_ATTACHMENT_EML_ATTACHMENT_BLOB_ID).build();
         Request request = Request.Options(target);
         if (accessToken != null) {
@@ -167,7 +167,7 @@ public class DownloadStepdefs {
     }
 
     private Request authenticatedDownloadRequest(URIBuilder uriBuilder, String blobId, String username) throws URISyntaxException {
-        AccessToken accessToken = userStepdefs.tokenByUser.get(username);
+        AccessToken accessToken = userStepdefs.getTokenForUser(username);
         AttachmentAccessTokenKey key = new AttachmentAccessTokenKey(username, blobId);
         if (attachmentAccessTokens.containsKey(key)) {
             uriBuilder.addParameter("access_token", attachmentAccessTokens.get(key).serialize());
@@ -222,7 +222,7 @@ public class DownloadStepdefs {
 
     private void trustForBlobId(String blobId, String username) throws Exception {
         Response tokenGenerationResponse = Request.Post(mainStepdefs.baseUri().setPath("/download/" + blobId).build())
-            .addHeader("Authorization", userStepdefs.tokenByUser.get(username).serialize())
+            .addHeader("Authorization", userStepdefs.getTokenForUser(username).serialize())
             .execute();
         String serializedAttachmentAccessToken = tokenGenerationResponse.returnContent().asString();
         attachmentAccessTokens.put(
@@ -234,11 +234,14 @@ public class DownloadStepdefs {
 
     @When("^\"([^\"]*)\" downloads \"([^\"]*)\" with a valid authentication token but a bad blobId$")
     public void downloadsWithValidToken(String username, String attachmentId) throws Throwable {
-        URIBuilder uriBuilder = mainStepdefs.baseUri().setPath("/download/badblobId");
-        response = Request.Get(uriBuilder.build())
-            .addHeader("Authorization", userStepdefs.tokenByUser.get(username).serialize())
-            .execute()
-            .returnResponse();
+        userStepdefs.execWithUser(username, () -> {
+            URIBuilder uriBuilder = mainStepdefs.baseUri().setPath("/download/badblobId");
+            response = Request.Get(uriBuilder.build())
+                .addHeader("Authorization", userStepdefs.getTokenForUser(username).serialize())
+                .execute()
+                .returnResponse();
+
+        });
     }
 
     @When("^\"([^\"]*)\" downloads \"([^\"]*)\" without any authentication token$")
@@ -314,7 +317,7 @@ public class DownloadStepdefs {
     @When("^\"([^\"]*)\" asks for a token for attachment \"([^\"]*)\"$")
     public void postDownload(String username, String attachmentId) throws Throwable {
         String blobId = blobIdByAttachmentId.get(attachmentId);
-        AccessToken accessToken = userStepdefs.tokenByUser.get(username);
+        AccessToken accessToken = userStepdefs.getTokenForUser(username);
         response = Request.Post(mainStepdefs.baseUri().setPath("/download/" + blobId).build())
                 .addHeader("Authorization", accessToken.serialize())
                 .execute()
@@ -350,9 +353,19 @@ public class DownloadStepdefs {
         assertThat(response.getStatusLine().getStatusCode()).isIn(200, 404);
     }
 
+    @Then("^\"([^\"]*)\" be authorized$")
+    public void httpStatusDifferentFromUnauthorized(String username) throws Throwable {
+        userStepdefs.execWithUser(username, this::httpStatusDifferentFromUnauthorized);
+    }
+
     @Then("^the user should not be authorized$")
     public void httpUnauthorizedStatus() throws IOException {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(401);
+    }
+
+    @Then("^\"([^\"]*)\" should not be authorized$")
+    public void httpUnauthorizedStatus(String username) throws Throwable {
+        userStepdefs.execWithUser(username, this::httpUnauthorizedStatus);
     }
 
     @Then("^the user should receive a bad request response$")
@@ -360,7 +373,12 @@ public class DownloadStepdefs {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
     }
 
-    @Then("^the user can read that blob")
+    @Then("^\"([^\"]*)\" should receive a bad request response$")
+    public void httpBadRequestStatus(String username) throws Throwable {
+        userStepdefs.execWithUser(username, this::httpBadRequestStatus);
+    }
+
+    @Then("^(?:he|she|the user) can read that blob")
     public void httpOkStatusAndExpectedContent() throws IOException {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
         assertThat(IOUtils.toString(response.getEntity().getContent(), Charsets.UTF_8)).isNotEmpty();
@@ -371,11 +389,21 @@ public class DownloadStepdefs {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(404);
     }
 
+    @Then("^\"([^\"]*)\" should receive a not found response$")
+    public void httpNotFoundStatus(String username) throws Throwable {
+        userStepdefs.execWithUser(username, this::httpNotFoundStatus);
+    }
+
     @Then("^the user should receive an attachment access token$")
     public void accessTokenResponse() throws Throwable {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
         assertThat(response.getHeaders("Content-Type")).extracting(Header::toString).containsExactly("Content-Type: text/plain");
         assertThat(IOUtils.toString(response.getEntity().getContent(), Charsets.UTF_8)).isNotEmpty();
+    }
+
+    @Then("^\"([^\"]*)\" should receive an attachment access token$")
+    public void accessTokenResponse(String username) throws Throwable {
+        userStepdefs.execWithUser(username, this::accessTokenResponse);
     }
 
     @Then("^the attachment is named \"([^\"]*)\"$")
@@ -401,7 +429,7 @@ public class DownloadStepdefs {
     }
 
     private String extractFilename(String contentDispositionHeader) {
-        return contentDispositionHeader.substring(UTF8_CONTENT_DIPOSITION_START.length(), 
+        return contentDispositionHeader.substring(UTF8_CONTENT_DIPOSITION_START.length(),
                 contentDispositionHeader.length() - 1);
     }
 

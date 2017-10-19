@@ -36,10 +36,6 @@ Feature: Download endpoint
     When "usera@domain.tld" checks for the availability of the attachment endpoint
     Then the user should be authorized
 
-  Scenario: An unauthenticated user should not have access to the download endpoint
-    When "usera@domain.tld" downloads "a1"
-    Then the user should not be authorized
-
   Scenario: A user should not have access to the download endpoint without the authentication token
     When "usera@domain.tld" downloads "a1" without any authentication token
     Then the user should not be authorized
