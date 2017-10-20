@@ -371,6 +371,11 @@ public class MailboxEventAnalyserTest {
             throw new NotImplementedException("Not implemented");
         }
 
+        @Override
+        public Rfc4314Rights myRights(MailboxId mailboxId, MailboxSession session) throws MailboxException {
+            throw new NotImplementedException("Not implemented");
+        }
+
         public Rfc4314Rights[] listRigths(MailboxPath mailboxPath, EntryKey mailboxACLEntryKey, MailboxSession mailboxSession) throws MailboxException {
             throw new NotImplementedException("Not implemented");
         }
@@ -383,6 +388,11 @@ public class MailboxEventAnalyserTest {
 
         @Override
         public void setRights(MailboxPath mailboxPath, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+            throw new NotImplementedException("Not implemented");
+        }
+
+        @Override
+        public void setRights(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
             throw new NotImplementedException("Not implemented");
         }
 
