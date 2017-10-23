@@ -23,20 +23,24 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Inject;
 
+import com.github.fge.lambdas.runnable.ThrowingRunnable;
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.modules.ACLProbeImpl;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 
-import cucumber.api.PendingException;
 import cucumber.api.java.en.Given;
 import cucumber.runtime.java.guice.ScenarioScoped;
 
@@ -45,10 +49,10 @@ public class UserStepdefs {
 
     private final MainStepdefs mainStepdefs;
     
-    protected Map<String, String> passwordByUser;
-    protected Set<String> domains;
-    protected Map<String, AccessToken> tokenByUser;
-    protected String lastConnectedUser;
+    private Map<String, String> passwordByUser;
+    private Set<String> domains;
+    private Map<String, AccessToken> tokenByUser;
+    private Optional<String> lastConnectedUser;
     
     @Inject
     private UserStepdefs(MainStepdefs mainStepdefs) {
@@ -56,6 +60,29 @@ public class UserStepdefs {
         this.domains = new HashSet<>();
         this.passwordByUser = new HashMap<>();
         this.tokenByUser = new HashMap<>();
+        this.lastConnectedUser = Optional.empty();
+    }
+
+    public void execWithUser(String user, ThrowingRunnable sideEffect) throws Throwable {
+        Optional<String> previousConnectedUser = lastConnectedUser;
+        connectUser(user);
+        try {
+            sideEffect.run();
+        } finally {
+            previousConnectedUser.ifPresent(Throwing.consumer(this::connectUser));
+        }
+    }
+
+    public String getConnectedUser() {
+        Preconditions.checkArgument(lastConnectedUser.isPresent(), "No user is connected");
+
+        return lastConnectedUser.get();
+    }
+
+    public String getUserPassword(String user) {
+        Preconditions.checkArgument(passwordByUser.containsKey(user), "User has no password created yet");
+
+        return passwordByUser.get(user);
     }
 
     @Given("^a domain named \"([^\"]*)\"$")
@@ -96,16 +123,34 @@ public class UserStepdefs {
     
     @Given("^\"([^\"]*)\" is connected$")
     public void connectUser(String username) throws Throwable {
-        String password = passwordByUser.get(username);
-        Preconditions.checkState(password != null, "unknown user " + username);
-        AccessToken accessToken = HttpJmapAuthentication.authenticateJamesUser(mainStepdefs.baseUri(), username, password);
+        AccessToken accessToken = getTokenForUser(username);
         tokenByUser.put(username, accessToken);
-        lastConnectedUser = username;
+        lastConnectedUser = Optional.of(username);
+    }
+
+    public AccessToken getTokenForUser(String username) {
+        return tokenByUser.computeIfAbsent(username, (user) -> {
+            String password = passwordByUser.get(user);
+            Preconditions.checkState(password != null, "unknown user " + user);
+
+            return HttpJmapAuthentication.authenticateJamesUser(mainStepdefs.baseUri(), user, password);
+        });
     }
     
     @Given("^\"([^\"]*)\" shares its mailbox \"([^\"]*)\" with \"([^\"]*)\"$")
     public void shareMailbox(String owner, String mailbox, String shareTo) throws Throwable {
-        throw new PendingException();
+        MailboxPath mailboxPath = MailboxPath.forUser(owner, mailbox);
+        MailboxACL.Rfc4314Rights rights = new MailboxACL.Rfc4314Rights(MailboxACL.Right.Lookup, MailboxACL.Right.Read);
+
+        mainStepdefs.aclProbe.addRights(mailboxPath, shareTo, rights);
+    }
+
+    @Given("^\"([^\"]*)\" shares its mailbox \"([^\"]*)\" with \"([^\"]*)\" with rights \"([^\"]*)\"$")
+    public void shareMailbox(String owner, String mailbox, String shareTo, String rights) throws Throwable {
+        mainStepdefs.jmapServer.getProbe(ACLProbeImpl.class)
+            .replaceRights(MailboxPath.forUser(owner, mailbox),
+                shareTo,
+                MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights(rights));
     }
 
     private String generatePassword(String username) {

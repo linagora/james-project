@@ -70,6 +70,10 @@ import com.google.common.collect.Sets;
 
 public class StoreMessageIdManager implements MessageIdManager {
 
+    private static MetadataWithMailboxId toMetadataWithMailboxId(MailboxMessage message) {
+        return new MetadataWithMailboxId(new SimpleMessageMetaData(message), message.getMailboxId());
+    }
+
     private static class MessageMoves {
         private final ImmutableSet<MailboxId> previousMailboxIds;
         private final ImmutableSet<MailboxId> targetMailboxIds;
@@ -100,10 +104,6 @@ public class StoreMessageIdManager implements MessageIdManager {
             this.messageMetaData = messageMetaData;
             this.mailboxId = mailboxId;
         }
-    }
-
-    private static MetadataWithMailboxId toMetadataWithMailboxId(MailboxMessage message) {
-        return new MetadataWithMailboxId(new SimpleMessageMetaData(message), message.getMailboxId());
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreMessageIdManager.class);

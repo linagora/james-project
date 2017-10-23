@@ -17,17 +17,16 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.probe;
+package org.apache.james.jmap.memory.cucumber;
 
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.junit.runner.RunWith;
 
-public interface ACLProbe {
-    void replaceRights(MailboxPath mailboxPath, String targetUser, Rfc4314Rights rights) throws MailboxException;
+import cucumber.api.CucumberOptions;
+import cucumber.api.junit.Cucumber;
 
-    void addRights(MailboxPath mailboxPath, String targetUser, Rfc4314Rights rights) throws MailboxException;
-
-    MailboxACL retrieveRights(MailboxPath mailboxPath) throws MailboxException;
+@RunWith(Cucumber.class)
+@CucumberOptions(features="classpath:cucumber/SetMessages.feature",
+                glue={"org.apache.james.jmap.methods.integration", "org.apache.james.jmap.memory.cucumber"},
+                strict = true)
+public class MemorySetMessagesMethodCucumberTest {
 }

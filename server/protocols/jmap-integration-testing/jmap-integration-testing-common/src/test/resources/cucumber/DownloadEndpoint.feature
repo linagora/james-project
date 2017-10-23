@@ -36,10 +36,6 @@ Feature: Download endpoint
     When "usera@domain.tld" checks for the availability of the attachment endpoint
     Then the user should be authorized
 
-  Scenario: An unauthenticated user should not have access to the download endpoint
-    When "usera@domain.tld" downloads "a1"
-    Then the user should not be authorized
-
   Scenario: A user should not have access to the download endpoint without the authentication token
     When "usera@domain.tld" downloads "a1" without any authentication token
     Then the user should not be authorized
@@ -80,13 +76,11 @@ Feature: Download endpoint
     When "usera@domain.tld" downloads "a1"
     Then the user should be authorized
 
-  @Ignore
   Scenario: An authenticated user should not have access to someone else attachment
     Given "userb@domain.tld" is connected
     When "userb@domain.tld" downloads "a1"
     Then the user should receive a not found response
 
-  @Ignore
   Scenario: An authenticated user should have access to a shared attachment
     Given "usera@domain.tld" shares its mailbox "INBOX" with "userb@domain.tld"
     And "userb@domain.tld" is connected
