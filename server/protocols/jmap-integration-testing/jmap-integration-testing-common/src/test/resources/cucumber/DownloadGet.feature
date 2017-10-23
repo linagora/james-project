@@ -82,7 +82,6 @@ Feature: Download GET
     When "bob@domain.tld" downloads "1"
     Then "bob@domain.tld" should receive a not found response
 
-  @only
   Scenario: User can download attachment of another user when shared mailbox
     Given "alice@domain.tld" mailbox "sharedMailbox" contains a message "1" with an attachment "2"
     And "alice@domain.tld" shares its mailbox "sharedMailbox" with "bob@domain.tld"
