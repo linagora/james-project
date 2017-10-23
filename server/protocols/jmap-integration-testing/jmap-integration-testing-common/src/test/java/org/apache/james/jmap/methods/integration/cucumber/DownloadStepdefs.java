@@ -156,6 +156,21 @@ public class DownloadStepdefs {
         downLoad(username, attachmentIdOrMessageId);
     }
 
+    @When("^un-authenticated user downloads \"([^\"]*)\"$")
+    public void downloadsUnAuthenticated(String blobId) throws Throwable {
+        String attachmentIdOrMessageId = Optional.ofNullable(blobIdByAttachmentId.get(blobId))
+            .orElse(Optional.ofNullable(inputToMessageId.get(blobId))
+                .map(MessageId::serialize)
+                .orElse(null));
+
+        response = Request.Get(
+            mainStepdefs.baseUri()
+                .setPath("/download/" + attachmentIdOrMessageId)
+                .build())
+            .execute()
+            .returnResponse();
+    }
+
     @When("^\"([^\"]*)\" downloads the message by its blobId$")
     public void downloads(String username) throws Throwable {
         downLoad(username, getMessagesMethodStepdefs.getBlobId());
@@ -176,6 +191,11 @@ public class DownloadStepdefs {
         if (accessToken != null) {
             request.addHeader("Authorization", accessToken.serialize());
         }
+        return request;
+    }
+
+    private Request unAuthenticatedDownloadRequest(URIBuilder uriBuilder, String blobId, String username) throws URISyntaxException {
+        Request request = Request.Get(uriBuilder.build());
         return request;
     }
 
