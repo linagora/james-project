@@ -55,8 +55,8 @@ public class ImapStepdefs {
     public void hasMessageInMailbox(String mailbox) throws Throwable {
         try (IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);) {
             assertThat(
-                imapMessageReader.userReceivedMessageInMailbox(userStepdefs.lastConnectedUser,
-                    userStepdefs.passwordByUser.get(userStepdefs.lastConnectedUser),
+                imapMessageReader.userReceivedMessageInMailbox(userStepdefs.getConnectedUser(),
+                    userStepdefs.getUserPassword(userStepdefs.getConnectedUser()),
                     mailbox))
                 .isTrue();
         }
@@ -66,8 +66,8 @@ public class ImapStepdefs {
     public void hasANotificationAboutNewMessagesInMailbox(int numOfNewMessage, String mailbox) throws Throwable {
         try (IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);) {
             assertThat(
-                imapMessageReader.userGetNotifiedForNewMessagesWhenSelectingMailbox(userStepdefs.lastConnectedUser,
-                    userStepdefs.passwordByUser.get(userStepdefs.lastConnectedUser),
+                imapMessageReader.userGetNotifiedForNewMessagesWhenSelectingMailbox(userStepdefs.getConnectedUser(),
+                    userStepdefs.getUserPassword(userStepdefs.getConnectedUser()),
                     numOfNewMessage, mailbox))
                 .isTrue();
         }
@@ -77,8 +77,8 @@ public class ImapStepdefs {
     public void hasNoMessageInMailbox(String mailbox) throws Throwable {
         try (IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);) {
             assertThat(
-                imapMessageReader.userDoesNotReceiveMessageInMailbox(userStepdefs.lastConnectedUser,
-                    userStepdefs.passwordByUser.get(userStepdefs.lastConnectedUser),
+                imapMessageReader.userDoesNotReceiveMessageInMailbox(userStepdefs.getConnectedUser(),
+                    userStepdefs.getUserPassword(userStepdefs.getConnectedUser()),
                     mailbox))
                 .isTrue();
         }
@@ -88,8 +88,8 @@ public class ImapStepdefs {
     public void openImapConnectionAndSelectMailbox(String mailbox) throws Throwable {
         IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);
 
-        String login = userStepdefs.lastConnectedUser;
-        String password = userStepdefs.passwordByUser.get(login);
+        String login = userStepdefs.getConnectedUser();
+        String password = userStepdefs.getUserPassword(login);
 
         imapMessageReader.connectAndSelect(login, password, mailbox);
         imapConnections.put(mailbox, imapMessageReader);
@@ -113,8 +113,8 @@ public class ImapStepdefs {
     public void copyAMessageByIMAP(String srcMailbox, String destMailbox) throws Throwable {
         IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);
 
-        String login = userStepdefs.lastConnectedUser;
-        String password = userStepdefs.passwordByUser.get(login);
+        String login = userStepdefs.getConnectedUser();
+        String password = userStepdefs.getUserPassword(login);
 
         imapMessageReader.connectAndSelect(login, password, srcMailbox);
         assertThat(imapMessageReader).isNotNull();
