@@ -62,6 +62,18 @@ public class ImapStepdefs {
         }
     }
 
+    @Then("^the message is \"([^\"]*)\" on \"([^\"]*)\"$")
+    public void hasMessageWithFlagInMailbox(String flags, String mailbox) throws Throwable {
+        try (IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);) {
+            assertThat(
+                imapMessageReader.userReceivedMessageWithFlagsInMailbox(userStepdefs.getConnectedUser(),
+                    userStepdefs.getUserPassword(userStepdefs.getConnectedUser()),
+                    mailbox,
+                    flags))
+                .isTrue();
+        }
+    }
+
     @Then("^the user has a IMAP notification about (\\d+) new message when selecting mailbox \"([^\"]*)\"$")
     public void hasANotificationAboutNewMessagesInMailbox(int numOfNewMessage, String mailbox) throws Throwable {
         try (IMAPMessageReader imapMessageReader = new IMAPMessageReader(LOCALHOST, IMAP_PORT);) {

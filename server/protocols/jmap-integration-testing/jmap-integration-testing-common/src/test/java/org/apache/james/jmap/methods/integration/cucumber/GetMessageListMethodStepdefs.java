@@ -32,6 +32,8 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.modules.MailboxProbeImpl;
 
+import com.github.steveash.guavate.Guavate;
+import com.google.common.base.Joiner;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -57,6 +59,26 @@ public class GetMessageListMethodStepdefs {
         this.mainStepdefs = mainStepdefs;
         this.userStepdefs = userStepdefs;
         this.messagesMethodStepdefs = messagesMethodStepdefs;
+    }
+
+    @When("^the user asks for message list in mailboxes \"([^\"]*)\" with flag \"([^\"]*)\"$")
+    public void getMessageList(List<String> mailboxes, String flag) throws Exception {
+        String mailboxIds = Joiner.on("\",\"")
+            .join(mailboxes.stream()
+                .map(mailbox -> mainStepdefs.jmapServer
+                    .getProbe(MailboxProbeImpl.class)
+                    .getMailbox(MailboxConstants.USER_NAMESPACE, userStepdefs.getConnectedUser(), mailbox)
+                    .getMailboxId()
+                    .serialize())
+                .collect(Guavate.toImmutableList()));
+
+        post(String.format(
+                "[[\"getMessageList\", {\"filter\":{" +
+                "    \"inMailboxes\":[\"%s\"]," +
+                "    \"hasKeyword\":\"%s\"" +
+                "}}, \"#0\"]]",
+            mailboxIds,
+            flag));
     }
 
     @When("^the user asks for message list in mailbox \"([^\"]*)\" with flag \"([^\"]*)\"$")

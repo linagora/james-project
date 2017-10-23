@@ -677,6 +677,12 @@ public class GetMessagesMethodStepdefs {
             .containsOnlyElementsOf(keywords);
     }
 
+    @Then("^the empty keywords of the message$")
+    public void assertKeywordsOfMessageShouldNotDisplay() throws Exception {
+        assertThat(jsonPath.<Map<String, Boolean>>read(FIRST_MESSAGE + ".keywords"))
+            .isNullOrEmpty();
+    }
+
     private void assertAttachment(String attachment, DataTable attachmentProperties) {
         attachmentProperties.asList(TableRow.class)
             .forEach(entry -> assertThat(jsonPath.<Object>read(attachment + "." + entry.getKey())).isEqualTo(entry.getValue()));

@@ -23,13 +23,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.mail.Flags;
 
 import org.apache.http.entity.ContentType;
 import org.apache.http.client.fluent.Request;
+import org.apache.james.jmap.model.Keywords;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.modules.MailboxProbeImpl;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
 import cucumber.api.java.en.When;
 import cucumber.runtime.java.guice.ScenarioScoped;
@@ -133,6 +136,20 @@ public class SetMessagesMethodStepdefs {
                 ContentType.APPLICATION_JSON)
             .execute()
             .discardContent();
+        mainStepdefs.awaitMethod.run();
+    }
+
+    @When("^the user set flags (.*) via messageIdProbe of \"([^\"]*)\" on \"([^\"]*)\" of user \"([^\"]*)\"")
+    public void setDraftFlag(List<String> keywords, String message, String mailbox, String mailboxOwner) throws Exception {
+        Flags newFlags = Keywords.factory().fromList(keywords).asFlags();
+        String username = userStepdefs.getConnectedUser();
+        MessageId messageId = getMessagesMethodStepdefs.getMessageId(message);
+        MailboxId mailboxId = mainStepdefs.jmapServer
+            .getProbe(MailboxProbeImpl.class)
+            .getMailbox(MailboxConstants.USER_NAMESPACE, mailboxOwner, mailbox)
+            .getMailboxId();
+
+        mainStepdefs.messageIdProbe.setFlag(username, newFlags, messageId, ImmutableList.of(mailboxId));
         mainStepdefs.awaitMethod.run();
     }
 }

@@ -65,6 +65,13 @@ public class IMAPMessageReader implements Closeable {
             .contains("OK FETCH completed");
     }
 
+    public boolean userReceivedMessageWithFlagsInMailbox(String user, String password, String mailbox, String flags) throws IOException {
+        connectAndSelect(user, password, mailbox);
+        imapClient.fetch("1:1", "ALL");
+        String replyString = imapClient.getReplyString();
+        return replyString.contains("OK FETCH completed") && replyString.contains(flags);
+    }
+
     public boolean userGetNotifiedForNewMessagesWhenSelectingMailbox(String user, String password, int numOfNewMessage, String mailboxName) throws IOException {
         connectAndSelect(user, password, mailboxName);
 
