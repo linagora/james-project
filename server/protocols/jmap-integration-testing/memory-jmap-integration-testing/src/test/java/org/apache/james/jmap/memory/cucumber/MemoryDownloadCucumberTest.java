@@ -28,7 +28,6 @@ import cucumber.api.junit.Cucumber;
 @CucumberOptions(features={"classpath:cucumber/DownloadEndpoint.feature", "classpath:cucumber/DownloadGet.feature", "classpath:cucumber/DownloadPost.feature"},
                 glue={"org.apache.james.jmap.methods.integration", "org.apache.james.jmap.memory.cucumber"},
                 tags = {"~@Ignore"},
-                //tags = {"@only"},
                 strict = true)
 public class MemoryDownloadCucumberTest {
 }
