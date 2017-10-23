@@ -71,7 +71,7 @@ public class MyRightsProcessor extends AbstractMailboxProcessor<MyRightsRequest>
             MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
             // Check that mailbox exists
             mailboxManager.getMailbox(mailboxPath, mailboxSession);
-            Rfc4314Rights myRights = mailboxManager.myRights(mailboxPath, mailboxSession);
+            Rfc4314Rights myRights = mailboxManager.getRightManager().myRights(mailboxPath, mailboxSession);
 
             /*
              * RFC 4314 section 6. An implementation MUST make sure the ACL

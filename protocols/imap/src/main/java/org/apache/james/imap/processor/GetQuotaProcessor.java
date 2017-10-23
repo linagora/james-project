@@ -101,7 +101,7 @@ public class GetQuotaProcessor extends AbstractMailboxProcessor<GetQuotaRequest>
         final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
         List<MailboxPath> mailboxList = quotaRootResolver.retrieveAssociatedMailboxes(quotaRootResolver.createQuotaRoot(quotaRoot), mailboxSession);
         for(MailboxPath mailboxPath : mailboxList) {
-            if(getMailboxManager().hasRight(mailboxPath, MailboxACL.Right.Read, mailboxSession)) {
+            if(getMailboxManager().getRightManager().hasRight(mailboxPath, MailboxACL.Right.Read, mailboxSession)) {
                 return true;
             }
         }

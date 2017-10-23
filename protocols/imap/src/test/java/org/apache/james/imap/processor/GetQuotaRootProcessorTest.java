@@ -92,7 +92,7 @@ public class GetQuotaRootProcessorTest {
         expectations.allowing(mockedQuotaRootResolver).getQuotaRoot(expectations.with(MAILBOX_PATH));
         expectations.will(Expectations.returnValue(QUOTA_ROOT));
 
-        expectations.allowing(mockedMailboxManager).hasRight(expectations.with(MAILBOX_PATH),
+        expectations.allowing(mockedMailboxManager).getRightManager().hasRight(expectations.with(MAILBOX_PATH),
             expectations.with(MailboxACL.Right.Read), expectations.with(mailboxSession));
         expectations.will(Expectations.returnValue(true));
 
@@ -135,7 +135,7 @@ public class GetQuotaRootProcessorTest {
         expectations.allowing(mockedImapSession).getAttribute(expectations.with(ImapSessionUtils.MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY));
         expectations.will(Expectations.returnValue(mailboxSession));
 
-        expectations.allowing(mockedMailboxManager).hasRight(expectations.with(MAILBOX_PATH),
+        expectations.allowing(mockedMailboxManager).getRightManager().hasRight(expectations.with(MAILBOX_PATH),
             expectations.with(MailboxACL.Right.Read), expectations.with(mailboxSession));
         expectations.will(Expectations.throwException(new MailboxException()));
 
@@ -166,7 +166,7 @@ public class GetQuotaRootProcessorTest {
         expectations.allowing(mockedImapSession).getAttribute(expectations.with(ImapSessionUtils.MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY));
         expectations.will(Expectations.returnValue(mailboxSession));
 
-        expectations.allowing(mockedMailboxManager).hasRight(expectations.with(MAILBOX_PATH),
+        expectations.allowing(mockedMailboxManager).getRightManager().hasRight(expectations.with(MAILBOX_PATH),
             expectations.with(MailboxACL.Right.Read), expectations.with(mailboxSession));
         expectations.will(Expectations.returnValue(false));
 

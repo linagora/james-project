@@ -190,7 +190,7 @@ public class MailboxFactoryTest {
     public void getNamespaceShouldReturnDelegatedNamespaceWhenUserMailboxPathAndUserMailboxSessionAreNotTheSame() throws Exception {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
-        mailboxManager.applyRightsCommand(inbox,
+        mailboxManager.getRightManager().applyRightsCommand(inbox,
             MailboxACL.command()
                 .forUser(otherUser)
                 .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
@@ -230,7 +230,7 @@ public class MailboxFactoryTest {
     public void delegatedUserShouldHaveMayAddItemsWhenAllowedToInsert() throws Exception {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
-        mailboxManager.applyRightsCommand(inbox,
+        mailboxManager.getRightManager().applyRightsCommand(inbox,
             MailboxACL.command()
                 .forUser(otherUser)
                 .rights(MailboxACL.Right.Insert, MailboxACL.Right.Lookup)
@@ -255,7 +255,7 @@ public class MailboxFactoryTest {
     public void delegatedUserShouldHaveMayReadItemsWhenAllowedToRead() throws Exception {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
-        mailboxManager.applyRightsCommand(inbox,
+        mailboxManager.getRightManager().applyRightsCommand(inbox,
             MailboxACL.command()
                 .forUser(otherUser)
                 .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
@@ -280,7 +280,7 @@ public class MailboxFactoryTest {
     public void delegatedUserShouldHaveMayRemoveItemsWhenAllowedToRemoveItems() throws Exception {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
-        mailboxManager.applyRightsCommand(inbox,
+        mailboxManager.getRightManager().applyRightsCommand(inbox,
             MailboxACL.command()
                 .forUser(otherUser)
                 .rights(MailboxACL.Right.DeleteMessages, MailboxACL.Right.Lookup)
