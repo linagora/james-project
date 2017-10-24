@@ -46,7 +46,7 @@ public class ACLProbeImpl implements GuiceProbe, ACLProbe {
         MailboxSession mailboxSession = mailboxManager.createSystemSession(mailboxPath.getUser());
 
         ACLCommand command = MailboxACL.command().forUser(targetUser).rights(rights).asReplacement();
-        mailboxManager.applyRightsCommand(mailboxPath, command, mailboxSession);
+        mailboxManager.getRightManager().applyRightsCommand(mailboxPath, command, mailboxSession);
     }
 
     @Override

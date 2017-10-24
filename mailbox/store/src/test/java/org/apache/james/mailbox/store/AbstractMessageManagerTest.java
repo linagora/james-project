@@ -58,8 +58,8 @@ public abstract class AbstractMessageManagerTest {
 
     @Test
     public void getMetadataShouldListUsersAclWhenShared() throws Exception {
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(BOB).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(CEDRIC).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
+        mailboxManager.getRightManager().applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(BOB).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
+        mailboxManager.getRightManager().applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(CEDRIC).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
         MessageManager messageManager = mailboxManager.getMailbox(INBOX_ALICE, aliceSession);
 
         MessageManager.MetaData actual = messageManager.getMetaData(NO_RESET_RECENT, aliceSession, MessageManager.MetaData.FetchGroup.NO_COUNT);
@@ -68,8 +68,8 @@ public abstract class AbstractMessageManagerTest {
 
     @Test
     public void getMetadataShouldNotExposeOtherUsersWhenSessionIsNotOwner() throws Exception {
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(BOB).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(CEDRIC).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
+        mailboxManager.getRightManager().applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(BOB).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
+        mailboxManager.getRightManager().applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(CEDRIC).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
         MessageManager messageManager = mailboxManager.getMailbox(INBOX_ALICE, aliceSession);
 
         MessageManager.MetaData actual = messageManager.getMetaData(NO_RESET_RECENT, bobSession, MessageManager.MetaData.FetchGroup.NO_COUNT);

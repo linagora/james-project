@@ -83,11 +83,11 @@ public class GetACLProcessor extends AbstractMailboxProcessor<GetACLRequest> imp
              * would be used if the mailbox did not exist, thus revealing no
              * existence information, much less the mailbox’s ACL.
              */
-            if (!mailboxManager.hasRight(mailboxPath, MailboxACL.Right.Lookup, mailboxSession)) {
+            if (!mailboxManager.getRightManager().hasRight(mailboxPath, MailboxACL.Right.Lookup, mailboxSession)) {
                 no(command, tag, responder, HumanReadableText.MAILBOX_NOT_FOUND);
             }
             /* RFC 4314 section 4. */
-            else if (!mailboxManager.hasRight(mailboxPath, MailboxACL.Right.Administer, mailboxSession)) {
+            else if (!mailboxManager.getRightManager().hasRight(mailboxPath, MailboxACL.Right.Administer, mailboxSession)) {
                 Object[] params = new Object[] {
                         MailboxACL.Right.Administer.toString(),
                         command.getName(),

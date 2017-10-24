@@ -28,21 +28,20 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
-import com.github.fge.lambdas.runnable.ThrowingRunnable;
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxConstants;
+import org.apache.james.mailbox.model.MailboxPath;
 
 import com.github.fge.lambdas.Throwing;
+import com.github.fge.lambdas.runnable.ThrowingRunnable;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 
-import cucumber.api.PendingException;
 import cucumber.api.java.en.Given;
 import cucumber.runtime.java.guice.ScenarioScoped;
-import org.apache.james.mailbox.model.MailboxPath;
 
 @ScenarioScoped
 public class UserStepdefs {
@@ -123,12 +122,12 @@ public class UserStepdefs {
     
     @Given("^\"([^\"]*)\" is connected$")
     public void connectUser(String username) throws Throwable {
-        AccessToken accessToken = getTokenForUser(username);
+        AccessToken accessToken = authenticate(username);
         tokenByUser.put(username, accessToken);
         lastConnectedUser = Optional.of(username);
     }
 
-    public AccessToken getTokenForUser(String username) {
+    public AccessToken authenticate(String username) {
         return tokenByUser.computeIfAbsent(username, (user) -> {
             String password = passwordByUser.get(user);
             Preconditions.checkState(password != null, "unknown user " + user);
