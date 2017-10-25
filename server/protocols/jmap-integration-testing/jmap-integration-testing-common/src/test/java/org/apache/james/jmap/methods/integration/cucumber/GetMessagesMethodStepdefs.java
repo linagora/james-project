@@ -38,8 +38,6 @@ import javax.mail.Flags;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.fluent.Request;
 import org.apache.james.jmap.DefaultMailboxes;
 import org.apache.james.jmap.methods.integration.cucumber.util.TableRow;
 import org.apache.james.jmap.model.MessagePreviewGenerator;
@@ -57,10 +55,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.Option;
 
 import cucumber.api.DataTable;
 import cucumber.api.java.en.Given;
@@ -83,16 +77,17 @@ public class GetMessagesMethodStepdefs {
 
     private final MainStepdefs mainStepdefs;
     private final UserStepdefs userStepdefs;
+    private final HttpClient httpClient;
     private final Map<String, MessageId> messageIdsByName;
 
-    private HttpResponse response;
-    private DocumentContext jsonPath;
     private List<MessageId> requestedMessageIds;
 
     @Inject
-    private GetMessagesMethodStepdefs(MainStepdefs mainStepdefs, UserStepdefs userStepdefs) {
+    private GetMessagesMethodStepdefs(MainStepdefs mainStepdefs, UserStepdefs userStepdefs,
+                                      HttpClient httpClient) {
         this.mainStepdefs = mainStepdefs;
         this.userStepdefs = userStepdefs;
+        this.httpClient = httpClient;
         this.messageIdsByName = new HashMap<>();
     }
 
@@ -209,7 +204,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with two attachments$")
     public void appendHtmlMessageWithTwoAttachments(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/twoAttachments.eml");
+        appendMessage(messageName, mailbox, "eml/twoAttachments.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with two attachments$")
@@ -224,7 +219,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with two attachments in text$")
     public void appendTextMessageWithTwoAttachments(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/twoAttachmentsTextPlain.eml");
+        appendMessage(messageName, mailbox, "eml/twoAttachmentsTextPlain.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with two same attachments in text$")
@@ -234,17 +229,17 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with two same attachments in text$")
     public void appendTextMessageWithTwoSameAttachments(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/twoSameAttachments.eml");
+        appendMessage(messageName, mailbox, "eml/twoSameAttachments.eml");
     }
 
     @Given("^\"([^\"]*)\" has a multipart message \"([^\"]*)\" in \"([^\"]*)\" mailbox$")
-    public void appendMultipartMessageWithOneAttachments(String username, String messageName, String arg1) throws Throwable {
-        userStepdefs.execWithUser(username, () -> appendMultipartMessageWithOneAttachments(messageName, arg1));
+    public void appendMultipartMessageWithOneAttachments(String username, String messageName, String mailbox) throws Throwable {
+        userStepdefs.execWithUser(username, () -> appendMultipartMessageWithOneAttachments(messageName, mailbox));
     }
 
     @Given("^the user has a multipart message \"([^\"]*)\" in \"([^\"]*)\" mailbox$")
-    public void appendMultipartMessageWithOneAttachments(String messageName, String arg1) throws Exception {
-        appendMessage(messageName, "eml/htmlAndTextMultipartWithOneAttachment.eml");
+    public void appendMultipartMessageWithOneAttachments(String messageName, String mailbox) throws Exception {
+        appendMessage(messageName, mailbox, "eml/htmlAndTextMultipartWithOneAttachment.eml");
     }
 
     @Given("\"([^\"]*)\" has a multipart/related message \"([^\"]*)\" in \"([^\"]*)\" mailbox$")
@@ -254,7 +249,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a multipart/related message \"([^\"]*)\" in \"([^\"]*)\" mailbox$")
     public void appendMultipartRelated(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/multipartRelated.eml");
+        appendMessage(messageName, mailbox, "eml/multipartRelated.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox beginning by a long line$")
@@ -264,7 +259,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox beginning by a long line$")
     public void appendMessageBeginningByALongLine(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/longLine.eml");
+        appendMessage(messageName, mailbox, "eml/longLine.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with plain/text inline attachment$")
@@ -274,7 +269,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with plain/text inline attachment$")
     public void appendMessageWithPlainTextInlineAttachment(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/embeddedMultipartWithInlineTextAttachment.eml");
+        appendMessage(messageName, mailbox, "eml/embeddedMultipartWithInlineTextAttachment.eml");
     }
 
 
@@ -285,7 +280,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with text in main multipart and html in inner multipart$")
     public void appendMessageWithTextInMainMultipartAndHtmlInInnerMultipart(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/textInMainMultipartHtmlInInnerMultipart.eml");
+        appendMessage(messageName, mailbox, "eml/textInMainMultipartHtmlInInnerMultipart.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with html body and no text body$")
@@ -295,7 +290,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with html body and no text body$")
     public void appendMessageWithNoTextButHtml(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/noTextBodyButHtmlBody.eml");
+        appendMessage(messageName, mailbox, "eml/noTextBodyButHtmlBody.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with inline attachment but no CID$")
@@ -305,7 +300,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with inline attachment but no CID$")
     public void appendMessageWithInlineAttachmentButNoCid(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/mailWithInlinedAttachmentButNoCid.eml");
+        appendMessage(messageName, mailbox, "eml/mailWithInlinedAttachmentButNoCid.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with inline attachment and blank CID$")
@@ -315,7 +310,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with inline attachment and blank CID$")
     public void appendMessageWithInlineAttachmentAndBlankCid(String messageName, String mailbox) throws Throwable {
-        appendMessage(messageName, "eml/mailWithInlinedAttachmentAndBlankCid.eml");
+        appendMessage(messageName, mailbox, "eml/mailWithInlinedAttachmentAndBlankCid.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with HTML body with many empty tags$")
@@ -325,7 +320,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with HTML body with many empty tags$")
     public void appendMessageWithNoPreview(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/htmlBodyWithManyEmptyTags.eml");
+        appendMessage(messageName, mailbox, "eml/htmlBodyWithManyEmptyTags.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in the \"([^\"]*)\" mailbox with multiple same inlined attachments \"([^\"]*)\"$")
@@ -335,7 +330,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in the \"([^\"]*)\" mailbox with multiple same inlined attachments \"([^\"]*)\"$")
     public void appendMessageWithSameInlinedAttachmentsToMailbox(String messageName, String mailbox, String attachmentId) throws Exception {
-        appendMessage(messageName, "eml/sameInlinedImages.eml");
+        appendMessage(messageName, mailbox, "eml/sameInlinedImages.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with specific charset$")
@@ -345,7 +340,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with specific charset$")
     public void appendMessageWithSpecificCharset(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/windows1252charset.eml");
+        appendMessage(messageName, mailbox, "eml/windows1252charset.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with long and complicated HTML content$")
@@ -355,7 +350,7 @@ public class GetMessagesMethodStepdefs {
 
     @Given("^the user has a message \"([^\"]*)\" in \"([^\"]*)\" mailbox with long and complicated HTML content$")
     public void appendMessageWithSpecialCase(String messageName, String mailbox) throws Exception {
-        appendMessage(messageName, "eml/htmlWithLongAndComplicatedContent.eml");
+        appendMessage(messageName, mailbox, "eml/htmlWithLongAndComplicatedContent.eml");
     }
 
     @Given("^\"([^\"]*)\" has a message \"([^\"]*)\" in the \"([^\"]*)\" mailbox with flags \"([^\"]*)\"$")
@@ -379,13 +374,15 @@ public class GetMessagesMethodStepdefs {
         messageIdsByName.put(messageName, id);
     }
 
-    private void appendMessage(String messageName, String emlFileName) throws Exception {
+    private void appendMessage(String messageName, String mailbox, String emlFileName) throws Exception {
         ZonedDateTime dateTime = ZonedDateTime.parse("2014-10-30T14:12:00Z");
+
         MessageId id = mainStepdefs.mailboxProbe.appendMessage(userStepdefs.getConnectedUser(),
-            MailboxPath.forUser(userStepdefs.getConnectedUser(), DefaultMailboxes.INBOX),
-            ClassLoader.getSystemResourceAsStream(emlFileName),
-            Date.from(dateTime.toInstant()), false, new Flags())
-            .getMessageId();
+            MailboxPath.forUser(userStepdefs.getConnectedUser(), mailbox),
+                ClassLoader.getSystemResourceAsStream(emlFileName),
+                Date.from(dateTime.toInstant()), false, new Flags())
+                    .getMessageId();
+
         messageIdsByName.put(messageName, id);
     }
 
@@ -396,7 +393,7 @@ public class GetMessagesMethodStepdefs {
 
     @When("^\the user ask for messages using its accountId$")
     public void postWithAccountId() throws Exception {
-        post("[[\"getMessages\", {\"accountId\": \"1\"}, \"#0\"]]");
+        httpClient.post("[[\"getMessages\", {\"accountId\": \"1\"}, \"#0\"]]");
     }
 
     @When("^\"([^\"]*)\" ask for messages using unknown arguments$")
@@ -406,12 +403,12 @@ public class GetMessagesMethodStepdefs {
 
     @When("^the user ask for messages using unknown arguments$")
     public void postWithUnknownArguments() throws Exception {
-        post("[[\"getMessages\", {\"WAT\": true}, \"#0\"]]");
+        httpClient.post("[[\"getMessages\", {\"WAT\": true}, \"#0\"]]");
     }
 
     @When("^the user ask for messages using invalid argument$")
     public void postWithInvalidArguments() throws Exception {
-        post("[[\"getMessages\", {\"ids\": null}, \"#0\"]]");
+        httpClient.post("[[\"getMessages\", {\"ids\": null}, \"#0\"]]");
     }
 
     @When("^\"([^\"]*)\" ask for messages using invalid argument$")
@@ -421,7 +418,7 @@ public class GetMessagesMethodStepdefs {
 
     @When("^the user ask for messages$")
     public void post() throws Exception {
-        post("[[\"getMessages\", {\"ids\": []}, \"#0\"]]");
+        httpClient.post("[[\"getMessages\", {\"ids\": []}, \"#0\"]]");
     }
 
     @When("^\"(.*?)\" ask for messages$")
@@ -458,7 +455,7 @@ public class GetMessagesMethodStepdefs {
             .map(MessageId::serialize)
             .map(toJsonString())
             .collect(Collectors.joining(",", "[", "]" ));
-        post("[[\"getMessages\", {\"ids\": " + serializedIds + "}, \"#0\"]]");
+        httpClient.post("[[\"getMessages\", {\"ids\": " + serializedIds + "}, \"#0\"]]");
     }
 
     private Function<? super String, ? extends String> toJsonString() {
@@ -485,7 +482,7 @@ public class GetMessagesMethodStepdefs {
             .map(toJsonString())
             .collect(Collectors.joining(",", "[", "]" ));
 
-        post("[[\"getMessages\", {\"ids\": " + serializedIds + ", \"properties\": " + serializedProperties + "}, \"#0\"]]");
+        httpClient.post("[[\"getMessages\", {\"ids\": " + serializedIds + ", \"properties\": " + serializedProperties + "}, \"#0\"]]");
     }
 
     private Pair<String, String> entryToPair(Map.Entry<String, String> entry) {
@@ -496,71 +493,61 @@ public class GetMessagesMethodStepdefs {
         return Joiner.on(": ").join(pair);
     }
 
-    private void post(String requestBody) throws Exception {
-        response = Request.Post(mainStepdefs.baseUri().setPath("/jmap").build())
-            .addHeader("Authorization", userStepdefs.getTokenForUser(userStepdefs.getConnectedUser()).serialize())
-            .addHeader("Accept", org.apache.http.entity.ContentType.APPLICATION_JSON.getMimeType())
-            .bodyString(requestBody, org.apache.http.entity.ContentType.APPLICATION_JSON)
-            .execute()
-            .returnResponse();
-        jsonPath = JsonPath.using(Configuration.defaultConfiguration().addOptions(Option.SUPPRESS_EXCEPTIONS)).parse(response.getEntity().getContent());
-    }
-
     @Then("^an error \"([^\"]*)\" is returned$")
     public void error(String type) throws Exception {
-        assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
-        assertThat(jsonPath.<String>read(NAME)).isEqualTo("error");
-        assertThat(jsonPath.<String>read(ARGUMENTS + ".type")).isEqualTo(type);
+        assertThat(httpClient.response.getStatusLine().getStatusCode()).isEqualTo(200);
+        assertThat(httpClient.jsonPath.<String>read(NAME)).isEqualTo("error");
+        assertThat(httpClient.jsonPath.<String>read(ARGUMENTS + ".type")).isEqualTo(type);
     }
 
     @Then("^no error is returned$")
     public void noError() throws Exception {
-        assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
-        assertThat(jsonPath.<String>read(NAME)).isEqualTo("messages");
+        assertThat(httpClient.response.getStatusLine().getStatusCode()).isEqualTo(200);
+        assertThat(httpClient.jsonPath.<String>read(NAME)).isEqualTo("messages");
     }
 
     @Then("^the list of unknown messages is empty$")
     public void assertNotFoundIsEmpty() {
-        assertThat(jsonPath.<List<String>>read(ARGUMENTS + ".notFound")).isEmpty();
+        assertThat(httpClient.jsonPath.<List<String>>read(ARGUMENTS + ".notFound")).isEmpty();
     }
 
     @Then("^the list of messages is empty$")
     public void assertListIsEmpty() {
-        assertThat(jsonPath.<List<String>>read(ARGUMENTS + ".list")).isEmpty();
+        assertThat(httpClient.jsonPath.<List<String>>read(ARGUMENTS + ".list")).isEmpty();
     }
 
     @Then("^the description is \"(.*?)\"$")
     public void assertDescription(String description) throws Exception {
-        assertThat(jsonPath.<String>read(ARGUMENTS + ".description")).isEqualTo(description);
+        assertThat(httpClient.jsonPath.<String>read(ARGUMENTS + ".description")).isEqualTo(description);
     }
 
     @Then("^the notFound list should contain \"([^\"]*)\"$")
     public void assertNotFoundListContains(String ids) throws Exception {
-        assertThat(jsonPath.<List<String>>read(ARGUMENTS + ".notFound")).contains(ids);
+        assertThat(httpClient.jsonPath.<List<String>>read(ARGUMENTS + ".notFound")).contains(ids);
     }
 
     @Then("^the notFound list should contain the requested message id$")
     public void assertNotFoundListContainsRequestedMessages() throws Exception {
         ImmutableList<String> elements = requestedMessageIds.stream().map(MessageId::serialize).collect(Guavate.toImmutableList());
-        assertThat(jsonPath.<List<String>>read(ARGUMENTS + ".notFound")).containsExactlyElementsOf(elements);
+        assertThat(httpClient.jsonPath.<List<String>>read(ARGUMENTS + ".notFound")).containsExactlyElementsOf(elements);
     }
 
 
     @Then("^the list should contain (\\d+) message$")
     public void assertListContains(int numberOfMessages) throws Exception {
-        assertThat(jsonPath.<List<String>>read(ARGUMENTS + ".list")).hasSize(numberOfMessages);
+        assertThat(httpClient.jsonPath.<List<String>>read(ARGUMENTS + ".list")).hasSize(numberOfMessages);
     }
 
     @Then("^the id of the message is \"([^\"]*)\"$")
     public void assertIdOfTheFirstMessage(String messageName) throws Exception {
         MessageId id = messageIdsByName.get(messageName);
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + ".id")).isEqualTo(id.serialize());
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".id")).isEqualTo(id.serialize());
     }
 
     @Then("^the message is in \"([^\"]*)\" mailboxes")
-    public void assertMailboxIdsOfTheFirstMessage(String mailboxIds) throws Exception {
+    public void assertMailboxNamesOfTheFirstMessage(String mailboxNames) throws Exception {
         List<String> values = Splitter.on(",")
-            .splitToList(mailboxIds).stream()
+            .splitToList(mailboxNames).stream()
             .map(Throwing.function(name -> mainStepdefs.jmapServer
                 .getProbe(MailboxProbeImpl.class)
                 .getMailbox(MailboxConstants.USER_NAMESPACE, userStepdefs.getConnectedUser(), name)
@@ -568,52 +555,69 @@ public class GetMessagesMethodStepdefs {
                 .serialize()))
             .distinct()
             .collect(Guavate.toImmutableList());
-        assertThat(jsonPath.<JSONArray>read(FIRST_MESSAGE + ".mailboxIds"))
-            .hasSize(2)
+        assertThat(httpClient.jsonPath.<JSONArray>read(FIRST_MESSAGE + ".mailboxIds"))
+            .hasSize(values.size())
+            .containsOnlyElementsOf(values);
+    }
+
+    @Then("^\"([^\"]*)\" should see message \"([^\"]*)\" in mailboxes:$")
+    public void assertMailboxesOfMessage(String user, String messageId, DataTable userMailboxes) throws Exception {
+        userStepdefs.execWithUser(user, () -> postWithAListOfIds(ImmutableList.of(messageId)));
+
+        List<String> values = userMailboxes.asMap(String.class, String.class).entrySet().stream()
+            .map(Throwing.function(userMailbox -> mainStepdefs.jmapServer
+                .getProbe(MailboxProbeImpl.class)
+                .getMailbox(MailboxConstants.USER_NAMESPACE, userMailbox.getKey(), userMailbox.getValue())
+                .getMailboxId()
+                .serialize()))
+            .distinct()
+            .collect(Guavate.toImmutableList());
+        assertThat(httpClient.jsonPath.<JSONArray>read(FIRST_MESSAGE + ".mailboxIds"))
+            .hasSize(values.size())
             .containsOnlyElementsOf(values);
     }
 
     @Then("^the threadId of the message is \"([^\"]*)\"$")
     public void assertThreadIdOfTheFirstMessage(String threadId) throws Exception {
         MessageId id = messageIdsByName.get(threadId);
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + ".threadId")).isEqualTo(id.serialize());
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".threadId")).isEqualTo(id.serialize());
     }
 
     @Then("^the subject of the message is \"([^\"]*)\"$")
     public void assertSubjectOfTheFirstMessage(String subject) throws Exception {
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + ".subject")).isEqualTo(subject);
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".subject")).isEqualTo(subject);
     }
 
     @Then("^the textBody of the message is \"([^\"]*)\"$")
     public void assertTextBodyOfTheFirstMessage(String textBody) throws Exception {
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + ".textBody")).isEqualTo(StringEscapeUtils.unescapeJava(textBody));
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".textBody")).isEqualTo(StringEscapeUtils.unescapeJava(textBody));
     }
 
     @Then("^the htmlBody of the message is \"([^\"]*)\"$")
     public void assertHtmlBodyOfTheFirstMessage(String htmlBody) throws Exception {
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + ".htmlBody")).isEqualTo(StringEscapeUtils.unescapeJava(htmlBody));
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".htmlBody")).isEqualTo(StringEscapeUtils.unescapeJava(htmlBody));
     }
 
     @Then("^the isUnread of the message is \"([^\"]*)\"$")
     public void assertIsUnreadOfTheFirstMessage(String isUnread) throws Exception {
-        assertThat(jsonPath.<Boolean>read(FIRST_MESSAGE + ".isUnread")).isEqualTo(Boolean.valueOf(isUnread));
+        assertThat(httpClient.jsonPath.<Boolean>read(FIRST_MESSAGE + ".isUnread")).isEqualTo(Boolean.valueOf(isUnread));
     }
 
     @Then("^the preview of the message is \"([^\"]*)\"$")
     public void assertPreviewOfTheFirstMessage(String preview) throws Exception {
-        String actual = jsonPath.<String>read(FIRST_MESSAGE + ".preview").replace("\n", " ");
+        String actual = httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".preview").replace("\n", " ");
         assertThat(actual).isEqualToIgnoringWhitespace(StringEscapeUtils.unescapeJava(preview));
     }
 
     @Then("^the preview of the message is not empty$")
     public void assertPreviewOfTheFirstMessageIsNotEmpty() throws Exception {
-        String actual = jsonPath.<String>read(FIRST_MESSAGE + ".preview");
+        String actual = httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".preview");
         assertThat(actual).isNotEmpty();
     }
 
     @Then("^the preview should not contain consecutive spaces or blank characters$")
     public void assertPreviewShouldBeNormalized() throws Exception {
-        String actual = jsonPath.<String>read(FIRST_MESSAGE + ".preview");
+        String actual = httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".preview");
         assertThat(actual).hasSize(MessagePreviewGenerator.MAX_PREVIEW_LENGTH)
             .doesNotMatch("  ")
             .doesNotContain(StringUtils.CR)
@@ -622,37 +626,37 @@ public class GetMessagesMethodStepdefs {
 
     @Then("^the headers of the message contains:$")
     public void assertHeadersOfTheFirstMessage(DataTable headers) throws Exception {
-        assertThat(jsonPath.<Map<String, String>>read(FIRST_MESSAGE + ".headers")).containsAllEntriesOf(headers.asMap(String.class, String.class));
+        assertThat(httpClient.jsonPath.<Map<String, String>>read(FIRST_MESSAGE + ".headers")).containsAllEntriesOf(headers.asMap(String.class, String.class));
     }
 
     @Then("^the date of the message is \"([^\"]*)\"$")
     public void assertDateOfTheFirstMessage(String date) throws Exception {
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + ".date")).isEqualTo(date);
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".date")).isEqualTo(date);
     }
 
     @Then("^the hasAttachment of the message is \"([^\"]*)\"$")
     public void assertHasAttachmentOfTheFirstMessage(String hasAttachment) throws Exception {
-        assertThat(jsonPath.<Boolean>read(FIRST_MESSAGE + ".hasAttachment")).isEqualTo(Boolean.valueOf(hasAttachment));
+        assertThat(httpClient.jsonPath.<Boolean>read(FIRST_MESSAGE + ".hasAttachment")).isEqualTo(Boolean.valueOf(hasAttachment));
     }
 
     @Then("^the list of attachments of the message is empty$")
     public void assertAttachmentsOfTheFirstMessageIsEmpty() throws Exception {
-        assertThat(jsonPath.<List<Object>>read(ATTACHMENTS)).isEmpty();
+        assertThat(httpClient.jsonPath.<List<Object>>read(ATTACHMENTS)).isEmpty();
     }
 
     @Then("^the property \"([^\"]*)\" of the message is null$")
     public void assertPropertyIsNull(String property) throws Exception {
-        assertThat(jsonPath.<String>read(FIRST_MESSAGE + "." + property + ".date")).isNull();
+        assertThat(httpClient.jsonPath.<String>read(FIRST_MESSAGE + "." + property + ".date")).isNull();
     }
 
     @Then("^the list of attachments of the message contains (\\d+) attachments?$")
     public void assertAttachmentsHasSize(int numberOfAttachments) throws Exception {
-        assertThat(jsonPath.<List<Object>>read(ATTACHMENTS)).hasSize(numberOfAttachments);
+        assertThat(httpClient.jsonPath.<List<Object>>read(ATTACHMENTS)).hasSize(numberOfAttachments);
     }
 
     @Then("^the list of attachments of the message contains only one attachment with cid \"([^\"]*)\"?$")
     public void assertAttachmentsAndItsCid(String cid) throws Exception {
-        assertThat(jsonPath.<String>read(FIRST_ATTACHMENT + ".cid")).isEqualTo(cid);
+        assertThat(httpClient.jsonPath.<String>read(FIRST_ATTACHMENT + ".cid")).isEqualTo(cid);
     }
 
     @Then("^the first attachment is:$")
@@ -667,22 +671,38 @@ public class GetMessagesMethodStepdefs {
 
     @Then("^the preview of the message contains: (.*)$")
     public void assertPreviewOfMessageShouldBePrintedWithEncoding(List<String> preview) throws Exception {
-        String actual = jsonPath.<String>read(FIRST_MESSAGE + ".preview");
+        String actual = httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".preview");
         assertThat(actual).contains(preview);
     }
 
     @Then("^the keywords of the message is (.*)$")
     public void assertKeywordsOfMessageShouldDisplay(List<String> keywords) throws Exception {
-        assertThat(jsonPath.<Map<String, Boolean>>read(FIRST_MESSAGE + ".keywords").keySet())
+        assertThat(httpClient.jsonPath.<Map<String, Boolean>>read(FIRST_MESSAGE + ".keywords").keySet())
             .containsOnlyElementsOf(keywords);
+    }
+
+    @Then("^\"([^\"]*)\" should see message \"([^\"]*)\" with keywords (.*)$")
+    public void assertKeywordsOfMessage(String user, String messageId, List<String> keywords) throws Exception {
+        userStepdefs.execWithUser(user, () -> postWithAListOfIds(ImmutableList.of(messageId)));
+
+        assertThat(httpClient.jsonPath.<Map<String, Boolean>>read(FIRST_MESSAGE + ".keywords").keySet())
+            .containsOnlyElementsOf(keywords);
+    }
+
+    @Then("^\"([^\"]*)\" should see message \"([^\"]*)\" without keywords$")
+    public void assertKeywordsEmpty(String user, String messageId) throws Exception {
+        userStepdefs.execWithUser(user, () -> postWithAListOfIds(ImmutableList.of(messageId)));
+
+        assertThat(httpClient.jsonPath.<Map<String, Boolean>>read(FIRST_MESSAGE + ".keywords").keySet())
+            .isEmpty();
     }
 
     private void assertAttachment(String attachment, DataTable attachmentProperties) {
         attachmentProperties.asList(TableRow.class)
-            .forEach(entry -> assertThat(jsonPath.<Object>read(attachment + "." + entry.getKey())).isEqualTo(entry.getValue()));
+            .forEach(entry -> assertThat(httpClient.jsonPath.<Object>read(attachment + "." + entry.getKey())).isEqualTo(entry.getValue()));
     }
 
     public String getBlobId() {
-        return jsonPath.<String>read(FIRST_MESSAGE + ".blobId");
+        return httpClient.jsonPath.<String>read(FIRST_MESSAGE + ".blobId");
     }
 }
