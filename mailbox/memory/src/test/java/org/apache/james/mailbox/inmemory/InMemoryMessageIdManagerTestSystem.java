@@ -124,6 +124,6 @@ public class InMemoryMessageIdManagerTestSystem extends MessageIdManagerTestSyst
 
     @Override
     public void setACL(MailboxId mailboxId, MailboxACL mailboxAcl, MailboxSession session) throws MailboxException {
-        mailboxManager.setRights(mailboxId, mailboxAcl, session);
+        mailboxManager.getRightManager().setRights(mailboxId, mailboxAcl, session);
     }
 }

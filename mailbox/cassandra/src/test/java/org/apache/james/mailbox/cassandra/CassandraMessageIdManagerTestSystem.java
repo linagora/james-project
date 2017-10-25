@@ -137,6 +137,6 @@ public class CassandraMessageIdManagerTestSystem extends MessageIdManagerTestSys
 
     @Override
     public void setACL(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
-        cassandraMailboxManager.setRights(mailboxId, mailboxACL, session);
+        cassandraMailboxManager.getRightManager().setRights(mailboxId, mailboxACL, session);
     }
 }

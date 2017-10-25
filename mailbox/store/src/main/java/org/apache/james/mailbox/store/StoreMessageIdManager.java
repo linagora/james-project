@@ -322,7 +322,8 @@ public class StoreMessageIdManager implements MessageIdManager {
     }
 
     private Predicate<MailboxId> hasRightsOnMailbox(MailboxSession session, Right... rights) {
-        return Throwing.predicate((MailboxId mailboxId) -> mailboxManager.myRights(mailboxId, session).contains(rights))
+        return Throwing.predicate((MailboxId mailboxId) -> mailboxManager.getRightManager()
+            .myRights(mailboxId, session).contains(rights))
             .fallbackTo(any -> false);
     }
 

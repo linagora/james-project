@@ -106,7 +106,7 @@ public abstract class JamesImapHostSystem implements ImapHostSystem, GrantRights
         MailboxManager mailboxManager = getMailboxManager();
         MailboxSession mailboxSession = mailboxManager.createSystemSession(mailboxPath.getUser());
         mailboxManager.startProcessingRequest(mailboxSession);
-        mailboxManager.setRights(mailboxPath,
+        mailboxManager.getRightManager().setRights(mailboxPath,
             MailboxACL.EMPTY.apply(MailboxACL.command()
                 .forUser(userName)
                 .rights(rights)
