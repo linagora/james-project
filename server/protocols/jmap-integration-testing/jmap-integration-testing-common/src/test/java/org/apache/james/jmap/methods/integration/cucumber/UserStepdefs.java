@@ -28,21 +28,17 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
-import com.github.fge.lambdas.runnable.ThrowingRunnable;
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxConstants;
 
 import com.github.fge.lambdas.Throwing;
+import com.github.fge.lambdas.runnable.ThrowingRunnable;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 
-import cucumber.api.PendingException;
 import cucumber.api.java.en.Given;
 import cucumber.runtime.java.guice.ScenarioScoped;
-import org.apache.james.mailbox.model.MailboxPath;
 
 @ScenarioScoped
 public class UserStepdefs {
@@ -115,12 +111,6 @@ public class UserStepdefs {
         connectUser(username);
     }
     
-    @Given("^\"([^\"]*)\" has a mailbox \"([^\"]*)\"$")
-    public void createMailbox(String username, String mailbox) throws Throwable {
-        mainStepdefs.mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailbox);
-    }
-
-    
     @Given("^\"([^\"]*)\" is connected$")
     public void connectUser(String username) throws Throwable {
         AccessToken accessToken = getTokenForUser(username);
@@ -135,14 +125,6 @@ public class UserStepdefs {
 
             return HttpJmapAuthentication.authenticateJamesUser(mainStepdefs.baseUri(), user, password);
         });
-    }
-    
-    @Given("^\"([^\"]*)\" shares its mailbox \"([^\"]*)\" with \"([^\"]*)\"$")
-    public void shareMailbox(String owner, String mailbox, String shareTo) throws Throwable {
-        MailboxPath mailboxPath = MailboxPath.forUser(owner, mailbox);
-        MailboxACL.Rfc4314Rights rights = new MailboxACL.Rfc4314Rights(MailboxACL.Right.Lookup, MailboxACL.Right.Read);
-
-        mainStepdefs.aclProbe.addRights(mailboxPath, shareTo, rights);
     }
 
     private String generatePassword(String username) {
