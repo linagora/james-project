@@ -1,71 +1,37 @@
+/****************************************************************
+ * Licensed to the Apache Software Foundation (ASF) under one   *
+ * or more contributor license agreements.  See the NOTICE file *
+ * distributed with this work for additional information        *
+ * regarding copyright ownership.  The ASF licenses this file   *
+ * to you under the Apache License, Version 2.0 (the            *
+ * "License"); you may not use this file except in compliance   *
+ * with the License.  You may obtain a copy of the License at   *
+ *                                                              *
+ *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *                                                              *
+ * Unless required by applicable law or agreed to in writing,   *
+ * software distributed under the License is distributed on an  *
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
+ * KIND, either express or implied.  See the License for the    *
+ * specific language governing permissions and limitations      *
+ * under the License.                                           *
+ ****************************************************************/
+
 package org.apache.james.webadmin.routes;
 
-import org.apache.james.sieverepository.api.ScriptSummary;
-import org.apache.james.sieverepository.api.SieveRepository;
-import org.apache.james.sieverepository.api.exception.DuplicateException;
-import org.apache.james.sieverepository.api.exception.IsActiveException;
-import org.apache.james.sieverepository.api.exception.QuotaExceededException;
+import org.apache.james.sieverepository.api.SieveQuotaRepository;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
-import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
-import org.joda.time.DateTime;
 
-import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class InMemorySieveQuotaRepository implements SieveRepository {
+public class InMemorySieveQuotaRepository implements SieveQuotaRepository {
 
     private boolean isGlobalQuotaSet = false;
     private long globalQuota = 0L;
 
     private Map<String, Long> userQuota = new ConcurrentHashMap<>();
-
-    @Override
-    public void haveSpace(final String user, final String name, final long size) throws QuotaExceededException, StorageException {
-
-    }
-
-    @Override
-    public void putScript(final String user, final String name, final String content) throws StorageException, QuotaExceededException {
-
-    }
-
-    @Override
-    public List<ScriptSummary> listScripts(final String user) throws StorageException {
-        return null;
-    }
-
-    @Override
-    public DateTime getActivationDateForActiveScript(final String user) throws StorageException, ScriptNotFoundException {
-        return null;
-    }
-
-    @Override
-    public InputStream getActive(final String user) throws ScriptNotFoundException, StorageException {
-        return null;
-    }
-
-    @Override
-    public void setActive(final String user, final String name) throws ScriptNotFoundException, StorageException {
-
-    }
-
-    @Override
-    public InputStream getScript(final String user, final String name) throws ScriptNotFoundException, StorageException {
-        return null;
-    }
-
-    @Override
-    public void deleteScript(final String user, final String name) throws ScriptNotFoundException, IsActiveException, StorageException {
-
-    }
-
-    @Override
-    public void renameScript(final String user, final String oldName, final String newName) throws ScriptNotFoundException, DuplicateException, StorageException {
-
-    }
 
     @Override
     public boolean hasQuota() throws StorageException {

@@ -1,4 +1,25 @@
+/****************************************************************
+ * Licensed to the Apache Software Foundation (ASF) under one   *
+ * or more contributor license agreements.  See the NOTICE file *
+ * distributed with this work for additional information        *
+ * regarding copyright ownership.  The ASF licenses this file   *
+ * to you under the Apache License, Version 2.0 (the            *
+ * "License"); you may not use this file except in compliance   *
+ * with the License.  You may obtain a copy of the License at   *
+ *                                                              *
+ *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *                                                              *
+ * Unless required by applicable law or agreed to in writing,   *
+ * software distributed under the License is distributed on an  *
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
+ * KIND, either express or implied.  See the License for the    *
+ * specific language governing permissions and limitations      *
+ * under the License.                                           *
+ ****************************************************************/
+
 package org.apache.james.webadmin.routes;
+
+import static org.apache.james.webadmin.Constants.SEPARATOR;
 
 import com.google.common.base.Preconditions;
 import io.swagger.annotations.Api;
@@ -7,7 +28,7 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
-import org.apache.james.sieverepository.api.SieveRepository;
+import org.apache.james.sieverepository.api.SieveQuotaRepository;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.webadmin.Constants;
 import org.apache.james.webadmin.Routes;
@@ -26,8 +47,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
-import static org.apache.james.webadmin.Constants.SEPARATOR;
-
 @Api(tags = "SieveQuota")
 @Path(SieveQuotaRoutes.ROOT_PATH)
 @Produces("application/json")
@@ -39,14 +58,14 @@ public class SieveQuotaRoutes implements Routes {
     private static final String REQUESTED_SIZE = "requestedSize";
     private static final Logger LOGGER = LoggerFactory.getLogger(SieveQuotaRoutes.class);
 
-    private final SieveRepository sieveRepository;
+    private final SieveQuotaRepository sieveQuotaRepository;
     private final JsonTransformer jsonTransformer;
     private final JsonExtractor<Long> jsonExtractor;
     private Service service;
 
     @Inject
-    public SieveQuotaRoutes(final SieveRepository sieveRepository, final JsonTransformer jsonTransformer) {
-        this.sieveRepository = sieveRepository;
+    public SieveQuotaRoutes(final SieveQuotaRepository sieveQuotaRepository, final JsonTransformer jsonTransformer) {
+        this.sieveQuotaRepository = sieveQuotaRepository;
         this.jsonTransformer = jsonTransformer;
         this.jsonExtractor = new JsonExtractor<>(Long.class);
     }
@@ -74,7 +93,7 @@ public class SieveQuotaRoutes implements Routes {
     public void defineGetGlobalSieveQuota() {
         service.get(ROOT_PATH, (request, response) -> {
             try {
-                final long sieveQuota = sieveRepository.getQuota();
+                long sieveQuota = sieveQuotaRepository.getQuota();
                 response.status(200);
                 return sieveQuota;
             } catch (QuotaNotFoundException e) {
@@ -98,10 +117,9 @@ public class SieveQuotaRoutes implements Routes {
     public void defineUpdateGlobalSieveQuota() {
         service.put(ROOT_PATH, (request, response) -> {
             try {
-                final Long requestedSize = extractRequestedQuotaSizeFromRequest(request);
-                sieveRepository.setQuota(requestedSize);
+                Long requestedSize = extractRequestedQuotaSizeFromRequest(request);
+                sieveQuotaRepository.setQuota(requestedSize);
                 response.status(200);
-                return sieveRepository.getQuota();
             } catch (JsonExtractException e) {
                 LOGGER.info("Malformed JSON", e);
                 response.status(400);
@@ -123,7 +141,7 @@ public class SieveQuotaRoutes implements Routes {
     public void defineRemoveGlobalSieveQuota() {
         service.delete(ROOT_PATH, (request, response) -> {
             try {
-                sieveRepository.removeQuota();
+                sieveQuotaRepository.removeQuota();
                 response.status(204);
             } catch (QuotaNotFoundException e) {
                 LOGGER.info("Global sieve quota not set", e);
@@ -145,9 +163,9 @@ public class SieveQuotaRoutes implements Routes {
     })
     public void defineGetPerUserSieveQuota() {
         service.get(USER_SIEVE_QUOTA_PATH, (request, response) -> {
-            final String userId = request.params(USER_ID);
+            String userId = request.params(USER_ID);
             try {
-                final long userQuota = sieveRepository.getQuota(userId);
+                long userQuota = sieveQuotaRepository.getQuota(userId);
                 response.status(200);
                 return userQuota;
             } catch (QuotaNotFoundException e) {
@@ -171,12 +189,11 @@ public class SieveQuotaRoutes implements Routes {
     })
     public void defineUpdatePerUserSieveQuota() {
         service.put(USER_SIEVE_QUOTA_PATH, (request, response) -> {
-            final String userId = request.params(USER_ID);
+            String userId = request.params(USER_ID);
             try {
-                final Long requestedSize = extractRequestedQuotaSizeFromRequest(request);
-                sieveRepository.setQuota(userId, requestedSize);
+                Long requestedSize = extractRequestedQuotaSizeFromRequest(request);
+                sieveQuotaRepository.setQuota(userId, requestedSize);
                 response.status(200);
-                return sieveRepository.getQuota(userId);
             } catch (JsonExtractException e) {
                 LOGGER.info("Malformed JSON", e);
                 response.status(400);
@@ -200,9 +217,9 @@ public class SieveQuotaRoutes implements Routes {
     })
     public void defineRemovePerUserSieveQuota() {
         service.delete(USER_SIEVE_QUOTA_PATH, (request, response) -> {
-            final String userId = request.params(USER_ID);
+            String userId = request.params(USER_ID);
             try {
-                sieveRepository.removeQuota(userId);
+                sieveQuotaRepository.removeQuota(userId);
                 response.status(204);
             } catch (QuotaNotFoundException e) {
                 LOGGER.info("User sieve quota not set", e);
@@ -213,7 +230,7 @@ public class SieveQuotaRoutes implements Routes {
     }
 
     private Long extractRequestedQuotaSizeFromRequest(final Request request) throws JsonExtractException {
-        final Long requestedSize = jsonExtractor.parse(request.body());
+        Long requestedSize = jsonExtractor.parse(request.body());
         Preconditions.checkArgument(requestedSize >= 0, "Requested quota size have to be a positive integer");
         return requestedSize;
     }

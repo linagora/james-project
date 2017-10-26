@@ -1,17 +1,23 @@
-package org.apache.james.webadmin.routes;
+/****************************************************************
+ * Licensed to the Apache Software Foundation (ASF) under one   *
+ * or more contributor license agreements.  See the NOTICE file *
+ * distributed with this work for additional information        *
+ * regarding copyright ownership.  The ASF licenses this file   *
+ * to you under the Apache License, Version 2.0 (the            *
+ * "License"); you may not use this file except in compliance   *
+ * with the License.  You may obtain a copy of the License at   *
+ *                                                              *
+ *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *                                                              *
+ * Unless required by applicable law or agreed to in writing,   *
+ * software distributed under the License is distributed on an  *
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
+ * KIND, either express or implied.  See the License for the    *
+ * specific language governing permissions and limitations      *
+ * under the License.                                           *
+ ****************************************************************/
 
-import com.google.common.base.Charsets;
-import com.jayway.restassured.RestAssured;
-import com.jayway.restassured.builder.RequestSpecBuilder;
-import com.jayway.restassured.http.ContentType;
-import org.apache.james.metrics.logger.DefaultMetricFactory;
-import org.apache.james.sieverepository.api.SieveRepository;
-import org.apache.james.webadmin.WebAdminServer;
-import org.apache.james.webadmin.WebAdminUtils;
-import org.apache.james.webadmin.utils.JsonTransformer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+package org.apache.james.webadmin.routes;
 
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
@@ -21,12 +27,25 @@ import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
 import static org.apache.james.webadmin.routes.SieveQuotaRoutes.ROOT_PATH;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.base.Charsets;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.builder.RequestSpecBuilder;
+import com.jayway.restassured.http.ContentType;
+import org.apache.james.metrics.logger.DefaultMetricFactory;
+import org.apache.james.sieverepository.api.SieveQuotaRepository;
+import org.apache.james.webadmin.WebAdminServer;
+import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.utils.JsonTransformer;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 public class SieveQuotaRoutesTest {
 
     private static final String USER_A = "userA";
 
     private WebAdminServer webAdminServer;
-    private SieveRepository sieveRepository;
+    private SieveQuotaRepository sieveRepository;
 
     @Before
     public void setUp() throws Exception {
@@ -80,17 +99,13 @@ public class SieveQuotaRoutesTest {
         sieveRepository.setQuota(500L);
         final long requiredSize = 1024L;
 
-        final long actual =
-            given()
-                .body(requiredSize)
-                .put(SieveQuotaRoutes.ROOT_PATH)
-            .then()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .extract()
-                .as(Long.class);
+        given()
+            .body(requiredSize)
+            .put(SieveQuotaRoutes.ROOT_PATH)
+        .then()
+            .statusCode(200);
 
-        assertThat(actual).isEqualTo(requiredSize);
+        assertThat(sieveRepository.getQuota()).isEqualTo(requiredSize);
     }
 
     @Test
@@ -159,17 +174,13 @@ public class SieveQuotaRoutesTest {
         sieveRepository.setQuota(USER_A, 500L);
         final long requiredSize = 1024L;
 
-        final long actual =
-            given()
-                .body(requiredSize)
-                .put(ROOT_PATH + SEPARATOR + USER_A)
-            .then()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .extract()
-                .as(Long.class);
+        given()
+            .body(requiredSize)
+            .put(ROOT_PATH + SEPARATOR + USER_A)
+        .then()
+            .statusCode(200);
 
-        assertThat(actual).isEqualTo(requiredSize);
+        assertThat(sieveRepository.getQuota(USER_A)).isEqualTo(requiredSize);
     }
 
     @Test
