@@ -54,7 +54,9 @@ public class MessageToElasticSearchJson {
     }
 
     @Inject
-    public MessageToElasticSearchJson(TextExtractor textExtractor, IndexAttachments indexAttachments, MailboxManager mailboxManager) {
+    public MessageToElasticSearchJson(TextExtractor textExtractor,
+                                      IndexAttachments indexAttachments,
+                                      MailboxManager mailboxManager) {
         this(textExtractor, ZoneId.systemDefault(), indexAttachments);
     }
 
@@ -78,6 +80,10 @@ public class MessageToElasticSearchJson {
                 .zoneId(zoneId)
                 .indexAttachments(IndexAttachments.NO)
                 .build());
+    }
+
+    public boolean handleIndexAttachment() {
+        return IndexAttachments.YES.equals(indexAttachments);
     }
 
     public String getUpdatedJsonMessagePart(Flags flags, long modSeq) throws JsonProcessingException {

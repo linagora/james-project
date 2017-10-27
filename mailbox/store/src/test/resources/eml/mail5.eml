@@ -35,49 +35,18 @@ Received: (qmail 81730 invoked by uid 99); 15 May 2015 06:36:00 -0000
 Received: from arcas.apache.org (HELO arcas.apache.org) (140.211.11.28)
     by apache.org (qpsmtpd/0.29) with ESMTP; Fri, 15 May 2015 06:36:00 +0000
 Date: Fri, 15 May 2015 06:35:59 +0000 (UTC)
-From: "Eric Charles (JIRA)" <mailet-api@james.apache.org>
+From: "Luc DUZAN (JIRA)" <luc.duzan@james.apache.org>
 To: "zzz" <mailet-api@james.apache.org>
-Cc: monkey@any.com
-Bcc: monkey@any.com
+Cc: any@any.com
+Bcc: any@any.com
 Message-ID: <JIRA.12825882.1430301328000.124152.1431671759942@Atlassian.JIRA>
 In-Reply-To: <JIRA.12825882.1430301328000@Atlassian.JIRA>
 References: <JIRA.12825882.1430301328000@Atlassian.JIRA> <JIRA.12825882.1430301328925@arcas>
-Subject: [jira] [Resolved] (MAILET-94) James Mailet should use latest
- version of other James subprojects
+Subject: This is a mail about mail!
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 7bit
 X-JIRA-FingerPrint: 30527f35849b9dde25b450d4833f0394
 
+This is the body of the mail
 
-     [ https://issues.apache.org/jira/browse/MAILET-94?page=com.atlassian.jira.plugin.system.issuetabpanels:all-tabpanel ]
-
-Eric Charles resolved MAILET-94.
---------------------------------
-    Resolution: Fixed
-      Assignee: Eric Charles
-
-Patch committed, Thx Matthieu
-
-> James Mailet should use latest version of other James subprojects
-> -----------------------------------------------------------------
->
->                 Key: MAILET-94
->                 URL: https://issues.apache.org/jira/browse/MAILET-94
->             Project: James Mailet
->          Issue Type: Task
->          Components: Build
->            Reporter: Matthieu Baechler
->            Assignee: Eric Charles
->             Fix For: 2.5.1
->
->         Attachments: 0001-JWC-111-update-james-related-projects-to-SNAPSHOT-ve.patch
->
->
-> It should depend on james-project 1.8.3-SNAPSHOT to use only up-to-date component.
-
-
-
---
-This message was sent by Atlassian JIRA
-(v6.3.4#6332)

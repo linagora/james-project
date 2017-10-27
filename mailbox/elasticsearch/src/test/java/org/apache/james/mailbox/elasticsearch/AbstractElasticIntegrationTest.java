@@ -42,6 +42,7 @@ import org.apache.james.mailbox.elasticsearch.json.MessageToElasticSearchJson;
 import org.apache.james.mailbox.elasticsearch.query.CriterionConverter;
 import org.apache.james.mailbox.elasticsearch.query.QueryConverter;
 import org.apache.james.mailbox.elasticsearch.search.ElasticSearchSearcher;
+import org.apache.james.mailbox.extractor.TextExtractor;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
@@ -62,12 +63,7 @@ import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
 import org.apache.james.mailbox.store.search.AbstractMessageSearchIndexTest;
-import org.apache.james.mailbox.tika.TikaConfiguration;
-import org.apache.james.mailbox.tika.TikaContainer;
-import org.apache.james.mailbox.tika.TikaHttpClientImpl;
-import org.apache.james.mailbox.tika.TikaTextExtractor;
 import org.elasticsearch.client.Client;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -76,7 +72,7 @@ import org.junit.rules.TemporaryFolder;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 
-public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest {
+public abstract class AbstractElasticIntegrationTest extends AbstractMessageSearchIndexTest {
 
     private static final int BATCH_SIZE = 1;
     private static final int SEARCH_SIZE = 1;
@@ -85,22 +81,11 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
     private EmbeddedElasticSearch embeddedElasticSearch= new EmbeddedElasticSearch(temporaryFolder, MailboxElasticsearchConstants.MAILBOX_INDEX);
 
+    protected abstract TextExtractor getTextExtractor();
+    protected abstract IndexAttachments handleAttachment();
+
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule(temporaryFolder).around(embeddedElasticSearch);
-
-    @ClassRule
-    public static TikaContainer tika = new TikaContainer();
-    private TikaTextExtractor textExtractor;
-
-    @Override
-    public void setUp() throws Exception {
-        textExtractor = new TikaTextExtractor(new TikaHttpClientImpl(TikaConfiguration.builder()
-                .host(tika.getIp())
-                .port(tika.getPort())
-                .timeoutInMillis(tika.getTimeoutInMillis())
-                .build()));
-        super.setUp();
-    }
 
     @Override
     protected void await() {
@@ -130,7 +115,7 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
                 MailboxElasticsearchConstants.MAILBOX_INDEX,
                 MailboxElasticsearchConstants.MESSAGE_TYPE),
             new ElasticSearchSearcher(client, new QueryConverter(new CriterionConverter()), SEARCH_SIZE, new InMemoryId.Factory(), messageIdFactory),
-            new MessageToElasticSearchJson(textExtractor, ZoneId.of("Europe/Paris"), IndexAttachments.YES));
+            new MessageToElasticSearchJson(getTextExtractor(), ZoneId.of("Europe/Paris"), handleAttachment()));
         storeMailboxManager = new InMemoryMailboxManager(
             mapperFactory,
             new FakeAuthenticator(),
@@ -150,6 +135,7 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
             messageIdFactory,
             new NoQuotaManager(),
             new DefaultQuotaRootResolver(mapperFactory));
+
         storeMailboxManager.setMessageSearchIndex(messageSearchIndex);
         storeMailboxManager.init();
     }
