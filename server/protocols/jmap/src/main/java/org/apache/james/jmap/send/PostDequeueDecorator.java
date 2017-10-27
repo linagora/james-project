@@ -81,7 +81,7 @@ public class PostDequeueDecorator extends MailQueueItemDecorator {
                     moveFromOutboxToSent(messageId, mailboxSession);
                     getMail().setAttribute(IS_DELIVERED, IS_DELIVERED);
                 } catch (MailShouldBeInOutboxException e) {
-                    LOG.info("Message does not exist on Outbox anymore, it could have already been sent {}", e);
+                    LOG.info("Message does not exist on Outbox anymore, it could have already been sent {}", e.toString());
                 } catch (MailboxException e) {
                     throw new MailQueueException(e.getMessage(), e);
                 }
@@ -102,7 +102,7 @@ public class PostDequeueDecorator extends MailQueueItemDecorator {
         try {
             messageIdFactory.fromString((String) messageId);
         } catch (Exception e) {
-            LOG.error("Invalid messageId: " + messageId, e);
+            LOG.error("Invalid messageId: {}", messageId, e);
             return false;
         }
         return true;

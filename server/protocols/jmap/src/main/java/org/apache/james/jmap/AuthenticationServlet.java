@@ -154,7 +154,9 @@ public class AuthenticationServlet extends HttpServlet {
             returnRestartAuthentication(resp);
             break;
         case INVALID:
-            LOG.warn("Use of an invalid ContinuationToken : " + request.getToken().serialize());
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Use of an invalid ContinuationToken : " + request.getToken().serialize());
+            }
             returnUnauthorizedResponse(resp);
             break;
         case OK:
@@ -168,7 +170,7 @@ public class AuthenticationServlet extends HttpServlet {
         if (authenticate(request, username)) {
             returnAccessTokenResponse(resp, username);
         } else {
-            LOG.info("Authentication failure for " + username);
+            LOG.info("Authentication failure for {}", username);
             returnUnauthorizedResponse(resp);
         }
     }

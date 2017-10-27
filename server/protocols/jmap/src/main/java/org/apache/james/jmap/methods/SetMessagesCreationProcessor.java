@@ -364,10 +364,10 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
                     .build());
         } catch (AttachmentNotFoundException e) {
             // should not happen (checked before)
-            LOG.error(String.format("Attachment %s not found", attachment.getBlobId()), e);
+            LOG.error("Attachment {} not found", attachment.getBlobId(), e);
             return Optional.empty();
         } catch (IllegalStateException e) {
-            LOG.error(String.format("Attachment %s is not well-formed", attachment.getBlobId()), e);
+            LOG.error("Attachment {} is not well-formed", attachment.getBlobId(), e);
             return Optional.empty();
         }
     }

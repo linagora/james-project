@@ -490,11 +490,11 @@ public class StoreMailboxManager implements MailboxManager {
         Mailbox mailboxRow = mapper.findMailboxByPath(mailboxPath);
 
         if (mailboxRow == null) {
-            LOGGER.info("Mailbox '" + mailboxPath + "' not found.");
+            LOGGER.info("Mailbox '{}' not found.", mailboxPath);
             throw new MailboxNotFoundException(mailboxPath);
 
         } else {
-            LOGGER.debug("Loaded mailbox " + mailboxPath);
+            LOGGER.debug("Loaded mailbox {}", mailboxPath);
 
             return createMessageManager(mailboxRow, session);
         }
@@ -507,16 +507,16 @@ public class StoreMailboxManager implements MailboxManager {
         Mailbox mailboxRow = mapper.findMailboxById(mailboxId);
 
         if (mailboxRow == null) {
-            LOGGER.info("Mailbox '" + mailboxId.serialize() + "' not found.");
+            LOGGER.info("Mailbox '{}' not found.", mailboxId.serialize());
             throw new MailboxNotFoundException(mailboxId);
         }
 
         if (! assertUserHasAccessTo(mailboxRow, session)) {
-            LOGGER.info("Mailbox '" + mailboxId.serialize() + "' does not belong to user '" + session.getUser() + "' but to '" + mailboxRow.getUser());
+            LOGGER.info("Mailbox '{}' does not belong to user '{}' but to '{}'", mailboxId.serialize(), session.getUser(), mailboxRow.getUser());
             throw new MailboxNotFoundException(mailboxId);
         }
 
-        LOGGER.debug("Loaded mailbox " + mailboxId.serialize());
+        LOGGER.debug("Loaded mailbox {}", mailboxId.serialize());
 
         return createMessageManager(mailboxRow, session);
     }
@@ -536,7 +536,7 @@ public class StoreMailboxManager implements MailboxManager {
     @Override
     public Optional<MailboxId> createMailbox(MailboxPath mailboxPath, final MailboxSession mailboxSession)
             throws MailboxException {
-        LOGGER.debug("createMailbox " + mailboxPath);
+        LOGGER.debug("createMailbox {}", mailboxPath);
         final int length = mailboxPath.getName().length();
         if (length == 0) {
             LOGGER.warn("Ignoring mailbox with empty name");
@@ -573,7 +573,7 @@ public class StoreMailboxManager implements MailboxManager {
 
     @Override
     public void deleteMailbox(final MailboxPath mailboxPath, final MailboxSession session) throws MailboxException {
-        LOGGER.info("deleteMailbox " + mailboxPath);
+        LOGGER.info("deleteMailbox {}", mailboxPath);
         final MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
 
         Mailbox mailbox = mapper.execute((Mapper.Transaction<Mailbox>) () -> {
@@ -595,7 +595,7 @@ public class StoreMailboxManager implements MailboxManager {
 
     @Override
     public void renameMailbox(MailboxPath from, MailboxPath to, MailboxSession session) throws MailboxException {
-        LOGGER.debug("renameMailbox " + from + " to " + to);
+        LOGGER.debug("renameMailbox {} to {}", from, to);
         if (mailboxExists(to, session)) {
             throw new MailboxExistsException(to.toString());
         }
@@ -628,7 +628,7 @@ public class StoreMailboxManager implements MailboxManager {
                 mapper.save(sub);
                 dispatcher.mailboxRenamed(session, fromPath, sub);
 
-                LOGGER.debug("Rename mailbox sub-mailbox " + subOriginalName + " to " + subNewName);
+                LOGGER.debug("Rename mailbox sub-mailbox {} to {}", subOriginalName, subNewName);
             }
             return null;
 

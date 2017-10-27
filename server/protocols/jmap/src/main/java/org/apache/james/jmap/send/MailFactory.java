@@ -66,7 +66,7 @@ public class MailFactory {
         try {
             return new MailAddress(emailer.getEmail().get());
         } catch (AddressException e) {
-            LOGGER.error("Invalid mail address", emailer.getEmail());
+            LOGGER.error("Invalid mail address {}", emailer.getEmail());
             throw Throwables.propagate(e);
         }
     }

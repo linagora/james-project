@@ -339,12 +339,12 @@ public class MaildirFolder {
                 String uidString = String.valueOf(uid.asLong());
                 String line = reader.readLine(); // the header
                 int lineNumber = 1;
-                while ((line = reader.readLine()) != null) {
+                for (; (line = reader.readLine()) != null; lineNumber++) {
                     if (!line.equals("")) {
                         int gap = line.indexOf(" ");
                         if (gap == -1) {
                             // there must be some issues in the file if no gap can be found
-                            LOGGER.info("Corrupted entry in uid-file " + uidList + " line " + lineNumber++);
+                            LOGGER.info("Corrupted entry in uid-file {} line {}", uidList, lineNumber);
                             continue;
                         }
 
@@ -510,7 +510,7 @@ public class MaildirFolder {
                         if (gap == -1) {
                             // there must be some issues in the file if no gap can be found
                             // there must be some issues in the file if no gap can be found
-                            LOGGER.info("Corrupted entry in uid-file " + uidList + " line " + lines.size());
+                            LOGGER.info("Corrupted entry in uid-file {} line {}", uidList, lines.size());
                             continue;
                         }
 
@@ -582,12 +582,12 @@ public class MaildirFolder {
             if (line != null)
                 readUidListHeader(line);
             int lineNumber = 1;
-            while ((line = reader.readLine()) != null) {
+            for (; (line = reader.readLine()) != null; lineNumber++) {
                 if (!line.equals("")) {
                     int gap = line.indexOf(" ");
                     if (gap == -1) {
                         // there must be some issues in the file if no gap can be found
-                        throw new MailboxException("Corrupted entry in uid-file " + uidList + " line " + lineNumber++);
+                        throw new MailboxException("Corrupted entry in uid-file " + uidList + " line " + lineNumber);
                     }
                     MessageUid uid = MessageUid.of(Long.valueOf(line.substring(0, gap)));
                     String name = line.substring(gap + 1, line.length());
@@ -631,13 +631,13 @@ public class MaildirFolder {
             if (line != null)
                 readUidListHeader(line);
             int lineNumber = 1;
-            while ((line = reader.readLine()) != null) {
+            for (; (line = reader.readLine()) != null; lineNumber++) {
                 if (!line.equals("")) {
                     int gap = line.indexOf(" ");
 
                     if (gap == -1) {
                         // there must be some issues in the file if no gap can be found
-                    	LOGGER.info("Corrupted entry in uid-file " + uidList + " line " + lineNumber++);
+                    	LOGGER.info("Corrupted entry in uid-file {} line {}", uidList, lineNumber);
                         continue;
                     }
                     
@@ -857,11 +857,11 @@ public class MaildirFolder {
                 ArrayList<String> lines = new ArrayList<>();
                 String line;
                 int lineNumber = 1;
-                while ((line = reader.readLine()) != null) {
+                for (; (line = reader.readLine()) != null; lineNumber++) {
                     int gap = line.indexOf(" ");
                     if (gap == -1) {
                         // there must be some issues in the file if no gap can be found
-                        LOGGER.info("Corrupted entry in uid-file " + uidList + " line " + lineNumber++);
+                        LOGGER.info("Corrupted entry in uid-file {} line {}", uidList, lineNumber);
                         continue;
                     }
 
