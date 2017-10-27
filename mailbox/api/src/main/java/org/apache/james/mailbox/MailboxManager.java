@@ -97,6 +97,7 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport {
 
     enum SearchCapabilities {
         MultimailboxSearch,
+        PartialEmailMatch,
         /**
          *  The implementation supporting this capability should
          *  provide an index on the fields: 
