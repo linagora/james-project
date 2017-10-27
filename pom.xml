@@ -673,6 +673,7 @@
         <jackrabbit-core.version>2.5.2</jackrabbit-core.version>
 
         <logback.version>1.1.7</logback.version>
+        <swagger.version>3.1.5</swagger.version>
     </properties>
 
     <dependencyManagement>
@@ -1432,6 +1433,11 @@
                 <groupId>com.github.fge</groupId>
                 <artifactId>throwing-lambdas</artifactId>
                 <version>0.5.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.kongchen</groupId>
+                <artifactId>swagger-maven-plugin</artifactId>
+                <version>${swagger.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.github.steveash.guavate</groupId>
