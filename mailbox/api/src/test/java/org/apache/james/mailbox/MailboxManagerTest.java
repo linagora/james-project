@@ -31,7 +31,7 @@ import javax.mail.Flags;
 import org.apache.james.mailbox.MailboxManager.MailboxCapabilities;
 import org.apache.james.mailbox.exception.AnnotationException;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.mock.MockMailboxManager;
+import org.apache.james.mailbox.mock.MailboxesAndMessagesFeeder;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
@@ -87,7 +87,7 @@ public abstract class MailboxManagerTest {
     protected abstract MailboxManager provideMailboxManager();
 
     public void setUp() throws Exception {
-        this.mailboxManager = new MockMailboxManager(provideMailboxManager()).getMockMailboxManager();
+        this.mailboxManager = provideMailboxManager();
     }
 
     public void tearDown() throws Exception {
@@ -97,6 +97,8 @@ public abstract class MailboxManagerTest {
     
     @Test
     public void createUser1SystemSessionShouldReturnValidSession() throws UnsupportedEncodingException, MailboxException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         
         assertThat(session.getUser().getUserName()).isEqualTo(USER_1);
@@ -104,6 +106,8 @@ public abstract class MailboxManagerTest {
 
     @Test
     public void user1ShouldNotHaveAnInbox() throws UnsupportedEncodingException, MailboxException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
         
@@ -113,6 +117,8 @@ public abstract class MailboxManagerTest {
 
     @Test
     public void createMailboxShouldReturnRightId() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
 
@@ -126,6 +132,8 @@ public abstract class MailboxManagerTest {
 
     @Test
     public void user1ShouldBeAbleToCreateInbox() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
      
@@ -137,6 +145,8 @@ public abstract class MailboxManagerTest {
 
     @Test
     public void user1ShouldNotBeAbleToCreateInboxTwice() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         expected.expect(MailboxException.class);
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
@@ -147,6 +157,8 @@ public abstract class MailboxManagerTest {
 
     @Test
     public void user1ShouldNotHaveTestSubmailbox() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
 
@@ -158,6 +170,8 @@ public abstract class MailboxManagerTest {
     
     @Test
     public void user1ShouldBeAbleToCreateTestSubmailbox() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
         MailboxPath inbox = MailboxPath.inbox(session);
@@ -171,6 +185,8 @@ public abstract class MailboxManagerTest {
     
     @Test
     public void user1ShouldBeAbleToDeleteInbox() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
      
@@ -187,6 +203,8 @@ public abstract class MailboxManagerTest {
     
     @Test
     public void user1ShouldBeAbleToDeleteSubmailbox() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession(USER_1);
         mailboxManager.startProcessingRequest(session);
      
@@ -214,10 +232,12 @@ public abstract class MailboxManagerTest {
 
     @Test
     public void listShouldReturnMailboxes() throws MailboxException, UnsupportedEncodingException {
+        new MailboxesAndMessagesFeeder(mailboxManager);
+
         session = mailboxManager.createSystemSession("manager");
         mailboxManager.startProcessingRequest(session);
         
-        assertThat(mailboxManager.list(session)).hasSize(MockMailboxManager.EXPECTED_MAILBOXES_COUNT);
+        assertThat(mailboxManager.list(session)).hasSize(MailboxesAndMessagesFeeder.EXPECTED_MAILBOXES_COUNT);
     }
 
     @Test
@@ -792,7 +812,7 @@ public abstract class MailboxManagerTest {
     }
 
     @Test
-    public void searchForMessageShouldOnlySearchInGivenMailbox() throws MailboxException {
+    public void searchForMessageShouldOnlySearchInGivenMailbox() throws MailboxException, UnsupportedEncodingException {
         Assume.assumeTrue(mailboxManager.hasCapability(MailboxCapabilities.ACL));
         boolean isRecent = false;
 

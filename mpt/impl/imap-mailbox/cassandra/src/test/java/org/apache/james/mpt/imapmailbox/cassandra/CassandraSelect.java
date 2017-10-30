@@ -20,29 +20,35 @@
 package org.apache.james.mpt.imapmailbox.cassandra;
 
 import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mpt.api.ImapHostSystem;
+import org.apache.james.mpt.imapmailbox.cassandra.host.CassandraHostSystem;
 import org.apache.james.mpt.imapmailbox.suite.Select;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.github.fge.lambdas.Throwing;
 
 public class CassandraSelect extends Select {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
 
-    private ImapHostSystem system;
-    
+    private static CassandraHostSystem system;
+
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        system = new CassandraHostSystem(cassandraServer.getIp(), cassandraServer.getBindingPort());
+        system.beforeTest();
+    }
+
     @Before
     public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new CassandraMailboxTestModule(cassandraServer.getIp(), cassandraServer.getBindingPort()));
-        system = injector.getInstance(ImapHostSystem.class);
-        system.beforeTest();
         super.setUp();
     }
-    
+
     @Override
     protected ImapHostSystem createImapHostSystem() {
         return system;
@@ -50,7 +56,13 @@ public class CassandraSelect extends Select {
 
     @After
     public void tearDown() throws Exception {
-        system.afterTest();
+        MailboxManager mailboxManager = system.getMailboxManager();
+        MailboxSession systemSession = mailboxManager.createSystemSession("mpt");
+        mailboxManager.list(systemSession)
+            .forEach(Throwing.consumer(
+                mailboxPath -> mailboxManager.deleteMailbox(
+                    mailboxPath,
+                    mailboxManager.createSystemSession(mailboxPath.getUser()))));
     }
     
 }

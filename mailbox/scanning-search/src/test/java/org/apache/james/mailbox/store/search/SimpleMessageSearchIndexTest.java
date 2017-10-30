@@ -37,16 +37,29 @@ import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
+import org.junit.Before;
 import org.junit.Ignore;
+
+import com.google.common.base.Throwables;
 
 public class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest {
 
-    @Override
-    protected void await() {
+    static {
+        initializeMailboxManager = () -> {
+            try {
+                initializeMailboxManager();
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
+            }
+        };
     }
 
-    @Override
-    protected void initializeMailboxManager() throws Exception {
+    @Before
+    public void setUp() throws Exception {
+        AbstractMessageSearchIndexTest.setUpClass();
+    }
+
+    protected static void initializeMailboxManager() throws Exception {
         MailboxSessionMapperFactory mapperFactory = new InMemoryMailboxSessionMapperFactory();
         messageSearchIndex = new SimpleMessageSearchIndex(mapperFactory, mapperFactory, new PDFTextExtractor());
         InMemoryMessageId.Factory messageIdFactory = new InMemoryMessageId.Factory();

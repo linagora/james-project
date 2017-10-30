@@ -39,16 +39,29 @@ import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
 import org.apache.james.mailbox.store.search.AbstractMessageSearchIndexTest;
 import org.apache.lucene.store.RAMDirectory;
+import org.junit.Before;
 import org.junit.Ignore;
+
+import com.google.common.base.Throwables;
 
 public class LuceneMessageSearchIndexTest extends AbstractMessageSearchIndexTest {
 
-    @Override
-    protected void await() {
+    static {
+        initializeMailboxManager = () -> {
+            try {
+                initializeMailboxManager();
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
+            }
+        };
     }
 
-    @Override
-    protected void initializeMailboxManager() throws Exception {
+    @Before
+    public void setUp() throws Exception {
+        AbstractMessageSearchIndexTest.setUpClass();
+    }
+
+    protected static void initializeMailboxManager() throws Exception {
         TestMessageId.Factory messageIdFactory = new TestMessageId.Factory();
         MailboxSessionMapperFactory mapperFactory = new InMemoryMailboxSessionMapperFactory();
         UnionMailboxACLResolver aclResolver = new UnionMailboxACLResolver();

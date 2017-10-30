@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.cassandra;
 
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
@@ -46,6 +47,7 @@ import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.quota.ListeningCurrentQuotaUpdater;
 import org.apache.james.mailbox.store.quota.StoreCurrentQuotaManager;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 
@@ -138,5 +140,14 @@ public class CassandraMessageIdManagerTestSystem extends MessageIdManagerTestSys
     @Override
     public void setACL(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
         cassandraMailboxManager.setRights(mailboxId, mailboxACL, session);
+    }
+
+    @Override
+    public void deleteAllMailboxes() throws MailboxException {
+        MailboxSession admin = cassandraMailboxManager.createSystemSession("admin");
+        List<MailboxPath> list = cassandraMailboxManager.list(admin);
+        list.forEach(Throwing.consumer(
+            path -> cassandraMailboxManager.deleteMailbox(path,
+                cassandraMailboxManager.createSystemSession(path.getUser()))));
     }
 }

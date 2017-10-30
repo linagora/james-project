@@ -22,7 +22,6 @@ package org.apache.james.mailbox.cassandra;
 import static org.mockito.Mockito.mock;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
-import org.apache.james.backends.cassandra.ContainerLifecycleConfiguration;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.MailboxListener;
@@ -39,32 +38,26 @@ import org.apache.james.mailbox.cassandra.modules.CassandraMailboxRecentsModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraModSeqModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraUidModule;
+import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.AbstractMessageIdManagerStorageTest;
 import org.apache.james.mailbox.store.MessageIdManagerTestSystem;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.rules.TestRule;
 
 public class CassandraMessageIdManagerStorageTest extends AbstractMessageIdManagerStorageTest {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
 
-    private CassandraCluster cassandra;
+    private static CassandraCluster cassandra;
+    private static MessageIdManagerTestSystem testingData;
 
-    public static ContainerLifecycleConfiguration cassandraLifecycleConfiguration = ContainerLifecycleConfiguration.builder()
-        .iterationsBetweenRestart(20)
-        .container(cassandraServer.getRawContainer())
-        .build();
-
-    @Rule
-    public TestRule cassandraLifecycleTestRule = cassandraLifecycleConfiguration.asTestRule();
-
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void setUpClass() throws Exception {
         CassandraModuleComposite modules = new CassandraModuleComposite(
                 new CassandraAclModule(),
                 new CassandraMailboxModule(),
@@ -80,16 +73,26 @@ public class CassandraMessageIdManagerStorageTest extends AbstractMessageIdManag
                 new CassandraApplicableFlagsModule(),
                 new CassandraBlobModule());
         cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
+        testingData = CassandraMessageIdManagerTestSystem.createTestingData(cassandra, new NoQuotaManager(), MailboxEventDispatcher.ofListener(mock(MailboxListener.class)));
+    }
+
+    @Before
+    public void setUp() throws Exception {
         super.setUp();
     }
-    
+
     @After
-    public void tearDown() {
+    public void tearDown() throws MailboxException {
+        testingData.deleteAllMailboxes();
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
         cassandra.close();
     }
     
     @Override
     protected MessageIdManagerTestSystem createTestingData() throws Exception {
-        return CassandraMessageIdManagerTestSystem.createTestingData(cassandra, new NoQuotaManager(), MailboxEventDispatcher.ofListener(mock(MailboxListener.class)));
+        return testingData;
     }
 }

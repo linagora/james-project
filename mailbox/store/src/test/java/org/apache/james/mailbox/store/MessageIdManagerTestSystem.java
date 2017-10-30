@@ -64,4 +64,7 @@ public abstract class MessageIdManagerTestSystem {
     public abstract int getConstantMessageSize();
 
     public abstract void setACL(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException;
+
+    public abstract void deleteAllMailboxes() throws MailboxException;
+
 }

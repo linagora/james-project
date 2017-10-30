@@ -21,10 +21,14 @@ package org.apache.james.mailbox.cassandra;
 
 import static org.mockito.Mockito.mock;
 
+import java.util.List;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.MailboxListener;
+import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraAnnotationModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraApplicableFlagsModule;
@@ -38,22 +42,29 @@ import org.apache.james.mailbox.cassandra.modules.CassandraMailboxRecentsModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraModSeqModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraUidModule;
+import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.AbstractCombinationManagerTest;
 import org.apache.james.mailbox.store.CombinationManagerTestSystem;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
+
+import com.github.fge.lambdas.Throwing;
 
 public class CassandraCombinationManagerTest extends AbstractCombinationManagerTest {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
     
-    private CassandraCluster cassandra;
+    private static CassandraCluster cassandra;
+    private static CombinationManagerTestSystem testingData;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void setUpClass() throws Exception {
         CassandraModuleComposite modules = new CassandraModuleComposite(
                 new CassandraAclModule(),
                 new CassandraMailboxModule(),
@@ -69,17 +80,33 @@ public class CassandraCombinationManagerTest extends AbstractCombinationManagerT
                 new CassandraApplicableFlagsModule(),
                 new CassandraBlobModule());
         cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
+        testingData = CassandraCombinationManagerTestSystem.createTestingData(cassandra, new NoQuotaManager(), MailboxEventDispatcher.ofListener(mock(MailboxListener.class)));
+
+    }
+
+    @Before
+    public void setUp() throws Exception {
         super.setUp();
     }
-    
+
     @After
-    public void tearDown() {
+    public void tearDown() throws MailboxException {
+        MailboxManager mailboxManager = testingData.getMailboxManager();
+        MailboxSession admin = mailboxManager.createSystemSession("admin");
+        List<MailboxPath> list = mailboxManager.list(admin);
+        list.forEach(Throwing.consumer(
+            path -> mailboxManager.deleteMailbox(path,
+                mailboxManager.createSystemSession(path.getUser()))));
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
         cassandra.close();
     }
     
     @Override
     public CombinationManagerTestSystem createTestingData() throws Exception {
-        return CassandraCombinationManagerTestSystem.createTestingData(cassandra, new NoQuotaManager(), MailboxEventDispatcher.ofListener(mock(MailboxListener.class)));
+        return testingData;
     }
     
 }

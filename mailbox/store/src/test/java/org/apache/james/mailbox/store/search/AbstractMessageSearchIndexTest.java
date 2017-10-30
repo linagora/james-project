@@ -31,6 +31,7 @@ import java.util.List;
 import javax.mail.Flags;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
@@ -56,7 +57,6 @@ import org.apache.james.mime4j.message.BodyPartBuilder;
 import org.apache.james.mime4j.message.DefaultMessageWriter;
 import org.apache.james.mime4j.message.MultipartBuilder;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
@@ -72,36 +72,34 @@ public abstract class AbstractMessageSearchIndexTest {
     public static final boolean RECENT = true;
     public static final boolean NOT_RECENT = false;
 
-    protected MessageSearchIndex messageSearchIndex;
-    protected StoreMailboxManager storeMailboxManager;
-    protected MessageIdManager messageIdManager;
-    private Mailbox mailbox;
-    private Mailbox mailbox2;
-    private Mailbox otherMailbox;
-    private MailboxSession session;
-    private MailboxSession otherSession;
+    protected static MessageSearchIndex messageSearchIndex;
+    protected static StoreMailboxManager storeMailboxManager;
+    protected static MessageIdManager messageIdManager;
+    private static Mailbox mailbox;
+    private static Mailbox mailbox2;
+    private static Mailbox otherMailbox;
+    private static MailboxSession session;
+    private static MailboxSession otherSession;
 
-    private ComposedMessageId m1;
-    private ComposedMessageId m2;
-    private ComposedMessageId m3;
-    private ComposedMessageId m4;
-    private ComposedMessageId m5;
-    private ComposedMessageId m6;
-    private ComposedMessageId m7;
-    private ComposedMessageId m8;
-    private ComposedMessageId m9;
-    private ComposedMessageId mOther;
-    private ComposedMessageId mailWithAttachment;
-    private ComposedMessageId mailWithInlinedAttachment;
-    private ComposedMessageId m10;
-    private StoreMessageManager myFolderMessageManager;
-    private MailboxPath inboxPath;
-    private MailboxPath otherInboxPath;
+    private static ComposedMessageId m1;
+    private static ComposedMessageId m2;
+    private static ComposedMessageId m3;
+    private static ComposedMessageId m4;
+    private static ComposedMessageId m5;
+    private static ComposedMessageId m6;
+    private static ComposedMessageId m7;
+    private static ComposedMessageId m8;
+    private static ComposedMessageId m9;
+    private static ComposedMessageId mOther;
+    private static ComposedMessageId mailWithAttachment;
+    private static ComposedMessageId mailWithInlinedAttachment;
+    private static ComposedMessageId m10;
+    private static StoreMessageManager myFolderMessageManager;
+    private static MailboxPath inboxPath;
+    private static MailboxPath otherInboxPath;
 
-
-    @Before
-    public void setUp() throws Exception {
-        initializeMailboxManager();
+    public static void setUpClass() throws Exception {
+        initializeMailboxManager.perform();
 
         session = storeMailboxManager.createSystemSession(USERNAME);
         otherSession = storeMailboxManager.createSystemSession(OTHERUSER);
@@ -220,11 +218,18 @@ public abstract class AbstractMessageSearchIndexTest {
             RECENT,
             new Flags());
 
-        await();
+        await.perform();
     }
 
-    protected abstract void await();
-    protected abstract void initializeMailboxManager() throws Exception;
+    public interface Operation {
+        void perform();
+    }
+
+    protected static Operation await = () -> {};
+    protected static Operation reset = () -> {};
+    protected static Operation initializeMailboxManager = () -> {
+        throw new NotImplementedException("You need to implement 'initializeMailboxManager'");
+    };
 
     @Test
     public void searchingMessageInMultipleMailboxShouldNotReturnTwiceTheSameMessage() throws MailboxException {
@@ -234,7 +239,7 @@ public abstract class AbstractMessageSearchIndexTest {
             ImmutableList.of(mailbox.getMailboxId(), mailbox2.getMailboxId()),
             session);
 
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery();
 
@@ -257,16 +262,19 @@ public abstract class AbstractMessageSearchIndexTest {
                 mOther.getMessageId(),
                 mailWithAttachment.getMessageId(),
                 mailWithInlinedAttachment.getMessageId());
+
+        reset.perform();
     }
 
     @Test
     public void searchingMessageInMultipleMailboxShouldUnionOfTheTwoMailbox() throws MailboxException {
         Assume.assumeTrue(messageIdManager != null);
+
         messageIdManager.setInMailboxes(m4.getMessageId(),
             ImmutableList.of(mailbox2.getMailboxId()),
             session);
 
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery();
 
@@ -288,11 +296,14 @@ public abstract class AbstractMessageSearchIndexTest {
                 mOther.getMessageId(),
                 mailWithAttachment.getMessageId(),
                 mailWithInlinedAttachment.getMessageId());
+
+        reset.perform();
     }
 
     @Test
     public void searchingMessageInMultipleMailboxShouldNotReturnLessMessageThanLimitArgument() throws MailboxException {
         Assume.assumeTrue(messageIdManager != null);
+
         messageIdManager.setInMailboxes(m1.getMessageId(), ImmutableList.of(mailbox.getMailboxId(), mailbox2.getMailboxId()), session);
         messageIdManager.setInMailboxes(m2.getMessageId(), ImmutableList.of(mailbox.getMailboxId(), mailbox2.getMailboxId()), session);
         messageIdManager.setInMailboxes(m3.getMessageId(), ImmutableList.of(mailbox.getMailboxId(), mailbox2.getMailboxId()), session);
@@ -301,7 +312,7 @@ public abstract class AbstractMessageSearchIndexTest {
         messageIdManager.setInMailboxes(m6.getMessageId(), ImmutableList.of(mailbox.getMailboxId(), mailbox2.getMailboxId()), session);
         messageIdManager.setInMailboxes(m7.getMessageId(), ImmutableList.of(mailbox.getMailboxId(), mailbox2.getMailboxId()), session);
 
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery();
 
@@ -313,6 +324,8 @@ public abstract class AbstractMessageSearchIndexTest {
 
         assertThat(result)
             .hasSize(limit);
+
+        reset.perform();
     }
 
     @Test
@@ -342,7 +355,7 @@ public abstract class AbstractMessageSearchIndexTest {
                 true,
                 new Flags(Flags.Flag.SEEN));
 
-        await();
+        await.perform();
 
         int limit = 13;
         List<MessageId> result = messageSearchIndex.search(session,
@@ -352,6 +365,8 @@ public abstract class AbstractMessageSearchIndexTest {
 
         assertThat(result)
                 .hasSize(limit);
+
+        reset.perform();
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -1135,12 +1150,14 @@ public abstract class AbstractMessageSearchIndexTest {
                 session,
                 RECENT,
                 new Flags());
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery(SearchQuery.mailContains("User message banana"));
 
         assertThat(messageSearchIndex.search(session, mailbox2, searchQuery))
             .containsExactly(messageWithBeautifulBananaAsTextAttachment.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -1152,12 +1169,14 @@ public abstract class AbstractMessageSearchIndexTest {
                 session,
                 RECENT,
                 new Flags());
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery(SearchQuery.attachmentContains("beautiful banana"));
 
         assertThat(messageSearchIndex.search(session, mailbox2, searchQuery))
             .containsExactly(messageWithBeautifulBananaAsTextAttachment.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -1185,12 +1204,14 @@ public abstract class AbstractMessageSearchIndexTest {
                 session,
                 RECENT,
                 new Flags());
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery(SearchQuery.attachmentContains("beautiful banana"));
 
         assertThat(messageSearchIndex.search(session, mailbox2, searchQuery))
             .containsExactly(messageWithBeautifulBananaAsPDFAttachment.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -1223,7 +1244,7 @@ public abstract class AbstractMessageSearchIndexTest {
         ComposedMessageId message2 = messageManager.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), date2, session, isRecent, new Flags());
         ComposedMessageId message3 = messageManager.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), date3, session, isRecent, new Flags());
 
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery();
         searchQuery.setSorts(ImmutableList.of(new Sort(SortClause.SentDate)));
@@ -1232,6 +1253,8 @@ public abstract class AbstractMessageSearchIndexTest {
             .containsExactly(message2.getUid(),
                 message1.getUid(),
                 message3.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -1249,7 +1272,7 @@ public abstract class AbstractMessageSearchIndexTest {
         ComposedMessageId message2 = messageManager.appendMessage(new ByteArrayInputStream("Date: Wed, 23 Aug 2017 00:00:00 +0200\r\nSubject: test\r\n\r\ntestmail".getBytes()), date2, session, isRecent, new Flags());
         ComposedMessageId message3 = messageManager.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), date3, session, isRecent, new Flags());
 
-        await();
+        await.perform();
 
         SearchQuery searchQuery = new SearchQuery();
         searchQuery.setSorts(ImmutableList.of(new Sort(SortClause.SentDate)));
@@ -1258,5 +1281,7 @@ public abstract class AbstractMessageSearchIndexTest {
             .containsExactly(message2.getUid(),
                 message1.getUid(),
                 message3.getUid());
+
+        reset.perform();
     }
 }

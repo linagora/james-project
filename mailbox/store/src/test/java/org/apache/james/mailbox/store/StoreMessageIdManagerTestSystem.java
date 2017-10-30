@@ -113,4 +113,9 @@ public class StoreMessageIdManagerTestSystem extends MessageIdManagerTestSystem 
     public void setACL(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
         throw new NotImplementedException("Not implemented");
     }
+
+    @Override
+    public void deleteAllMailboxes() throws MailboxException {
+        throw new org.apache.commons.lang3.NotImplementedException("Not implemented");
+    }
 }

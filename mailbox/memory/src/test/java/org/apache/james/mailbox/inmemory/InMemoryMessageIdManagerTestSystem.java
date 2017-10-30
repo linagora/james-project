@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import javax.mail.Flags;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
@@ -125,5 +126,10 @@ public class InMemoryMessageIdManagerTestSystem extends MessageIdManagerTestSyst
     @Override
     public void setACL(MailboxId mailboxId, MailboxACL mailboxAcl, MailboxSession session) throws MailboxException {
         mailboxManager.setRights(mailboxId, mailboxAcl, session);
+    }
+
+    @Override
+    public void deleteAllMailboxes() throws MailboxException {
+        throw new NotImplementedException("Not implemented");
     }
 }

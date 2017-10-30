@@ -34,7 +34,7 @@ import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
-import org.apache.james.mailbox.mock.MockMailboxManager;
+import org.apache.james.mailbox.mock.MailboxesAndMessagesFeeder;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.Authorizator;
@@ -108,7 +108,7 @@ public class MailboxCopierTest {
              ((StoreMailboxManager) dstMemMailboxManager).init();
          }
     
-        srcMemMailboxManager = new MockMailboxManager(srcMemMailboxManager).getMockMailboxManager();
+        srcMemMailboxManager = new MailboxesAndMessagesFeeder(srcMemMailboxManager).getMockMailboxManager();
        
         assertMailboxManagerSize(srcMemMailboxManager, 1);
         
@@ -135,11 +135,11 @@ public class MailboxCopierTest {
 
         List<MailboxPath> mailboxPathList = mailboxManager.list(mailboxSession);
         
-        assertThat(mailboxPathList).hasSize(MockMailboxManager.EXPECTED_MAILBOXES_COUNT);
+        assertThat(mailboxPathList).hasSize(MailboxesAndMessagesFeeder.EXPECTED_MAILBOXES_COUNT);
         
         for (MailboxPath mailboxPath: mailboxPathList) {
             MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, mailboxSession);
-            assertThat(messageManager.getMetaData(false, mailboxSession, FetchGroup.NO_UNSEEN).getMessageCount()).isEqualTo(MockMailboxManager.MESSAGE_PER_MAILBOX_COUNT * multiplicationFactor);
+            assertThat(messageManager.getMetaData(false, mailboxSession, FetchGroup.NO_UNSEEN).getMessageCount()).isEqualTo(MailboxesAndMessagesFeeder.MESSAGE_PER_MAILBOX_COUNT * multiplicationFactor);
         }
         
         mailboxManager.endProcessingRequest(mailboxSession);

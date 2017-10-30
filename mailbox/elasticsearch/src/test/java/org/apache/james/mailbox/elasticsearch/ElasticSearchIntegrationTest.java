@@ -67,14 +67,15 @@ import org.apache.james.mailbox.tika.TikaContainer;
 import org.apache.james.mailbox.tika.TikaHttpClientImpl;
 import org.apache.james.mailbox.tika.TikaTextExtractor;
 import org.elasticsearch.client.Client;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 
 public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest {
 
@@ -82,33 +83,48 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
     private static final int SEARCH_SIZE = 1;
     private static final boolean IS_RECENT = true;
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch= new EmbeddedElasticSearch(temporaryFolder, MailboxElasticsearchConstants.MAILBOX_INDEX);
+    private static TemporaryFolder temporaryFolder = new TemporaryFolder();
+    private static EmbeddedElasticSearch embeddedElasticSearch= new EmbeddedElasticSearch(temporaryFolder, MailboxElasticsearchConstants.MAILBOX_INDEX);
 
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(temporaryFolder).around(embeddedElasticSearch);
+    @ClassRule
+    public static RuleChain ruleChain = RuleChain.outerRule(temporaryFolder).around(embeddedElasticSearch);
 
     @ClassRule
     public static TikaContainer tika = new TikaContainer();
-    private TikaTextExtractor textExtractor;
 
-    @Override
-    public void setUp() throws Exception {
-        textExtractor = new TikaTextExtractor(new TikaHttpClientImpl(TikaConfiguration.builder()
-                .host(tika.getIp())
-                .port(tika.getPort())
-                .timeoutInMillis(tika.getTimeoutInMillis())
-                .build()));
-        super.setUp();
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        AbstractMessageSearchIndexTest.setUpClass();
     }
 
-    @Override
-    protected void await() {
-        embeddedElasticSearch.awaitForElasticSearch();
+    static {
+        await = () -> embeddedElasticSearch.awaitForElasticSearch();
+        initializeMailboxManager = () -> {
+            try {
+                initializeMailboxManager();
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
+            }
+        };
+        reset = () -> {
+            try {
+                embeddedElasticSearch.after();
+                temporaryFolder.delete();
+                temporaryFolder.create();
+                embeddedElasticSearch.before();
+                setUpClass();
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
+            }
+        };
     }
 
-    @Override
-    protected void initializeMailboxManager() throws Exception {
+    protected static void initializeMailboxManager() throws Exception {
+        TikaTextExtractor textExtractor = new TikaTextExtractor(new TikaHttpClientImpl(TikaConfiguration.builder()
+            .host(tika.getIp())
+            .port(tika.getPort())
+            .timeoutInMillis(tika.getTimeoutInMillis())
+            .build()));
         Client client = NodeMappingFactory.applyMapping(
             IndexCreationFactory.createIndex(
                 new TestingClientProvider(embeddedElasticSearch.getNode()).get(),
@@ -169,6 +185,8 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
         assertThat(messageManager.search(new SearchQuery(SearchQuery.address(SearchQuery.AddressType.To, recipient)), session))
             .containsExactly(composedMessageId.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -186,6 +204,8 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
         assertThat(messageManager.search(new SearchQuery(SearchQuery.address(SearchQuery.AddressType.To, recipient)), session))
             .containsExactly(composedMessageId.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -203,6 +223,8 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
         assertThat(messageManager.search(new SearchQuery(SearchQuery.bodyContains("0123456789")), session))
             .containsExactly(composedMessageId.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -220,6 +242,8 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
         assertThat(messageManager.search(new SearchQuery(SearchQuery.bodyContains("matchMe")), session))
             .containsExactly(composedMessageId.getUid());
+
+        reset.perform();
     }
 
     @Test
@@ -238,5 +262,7 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
         assertThat(messageManager.search(new SearchQuery(SearchQuery.bodyContains(reasonableLongTerm)), session))
             .containsExactly(composedMessageId.getUid());
+
+        reset.perform();
     }
 }

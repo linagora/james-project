@@ -45,9 +45,9 @@ import org.junit.Before;
 import org.junit.ClassRule;
 
 public class CassandraAttachmentMapperTest extends AttachmentMapperTest {
-    
+
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
-    
+
     private CassandraCluster cassandra;
 
     @Before
@@ -69,12 +69,12 @@ public class CassandraAttachmentMapperTest extends AttachmentMapperTest {
         this.cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
         super.setUp();
     }
-    
+
     @After
     public void tearDown() {
         cassandra.close();
     }
-    
+
     @Override
     protected MapperProvider createMapperProvider() {
         return new CassandraMapperProvider(cassandra);
