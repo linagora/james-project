@@ -42,7 +42,7 @@ import org.apache.james.mailbox.acl.MailboxACLResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.elasticsearch.IndexAttachments;
-import org.apache.james.mailbox.elasticsearch.MailboxElasticsearchConstants;
+import org.apache.james.mailbox.elasticsearch.MailboxElasticSearchConstants;
 import org.apache.james.mailbox.elasticsearch.MailboxMappingFactory;
 import org.apache.james.mailbox.elasticsearch.events.ElasticSearchListeningMessageSearchIndex;
 import org.apache.james.mailbox.elasticsearch.json.MessageToElasticSearchJson;
@@ -82,7 +82,7 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
     public void beforeTest() throws Exception {
         super.beforeTest();
         this.tempDirectory = Files.createTempDirectory("elasticsearch");
-        this.embeddedElasticSearch = new EmbeddedElasticSearch(tempDirectory, MailboxElasticsearchConstants.MAILBOX_INDEX);
+        this.embeddedElasticSearch = new EmbeddedElasticSearch(tempDirectory, MailboxElasticSearchConstants.DEFAULT_MAILBOX_INDEX);
         embeddedElasticSearch.before();
         initFields();
     }
@@ -95,19 +95,27 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
 
     private void initFields() {
         Client client = NodeMappingFactory.applyMapping(
-            IndexCreationFactory.createIndex(new TestingClientProvider(embeddedElasticSearch.getNode()).get(), MailboxElasticsearchConstants.MAILBOX_INDEX),
-            MailboxElasticsearchConstants.MAILBOX_INDEX,
-            MailboxElasticsearchConstants.MESSAGE_TYPE,
-            MailboxMappingFactory.getMappingContent()
-        );
+            new IndexCreationFactory()
+                .useIndex(MailboxElasticSearchConstants.DEFAULT_MAILBOX_INDEX)
+                .addAlias(MailboxElasticSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS)
+                .addAlias(MailboxElasticSearchConstants.DEFAULT_MAILBOX_READ_ALIAS)
+                .createIndexAndAliases(new TestingClientProvider(embeddedElasticSearch.getNode()).get()),
+            MailboxElasticSearchConstants.DEFAULT_MAILBOX_INDEX,
+            MailboxElasticSearchConstants.MESSAGE_TYPE,
+            MailboxMappingFactory.getMappingContent());
 
         InMemoryMailboxSessionMapperFactory factory = new InMemoryMailboxSessionMapperFactory();
         InMemoryMessageId.Factory messageIdFactory = new InMemoryMessageId.Factory();
 
         ElasticSearchListeningMessageSearchIndex searchIndex = new ElasticSearchListeningMessageSearchIndex(
             factory,
-            new ElasticSearchIndexer(client, new DeleteByQueryPerformer(client, Executors.newSingleThreadExecutor(), MailboxElasticsearchConstants.MAILBOX_INDEX, MailboxElasticsearchConstants.MESSAGE_TYPE), MailboxElasticsearchConstants.MAILBOX_INDEX, MailboxElasticsearchConstants.MESSAGE_TYPE),
-            new ElasticSearchSearcher(client, new QueryConverter(new CriterionConverter()), new InMemoryId.Factory(), messageIdFactory),
+            new ElasticSearchIndexer(client,
+                new DeleteByQueryPerformer(client, Executors.newSingleThreadExecutor(), MailboxElasticSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS, MailboxElasticSearchConstants.MESSAGE_TYPE),
+                MailboxElasticSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS,
+                MailboxElasticSearchConstants.MESSAGE_TYPE),
+            new ElasticSearchSearcher(client,
+                new QueryConverter(new CriterionConverter()), new InMemoryId.Factory(), messageIdFactory,
+                MailboxElasticSearchConstants.DEFAULT_MAILBOX_READ_ALIAS, MailboxElasticSearchConstants.MESSAGE_TYPE),
             new MessageToElasticSearchJson(new DefaultTextExtractor(), ZoneId.systemDefault(), IndexAttachments.YES));
 
         MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
