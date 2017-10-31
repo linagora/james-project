@@ -19,31 +19,7 @@
 
 package org.apache.james.backends.es;
 
-import java.util.Objects;
-
-public class IndexName {
-    private final String value;
-
-    public IndexName(String value) {
-        this.value = value;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    @Override
-    public final boolean equals(Object o) {
-        if (o instanceof IndexName) {
-            IndexName indexName = (IndexName) o;
-
-            return Objects.equals(this.value, indexName.value);
-        }
-        return false;
-    }
-
-    @Override
-    public final int hashCode() {
-        return Objects.hash(value);
-    }
+public interface ElasticSearchConstants {
+    String WRITE_ALIAS = "injectWriteAlias";
+    String READ_ALIAS = "injectReadAlias";
 }

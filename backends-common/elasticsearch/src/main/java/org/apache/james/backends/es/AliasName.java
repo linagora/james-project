@@ -21,10 +21,10 @@ package org.apache.james.backends.es;
 
 import java.util.Objects;
 
-public class IndexName {
+public class AliasName {
     private final String value;
 
-    public IndexName(String value) {
+    public AliasName(String value) {
         this.value = value;
     }
 
@@ -34,10 +34,10 @@ public class IndexName {
 
     @Override
     public final boolean equals(Object o) {
-        if (o instanceof IndexName) {
-            IndexName indexName = (IndexName) o;
+        if (o instanceof AliasName) {
+            AliasName aliasName = (AliasName) o;
 
-            return Objects.equals(this.value, indexName.value);
+            return Objects.equals(this.value, aliasName.value);
         }
         return false;
     }
