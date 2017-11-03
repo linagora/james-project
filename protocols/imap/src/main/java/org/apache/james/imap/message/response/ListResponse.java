@@ -20,13 +20,13 @@ package org.apache.james.imap.message.response;
 
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
 import org.apache.james.imap.api.process.MailboxType;
+import org.apache.james.mailbox.PathDelimiter;
 
 /**
  * Values an IMAP4rev1 <code>LIST</code> response.
  */
 public final class ListResponse extends AbstractListingResponse implements ImapResponseMessage {
-
-    public ListResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, char delimiter) {
+    public ListResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, PathDelimiter delimiter) {
         super(noInferiors, noSelect, marked, unmarked, hasChildren, hasNoChildren, name, delimiter, MailboxType.OTHER);
     }
 }

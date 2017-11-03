@@ -21,6 +21,9 @@ package org.apache.james.imap.message.response;
 import java.util.List;
 
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
+import org.apache.james.mailbox.PathDelimiter;
+
+import com.google.common.base.Objects;
 
 /**
  * Describes a NAMESPACE response.
@@ -71,23 +74,23 @@ public class NamespaceResponse implements ImapResponseMessage {
      * Describes a namespace.
      */
     public static final class Namespace {
+        
         private final String prefix;
+        private final PathDelimiter pathDelimiter;
 
-        private final char delimiter;
-
-        public Namespace(String prefix, char delimiter) {
+        public Namespace(String prefix, PathDelimiter pathDelimiter) {
             super();
             this.prefix = prefix;
-            this.delimiter = delimiter;
+            this.pathDelimiter = pathDelimiter;
         }
 
         /**
-         * Gets the delimiter used to separate mailboxes.
+         * Gets the pathDelimiter used to separate mailboxes.
          * 
          * @return not null
          */
-        public char getDelimiter() {
-            return delimiter;
+        public PathDelimiter getDelimiter() {
+            return pathDelimiter;
         }
 
         /**
@@ -101,11 +104,7 @@ public class NamespaceResponse implements ImapResponseMessage {
 
         @Override
         public int hashCode() {
-            final int PRIME = 31;
-            int result = 1;
-            result = PRIME * result + delimiter;
-            result = PRIME * result + ((prefix == null) ? 0 : prefix.hashCode());
-            return result;
+            return Objects.hashCode(prefix, pathDelimiter);
         }
 
         @Override
@@ -117,7 +116,7 @@ public class NamespaceResponse implements ImapResponseMessage {
             if (getClass() != obj.getClass())
                 return false;
             final Namespace other = (Namespace) obj;
-            if (delimiter != other.delimiter)
+            if (pathDelimiter != other.pathDelimiter)
                 return false;
             if (prefix == null) {
                 if (other.prefix != null)
@@ -129,7 +128,7 @@ public class NamespaceResponse implements ImapResponseMessage {
 
         @Override
         public String toString() {
-            return "Namespace [prefix=" + prefix + ", delim=" + delimiter + "]";
+            return "Namespace [prefix=" + prefix + ", delim=" + pathDelimiter + "]";
         }
     }
 

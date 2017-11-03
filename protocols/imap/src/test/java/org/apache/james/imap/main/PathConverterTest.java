@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import org.apache.james.imap.api.ImapSessionUtils;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.Before;
@@ -37,7 +38,7 @@ import org.junit.rules.ExpectedException;
 public class PathConverterTest {
 
     private static final String USERNAME = "username";
-    private static final char PATH_DELIMITER = '.';
+    private static final PathDelimiter PATH_DELIMITER = new PathDelimiter('.');
 
     private ImapSession imapSession;
     private MailboxSession mailboxSession;

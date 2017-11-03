@@ -35,6 +35,7 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxId;
@@ -80,7 +81,7 @@ public class MailboxEventAnalyserTest {
     private static final MessageUid MESSAGE_UID = MessageUid.of(1);
     private static final MockMailboxSession MAILBOX_SESSION = new MockMailboxSession("user");
     private static final MockMailboxSession OTHER_MAILBOX_SESSION = new MockMailboxSession("user");
-    private static final char PATH_DELIMITER = '.';
+    private static final PathDelimiter PATH_DELIMITER = new PathDelimiter('.');
     private static final MailboxPath MAILBOX_PATH = new MailboxPath("namespace", "user", "name");
 
     private SelectedMailboxImpl testee;

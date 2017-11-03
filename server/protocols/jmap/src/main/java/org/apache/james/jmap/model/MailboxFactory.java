@@ -41,7 +41,6 @@ import org.apache.james.mailbox.model.MailboxPath;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 
 public class MailboxFactory {
@@ -142,7 +141,7 @@ public class MailboxFactory {
     @VisibleForTesting String getName(MailboxPath mailboxPath, MailboxSession mailboxSession) {
         String name = mailboxPath.getName();
         if (name.contains(String.valueOf(mailboxSession.getPathDelimiter()))) {
-            List<String> levels = Splitter.on(mailboxSession.getPathDelimiter()).splitToList(name);
+            List<String> levels = mailboxSession.getPathDelimiter().split(name);
             return levels.get(levels.size() - 1);
         }
         return name;

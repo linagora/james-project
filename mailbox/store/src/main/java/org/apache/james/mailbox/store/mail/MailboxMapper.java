@@ -20,6 +20,7 @@ package org.apache.james.mailbox.store.mail;
 
 import java.util.List;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxACL;
@@ -103,7 +104,7 @@ public interface MailboxMapper extends Mapper {
      * @throws MailboxException
      * @throws MailboxNotFoundException
      */
-    boolean hasChildren(Mailbox mailbox, char delimiter)
+    boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter)
             throws MailboxException, MailboxNotFoundException;
 
     /**

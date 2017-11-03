@@ -34,6 +34,7 @@ import org.apache.jackrabbit.commons.JcrUtils;
 import org.apache.jackrabbit.util.ISO9075;
 import org.apache.jackrabbit.util.Text;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.jcr.AbstractJCRScalingMapper;
@@ -207,7 +208,7 @@ public class JCRMailboxMapper extends AbstractJCRScalingMapper implements Mailbo
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#hasChildren(org.apache.james.
      * imap.store.mail.model.Mailbox)
      */
-    public boolean hasChildren(Mailbox mailbox, char delimiter)
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter)
             throws MailboxException, MailboxNotFoundException {
         try {
             String name = Text.escapeIllegalXpathSearchChars(mailbox.getName());

@@ -26,6 +26,7 @@ import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.MailboxType;
 import org.apache.james.imap.message.response.ListResponse;
 import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -77,13 +78,13 @@ public class ListProcessorTest  {
 
     ListResponse createResponse(boolean noinferior, boolean noselect,
             boolean marked, boolean unmarked, boolean hasChildren,
-            boolean hasNoChildren, char hierarchyDelimiter, String mailboxName) {
+            boolean hasNoChildren, PathDelimiter hierarchyDelimiter, String mailboxName) {
         return new ListResponse(noinferior, noselect, marked, unmarked,
                 hasChildren, hasNoChildren, MailboxConstants.USER_NAMESPACE + MailboxConstants.DEFAULT_DELIMITER + mailboxName, hierarchyDelimiter);
     }
 
     void setUpResult(final MailboxMetaData.Children children, final MailboxMetaData.Selectability selectability,
-            final char hierarchyDelimiter, final MailboxPath path) {
+            final PathDelimiter hierarchyDelimiter, final MailboxPath path) {
         mockery.checking(new Expectations() {{
             oneOf(result).inferiors();will(returnValue(children));
             oneOf(result).getSelectability();will(returnValue(selectability));
@@ -94,54 +95,54 @@ public class ListProcessorTest  {
     
     @Test
     public void testHasChildren() throws Exception {
-        setUpResult(MailboxMetaData.Children.HAS_CHILDREN, MailboxMetaData.Selectability.NONE, '.', inboxPath);
+        setUpResult(MailboxMetaData.Children.HAS_CHILDREN, MailboxMetaData.Selectability.NONE, new PathDelimiter('.'), inboxPath);
         mockery.checking(new Expectations() {{
-            oneOf(responder).respond(with(equal(createResponse(false, false, false, false, true, false, '.', "INBOX"))));
+            oneOf(responder).respond(with(equal(createResponse(false, false, false, false, true, false, new PathDelimiter('.'), "INBOX"))));
         }});
         processor.processResult(responder, false, result,MailboxType.OTHER);
     }
 
     @Test
     public void testHasNoChildren() throws Exception {
-        setUpResult(MailboxMetaData.Children.HAS_NO_CHILDREN, MailboxMetaData.Selectability.NONE, '.', inboxPath);
+        setUpResult(MailboxMetaData.Children.HAS_NO_CHILDREN, MailboxMetaData.Selectability.NONE, new PathDelimiter('.'), inboxPath);
         mockery.checking(new Expectations() {{
-            oneOf(responder).respond(with(equal(createResponse(false, false, false, false, false, true, '.', "INBOX"))));
+            oneOf(responder).respond(with(equal(createResponse(false, false, false, false, false, true, new PathDelimiter('.'), "INBOX"))));
         }});
         processor.processResult(responder, false, result,MailboxType.OTHER);
     }
     
     @Test
     public void testNoInferiors() throws Exception {
-        setUpResult(MailboxMetaData.Children.NO_INFERIORS, MailboxMetaData.Selectability.NONE, '.', inboxPath);
+        setUpResult(MailboxMetaData.Children.NO_INFERIORS, MailboxMetaData.Selectability.NONE, new PathDelimiter('.'), inboxPath);
         mockery.checking(new Expectations() {{
-            oneOf(responder).respond(with(equal(createResponse(true, false, false, false, false, false, '.', "INBOX"))));
+            oneOf(responder).respond(with(equal(createResponse(true, false, false, false, false, false, new PathDelimiter('.'), "INBOX"))));
         }});
         processor.processResult(responder, false, result,MailboxType.OTHER);
     }
 
     @Test
     public void testNoSelect() throws Exception {
-        setUpResult(MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.NOSELECT, '.', inboxPath);
+        setUpResult(MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.NOSELECT, new PathDelimiter('.'), inboxPath);
         mockery.checking(new Expectations() {{
-            oneOf(responder).respond(with(equal(createResponse(false, true, false, false, false, false, '.', "INBOX"))));
+            oneOf(responder).respond(with(equal(createResponse(false, true, false, false, false, false, new PathDelimiter('.'), "INBOX"))));
         }});
         processor.processResult(responder, false, result,MailboxType.OTHER);
     }
 
     @Test
     public void testUnMarked() throws Exception {
-        setUpResult(MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.UNMARKED, '.', inboxPath);
+        setUpResult(MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.UNMARKED, new PathDelimiter('.'), inboxPath);
         mockery.checking(new Expectations() {{
-            oneOf(responder).respond(with(equal(createResponse(false, false, false, true, false, false, '.', "INBOX"))));
+            oneOf(responder).respond(with(equal(createResponse(false, false, false, true, false, false, new PathDelimiter('.'), "INBOX"))));
         }});
         processor.processResult(responder, false, result,MailboxType.OTHER);
     }
 
     @Test
     public void testMarked() throws Exception {
-        setUpResult(MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.MARKED, '.', inboxPath);
+        setUpResult(MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.MARKED, new PathDelimiter('.'), inboxPath);
         mockery.checking(new Expectations() {{
-            oneOf(responder).respond(with(equal(createResponse(false, false, true, false, false, false, '.', "INBOX"))));
+            oneOf(responder).respond(with(equal(createResponse(false, false, true, false, false, false, new PathDelimiter('.'), "INBOX"))));
         }});
         processor.processResult(responder, false, result,MailboxType.OTHER);
     }

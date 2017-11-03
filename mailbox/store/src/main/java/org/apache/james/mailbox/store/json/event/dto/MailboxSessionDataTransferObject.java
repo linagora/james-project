@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.store.SimpleMailboxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,7 @@ public class MailboxSessionDataTransferObject {
     @JsonProperty()
     private String otherUserSpace;
     @JsonProperty()
-    private char separator;
+    private PathDelimiter separator;
     @JsonProperty()
     private List<LocaleDataTransferObject> locales;
     @JsonProperty("r")

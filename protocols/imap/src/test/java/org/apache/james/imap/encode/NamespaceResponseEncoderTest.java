@@ -28,6 +28,7 @@ import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.response.NamespaceResponse;
+import org.apache.james.mailbox.PathDelimiter;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.Sequence;
@@ -75,8 +76,7 @@ public class NamespaceResponseEncoderTest {
             }
         });
         List<NamespaceResponse.Namespace> namespaces = new ArrayList<>();
-        namespaces.add(new NamespaceResponse.Namespace(aPrefix, aDeliminator
-                .charAt(0)));
+        namespaces.add(new NamespaceResponse.Namespace(aPrefix, new PathDelimiter(aDeliminator.charAt(0))));
         subject.doEncode(new NamespaceResponse(null, null, namespaces),
                 mockComposer, dummySession);
     }
@@ -103,8 +103,7 @@ public class NamespaceResponseEncoderTest {
             }
         });
         List<NamespaceResponse.Namespace> namespaces = new ArrayList<>();
-        namespaces.add(new NamespaceResponse.Namespace(aPrefix, aDeliminator
-                .charAt(0)));
+        namespaces.add(new NamespaceResponse.Namespace(aPrefix, new PathDelimiter(aDeliminator.charAt(0))));
         subject.doEncode(new NamespaceResponse(null, namespaces, null),
                 mockComposer, dummySession);
     }
@@ -131,8 +130,7 @@ public class NamespaceResponseEncoderTest {
             }
         });
         List<NamespaceResponse.Namespace> namespaces = new ArrayList<>();
-        namespaces.add(new NamespaceResponse.Namespace(aPrefix, aDeliminator
-                .charAt(0)));
+        namespaces.add(new NamespaceResponse.Namespace(aPrefix, new PathDelimiter(aDeliminator.charAt(0))));
         subject.doEncode(new NamespaceResponse(namespaces, null, null),
                 mockComposer, dummySession);
     }
@@ -165,10 +163,8 @@ public class NamespaceResponseEncoderTest {
             }
         });
         List<NamespaceResponse.Namespace> namespaces = new ArrayList<>();
-        namespaces.add(new NamespaceResponse.Namespace(aPrefix, aDeliminator
-                .charAt(0)));
-        namespaces.add(new NamespaceResponse.Namespace(anotherPrefix,
-                anotherDeliminator.charAt(0)));
+        namespaces.add(new NamespaceResponse.Namespace(aPrefix, new PathDelimiter(aDeliminator.charAt(0))));
+        namespaces.add(new NamespaceResponse.Namespace(anotherPrefix, new PathDelimiter(anotherDeliminator.charAt(0))));
         subject.doEncode(new NamespaceResponse(namespaces, null, null),
                 mockComposer, dummySession);
     }

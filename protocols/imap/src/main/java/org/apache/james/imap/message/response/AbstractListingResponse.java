@@ -20,6 +20,7 @@
 package org.apache.james.imap.message.response;
 
 import org.apache.james.imap.api.process.MailboxType;
+import org.apache.james.mailbox.PathDelimiter;
 
 /**
  * <code>LIST</code> and <code>LSUB</code> return identical data.
@@ -38,13 +39,13 @@ public abstract class AbstractListingResponse {
 
     private final boolean unmarked;
 
-    private final char hierarchyDelimiter;
+    private final PathDelimiter hierarchyDelimiter;
 
     private final String name;
 
     private final MailboxType type;
 
-    public AbstractListingResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, char hierarchyDelimiter, MailboxType type) {
+    public AbstractListingResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, PathDelimiter hierarchyDelimiter, MailboxType type) {
         super();
         this.noInferiors = noInferiors;
         this.noSelect = noSelect;
@@ -62,7 +63,7 @@ public abstract class AbstractListingResponse {
      * 
      * @return hierarchy delimiter, or null if no hierarchy exists
      */
-    public final char getHierarchyDelimiter() {
+    public final PathDelimiter getHierarchyDelimiter() {
         return hierarchyDelimiter;
     }
 
@@ -153,7 +154,7 @@ public abstract class AbstractListingResponse {
         final int PRIME = 31;
         int result = 1;
         result = PRIME * result + (children ? 1231 : 1237);
-        result = PRIME * result + hierarchyDelimiter;
+        result = PRIME * result + hierarchyDelimiter.getPathDelimiter();
         result = PRIME * result + type.ordinal();
         result = PRIME * result + (marked ? 1231 : 1237);
         result = PRIME * result + ((name == null) ? 0 : name.hashCode());

@@ -35,6 +35,7 @@ import org.apache.james.imap.message.request.LsubRequest;
 import org.apache.james.imap.message.response.LSubResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.metrics.api.NoopMetricFactory;
@@ -48,7 +49,7 @@ public class LSubProcessorTest {
 
     private static final String ROOT = "ROOT";
     
-    private static final char HIERARCHY_DELIMITER = '.';
+    private static final PathDelimiter HIERARCHY_DELIMITER = new PathDelimiter('.');
 
     private static final String PARENT = ROOT
             + HIERARCHY_DELIMITER + "PARENT";

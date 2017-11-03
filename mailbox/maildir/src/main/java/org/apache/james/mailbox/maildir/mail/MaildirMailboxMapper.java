@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -154,7 +155,7 @@ public class MaildirMailboxMapper extends NonTransactionalMapper implements Mail
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#hasChildren(org.apache.james.mailbox.store.mail.model.Mailbox, char)
      */
     @Override
-    public boolean hasChildren(Mailbox mailbox, char delimiter) throws MailboxException, MailboxNotFoundException {
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter) throws MailboxException, MailboxNotFoundException {
         String searchString = mailbox.getName() + MaildirStore.maildirDelimiter + MaildirStore.WILDCARD;
         List<Mailbox> mailboxes = findMailboxWithPathLike(
                 new MailboxPath(mailbox.getNamespace(), mailbox.getUser(), searchString));

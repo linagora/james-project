@@ -22,6 +22,7 @@ package org.apache.james.mailbox.jpa.mail;
 import java.util.List;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxACL;
@@ -75,7 +76,7 @@ public class TransactionalMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public boolean hasChildren(Mailbox mailbox, char delimiter) throws MailboxException, MailboxNotFoundException {
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter) throws MailboxException, MailboxNotFoundException {
         return wrapped.hasChildren(mailbox, delimiter);
     }
 

@@ -20,17 +20,16 @@
 package org.apache.james.imap.main;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.james.imap.api.ImapSessionUtils;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 
 public class PathConverter {
 
@@ -71,10 +70,10 @@ public class PathConverter {
     }
 
     private MailboxPath buildAbsolutePath(String absolutePath) {
-        char pathDelimiter = ImapSessionUtils.getMailboxSession(session).getPathDelimiter();
-        List<String> mailboxPathParts = Splitter.on(pathDelimiter).splitToList(absolutePath);
+        PathDelimiter pathDelimiter = ImapSessionUtils.getMailboxSession(session).getPathDelimiter();
+        List<String> mailboxPathParts = pathDelimiter.split(absolutePath);
         String namespace = mailboxPathParts.get(NAMESPACE);
-        String mailboxName = Joiner.on(pathDelimiter).join(Iterables.skip(mailboxPathParts, 1));
+        String mailboxName = pathDelimiter.join(mailboxPathParts.stream().skip(1).collect(Collectors.toList()));
         return buildMailboxPath(namespace, retrieveUserName(namespace), mailboxName);
     }
 

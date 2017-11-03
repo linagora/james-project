@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -134,7 +135,7 @@ public class InMemoryMailboxMapper implements MailboxMapper {
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#hasChildren(org.apache.james.mailbox.store.mail.model.Mailbox, char)
      */
-    public boolean hasChildren(Mailbox mailbox, char delimiter) throws MailboxException {
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter) throws MailboxException {
         String mailboxName = mailbox.getName() + delimiter;
         return mailboxesByPath.values()
             .stream()

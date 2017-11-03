@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
 import javax.mail.Flags;
 
 import org.apache.james.imap.api.ImapCommand;
@@ -54,6 +55,7 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
@@ -371,25 +373,25 @@ abstract public class AbstractMailboxProcessor<M extends ImapRequest> extends Ab
      * @param mailboxPath
      * @return
      */
-    private String joinMailboxPath(MailboxPath mailboxPath, char delimiter) {
+    private String joinMailboxPath(MailboxPath mailboxPath, PathDelimiter delimiter) {
         StringBuffer sb = new StringBuffer("");
         if (mailboxPath.getNamespace() != null && !mailboxPath.getNamespace().equals("")) {
             sb.append(mailboxPath.getNamespace());
         }
         if (mailboxPath.getUser() != null && !mailboxPath.getUser().equals("")) {
             if (sb.length() > 0)
-                sb.append(delimiter);
+                sb.append(delimiter.getPathDelimiter());
             sb.append(mailboxPath.getUser());
         }
         if (mailboxPath.getName() != null && !mailboxPath.getName().equals("")) {
             if (sb.length() > 0)
-                sb.append(delimiter);
+                sb.append(delimiter.getPathDelimiter());
             sb.append(mailboxPath.getName());
         }
         return sb.toString();
     }
 
-    protected String mailboxName(boolean relative, MailboxPath path, char delimiter) {
+    protected String mailboxName(boolean relative, MailboxPath path, PathDelimiter delimiter) {
         if (relative) {
             return path.getName();
         } else {

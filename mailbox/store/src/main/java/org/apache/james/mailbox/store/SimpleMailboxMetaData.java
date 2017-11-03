@@ -19,6 +19,7 @@
 
 package org.apache.james.mailbox.store;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.StandardMailboxMetaDataComparator;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
@@ -26,13 +27,13 @@ import org.apache.james.mailbox.model.MailboxPath;
 
 public class SimpleMailboxMetaData implements MailboxMetaData, Comparable<MailboxMetaData> {
 
-    public static MailboxMetaData createNoSelect(MailboxPath path, MailboxId mailboxId, char delimiter) {
-        return new SimpleMailboxMetaData(path, mailboxId, delimiter, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NOSELECT);
+    public static MailboxMetaData createNoSelect(MailboxPath path, MailboxId mailboxId, PathDelimiter pathDelimiter) {
+        return new SimpleMailboxMetaData(path, mailboxId, pathDelimiter, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NOSELECT);
     }
 
     private final MailboxPath path;
 
-    private final char delimiter;
+    private final PathDelimiter pathDelimiter;
 
     private final Children inferiors;
 
@@ -40,15 +41,15 @@ public class SimpleMailboxMetaData implements MailboxMetaData, Comparable<Mailbo
 
     private final MailboxId mailboxId;
 
-    public SimpleMailboxMetaData(MailboxPath path, MailboxId mailboxId, char delimiter) {
-        this(path, mailboxId, delimiter, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NONE);
+    public SimpleMailboxMetaData(MailboxPath path, MailboxId mailboxId, PathDelimiter pathDelimiter) {
+        this(path, mailboxId, pathDelimiter, Children.CHILDREN_ALLOWED_BUT_UNKNOWN, Selectability.NONE);
     }
 
-    public SimpleMailboxMetaData(MailboxPath path, MailboxId mailboxId, char delimiter, Children inferiors, Selectability selectability) {
+    public SimpleMailboxMetaData(MailboxPath path, MailboxId mailboxId, PathDelimiter pathDelimiter, Children inferiors, Selectability selectability) {
         super();
         this.path = path;
         this.mailboxId = mailboxId;
-        this.delimiter = delimiter;
+        this.pathDelimiter = pathDelimiter;
         this.inferiors = inferiors;
         this.selectability = selectability;
     }
@@ -72,8 +73,8 @@ public class SimpleMailboxMetaData implements MailboxMetaData, Comparable<Mailbo
     /**
      * @see org.apache.james.mailbox.model.MailboxMetaData#getHierarchyDelimiter()
      */
-    public char getHierarchyDelimiter() {
-        return delimiter;
+    public PathDelimiter getHierarchyDelimiter() {
+        return pathDelimiter;
     }
 
     /**

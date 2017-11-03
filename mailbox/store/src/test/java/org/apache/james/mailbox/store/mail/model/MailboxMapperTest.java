@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.util.List;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -44,7 +45,7 @@ import org.junit.rules.ExpectedException;
  */
 public abstract class MailboxMapperTest {
     
-    private final static char DELIMITER = '.';
+    private final static PathDelimiter DELIMITER = new PathDelimiter('.');
     private final static char WILDCARD = '%';
     private final static long UID_VALIDITY = 42;
 
@@ -162,7 +163,7 @@ public abstract class MailboxMapperTest {
     @Test
     public void hasChildrenShouldNotBeAcrossUsersAndNamespace() throws MailboxException {
         saveAll();
-        assertThat(mailboxMapper.hasChildren(bobInboxMailbox, '.')).isFalse();
+        assertThat(mailboxMapper.hasChildren(bobInboxMailbox, new PathDelimiter('.'))).isFalse();
     }
 
     @Test

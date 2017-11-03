@@ -28,6 +28,7 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxSession;
@@ -122,8 +123,8 @@ public class DefaultMailboxesProvisioningFilterThreadTest {
         }
 
         @Override
-        public char getDelimiter() {
-            return 0;
+        public PathDelimiter getDelimiter() {
+            return new PathDelimiter('.');
         }
 
         @Override

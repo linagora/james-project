@@ -56,7 +56,7 @@ public class CreateCommandParser extends AbstractImapCommandParser {
             // RFC3501@6.3.3p2
             // When mailbox name is suffixed with hierarchy separator
             // name created must remove tailing delimiter
-            if (mailboxName.endsWith(Character.toString(mailboxSession.getPathDelimiter()))) { // NOPMD
+            if (mailboxName.endsWith(Character.toString(mailboxSession.getPathDelimiter().getPathDelimiter()))) { // NOPMD
                                                                                                // keep
                                                                                                // comment
                 mailboxName = mailboxName.substring(0, mailboxName.length() - 1);

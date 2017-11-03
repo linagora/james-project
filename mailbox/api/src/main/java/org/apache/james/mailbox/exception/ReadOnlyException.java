@@ -19,6 +19,7 @@
 
 package org.apache.james.mailbox.exception;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.model.MailboxPath;
 
 /**
@@ -36,13 +37,13 @@ public class ReadOnlyException extends MailboxException{
 
 
 
-    public ReadOnlyException(MailboxPath path, char delimiter) {
-        super(path.getFullName(delimiter));
+    public ReadOnlyException(MailboxPath path, PathDelimiter pathDelimiter) {
+        super(path.getFullName(pathDelimiter));
     }
 
 
-    public ReadOnlyException(MailboxPath path, char delimiter, Exception e) {
-        super(path.getFullName(delimiter), e);
+    public ReadOnlyException(MailboxPath path, PathDelimiter pathDelimiter, Exception e) {
+        super(path.getFullName(pathDelimiter), e);
     }
 }
 

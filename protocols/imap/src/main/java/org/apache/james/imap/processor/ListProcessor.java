@@ -39,6 +39,7 @@ import org.apache.james.imap.message.request.ListRequest;
 import org.apache.james.imap.message.response.ListResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
@@ -74,7 +75,7 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
         doProcess(baseReferenceName, mailboxPatternString, session, tag, command, responder, null);
     }
 
-    protected ImapResponseMessage createResponse(boolean noInferior, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String mailboxName, char delimiter, MailboxType type) {
+    protected ImapResponseMessage createResponse(boolean noInferior, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String mailboxName, PathDelimiter delimiter, MailboxType type) {
         return new ListResponse(noInferior, noSelect, marked, unmarked, hasChildren, hasNoChildren, mailboxName, delimiter);
     }
 
@@ -113,7 +114,7 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
                 if (referenceName.length() > 0 && referenceName.charAt(0) == MailboxConstants.NAMESPACE_PREFIX_CHAR) {
                     // A qualified reference name - get the root element
                     isRelative = false;
-                    int firstDelimiter = referenceName.indexOf(mailboxSession.getPathDelimiter());
+                    int firstDelimiter = referenceName.indexOf(mailboxSession.getPathDelimiter().getPathDelimiter());
                     if (firstDelimiter == -1) {
                         referenceRoot = referenceName;
                     } else {
@@ -139,7 +140,7 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
                         return Selectability.NOSELECT;
                     }
                     
-                    public char getHierarchyDelimiter() {
+                    public PathDelimiter getHierarchyDelimiter() {
                         return mailboxSession.getPathDelimiter();
                     }
 
@@ -195,7 +196,7 @@ public class ListProcessor extends AbstractMailboxProcessor<ListRequest> {
     }
 
     void processResult(Responder responder, boolean relative, MailboxMetaData listResult, MailboxType mailboxType) {
-        final char delimiter = listResult.getHierarchyDelimiter();
+        final PathDelimiter delimiter = listResult.getHierarchyDelimiter();
         final String mailboxName = mailboxName(relative, listResult.getPath(), delimiter);
 
         final Children inferiors = listResult.inferiors();

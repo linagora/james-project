@@ -38,6 +38,7 @@ import org.apache.james.core.MailAddress;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.api.Metric;
@@ -75,7 +76,7 @@ public class LocalDeliveryTest {
 
         user = mock(MailboxSession.User.class);
         MailboxSession session = mock(MailboxSession.class);
-        when(session.getPathDelimiter()).thenReturn('.');
+        when(session.getPathDelimiter()).thenReturn(new PathDelimiter('.'));
         try {
             when(mailboxManager.createSystemSession(any(String.class))).thenReturn(session);
         } catch (MailboxException e) {

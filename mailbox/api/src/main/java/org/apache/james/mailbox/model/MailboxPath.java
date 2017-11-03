@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 
 import com.google.common.collect.ImmutableList;
 
@@ -50,7 +51,7 @@ public class MailboxPath {
      * @return path
      */
     public static MailboxPath parse(MailboxSession session, String fullmailboxname) {
-        char delimiter = session.getPathDelimiter();
+        char delimiter = session.getPathDelimiter().getPathDelimiter();
         int i = fullmailboxname.indexOf(delimiter);
         String namespace = fullmailboxname.substring(0, i);
         String mailbox = fullmailboxname.substring(i + 1, fullmailboxname.length());
@@ -157,10 +158,11 @@ public class MailboxPath {
      * @param delimiter
      * @return list of hierarchy levels
      */
-    public List<MailboxPath> getHierarchyLevels(char delimiter) {
+    public List<MailboxPath> getHierarchyLevels(PathDelimiter pathDelimiter) {
         if (name == null) {
             return ImmutableList.of(this);
         }
+        char delimiter = pathDelimiter.getPathDelimiter();
         ArrayList<MailboxPath> levels = new ArrayList<>();
         int index = name.indexOf(delimiter);
         while (index >= 0) {
@@ -231,8 +233,8 @@ public class MailboxPath {
      * @param delimiter
      * @return fullName
      */
-    public String getFullName(char delimiter) {
-        return namespace + delimiter + name;
+    public String getFullName(PathDelimiter pathDelimiter) {
+        return pathDelimiter.join(namespace, name);
     }
 
 }

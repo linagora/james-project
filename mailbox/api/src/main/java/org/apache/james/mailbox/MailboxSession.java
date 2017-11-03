@@ -149,9 +149,9 @@ public interface MailboxSession {
     Map<Object, Object> getAttributes();
 
     /**
-     * Return server side, folder path separator
+     * Return server side, folder path delimiter
      * 
-     * @return path separator
+     * @return pathDelimiter
      */
-    char getPathDelimiter();
+    PathDelimiter getPathDelimiter();
 }

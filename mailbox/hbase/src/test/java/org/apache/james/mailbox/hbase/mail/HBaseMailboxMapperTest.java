@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
@@ -75,7 +76,7 @@ public class HBaseMailboxMapperTest {
     private static final int NAMESPACES = 5;
     private static final int USERS = 5;
     private static final int MAILBOX_NO = 5;
-    private static final char SEPARATOR = '%';
+    private static final PathDelimiter SEPARATOR = new PathDelimiter('%');
 
     @Before
     public void setUp() throws Exception {

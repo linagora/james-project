@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.model;
 
+import org.apache.james.mailbox.PathDelimiter;
+
 /**
  * Constants which are used within the mailbox api and implementations
  * 
@@ -35,7 +37,7 @@ public interface MailboxConstants {
     String USER_NAMESPACE = NAMESPACE_PREFIX_CHAR + "private";
 
     /** The default delimiter used to seperated parent/child folders */
-    char DEFAULT_DELIMITER = '.';
+    PathDelimiter DEFAULT_DELIMITER = new PathDelimiter('.');
 
     /** The name of the INBOX */
     String INBOX = "INBOX";

@@ -23,14 +23,16 @@ import java.util.Optional;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
+import org.apache.james.mailbox.PathDelimiter;
+
 public class PrefixedRegex implements MailboxNameExpression {
 
     private final String prefix;
     private final String regex;
     private final Pattern pattern;
-    private final char pathDelimiter;
+    private final PathDelimiter pathDelimiter;
 
-    public PrefixedRegex(String prefix, String regex, char pathDelimiter) {
+    public PrefixedRegex(String prefix, String regex, PathDelimiter pathDelimiter) {
         this.prefix = Optional.ofNullable(prefix).orElse("");
         this.regex = Optional.ofNullable(regex).orElse("");
         this.pathDelimiter = pathDelimiter;
@@ -56,9 +58,9 @@ public class PrefixedRegex implements MailboxNameExpression {
     public String getCombinedName() {
         if (prefix != null && prefix.length() > 0) {
             final int baseLength = prefix.length();
-            if (prefix.charAt(baseLength - 1) == pathDelimiter) {
+            if (prefix.charAt(baseLength - 1) == pathDelimiter.getPathDelimiter()) {
                 if (regex != null && regex.length() > 0) {
-                    if (regex.charAt(0) == pathDelimiter) {
+                    if (regex.charAt(0) == pathDelimiter.getPathDelimiter()) {
                         return prefix + regex.substring(1);
                     } else {
                         return prefix + regex;
@@ -68,10 +70,10 @@ public class PrefixedRegex implements MailboxNameExpression {
                 }
             } else {
                 if (regex != null && regex.length() > 0) {
-                    if (regex.charAt(0) == pathDelimiter) {
+                    if (regex.charAt(0) == pathDelimiter.getPathDelimiter()) {
                         return prefix + regex;
                     } else {
-                        return prefix + pathDelimiter + regex;
+                        return prefix + pathDelimiter.getPathDelimiter() + regex;
                     }
                 } else {
                     return prefix;
@@ -104,7 +106,7 @@ public class PrefixedRegex implements MailboxNameExpression {
         if (token.equals("*")) {
             return ".*";
         } else if (token.equals("%")) {
-            return "[^" + Pattern.quote(String.valueOf(pathDelimiter)) + "]*";
+            return "[^" + Pattern.quote(String.valueOf(pathDelimiter.getPathDelimiter())) + "]*";
         } else {
             return Pattern.quote(token);
         }

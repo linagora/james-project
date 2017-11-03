@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 
 public class MockMailboxSession implements MailboxSession {
     private final User user;
@@ -100,8 +101,8 @@ public class MockMailboxSession implements MailboxSession {
         return open;
     }
 
-	public char getPathDelimiter() {
-		return '.';
+	public PathDelimiter getPathDelimiter() {
+		return new PathDelimiter('.');
 	}
 
     public SessionType getType() {

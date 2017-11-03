@@ -56,7 +56,6 @@ import org.slf4j.LoggerFactory;
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 
 public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
@@ -158,7 +157,7 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
     }
 
     private void validateMailboxName(MailboxUpdateRequest updateRequest, MailboxSession mailboxSession) throws MailboxNameException {
-        char pathDelimiter = mailboxSession.getPathDelimiter();
+        char pathDelimiter = mailboxSession.getPathDelimiter().getPathDelimiter();
 
         if (nameContainsPathDelimiter(updateRequest, pathDelimiter)) {
             throw new MailboxNameException(String.format("The mailbox '%s' contains an illegal character: '%c'", updateRequest.getName().get(), pathDelimiter));
@@ -255,8 +254,8 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
 
     private String getCurrentMailboxName(MailboxPath originMailboxPath, MailboxSession mailboxSession) {
         return Iterables.getLast(
-                Splitter.on(mailboxSession.getPathDelimiter())
-                    .splitToList(originMailboxPath.getName()));
+                mailboxSession.getPathDelimiter()
+                    .split(originMailboxPath.getName()));
     }
 
 }

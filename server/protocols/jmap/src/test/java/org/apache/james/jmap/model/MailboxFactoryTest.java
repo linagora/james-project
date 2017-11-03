@@ -26,6 +26,7 @@ import org.apache.james.jmap.model.mailbox.Mailbox;
 import org.apache.james.jmap.model.mailbox.MailboxNamespace;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.manager.ManagerTestResources;
@@ -41,7 +42,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 
 public class MailboxFactoryTest {
-    public static final char DELIMITER = '.';
+    public static final PathDelimiter DELIMITER = new PathDelimiter('.');
 
     @Rule
     public final JUnitSoftAssertions softly = new JUnitSoftAssertions();

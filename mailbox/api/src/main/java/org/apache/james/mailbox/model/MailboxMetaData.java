@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.model;
 
+import org.apache.james.mailbox.PathDelimiter;
+
 /**
  * Returned by the list method of MailboxRepository and others
  */
@@ -71,7 +73,7 @@ public interface MailboxMetaData {
      * 
      * @return delimiter
      */
-    char getHierarchyDelimiter();
+    PathDelimiter getHierarchyDelimiter();
 
     /**
      * Return the MailboxPath

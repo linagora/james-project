@@ -21,10 +21,11 @@ package org.apache.james.mailbox.model.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.junit.Test;
 
 public class PrefixedRegexTest {
-    private static final char PATH_DELIMITER = '.';
+    private static final PathDelimiter PATH_DELIMITER = new PathDelimiter('.');
     private static final String PREFIX = "name";
     private static final String EMPTY_PREFIX = "";
 

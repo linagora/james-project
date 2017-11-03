@@ -28,6 +28,7 @@ import org.apache.james.imap.encode.base.ByteImapResponseWriter;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.message.response.LSubResponse;
 import org.apache.james.imap.message.response.ListResponse;
+import org.apache.james.mailbox.PathDelimiter;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JUnit4Mockery;
 import org.junit.Before;
@@ -53,29 +54,29 @@ public class LSubResponseEncoderTest  {
     @Test
     public void testIsAcceptable() {
         assertFalse(encoder.isAcceptable(new ListResponse(true, true, true,
-                true, false, false, "name", '.')));
-        assertTrue(encoder.isAcceptable(new LSubResponse("name", true, '.')));
+                true, false, false, "name", new PathDelimiter('.'))));
+        assertTrue(encoder.isAcceptable(new LSubResponse("name", true, new PathDelimiter('.'))));
         assertFalse(encoder.isAcceptable(context.mock(ImapMessage.class)));
         assertFalse(encoder.isAcceptable(null));
     }
 
     @Test
 	public void testName() throws Exception {
-        encoder.encode(new LSubResponse("INBOX.name", false, '.'), composer, new FakeImapSession());
+        encoder.encode(new LSubResponse("INBOX.name", false, new PathDelimiter('.')), composer, new FakeImapSession());
         assertEquals("* LSUB () \".\" \"INBOX.name\"\r\n", writer.getString());
 
     }
 
     @Test
 	public void testDelimiter() throws Exception {
-        encoder.encode(new LSubResponse("INBOX.name", false, '.'), composer, new FakeImapSession());
+        encoder.encode(new LSubResponse("INBOX.name", false, new PathDelimiter('.')), composer, new FakeImapSession());
         assertEquals("* LSUB () \".\" \"INBOX.name\"\r\n", writer.getString());
 
     }
 
     @Test
     public void testNoSelect() throws Exception {
-        encoder.encode(new LSubResponse("INBOX.name", true, '.'), composer, new FakeImapSession());
+        encoder.encode(new LSubResponse("INBOX.name", true, new PathDelimiter('.')), composer, new FakeImapSession());
         assertEquals("* LSUB (\\Noselect) \".\" \"INBOX.name\"\r\n", writer.getString());
 
 
