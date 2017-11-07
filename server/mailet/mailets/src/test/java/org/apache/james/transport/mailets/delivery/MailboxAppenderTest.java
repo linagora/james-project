@@ -33,7 +33,6 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.MessageResultIterator;
-import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.mailet.base.test.MimeMessageBuilder;
 import org.junit.After;
 import org.junit.Before;
@@ -66,7 +65,7 @@ public class MailboxAppenderTest {
 
         integrationResources = new InMemoryIntegrationResources();
         integrationResources.init();
-        mailboxManager = new ManagerTestResources<StoreMailboxManager>(integrationResources).getMailboxManager();
+        mailboxManager = new ManagerTestResources<>(integrationResources).getMailboxManager();
         testee = new MailboxAppender(mailboxManager);
 
         session = mailboxManager.createSystemSession("TEST");

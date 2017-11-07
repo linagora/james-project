@@ -20,9 +20,11 @@
 package org.apache.james.jmap.methods;
 
 import static org.apache.james.jmap.methods.Method.JMAP_PREFIX;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
 import javax.inject.Inject;
 
 import org.apache.james.jmap.exceptions.MailboxParentNotFoundException;
@@ -98,13 +100,12 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
     }
 
     private void markRequestsAsNotCreatedDueToCycle(SetMailboxesRequest request, SetMailboxesResponse.Builder builder) {
-        request.getCreate().entrySet()
-            .forEach(entry ->
-                builder.notCreated(entry.getKey(),
-                        SetError.builder()
-                        .type("invalidArguments")
-                        .description("The created mailboxes introduce a cycle.")
-                        .build()));
+        request.getCreate()
+            .forEach((key, value) -> builder.notCreated(key,
+                SetError.builder()
+                    .type("invalidArguments")
+                    .description("The created mailboxes introduce a cycle.")
+                    .build()));
     }
 
     private void createMailbox(MailboxCreationId mailboxCreationId, MailboxCreateRequest mailboxRequest, MailboxSession mailboxSession,
@@ -154,10 +155,10 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
     }
 
     private void ensureValidMailboxName(MailboxCreateRequest mailboxRequest, MailboxSession mailboxSession) throws MailboxNameException {
-        String name = mailboxRequest.getName();
-        char pathDelimiter = mailboxSession.getPathDelimiter();
-        if (name.contains(String.valueOf(pathDelimiter))) {
-            throw new MailboxNameException(String.format("The mailbox '%s' contains an illegal character: '%c'", name, pathDelimiter));
+        if (mailboxSession.getPathDelimiter()
+            .containsPathDelimiter(mailboxRequest.getName())) {
+            throw new MailboxNameException(String.format("The mailbox '%s' contains an illegal character: '%c'",
+                mailboxRequest.getName(), mailboxSession.getPathDelimiter().getPathDelimiter()));
         }
     }
 
@@ -170,10 +171,11 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
                             .orElseThrow(() -> new MailboxParentNotFoundException(parentId))
                     ));
 
-            return new MailboxPath(mailboxSession.getPersonalSpace(), mailboxSession.getUser().getUserName(), 
-                    parentName + mailboxSession.getPathDelimiter() + mailboxRequest.getName());
+            return MailboxPath.forUser(mailboxSession.getUser().getUserName(),
+                    mailboxSession.getPathDelimiter()
+                        .join(parentName, mailboxRequest.getName()));
         }
-        return new MailboxPath(mailboxSession.getPersonalSpace(), mailboxSession.getUser().getUserName(), mailboxRequest.getName());
+        return MailboxPath.forUser(mailboxSession.getUser().getUserName(), mailboxRequest.getName());
     }
 
     private Optional<String> getMailboxNameFromId(MailboxCreationId creationId, MailboxSession mailboxSession) {

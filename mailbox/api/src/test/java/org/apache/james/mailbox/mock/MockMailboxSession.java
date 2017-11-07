@@ -19,7 +19,6 @@
 package org.apache.james.mailbox.mock;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +26,8 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
+import org.apache.james.mailbox.model.MailboxConstants;
 
 public class MockMailboxSession implements MailboxSession {
     private final User user;
@@ -76,20 +77,8 @@ public class MockMailboxSession implements MailboxSession {
         return attrs;
     }
 
-    public String getOtherUsersSpace() {
-        return null;
-    }
-
-    public String getPersonalSpace() {
-        return "";
-    }
-
     public long getSessionId() {
         return sessionId;
-    }
-
-    public Collection<String> getSharedSpaces() {
-        return new ArrayList<>();
     }
 
     public User getUser() {
@@ -100,8 +89,8 @@ public class MockMailboxSession implements MailboxSession {
         return open;
     }
 
-	public char getPathDelimiter() {
-		return '.';
+	public PathDelimiter getPathDelimiter() {
+		return MailboxConstants.DEFAULT_DELIMITER;
 	}
 
     public SessionType getType() {

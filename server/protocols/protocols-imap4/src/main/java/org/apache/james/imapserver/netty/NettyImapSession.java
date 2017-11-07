@@ -27,6 +27,7 @@ import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.process.ImapLineHandler;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.protocols.imap.DefaultNamespaceConfiguration;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.compression.ZlibDecoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
@@ -233,17 +234,14 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     }
 
     /**
-     * @see org.apache.james.imap.api.process.ImapSession#supportMultipleNamespaces()
-     */
-    public boolean supportMultipleNamespaces() {
-        return false;
-    }
-
-    /**
      * @see org.apache.james.imap.api.process.ImapSession#isCompressionActive()
      */
     public boolean isCompressionActive() {
         return channel.getPipeline().get(ZLIB_DECODER) != null;
     }
 
+    @Override
+    public NamespaceConfiguration getNamespaceConfiguration() {
+        return new DefaultNamespaceConfiguration();
+    }
 }

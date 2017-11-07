@@ -21,10 +21,6 @@ package org.apache.james.imap.processor;
 import static org.apache.james.imap.api.ImapConstants.SUPPORTS_NAMESPACES;
 
 import java.io.Closeable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.james.imap.api.ImapCommand;
@@ -35,79 +31,47 @@ import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.NamespaceRequest;
 import org.apache.james.imap.message.response.NamespaceResponse;
 import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+
+import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Processes a NAMESPACE command into a suitable set of responses.
  */
 public class NamespaceProcessor extends AbstractMailboxProcessor<NamespaceRequest> implements CapabilityImplementingProcessor {
-    private final static List<String> CAPS = Collections.unmodifiableList(Arrays.asList(SUPPORTS_NAMESPACES));
-    
-    
+    private static final List<String> CAPS = ImmutableList.of(SUPPORTS_NAMESPACES);
+
+
     public NamespaceProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
+                              MetricFactory metricFactory) {
         super(NamespaceRequest.class, next, mailboxManager, factory, metricFactory);
     }
 
     @Override
     protected void doProcess(NamespaceRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final List<NamespaceResponse.Namespace> personalNamespaces = buildPersonalNamespaces(mailboxSession, session);
-        final List<NamespaceResponse.Namespace> otherUsersNamespaces = buildOtherUsersSpaces(mailboxSession, session);
-        final List<NamespaceResponse.Namespace> sharedNamespaces = buildSharedNamespaces(mailboxSession, session);
-        final NamespaceResponse response = new NamespaceResponse(personalNamespaces, otherUsersNamespaces, sharedNamespaces);
-        responder.respond(response);
+        PathDelimiter pathDelimiter = ImapSessionUtils.getMailboxSession(session).getPathDelimiter();
+        responder.respond( new NamespaceResponse(
+            toNamespaces(session.getNamespaceConfiguration().personalNamespace(), pathDelimiter),
+            toNamespaces(session.getNamespaceConfiguration().otherUsersNamespace(), pathDelimiter),
+            toNamespaces(session.getNamespaceConfiguration().sharedNamespacesNamespaces(), pathDelimiter)));
         unsolicitedResponses(session, responder, false);
         okComplete(command, tag, responder);
     }
 
-    /**
-     * Builds personal namespaces from the session.
-     * 
-     * @param mailboxSession
-     *            not null
-     * @return personal namespaces, not null
-     */
-    private List<NamespaceResponse.Namespace> buildPersonalNamespaces(MailboxSession mailboxSession, ImapSession session) {
-        final List<NamespaceResponse.Namespace> personalSpaces = new ArrayList<>();
-        String personal = "";
-        if (session.supportMultipleNamespaces()) {
-            personal = mailboxSession.getPersonalSpace();
-        }
-        personalSpaces.add(new NamespaceResponse.Namespace(personal, mailboxSession.getPathDelimiter()));
-        return personalSpaces;
+    public List<NamespaceResponse.Namespace> toNamespaces(String namespace, PathDelimiter pathDelimiter) {
+        return ImmutableList.of(new NamespaceResponse.Namespace(namespace, pathDelimiter));
     }
 
-    private List<NamespaceResponse.Namespace> buildOtherUsersSpaces(MailboxSession mailboxSession,  ImapSession session) {
-        final String otherUsersSpace = mailboxSession.getOtherUsersSpace();
-        final List<NamespaceResponse.Namespace> otherUsersSpaces;
-        if (session.supportMultipleNamespaces() == false || otherUsersSpace == null) {
-            otherUsersSpaces = null;
-        } else {
-            otherUsersSpaces = new ArrayList<>(1);
-            otherUsersSpaces.add(new NamespaceResponse.Namespace(otherUsersSpace, mailboxSession.getPathDelimiter()));
-        }
-        return otherUsersSpaces;
+    public List<NamespaceResponse.Namespace> toNamespaces(List<String> namespaces, PathDelimiter pathDelimiter) {
+        return namespaces.stream()
+            .map(namespace -> new NamespaceResponse.Namespace(namespace, pathDelimiter))
+            .collect(Guavate.toImmutableList());
     }
 
-    private List<NamespaceResponse.Namespace> buildSharedNamespaces(MailboxSession mailboxSession,  ImapSession session) {
-        List<NamespaceResponse.Namespace> sharedNamespaces = null;
-        final Collection<String> sharedSpaces = mailboxSession.getSharedSpaces();
-        if (session.supportMultipleNamespaces() && !sharedSpaces.isEmpty()) {
-            sharedNamespaces = new ArrayList<>(sharedSpaces.size());
-            for (String space : sharedSpaces) {
-                sharedNamespaces.add(new NamespaceResponse.Namespace(space, mailboxSession.getPathDelimiter()));
-            }
-        }
-        return sharedNamespaces;
-    }
-
-    /**
-     * @see org.apache.james.imap.processor.CapabilityImplementingProcessor
-     * #getImplementedCapabilities(org.apache.james.imap.api.process.ImapSession)
-     */
+    @Override
     public List<String> getImplementedCapabilities(ImapSession session) {
         return CAPS;
     }

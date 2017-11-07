@@ -67,22 +67,20 @@ public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(AppendRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final String mailboxName = request.getMailboxName();
-        final InputStream messageIn = request.getMessage();
-        final Date datetime = request.getDatetime();
-        final Flags flags = request.getFlags();
-        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
-
+        String mailboxName = request.getMailboxName();
+        InputStream messageIn = request.getMessage();
+        Date datetime = request.getDatetime();
+        Flags flags = request.getFlags();
         try {
-
-            final MailboxManager mailboxManager = getMailboxManager();
-            final MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
+            MailboxManager mailboxManager = getMailboxManager();
+            MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
             appendToMailbox(messageIn, datetime, flags, session, tag, command, mailbox, responder, mailboxPath);
         } catch (MailboxNotFoundException e) {
             // consume message on exception
             consume(messageIn);
 
-            LOGGER.debug("Append failed for mailbox " + mailboxPath, e);
+            LOGGER.debug("Append failed for mailbox " + mailboxName, e);
             
             // Indicates that the mailbox does not exist
             // So TRY CREATE
@@ -92,7 +90,7 @@ public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
             // consume message on exception
             consume(messageIn);
             
-            LOGGER.error("Append failed for mailbox " + mailboxPath, e);
+            LOGGER.error("Append failed for mailbox " + mailboxName, e);
             
             // Some other issue
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);

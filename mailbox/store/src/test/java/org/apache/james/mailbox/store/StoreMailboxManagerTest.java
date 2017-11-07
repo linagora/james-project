@@ -41,7 +41,6 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.search.MailboxQuery;
-import org.apache.james.mailbox.model.search.PrefixedRegex;
 import org.apache.james.mailbox.store.event.DefaultDelegatingMailboxListener;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
@@ -58,7 +57,6 @@ public class StoreMailboxManagerTest {
     private static final MailboxId MAILBOX_ID = TestId.of(123);
     private static final String UNKNOWN_USER = "otheruser";
     private static final String BAD_PASSWORD = "badpassword";
-    private static final String EMPTY_PREFIX = "";
 
     private StoreMailboxManager storeMailboxManager;
     private MailboxMapper mockedMailboxMapper;
@@ -181,30 +179,14 @@ public class StoreMailboxManagerTest {
     }
 
     @Test
-    public void getPathLikeShouldReturnUserPathLikeWhenNoPrefixDefined() throws Exception {
+    public void getPathLikeShouldAlwaysReturnSQLWildcard() throws Exception {
         //Given
         MailboxSession session = new MockMailboxSession("user");
-        MailboxQuery.Builder testee = MailboxQuery.builder()
-            .expression(new PrefixedRegex(EMPTY_PREFIX, "abc", session.getPathDelimiter()));
         //When
-        MailboxQuery mailboxQuery = testee.build();
+        MailboxQuery mailboxQuery = MailboxQuery.allMailboxes();
 
         assertThat(StoreMailboxManager.getPathLike(mailboxQuery, session))
-            .isEqualTo(MailboxPath.forUser("user", "abc%"));
-    }
-
-    @Test
-    public void getPathLikeShouldReturnUserPathLikeWhenPrefixDefined() throws Exception {
-        //Given
-        MailboxSession session = new MockMailboxSession("user");
-        MailboxQuery.Builder testee = MailboxQuery.builder()
-            .expression(new PrefixedRegex("prefix.", "abc", session.getPathDelimiter()));
-
-        //When
-        MailboxQuery mailboxQuery = testee.build();
-
-        assertThat(StoreMailboxManager.getPathLike(mailboxQuery, session))
-            .isEqualTo(MailboxPath.forUser("user", "prefix.abc%"));
+            .isEqualTo(MailboxPath.forUser("user", "%"));
     }
 }
 

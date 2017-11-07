@@ -27,6 +27,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.RollbackException;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -199,10 +200,10 @@ public class JPAMailboxMapper extends JPATransactionalMapper implements MailboxM
     /**
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#hasChildren(Mailbox, char)
      */
-    public boolean hasChildren(Mailbox mailbox, char delimiter) throws MailboxException,
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter) throws MailboxException,
             MailboxNotFoundException {
-        final String name = mailbox.getName() + delimiter + SQL_WILDCARD_CHAR; 
-        final Long numberOfChildMailboxes;
+        String name = delimiter.join(mailbox.getName(), String.valueOf(SQL_WILDCARD_CHAR));
+        Long numberOfChildMailboxes;
         if (mailbox.getUser() == null) {
             numberOfChildMailboxes = (Long) getEntityManager().createNamedQuery("countMailboxesWithNameLike").setParameter("nameParam", name).setParameter("namespaceParam", mailbox.getNamespace()).getSingleResult();
         } else {

@@ -38,17 +38,6 @@ public class MailboxQueryTest {
     }
 
     @Test
-    public void buildShouldMatchAllValuesWhenMatchesAll() throws Exception {
-
-        MailboxQuery actual = MailboxQuery.builder()
-                .userAndNamespaceFrom(mailboxPath)
-                .matchesAllMailboxNames()
-                .build();
-
-        assertThat(actual.isExpressionMatch("folder")).isTrue();
-    }
-
-    @Test
     public void buildShouldConstructMailboxPathWhenPrivateUserMailboxes() throws Exception {
         MailboxPath expected = MailboxPath.forUser("user", "");
 
@@ -58,25 +47,13 @@ public class MailboxQueryTest {
                 .build();
 
         assertThat(actual.getNamespace()).contains(expected.getNamespace());
-        assertThat(actual.getUser()).contains(expected.getUser());
-        assertThat(actual.getMailboxNameExpression()).isEqualTo(Wildcard.INSTANCE);
+        assertThat(actual.getUser()).contains(expected.getUser());;
     }
 
-    @Test
-    public void buildShouldMatchAllValuesWhenPrivateUserMailboxes() throws Exception {
-        Builder testee = MailboxQuery.builder()
-                .username("user")
-                .privateNamespace();
-
-        MailboxQuery actual = testee.build();
-
-        assertThat(actual.isExpressionMatch("folder")).isTrue();
-    }
 
     @Test
     public void builderShouldNotThrowWhenNoBaseDefined() throws Exception {
-        Builder testee = MailboxQuery.builder()
-                .expression(new ExactName("abc"));
+        Builder testee = MailboxQuery.builder();
 
         testee.build();
     }
@@ -109,14 +86,12 @@ public class MailboxQueryTest {
 
     @Test
     public void builderShouldUseBaseWhenGiven() throws Exception {
-
         MailboxQuery actual = MailboxQuery.builder()
                 .userAndNamespaceFrom(mailboxPath)
                 .build();
 
         assertThat(actual.getNamespace()).contains(mailboxPath.getNamespace());
-        assertThat(actual.getUser()).contains(mailboxPath.getUser());
-        assertThat(actual.getMailboxNameExpression()).isEqualTo(Wildcard.INSTANCE);
+        assertThat(actual.getUser()).contains(mailboxPath.getUser());;
     }
 
     @Test

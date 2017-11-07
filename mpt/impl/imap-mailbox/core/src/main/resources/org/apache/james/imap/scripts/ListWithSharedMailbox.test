@@ -17,16 +17,70 @@
 # under the License.                                           #
 ################################################################
 
-# Shouw that #private.Boby.sharedMailbox and it's child are not displayed
-
+# Delegated mailboxes are returned as part of LIST when applicable
 C: a0 LIST "" "*"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\"
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\.Boby\"
 S: \* LIST \(\\HasNoChildren\) \"\.\" \"INBOX\"
+S: \* LIST \(\\HasChildren\) \".\" \"Other users\.Boby\.sharedMailbox\"
+S: \* LIST \(\\HasNoChildren\) \".\" \"Other users\.Boby\.sharedMailbox\.child\"
+}
 S: a0 OK LIST completed.
 
-C: a1 LIST "#private" "%"
-S: \* LIST \(\\HasNoChildren\) \"\.\" \"#private.imapuser.INBOX\"
+# Virtual mailbox "other users" is returned as a base mailbox (when I have delegated mailboxes)
+C: a1 LIST "" "%"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\"
+S: \* LIST \(\\HasNoChildren\) \"\.\" \"INBOX\"
+}
 S: a1 OK LIST completed.
 
-C: a3 LIST "#private" sharedMailbox*
+# I can list the delegated mailboxes
+C: a2 LIST "Other users" "*"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\"
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\.Boby\"
+S: \* LIST \(\\HasChildren\) \".\" \"Other users\.Boby\.sharedMailbox\"
+S: \* LIST \(\\HasNoChildren\) \".\" \"Other users\.Boby\.sharedMailbox\.child\"
+}
+S: a2 OK LIST completed.
+
+# I can list the delegated users
+C: a3 LIST "Other users" ".%"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\.Boby\"
+}
 S: a3 OK LIST completed.
 
+# I can list the delegated mailboxes of a delegated user
+C: a4 LIST "Other users.Boby" "*"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \".\" \"Other users\.Boby\"
+S: \* LIST \(\\HasChildren\) \".\" \"Other users\.Boby\.sharedMailbox\"
+S: \* LIST \(\\HasNoChildren\) \".\" \"Other users\.Boby\.sharedMailbox\.child\"
+}
+S: a4 OK LIST completed.
+
+# Wildcard are not supported in reference names
+C: a5 LIST "Othe*" "*"
+S: a5 OK LIST completed.
+
+# Wildcards are supported in virtual mailbox names
+C: a6 LIST "" "Othe*"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\"
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\.Boby\"
+S: \* LIST \(\\HasChildren\) \".\" \"Other users\.Boby\.sharedMailbox\"
+S: \* LIST \(\\HasNoChildren\) \".\" \"Other users\.Boby\.sharedMailbox\.child\"
+}
+S: a6 OK LIST completed.
+
+# Shared mailbox with full path should be listed
+C: a7 LIST "" "Other users.Boby.sharedMailbox"
+S: \* LIST \(\\HasChildren\) \".\" \"Other users\.Boby\.sharedMailbox\"
+S: a7 OK LIST completed.
+
+# Shared mailbox without l right should not appear
+C: a8 LIST "" "Other users.Boby.noEnoughSharedMailbox"
+S: a8 OK LIST completed.

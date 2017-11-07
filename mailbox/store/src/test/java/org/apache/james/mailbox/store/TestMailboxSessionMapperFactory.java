@@ -37,6 +37,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.SubscriptionException;
@@ -133,7 +134,7 @@ public class TestMailboxSessionMapperFactory extends MailboxSessionMapperFactory
             }
 
             @Override
-            public boolean hasChildren(Mailbox mailbox, char delimiter) throws MailboxException {
+            public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter) throws MailboxException {
                 throw new NotImplementedException("Not implemented");
             }
 

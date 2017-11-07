@@ -105,11 +105,11 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport, Ri
 
     
     /**
-     * Return the delimiter to use for folders
+     * Return the pathDelimiter to use for folders
      * 
      * @return delimiter
      */
-    char getDelimiter();
+    PathDelimiter getDelimiter();
 
     /**
      * Gets an object managing the given mailbox.

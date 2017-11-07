@@ -28,6 +28,7 @@ import org.apache.james.imap.encode.base.ByteImapResponseWriter;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.message.response.LSubResponse;
 import org.apache.james.imap.message.response.ListResponse;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JUnit4Mockery;
 import org.junit.Before;
@@ -53,55 +54,55 @@ public class SearchResponseEncoderTest {
     @Test
     public void testIsAcceptable() {
         assertTrue(encoder.isAcceptable(new ListResponse(true, true, true,
-                true, false, false, "name", '.')));
-        assertFalse(encoder.isAcceptable(new LSubResponse("name", true, '.')));
+                true, false, false, "name", MailboxConstants.DEFAULT_DELIMITER)));
+        assertFalse(encoder.isAcceptable(new LSubResponse("name", true, MailboxConstants.DEFAULT_DELIMITER)));
         assertFalse(encoder.isAcceptable(context.mock(ImapMessage.class)));
         assertFalse(encoder.isAcceptable(null));
     }
 
     @Test
 	public void testName() throws Exception {     
-        encoder.encode(new ListResponse(false, false, false, false, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(false, false, false, false, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST () \".\" \"INBOX.name\"\r\n", writer.getString());
     }
 
     @Test
 	public void testDelimiter() throws Exception {
-        encoder.encode(new ListResponse(false, false, false, false, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(false, false, false, false, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST () \".\" \"INBOX.name\"\r\n", writer.getString());
     }
 
 
     @Test
     public void testAllAttributes() throws Exception {
-        encoder.encode(new ListResponse(true, true, true, true, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(true, true, true, true, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST (\\Noinferiors \\Noselect \\Marked \\Unmarked) \".\" \"INBOX.name\"\r\n", writer.getString());
 
     }
 
     @Test
     public void testNoInferiors() throws Exception {      
-        encoder.encode(new ListResponse(true, false, false, false, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(true, false, false, false, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST (\\Noinferiors) \".\" \"INBOX.name\"\r\n", writer.getString());
     }
 
     @Test
     public void testNoSelect() throws Exception {
-        encoder.encode(new ListResponse(false, true, false, false, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(false, true, false, false, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST (\\Noselect) \".\" \"INBOX.name\"\r\n", writer.getString());
 
     }
 
     @Test
     public void testMarked() throws Exception {
-        encoder.encode(new ListResponse(false, false, true, false, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(false, false, true, false, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST (\\Marked) \".\" \"INBOX.name\"\r\n", writer.getString());
 
     }
 
     @Test
     public void testUnmarked() throws Exception {
-        encoder.encode(new ListResponse(false, false, false, true, false, false, "INBOX.name", '.'), composer, new FakeImapSession());
+        encoder.encode(new ListResponse(false, false, false, true, false, false, "INBOX.name", MailboxConstants.DEFAULT_DELIMITER), composer, new FakeImapSession());
         assertEquals("* LIST (\\Unmarked) \".\" \"INBOX.name\"\r\n", writer.getString());
 
     }

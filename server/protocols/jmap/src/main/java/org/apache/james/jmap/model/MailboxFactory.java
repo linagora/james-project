@@ -41,7 +41,6 @@ import org.apache.james.mailbox.model.MailboxPath;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 
 public class MailboxFactory {
@@ -111,7 +110,7 @@ public class MailboxFactory {
 
         return Mailbox.builder()
             .id(messageManager.getId())
-            .name(getName(mailboxPath, mailboxSession))
+            .name(mailboxSession.getPathDelimiter().getSimpleName(mailboxPath.getName()))
             .parentId(getParentIdFromMailboxPath(mailboxPath, userMailboxesMetadata, mailboxSession).orElse(null))
             .role(role)
             .unreadMessages(mailboxCounters.getUnseen())
@@ -137,15 +136,6 @@ public class MailboxFactory {
 
     private boolean isSameUser(MailboxSession mailboxSession, MailboxPath mailboxPath) {
         return mailboxSession.getUser().isSameUser(mailboxPath.getUser());
-    }
-
-    @VisibleForTesting String getName(MailboxPath mailboxPath, MailboxSession mailboxSession) {
-        String name = mailboxPath.getName();
-        if (name.contains(String.valueOf(mailboxSession.getPathDelimiter()))) {
-            List<String> levels = Splitter.on(mailboxSession.getPathDelimiter()).splitToList(name);
-            return levels.get(levels.size() - 1);
-        }
-        return name;
     }
 
     @VisibleForTesting Optional<MailboxId> getParentIdFromMailboxPath(MailboxPath mailboxPath, Optional<List<MailboxMetaData>> userMailboxesMetadata,

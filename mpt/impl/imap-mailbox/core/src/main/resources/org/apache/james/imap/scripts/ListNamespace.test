@@ -29,11 +29,11 @@ S: \* LIST \(\\Noselect\) \"\.\" \"\"
 S: e1 OK LIST completed.
 
 # Rooted in users namespace
-C: e2 LIST "#private" ""
-S: \* LIST \(\\Noselect\) \"\.\" \"\#private\"
+C: e2 LIST "Other users" ""
+S: \* LIST \(\\Noselect\) \"\.\" \"Other users\"
 S: e2 OK LIST completed.
-C: e3 LIST "#private.someone" ""
-S: \* LIST \(\\Noselect\) \"\.\" \"\#private\"
+C: e3 LIST "Other users.someone" ""
+S: \* LIST \(\\Noselect\) \"\.\" \"Other users\"
 S: e3 OK LIST completed.
 
 # Rooted in shared namespace

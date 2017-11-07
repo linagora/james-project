@@ -22,6 +22,8 @@ package org.apache.james.mpt.imapmailbox.suite;
 import java.util.Locale;
 
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mpt.api.ImapHostSystem;
 import org.apache.james.mpt.imapmailbox.ImapTestConstants;
@@ -31,15 +33,33 @@ import org.junit.Before;
 import org.junit.Test;
 
 public abstract class ListingWithSharingTest implements ImapTestConstants {
-    public static final String OTHER_USER_NAME = "Boby";
-    public static final String OTHER_USER_PASSWORD = "password";
-    public static final MailboxPath OTHER_USER_SHARED_MAILBOX = MailboxPath.forUser( OTHER_USER_NAME, "sharedMailbox");
-    public static final MailboxPath OTHER_USER_SHARED_MAILBOX_CHILD = MailboxPath.forUser( OTHER_USER_NAME, "sharedMailbox.child");
+
+    public static final String IMAPUSER_DOMAIN_COM = "imapuser@domain.com";
+    public static final String OTHER_DOMAIN_COM = "Boby@domain.com";
+
+    private static final String OTHER_USER_NAME = "Boby";
+    private static final String OTHER_USER_PASSWORD = "password";
+    private static final MailboxPath OTHER_USER_SHARED_MAILBOX =
+        MailboxPath.forUser(OTHER_USER_NAME, "sharedMailbox");
+    private static final MailboxPath OTHER_USER_SHARED_MAILBOX_CHILD =
+        MailboxPath.forUser(OTHER_USER_NAME, "sharedMailbox.child");
+    private static final MailboxPath OTHER_USER_INSUFFICIENT_RIGHT_SHARED_MAILBOX =
+        MailboxPath.forUser(OTHER_USER_NAME, "notEnoughSharedMailbox");
+    private static final MailboxPath MAILBOX_1_VIRTUAL_HOSTED =
+        MailboxPath.forUser(OTHER_USER_NAME, "sharedMailbox");
+    private static final MailboxPath MAILBOX_2_VIRTUAL_HOSTED =
+        MailboxPath.forUser(OTHER_USER_NAME, "sharedMailbox.child");
+    private static final MailboxPath MAILBOX_3_VIRTUAL_HOSTED =
+        MailboxPath.forUser(OTHER_USER_NAME, "notEnoughSharedMailbox");
 
     protected abstract ImapHostSystem createImapHostSystem();
 
+    protected abstract ImapHostSystem createImapHostSystemWithVirtualHosting();
+
     private ImapHostSystem system;
+    private ImapHostSystem virtualHostedSystem;
     private ImapScriptedTestProtocol scriptedTestProtocol;
+    private ImapScriptedTestProtocol scriptedVirtualHostedTestProtocol;
 
     @Before
     public void setUp() throws Exception {
@@ -49,6 +69,15 @@ public abstract class ListingWithSharingTest implements ImapTestConstants {
             .withUser(OTHER_USER_NAME, OTHER_USER_PASSWORD);
         BasicImapCommands.welcome(scriptedTestProtocol);
         BasicImapCommands.authenticate(scriptedTestProtocol);
+
+        virtualHostedSystem = createImapHostSystemWithVirtualHosting();
+        virtualHostedSystem.beforeTest();
+        virtualHostedSystem.addUser(IMAPUSER_DOMAIN_COM, PASSWORD);
+        scriptedVirtualHostedTestProtocol = new ImapScriptedTestProtocol("/org/apache/james/imap/scripts/", virtualHostedSystem)
+            .withUser(IMAPUSER_DOMAIN_COM, PASSWORD)
+            .withUser(OTHER_DOMAIN_COM, "other pass");
+        BasicImapCommands.welcome(scriptedVirtualHostedTestProtocol);
+        BasicImapCommands.addLogin(scriptedVirtualHostedTestProtocol, IMAPUSER_DOMAIN_COM, PASSWORD);
     }
 
     @Test
@@ -56,8 +85,35 @@ public abstract class ListingWithSharingTest implements ImapTestConstants {
         scriptedTestProtocol
             .withMailbox(OTHER_USER_SHARED_MAILBOX)
             .withMailbox(OTHER_USER_SHARED_MAILBOX_CHILD)
-            .withRights(OTHER_USER_SHARED_MAILBOX, USER, MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights("r"))
-            .withRights(OTHER_USER_SHARED_MAILBOX_CHILD, USER, MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights("r"))
+            .withMailbox(OTHER_USER_INSUFFICIENT_RIGHT_SHARED_MAILBOX)
+            .withRights(OTHER_USER_SHARED_MAILBOX, USER,  new Rfc4314Rights(Right.Lookup, Right.Read))
+            .withRights(OTHER_USER_SHARED_MAILBOX_CHILD, USER, new Rfc4314Rights(Right.Lookup, Right.Read))
+            .withRights(OTHER_USER_INSUFFICIENT_RIGHT_SHARED_MAILBOX, USER, new Rfc4314Rights(Right.Read))
+            .withLocale(Locale.US)
+            .run("ListWithSharedMailbox");
+    }
+
+    @Test
+    public void listShouldNotDisplaySelectForNonReadableMailboxes() throws Exception {
+        scriptedTestProtocol
+            .withMailbox(OTHER_USER_SHARED_MAILBOX)
+            .withMailbox(OTHER_USER_SHARED_MAILBOX_CHILD)
+            .withMailbox(OTHER_USER_INSUFFICIENT_RIGHT_SHARED_MAILBOX)
+            .withRights(OTHER_USER_SHARED_MAILBOX, USER, new Rfc4314Rights(Right.Lookup))
+            .withRights(OTHER_USER_SHARED_MAILBOX_CHILD, USER, new Rfc4314Rights(Right.Lookup))
+            .withLocale(Locale.US)
+            .run("ListWithSharedMailboxAndNoLookup");
+    }
+
+    @Test
+    public void listShouldOmmitAddressPartsWhenDelegationAndVirtualHosing() throws Exception {
+        scriptedVirtualHostedTestProtocol
+            .withMailbox(MAILBOX_1_VIRTUAL_HOSTED)
+            .withMailbox(MAILBOX_2_VIRTUAL_HOSTED)
+            .withMailbox(MAILBOX_3_VIRTUAL_HOSTED)
+            .withRights(MAILBOX_1_VIRTUAL_HOSTED, IMAPUSER_DOMAIN_COM,  new MailboxACL.Rfc4314Rights(MailboxACL.Right.Lookup, MailboxACL.Right.Read))
+            .withRights(MAILBOX_2_VIRTUAL_HOSTED, IMAPUSER_DOMAIN_COM, new MailboxACL.Rfc4314Rights(MailboxACL.Right.Lookup, MailboxACL.Right.Read))
+            .withRights(MAILBOX_3_VIRTUAL_HOSTED, IMAPUSER_DOMAIN_COM, new MailboxACL.Rfc4314Rights(MailboxACL.Right.Read))
             .withLocale(Locale.US)
             .run("ListWithSharedMailbox");
     }

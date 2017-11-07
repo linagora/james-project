@@ -57,28 +57,28 @@ public class DeleteProcessor extends AbstractMailboxProcessor<DeleteRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(DeleteRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
         try {
-            final SelectedMailbox selected = session.getSelected();
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
+            SelectedMailbox selected = session.getSelected();
             if (selected != null && selected.getPath().equals(mailboxPath)) {
                 session.deselect();
             }
-            final MailboxManager mailboxManager = getMailboxManager();
+            MailboxManager mailboxManager = getMailboxManager();
             mailboxManager.deleteMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
             unsolicitedResponses(session, responder, false);
             okComplete(command, tag, responder);
         } catch (MailboxNotFoundException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Delete failed for mailbox " + mailboxPath + " as it not exist", e);
+                LOGGER.debug("Delete failed for mailbox " + request.getMailboxName() + " as it not exist", e);
             }
             no(command, tag, responder, HumanReadableText.FAILURE_NO_SUCH_MAILBOX);
         } catch (TooLongMailboxNameException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("The mailbox name length is over limit: " + mailboxPath.getName(), e);
+                LOGGER.debug("The mailbox name length is over limit: " + request.getMailboxName(), e);
             }
             taggedBad(command, tag, responder, HumanReadableText.FAILURE_MAILBOX_NAME);
         } catch (MailboxException e) {
-            LOGGER.error("Delete failed for mailbox " + mailboxPath, e);
+            LOGGER.error("Delete failed for mailbox " + request.getMailboxName(), e);
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }
     }

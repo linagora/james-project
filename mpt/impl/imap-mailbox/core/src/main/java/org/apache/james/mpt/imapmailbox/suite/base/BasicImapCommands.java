@@ -35,12 +35,16 @@ public class BasicImapCommands implements ImapTestConstants {
         addLogin(scriptedTestProtocol.preElements(), USER, PASSWORD);
     }
 
+    public static void addLogin(GenericSimpleScriptedTestProtocol<?, ?> scriptedTestProtocol, String username, String password) {
+        scriptedTestProtocol.preElements().CL("a001 LOGIN " + username + " " + password);
+        scriptedTestProtocol.preElements().SL("a001 OK .*", "BasicImapCommands.java:40");
+    }
 
     private static void addLogin(ProtocolInteractor preElements, String username, String password) {
         preElements.CL("a001 LOGIN " + username + " " + password);
-        preElements.SL("a001 OK .*", "BaseAuthenticatedState.java:53");
+        preElements.SL("a001 OK .*", "BasicImapCommands.java:45");
     }
-    
+
     public static void selectInbox(SimpleScriptedTestProtocol scriptedTestProtocol) {
         ProtocolInteractor preElements = scriptedTestProtocol.preElements();
         

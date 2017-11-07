@@ -40,7 +40,6 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.search.MailboxQuery;
-import org.apache.james.mailbox.model.search.Wildcard;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -124,9 +123,7 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
 
     private List<MailboxMetaData> searchUserMailboxes(MailboxSession session) throws MailboxException {
         return mailboxManager.search(
-            MailboxQuery.privateMailboxesBuilder(session)
-                .expression(Wildcard.INSTANCE)
-                .build(),
+            MailboxQuery.privateMailboxes(session),
             session);
     }
 

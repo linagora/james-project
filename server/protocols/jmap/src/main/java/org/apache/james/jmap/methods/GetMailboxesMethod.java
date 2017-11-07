@@ -134,9 +134,7 @@ public class GetMailboxesMethod implements Method {
 
     private Stream<Mailbox> retrieveAllMailboxes(MailboxSession mailboxSession) throws MailboxException {
         List<MailboxMetaData> userMailboxes = mailboxManager.search(
-            MailboxQuery.builder()
-                .matchesAllMailboxNames()
-                .build(),
+            MailboxQuery.allMailboxes(),
             mailboxSession);
         return userMailboxes
             .stream()

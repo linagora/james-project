@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.process.MailboxType;
 import org.apache.james.imap.message.response.AbstractListingResponse;
+import org.apache.james.mailbox.PathDelimiter;
 
 /**
  * Utilities for encoding LIST and LSUB responses.
@@ -36,7 +37,7 @@ public class ListingEncodingUtils {
         final List<String> attributes = getNameAttributes(response);
 
         final String name = response.getName();
-        final char hierarchyDelimiter = response.getHierarchyDelimiter();
+        final PathDelimiter hierarchyDelimiter = response.getHierarchyDelimiter();
                 
         composer.untagged();
         composer.message(responseTypeName);
@@ -48,10 +49,10 @@ public class ListingEncodingUtils {
         }
         composer.closeParen();
 
-        if (hierarchyDelimiter == Character.UNASSIGNED) {
+        if (hierarchyDelimiter.getPathDelimiter() == Character.UNASSIGNED) {
         	composer.nil();
         } else {
-        	composer.quote(Character.toString(hierarchyDelimiter));
+        	composer.quote(Character.toString(hierarchyDelimiter.getPathDelimiter()));
         }
         composer.mailbox(name);
 

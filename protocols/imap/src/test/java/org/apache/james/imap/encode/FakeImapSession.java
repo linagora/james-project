@@ -25,6 +25,7 @@ import org.apache.james.imap.api.ImapSessionState;
 import org.apache.james.imap.api.process.ImapLineHandler;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
+import org.apache.james.protocols.imap.DefaultNamespaceConfiguration;
 
 public class FakeImapSession implements ImapSession {
 
@@ -116,12 +117,12 @@ public class FakeImapSession implements ImapSession {
         return false;
     }
 
-    public boolean supportMultipleNamespaces() {
-        return false;
-    }
-
     public boolean isCompressionActive() {
         return false;
     }
 
+    @Override
+    public NamespaceConfiguration getNamespaceConfiguration() {
+        return new DefaultNamespaceConfiguration();
+    }
 }

@@ -19,6 +19,8 @@
 
 package org.apache.james.imap.api.process;
 
+import java.util.List;
+
 import org.apache.james.imap.api.ImapSessionState;
 
 /**
@@ -29,6 +31,11 @@ import org.apache.james.imap.api.ImapSessionState;
  * @version $Revision: 109034 $
  */
 public interface ImapSession {
+    interface NamespaceConfiguration {
+        String personalNamespace();
+        String otherUsersNamespace();
+        List<String> sharedNamespacesNamespaces();
+    }
 
     /**
      * Logs out the session. Marks the connection for closure;
@@ -151,13 +158,6 @@ public interface ImapSession {
     void popLineHandler();
     
     /**
-     * Return true if multiple namespaces are supported
-     * 
-     * @return multipleNamespaces
-     */
-    boolean supportMultipleNamespaces();
-    
-    /**
      * Return true if the login / authentication via plain username / password is
      * disallowed
      * 
@@ -165,4 +165,5 @@ public interface ImapSession {
      */
     boolean isPlainAuthDisallowed();
 
+    NamespaceConfiguration getNamespaceConfiguration();
 }

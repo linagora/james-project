@@ -39,6 +39,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MailboxSession.SessionType;
 import org.apache.james.mailbox.MailboxSessionIdGenerator;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.StandardMailboxMetaDataComparator;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -60,7 +61,6 @@ import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
-import org.apache.james.mailbox.model.search.MailboxNameExpression;
 import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
@@ -354,7 +354,7 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
-    public char getDelimiter() {
+    public PathDelimiter getDelimiter() {
         return MailboxConstants.DEFAULT_DELIMITER;
     }
 
@@ -491,8 +491,7 @@ public class StoreMailboxManager implements MailboxManager {
         if (length == 0) {
             LOGGER.warn("Ignoring mailbox with empty name");
         } else {
-            if (mailboxPath.getName().charAt(length - 1) == getDelimiter())
-                mailboxPath.setName(mailboxPath.getName().substring(0, length - 1));
+            mailboxPath.setName(getDelimiter().removeTrailingSeparatorAtTheEnd(mailboxPath.getName()));
             if (mailboxExists(mailboxPath, mailboxSession))
                 throw new MailboxExistsException(mailboxPath.toString());
             // Create parents first
@@ -567,7 +566,8 @@ public class StoreMailboxManager implements MailboxManager {
         dispatcher.mailboxRenamed(session, from, mailbox);
 
         // rename submailboxes
-        MailboxPath children = new MailboxPath(from.getNamespace(), from.getUser(), from.getName() + getDelimiter() + "%");
+        MailboxPath children = new MailboxPath(from.getNamespace(), from.getUser(), getDelimiter()
+            .join(from.getName(), "%"));
         locker.executeWithLock(session, children, (LockAwareExecution<Void>) () -> {
             List<Mailbox> subMailboxes = mapper.findMailboxWithPathLike(children);
             for (Mailbox sub : subMailboxes) {
@@ -637,18 +637,16 @@ public class StoreMailboxManager implements MailboxManager {
         return mailboxes
             .stream()
             .filter(mailbox -> mailboxExpression.isPathMatch(mailbox.generateAssociatedPath()))
-            .map(mailbox -> toMailboxMetadata(session, mailboxes, mailbox))
+            .map(Throwing.function(
+                (Mailbox mailbox) -> toMailboxMetadata(session, mailboxes, mailbox))
+                .sneakyThrow())
             .sorted(new StandardMailboxMetaDataComparator())
             .collect(Guavate.toImmutableList());
     }
 
     @VisibleForTesting
     public static MailboxPath getPathLike(MailboxQuery mailboxQuery, MailboxSession mailboxSession) {
-        MailboxNameExpression nameExpression = mailboxQuery.getMailboxNameExpression();
-        String combinedName = nameExpression.getCombinedName()
-            .replace(nameExpression.getFreeWildcard(), SQL_WILDCARD_CHAR)
-            .replace(nameExpression.getLocalWildcard(), SQL_WILDCARD_CHAR)
-            + SQL_WILDCARD_CHAR;
+        String combinedName = String.valueOf(SQL_WILDCARD_CHAR);
         MailboxPath base = new MailboxPath(
             mailboxQuery.getNamespace().orElse(MailboxConstants.USER_NAMESPACE),
             mailboxQuery.getUser().orElse(mailboxSession.getUser().getUserName()),
@@ -664,13 +662,21 @@ public class StoreMailboxManager implements MailboxManager {
         return mailboxMapper.findNonPersonalMailboxes(session.getUser().getUserName(), right).stream();
     }
 
-    private SimpleMailboxMetaData toMailboxMetadata(MailboxSession session, List<Mailbox> mailboxes, Mailbox mailbox) {
+    private SimpleMailboxMetaData toMailboxMetadata(MailboxSession session, List<Mailbox> mailboxes, Mailbox mailbox) throws MailboxException {
         return new SimpleMailboxMetaData(
             mailbox.generateAssociatedPath(),
             mailbox.getMailboxId(),
             getDelimiter(),
             computeChildren(session, mailboxes, mailbox),
-            Selectability.NONE);
+            computeSelectability(session, mailbox));
+    }
+
+    private Selectability computeSelectability(MailboxSession session, Mailbox mailbox) throws MailboxException {
+        if (storeRightManager.hasRight(mailbox, Right.Read, session)) {
+            return Selectability.NONE;
+        } else {
+            return Selectability.NOSELECT;
+        }
     }
 
     private MailboxMetaData.Children computeChildren(MailboxSession session, List<Mailbox> potentialChildren, Mailbox mailbox) {
@@ -705,7 +711,7 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     private Stream<MailboxId> getAllReadableMailbox(MailboxSession session) throws MailboxException {
-        return searchMailboxes(MailboxQuery.builder().matchesAllMailboxNames().build(), session, Right.Read)
+        return searchMailboxes(MailboxQuery.allMailboxes(), session, Right.Read)
             .stream()
             .map(MailboxMetaData::getId);
     }

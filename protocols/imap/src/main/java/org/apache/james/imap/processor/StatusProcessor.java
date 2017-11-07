@@ -59,107 +59,95 @@ public class StatusProcessor extends AbstractMailboxProcessor<StatusRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(StatusRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
-        final StatusDataItems statusDataItems = request.getStatusDataItems();
-        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        StatusDataItems statusDataItems = request.getStatusDataItems();
+        MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
 
         try {
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Status called on mailbox named " + mailboxPath);
             }
 
-            final MailboxManager mailboxManager = getMailboxManager();
-            final MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
-            final MessageManager.MetaData.FetchGroup fetchGroup;
+            MailboxManager mailboxManager = getMailboxManager();
+            MessageManager mailbox = mailboxManager.getMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
+            MessageManager.MetaData.FetchGroup fetchGroup;
             if (statusDataItems.isUnseen()) {
                 fetchGroup = MessageManager.MetaData.FetchGroup.UNSEEN_COUNT;
             } else {
                 fetchGroup = MessageManager.MetaData.FetchGroup.NO_UNSEEN;
             }
-            final MessageManager.MetaData metaData = mailbox.getMetaData(false, mailboxSession, fetchGroup);
+            MessageManager.MetaData metaData = mailbox.getMetaData(false, mailboxSession, fetchGroup);
 
-            final Long messages = messages(statusDataItems, metaData);
-            final Long recent = recent(statusDataItems, metaData);
-            final MessageUid uidNext = uidNext(statusDataItems, metaData);
-            final Long uidValidity = uidValidity(statusDataItems, metaData);
-            final Long unseen = unseen(statusDataItems, metaData);
-            final Long highestModSeq = highestModSeq(statusDataItems, metaData);
+            Long messages = messages(statusDataItems, metaData);
+            Long recent = recent(statusDataItems, metaData);
+            MessageUid uidNext = uidNext(statusDataItems, metaData);
+            Long uidValidity = uidValidity(statusDataItems, metaData);
+            Long unseen = unseen(statusDataItems, metaData);
+            Long highestModSeq = highestModSeq(statusDataItems, metaData);
             
             // Enable CONDSTORE as this is a CONDSTORE enabling command
             if (highestModSeq != null) {
                 condstoreEnablingCommand(session, responder, metaData, false); 
             }
-            final MailboxStatusResponse response = new MailboxStatusResponse(messages, recent, uidNext, highestModSeq, uidValidity, unseen, request.getMailboxName());
+            MailboxStatusResponse response = new MailboxStatusResponse(messages, recent, uidNext, highestModSeq, uidValidity, unseen, request.getMailboxName());
             responder.respond(response);
             unsolicitedResponses(session, responder, false);
             okComplete(command, tag, responder);
 
         } catch (MailboxException e) {
-            LOGGER.error("Status failed for mailbox " + mailboxPath, e);
+            LOGGER.error("Status failed for mailbox " + request.getMailboxName(), e);
             no(command, tag, responder, HumanReadableText.SEARCH_FAILED);
         }
     }
 
     private Long unseen(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
-        final Long unseen;
         if (statusDataItems.isUnseen()) {
-            unseen = metaData.getUnseenCount();
+            return metaData.getUnseenCount();
         } else {
-            unseen = null;
+            return null;
         }
-        return unseen;
     }
 
     private Long uidValidity(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
-        final Long uidValidity;
         if (statusDataItems.isUidValidity()) {
-            uidValidity = metaData.getUidValidity();
+            return metaData.getUidValidity();
         } else {
-            uidValidity = null;
+            return null;
         }
-        return uidValidity;
     }
 
 
     private Long highestModSeq(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
-        final Long highestModSeq;
         if (statusDataItems.isHighestModSeq()) {
-            highestModSeq = metaData.getHighestModSeq();
+            return metaData.getHighestModSeq();
         } else {
-            highestModSeq = null;
+            return null;
         }
-        return highestModSeq;
     }
 
     
     private MessageUid uidNext(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
-        final MessageUid uidNext;
         if (statusDataItems.isUidNext()) {
-            uidNext = metaData.getUidNext();
+            return metaData.getUidNext();
         } else {
-            uidNext = null;
+            return null;
         }
-        return uidNext;
     }
 
     private Long recent(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
-        final Long recent;
         if (statusDataItems.isRecent()) {
-            recent = metaData.countRecent();
+            return metaData.countRecent();
         } else {
-            recent = null;
+            return null;
         }
-        return recent;
     }
 
     private Long messages(StatusDataItems statusDataItems, MessageManager.MetaData metaData) throws MailboxException {
-        final Long messages;
         if (statusDataItems.isMessages()) {
-            messages = metaData.getMessageCount();
+            return metaData.getMessageCount();
         } else {
-            messages = null;
+            return null;
         }
-        return messages;
     }
 
     @Override

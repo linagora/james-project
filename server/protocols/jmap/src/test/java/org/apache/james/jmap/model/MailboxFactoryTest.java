@@ -26,10 +26,12 @@ import org.apache.james.jmap.model.mailbox.Mailbox;
 import org.apache.james.jmap.model.mailbox.MailboxNamespace;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.manager.ManagerTestResources;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.SimpleMailboxMetaData;
@@ -41,7 +43,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 
 public class MailboxFactoryTest {
-    public static final char DELIMITER = '.';
+    public static final PathDelimiter DELIMITER = MailboxConstants.DEFAULT_DELIMITER;
 
     @Rule
     public final JUnitSoftAssertions softly = new JUnitSoftAssertions();
@@ -88,33 +90,6 @@ public class MailboxFactoryTest {
 
         assertThat(mailbox).isPresent();
         assertThat(mailbox.get().getId()).isEqualTo(mailboxId);
-    }
-
-    @Test
-    public void getNameShouldReturnMailboxNameWhenRootMailbox() throws Exception {
-        String expected = "mailbox";
-        MailboxPath mailboxPath = MailboxPath.forUser(user, expected);
-
-        String name = sut.getName(mailboxPath, mailboxSession);
-        assertThat(name).isEqualTo(expected);
-    }
-
-    @Test
-    public void getNameShouldReturnMailboxNameWhenChildMailbox() throws Exception {
-        String expected = "mailbox";
-        MailboxPath mailboxPath = MailboxPath.forUser(user, "inbox." + expected);
-
-        String name = sut.getName(mailboxPath, mailboxSession);
-        assertThat(name).isEqualTo(expected);
-    }
-
-    @Test
-    public void getNameShouldReturnMailboxNameWhenChildOfChildMailbox() throws Exception {
-        String expected = "mailbox";
-        MailboxPath mailboxPath = MailboxPath.forUser(user, "inbox.children." + expected);
-
-        String name = sut.getName(mailboxPath, mailboxSession);
-        assertThat(name).isEqualTo(expected);
     }
 
     @Test

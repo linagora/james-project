@@ -17,7 +17,13 @@
 # under the License.                                           #
 ################################################################
 
-C: A001 NAMESPACE
-S: \* NAMESPACE \(\(\"\" \"\.\"\)\) \(\(\"Other users\.\" \"\.\"\)\) NIL
-S: A001 OK NAMESPACE completed.
-
+# As boby did not delegate READ right, we can not select delegated mailboxes
+C: a0 LIST "" "*"
+SUB {
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\"
+S: \* LIST \(\\Noselect \\HasChildren\) \"\.\" \"Other users\.Boby\"
+S: \* LIST \(\\HasNoChildren\) \"\.\" \"INBOX\"
+S: \* LIST \(\\Noselect \\HasChildren\) \".\" \"Other users\.Boby\.sharedMailbox\"
+S: \* LIST \(\\Noselect \\HasNoChildren\) \".\" \"Other users\.Boby\.sharedMailbox\.child\"
+}
+S: a0 OK LIST completed.

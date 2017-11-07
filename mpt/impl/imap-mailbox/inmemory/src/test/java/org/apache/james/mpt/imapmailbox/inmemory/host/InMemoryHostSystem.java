@@ -51,10 +51,19 @@ public class InMemoryHostSystem extends JamesImapHostSystem {
         Feature.ANNOTATION_SUPPORT);
 
     private StoreMailboxManager mailboxManager;
+
+    public static InMemoryHostSystem withVirtualHosting() {
+        return new InMemoryHostSystem(true);
+    }
+
     private InMemoryPerUserMaxQuotaManager perUserMaxQuotaManager;
 
-    public static JamesImapHostSystem build() throws Exception {
-        return new InMemoryHostSystem();
+    public InMemoryHostSystem() {
+        super();
+    }
+
+    private InMemoryHostSystem(boolean supportsVirtualHosting) {
+        super(supportsVirtualHosting);
     }
     
     @Override

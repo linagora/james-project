@@ -39,24 +39,25 @@ public final class MailboxQuery {
         return new Builder();
     }
 
-    public static Builder privateMailboxesBuilder(MailboxSession session) {
+    public static MailboxQuery privateMailboxes(MailboxSession session) {
         return builder()
             .namespace(MailboxConstants.USER_NAMESPACE)
             .username(session.getUser().getUserName())
-            .matchesAllMailboxNames();
+            .build();
+    }
+
+    public static MailboxQuery allMailboxes() {
+        return builder()
+            .build();
     }
 
     public static class Builder {
-        private static final Wildcard DEFAULT_WILDCARD = Wildcard.INSTANCE;
-
         Optional<String> username;
         Optional<String> namespace;
-        Optional<MailboxNameExpression> mailboxNameExpression;
         
         private Builder() {
             this.namespace = Optional.empty();
             this.username = Optional.empty();
-            this.mailboxNameExpression = Optional.empty();
         }
         
         public Builder userAndNamespaceFrom(MailboxPath base) {
@@ -89,24 +90,13 @@ public final class MailboxQuery {
             return this;
         }
         
-        public Builder expression(MailboxNameExpression expression) {
-            this.mailboxNameExpression = Optional.of(expression);
-            return this;
-        }
-        
-        public Builder matchesAllMailboxNames() {
-            this.mailboxNameExpression = Optional.of(Wildcard.INSTANCE);
-            return this;
-        }
-        
         public MailboxQuery build() {
-            return new MailboxQuery(namespace, username, mailboxNameExpression.orElse(DEFAULT_WILDCARD));
+            return new MailboxQuery(namespace, username);
         }
     }
 
     private final Optional<String> namespace;
     private final Optional<String> user;
-    private final MailboxNameExpression mailboxNameExpression;
 
     /**
      * Constructs an expression determining a set of mailbox names.
@@ -118,10 +108,9 @@ public final class MailboxQuery {
      * @param pathDelimiter
      *            path delimiter to use
      */
-    @VisibleForTesting MailboxQuery(Optional<String> namespace, Optional<String> user, MailboxNameExpression mailboxNameExpression) {
+    @VisibleForTesting MailboxQuery(Optional<String> namespace, Optional<String> user) {
         this.namespace = namespace;
         this.user = user;
-        this.mailboxNameExpression = mailboxNameExpression;
     }
 
     public Optional<String> getNamespace() {
@@ -130,10 +119,6 @@ public final class MailboxQuery {
 
     public Optional<String> getUser() {
         return user;
-    }
-
-    public MailboxNameExpression getMailboxNameExpression() {
-        return mailboxNameExpression;
     }
 
     public boolean isPrivateMailboxes(MailboxSession session) {
@@ -154,20 +139,14 @@ public final class MailboxQuery {
         return belongsToRequestedNamespace && belongsToRequestedUser;
     }
 
-    public boolean isExpressionMatch(String name) {
-        return mailboxNameExpression.isExpressionMatch(name);
-    }
-
     public boolean isPathMatch(MailboxPath mailboxPath) {
-        return belongsToRequestedNamespaceAndUser(mailboxPath)
-            && isExpressionMatch(mailboxPath.getName());
+        return belongsToRequestedNamespaceAndUser(mailboxPath);
     }
 
     public String toString() {
         return MoreObjects.toStringHelper(this)
             .add("namespace", namespace)
             .add("user", user)
-            .add("mailboxNameExpression", mailboxNameExpression)
             .toString();
     }
 

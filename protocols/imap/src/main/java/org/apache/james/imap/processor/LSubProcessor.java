@@ -32,13 +32,14 @@ import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.LsubRequest;
 import org.apache.james.imap.message.response.LSubResponse;
+import org.apache.james.imap.processor.base.MailboxNameExpression;
+import org.apache.james.imap.processor.base.PrefixedRegex;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
-import org.apache.james.mailbox.model.search.MailboxNameExpression;
-import org.apache.james.mailbox.model.search.PrefixedRegex;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
@@ -90,14 +91,14 @@ public class LSubProcessor extends AbstractSubscriptionProcessor<LsubRequest> {
         }
     }
 
-    private void respond(Responder responder, MailboxNameExpression expression, String mailboxName, boolean originalSubscription, Collection<String> mailboxes, Collection<String> mailboxResponses, char delimiter) {
+    private void respond(Responder responder, MailboxNameExpression expression, String mailboxName, boolean originalSubscription, Collection<String> mailboxes, Collection<String> mailboxResponses, PathDelimiter delimiter) {
         if (expression.isExpressionMatch(mailboxName)) {
             if (!mailboxResponses.contains(mailboxName)) {
                 responder.respond(new LSubResponse(mailboxName, !originalSubscription, delimiter));
                 mailboxResponses.add(mailboxName);
             }
         } else {
-            int lastDelimiter = mailboxName.lastIndexOf(delimiter);
+            int lastDelimiter = delimiter.lastIndex(mailboxName);
             if (lastDelimiter > 0) {
                 String parentMailbox = mailboxName.substring(0, lastDelimiter);
                 if (!mailboxes.contains(parentMailbox)) {

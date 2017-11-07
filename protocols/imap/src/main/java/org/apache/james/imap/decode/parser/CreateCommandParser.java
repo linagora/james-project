@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.imap.decode.parser;
 
+import java.util.Optional;
+
 import org.apache.james.imap.api.ImapCommand;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
@@ -48,22 +50,25 @@ public class CreateCommandParser extends AbstractImapCommandParser {
         String mailboxName = request.mailbox();
 
         MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        request.eol();
+
+        return new CreateRequest(command, getSanitizedMailboxName( mailboxName, mailboxSession), tag);
+    }
+
+    private String getSanitizedMailboxName(String mailboxName, MailboxSession mailboxSession) {
 
         // Check if we have an mailboxsession. This is a workaround for
         // IMAP-240:
         // https://issues.apache.org/jira/browse/IMAP-240
-        if (mailboxSession != null) {
-            // RFC3501@6.3.3p2
-            // When mailbox name is suffixed with hierarchy separator
-            // name created must remove tailing delimiter
-            if (mailboxName.endsWith(Character.toString(mailboxSession.getPathDelimiter()))) { // NOPMD
-                                                                                               // keep
-                                                                                               // comment
-                mailboxName = mailboxName.substring(0, mailboxName.length() - 1);
-            }
-        }
-        request.eol();
-        return new CreateRequest(command, mailboxName, tag);
+
+        // RFC3501@6.3.3p2
+        // When mailbox name is suffixed with hierarchy separator
+        // name created must remove tailing delimiter
+
+        return Optional.ofNullable(mailboxSession)
+            .map(MailboxSession::getPathDelimiter)
+            .map(pathDelimiter -> pathDelimiter.removeTrailingSeparatorAtTheEnd(mailboxName))
+            .orElse(mailboxName);
     }
 
 }

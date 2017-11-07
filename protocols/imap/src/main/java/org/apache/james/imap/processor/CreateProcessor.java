@@ -55,24 +55,24 @@ public class CreateProcessor extends AbstractMailboxProcessor<CreateRequest> {
      * org.apache.james.imap.api.process.ImapProcessor.Responder)
      */
     protected void doProcess(CreateRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
         try {
-            final MailboxManager mailboxManager = getMailboxManager();
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
+            MailboxManager mailboxManager = getMailboxManager();
             mailboxManager.createMailbox(mailboxPath, ImapSessionUtils.getMailboxSession(session));
             unsolicitedResponses(session, responder, false);
             okComplete(command, tag, responder);
         } catch (MailboxExistsException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Create failed for mailbox " + mailboxPath + " as it already exists", e);
+                LOGGER.debug("Create failed for mailbox " + request.getMailboxName() + " as it already exists", e);
             }
             no(command, tag, responder, HumanReadableText.MAILBOX_EXISTS);
         } catch (TooLongMailboxNameException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("The mailbox name length is over limit: " + mailboxPath.getName(), e);
+                LOGGER.debug("The mailbox name length is over limit: " + request.getMailboxName(), e);
             }
             taggedBad(command, tag, responder, HumanReadableText.FAILURE_MAILBOX_NAME);
         } catch (MailboxException e) {
-            LOGGER.error("Create failed for mailbox " + mailboxPath, e);
+            LOGGER.error("Create failed for mailbox " + request.getMailboxName(), e);
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }
     }

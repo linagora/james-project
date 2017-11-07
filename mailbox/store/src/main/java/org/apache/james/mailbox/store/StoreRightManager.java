@@ -50,6 +50,7 @@ public class StoreRightManager implements RightManager {
     private final MailboxSessionMapperFactory mailboxSessionMapperFactory;
     private final MailboxACLResolver aclResolver;
     private final GroupMembershipResolver groupMembershipResolver;
+    private final GroupFolderResolver groupFolderResolver;
 
     @Inject
     public StoreRightManager(MailboxSessionMapperFactory mailboxSessionMapperFactory,
@@ -58,6 +59,7 @@ public class StoreRightManager implements RightManager {
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.aclResolver = aclResolver;
         this.groupMembershipResolver = groupMembershipResolver;
+        this.groupFolderResolver = new GroupFolderResolver();
     }
 
     @Override
@@ -98,7 +100,7 @@ public class StoreRightManager implements RightManager {
                     groupMembershipResolver,
                     mailbox.getACL(),
                     mailbox.getUser(),
-                    new GroupFolderResolver(session).isGroupFolder(mailbox)))
+                    groupFolderResolver.isGroupFolder(mailbox)))
                 .sneakyThrow())
             .orElse(MailboxACL.NO_RIGHTS);
     }
@@ -107,7 +109,7 @@ public class StoreRightManager implements RightManager {
     public Rfc4314Rights[] listRigths(MailboxPath mailboxPath, EntryKey key, MailboxSession session) throws MailboxException {
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
-        return aclResolver.listRights(key, groupMembershipResolver, mailbox.getUser(), new GroupFolderResolver(session).isGroupFolder(mailbox));
+        return aclResolver.listRights(key, groupMembershipResolver, mailbox.getUser(), new GroupFolderResolver().isGroupFolder(mailbox));
     }
 
     @Override
@@ -182,7 +184,7 @@ public class StoreRightManager implements RightManager {
     public MailboxACL getResolvedMailboxACL(Mailbox mailbox, MailboxSession mailboxSession) throws UnsupportedRightException {
         MailboxACL acl = aclResolver.applyGlobalACL(
             mailbox.getACL(),
-            new GroupFolderResolver(mailboxSession).isGroupFolder(mailbox));
+            new GroupFolderResolver().isGroupFolder(mailbox));
 
         return filteredForSession(mailbox, acl, mailboxSession);
     }

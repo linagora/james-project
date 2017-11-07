@@ -20,76 +20,101 @@
 package org.apache.james.imap.main;
 
 import java.util.List;
+import java.util.Optional;
 
+import org.apache.james.core.User;
 import org.apache.james.imap.api.ImapSessionUtils;
 import org.apache.james.imap.api.process.ImapSession;
+import org.apache.james.mailbox.PathDelimiter;
+import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 
-import com.google.common.base.Joiner;
+import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 public class PathConverter {
 
-    private static final int NAMESPACE = 0;
+    private static final int BASE_PART = 0;
+    private static final int USER_PART = 1;
 
     public static PathConverter forSession(ImapSession session) {
         return new PathConverter(session);
     }
 
-    private final ImapSession session;
+    private final PathDelimiter pathDelimiter;
+    private final ImapSession.NamespaceConfiguration namespaceConfiguration;
+    private final String userName;
 
     private PathConverter(ImapSession session) {
-        this.session = session;
+        pathDelimiter = ImapSessionUtils.getMailboxSession(session).getPathDelimiter();
+        namespaceConfiguration = session.getNamespaceConfiguration();
+        userName = ImapSessionUtils.getUserName(session);
     }
 
-    public MailboxPath buildFullPath(String mailboxName) {
-        if (Strings.isNullOrEmpty(mailboxName)) {
-            return buildDefaultPath();
+    public MailboxPath buildFullPath(String mailboxName) throws MailboxNotFoundException {
+        Preconditions.checkNotNull(mailboxName);
+        List<String> mailboxNameParts = pathDelimiter.split(mailboxName);
+        if (isADelegatedMailboxName(mailboxNameParts)) {
+            return buildDelegatedMailboxPath(mailboxNameParts);
         }
-        if (isAbsolute(mailboxName)) {
-            return buildAbsolutePath(mailboxName);
-        } else {
-            return buildRelativePath(mailboxName);
+        return buildPersonalMailboxPath(mailboxName);
+    }
+
+    private boolean isADelegatedMailboxName(List<String> mailboxNameParts) {
+        return mailboxNameParts.size() > 2
+            && mailboxNameParts.get(BASE_PART).equals(namespaceConfiguration.otherUsersNamespace());
+    }
+
+    private MailboxPath buildDelegatedMailboxPath(List<String> mailboxNameParts) {
+        return new MailboxPath(MailboxConstants.USER_NAMESPACE,
+            addDomainPartToAmbigusUserName(mailboxNameParts.get(USER_PART)),
+            sanitizeMailboxName(
+                pathDelimiter.join(
+                    Iterables.skip(mailboxNameParts, 2))));
+    }
+
+    private String addDomainPartToAmbigusUserName(String otherUserName) {
+        if (!otherUserName.contains("@")) {
+            Optional<String> domainPart = User.fromUsername(userName).getDomainPart();
+            return User.from(otherUserName, domainPart).getUsername();
         }
+        return otherUserName;
     }
 
-    private MailboxPath buildDefaultPath() {
-        return new MailboxPath("", "", "");
-    }
-
-    private boolean isAbsolute(String mailboxName) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(mailboxName));
-        return mailboxName.charAt(0) == MailboxConstants.NAMESPACE_PREFIX_CHAR;
-    }
-
-    private MailboxPath buildRelativePath(String mailboxName) {
-        return buildMailboxPath(MailboxConstants.USER_NAMESPACE, ImapSessionUtils.getUserName(session), mailboxName);
-    }
-
-    private MailboxPath buildAbsolutePath(String absolutePath) {
-        char pathDelimiter = ImapSessionUtils.getMailboxSession(session).getPathDelimiter();
-        List<String> mailboxPathParts = Splitter.on(pathDelimiter).splitToList(absolutePath);
-        String namespace = mailboxPathParts.get(NAMESPACE);
-        String mailboxName = Joiner.on(pathDelimiter).join(Iterables.skip(mailboxPathParts, 1));
-        return buildMailboxPath(namespace, retrieveUserName(namespace), mailboxName);
-    }
-
-    private String retrieveUserName(String namespace) {
-        if (namespace.equals(MailboxConstants.USER_NAMESPACE)) {
-            return ImapSessionUtils.getUserName(session);
+    private MailboxPath buildPersonalMailboxPath(String mailboxName) throws MailboxNotFoundException {
+        if (mailboxName.startsWith(namespaceConfiguration.personalNamespace())) {
+            return new MailboxPath(MailboxConstants.USER_NAMESPACE,
+                userName,
+                sanitizeMailboxName(mailboxName.substring(namespaceConfiguration.personalNamespace().length())));
         }
-        return null;
+        throw new MailboxNotFoundException(mailboxName);
     }
 
-    private MailboxPath buildMailboxPath(String namespace, String user, String mailboxName) {
-        if (!namespace.equals(MailboxConstants.USER_NAMESPACE)) {
-            throw new DeniedAccessOnSharedMailboxException();
+    public String buildMailboxName(MailboxPath mailboxPath) {
+        Preconditions.checkNotNull(mailboxPath);
+        if (userName.equals(mailboxPath.getUser())) {
+            return joinMailboxNameParts(
+                ImmutableList.of(
+                    namespaceConfiguration.personalNamespace(),
+                    mailboxPath.getName()));
         }
-        return new MailboxPath(namespace, user, sanitizeMailboxName(mailboxName));
+        return joinMailboxNameParts(
+            ImmutableList.of(
+                namespaceConfiguration.otherUsersNamespace(),
+                User.fromUsername(mailboxPath.getUser()).getLocalPart(),
+                mailboxPath.getName()));
+    }
+
+    private String joinMailboxNameParts(ImmutableList<String> mailboxNameParts) {
+        return pathDelimiter.join(
+            mailboxNameParts
+                .stream()
+                .filter(s -> !Strings.isNullOrEmpty(s))
+                .collect(Guavate.toImmutableList()));
     }
 
     private String sanitizeMailboxName(String mailboxName) {
@@ -98,7 +123,14 @@ public class PathConverter {
         if (mailboxName.equalsIgnoreCase(MailboxConstants.INBOX)) {
             return MailboxConstants.INBOX;
         }
-        return mailboxName;
+        return removeRedundantPathDelimiters(mailboxName);
     }
 
+    private String removeRedundantPathDelimiters(String name) {
+        return pathDelimiter.join(
+            pathDelimiter.split(name)
+            .stream()
+            .filter(s -> !s.isEmpty())
+            .collect(Guavate.toImmutableList()));
+    }
 }

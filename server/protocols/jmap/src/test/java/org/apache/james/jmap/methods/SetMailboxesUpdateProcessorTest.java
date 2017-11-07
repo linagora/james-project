@@ -40,6 +40,7 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.Before;
@@ -81,6 +82,8 @@ public class SetMailboxesUpdateProcessorTest {
             .thenReturn(mockBuilder);
         when(mockBuilder.session(mockedMailboxSession))
             .thenReturn(mockBuilder);
+        when(mockedMailboxSession.getPathDelimiter())
+            .thenReturn(MailboxConstants.DEFAULT_DELIMITER);
         when(mockBuilder.build())
             .thenReturn(Optional.of(mailbox));
 

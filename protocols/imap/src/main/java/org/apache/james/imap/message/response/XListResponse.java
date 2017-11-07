@@ -21,13 +21,14 @@ package org.apache.james.imap.message.response;
 
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
 import org.apache.james.imap.api.process.MailboxType;
+import org.apache.james.mailbox.PathDelimiter;
 
 /**
  * XLIST command response
  */
 public class XListResponse extends AbstractListingResponse implements ImapResponseMessage {
 
-    public XListResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, char delimiter, MailboxType type) {
+    public XListResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, PathDelimiter delimiter, MailboxType type) {
         super(noInferiors, noSelect, marked, unmarked, hasChildren, hasNoChildren, name, delimiter, type);
     }
 }

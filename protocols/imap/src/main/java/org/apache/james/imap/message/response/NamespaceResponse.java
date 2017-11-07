@@ -19,8 +19,10 @@
 package org.apache.james.imap.message.response;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
+import org.apache.james.mailbox.PathDelimiter;
 
 /**
  * Describes a NAMESPACE response.
@@ -71,23 +73,23 @@ public class NamespaceResponse implements ImapResponseMessage {
      * Describes a namespace.
      */
     public static final class Namespace {
+        
         private final String prefix;
+        private final PathDelimiter pathDelimiter;
 
-        private final char delimiter;
-
-        public Namespace(String prefix, char delimiter) {
+        public Namespace(String prefix, PathDelimiter pathDelimiter) {
             super();
             this.prefix = prefix;
-            this.delimiter = delimiter;
+            this.pathDelimiter = pathDelimiter;
         }
 
         /**
-         * Gets the delimiter used to separate mailboxes.
+         * Gets the pathDelimiter used to separate mailboxes.
          * 
          * @return not null
          */
-        public char getDelimiter() {
-            return delimiter;
+        public PathDelimiter getDelimiter() {
+            return pathDelimiter;
         }
 
         /**
@@ -101,73 +103,42 @@ public class NamespaceResponse implements ImapResponseMessage {
 
         @Override
         public int hashCode() {
-            final int PRIME = 31;
-            int result = 1;
-            result = PRIME * result + delimiter;
-            result = PRIME * result + ((prefix == null) ? 0 : prefix.hashCode());
-            return result;
+            return Objects.hash(prefix, pathDelimiter);
         }
 
+
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            final Namespace other = (Namespace) obj;
-            if (delimiter != other.delimiter)
-                return false;
-            if (prefix == null) {
-                if (other.prefix != null)
-                    return false;
-            } else if (!prefix.equals(other.prefix))
-                return false;
-            return true;
+        public final boolean equals(Object o) {
+            if (o instanceof Namespace) {
+                Namespace namespace = (Namespace) o;
+
+                return Objects.equals(this.prefix, namespace.prefix)
+                    && Objects.equals(this.pathDelimiter, namespace.pathDelimiter);
+            }
+            return false;
         }
 
         @Override
         public String toString() {
-            return "Namespace [prefix=" + prefix + ", delim=" + delimiter + "]";
+            return "Namespace [prefix=" + prefix + ", delim=" + pathDelimiter + "]";
         }
     }
 
     @Override
-    public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + ((personal == null) ? 0 : personal.hashCode());
-        result = PRIME * result + ((shared == null) ? 0 : shared.hashCode());
-        result = PRIME * result + ((users == null) ? 0 : users.hashCode());
-        return result;
+    public final boolean equals(Object o) {
+        if (o instanceof NamespaceResponse) {
+            NamespaceResponse that = (NamespaceResponse) o;
+
+            return Objects.equals(this.personal, that.personal)
+                && Objects.equals(this.users, that.users)
+                && Objects.equals(this.shared, that.shared);
+        }
+        return false;
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final NamespaceResponse other = (NamespaceResponse) obj;
-        if (personal == null) {
-            if (other.personal != null)
-                return false;
-        } else if (!personal.equals(other.personal))
-            return false;
-        if (shared == null) {
-            if (other.shared != null)
-                return false;
-        } else if (!shared.equals(other.shared))
-            return false;
-        if (users == null) {
-            if (other.users != null)
-                return false;
-        } else if (!users.equals(other.users))
-            return false;
-        return true;
+    public final int hashCode() {
+        return Objects.hash(personal, users, shared);
     }
 
     /**

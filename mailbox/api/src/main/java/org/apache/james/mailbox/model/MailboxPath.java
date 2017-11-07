@@ -19,13 +19,18 @@
 
 package org.apache.james.mailbox.model;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 
+import com.github.steveash.guavate.Guavate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 /**
  * The path to a mailbox.
@@ -39,30 +44,7 @@ public class MailboxPath {
      * @return inbox
      */
     public static MailboxPath inbox(MailboxSession session) {
-        return new MailboxPath(session.getPersonalSpace(), session.getUser().getUserName(), MailboxConstants.INBOX);
-    }
-
-    /**
-     * Create a {@link MailboxPath} by parsing the given full mailboxname (which included the namespace)
-     *
-     * @param session
-     * @param fullmailboxname
-     * @return path
-     */
-    public static MailboxPath parse(MailboxSession session, String fullmailboxname) {
-        char delimiter = session.getPathDelimiter();
-        int i = fullmailboxname.indexOf(delimiter);
-        String namespace = fullmailboxname.substring(0, i);
-        String mailbox = fullmailboxname.substring(i + 1, fullmailboxname.length());
-        String username = null;
-        if (namespace == null || namespace.trim().equals("")) {
-            namespace = MailboxConstants.USER_NAMESPACE;
-        }
-        if (namespace.equals(session.getPersonalSpace())) {
-            username = session.getUser().getUserName();
-        }
-        return new MailboxPath(namespace, username, mailbox);
-
+        return MailboxPath.forUser(session.getUser().getUserName(), MailboxConstants.INBOX);
     }
 
     /**
@@ -70,7 +52,6 @@ public class MailboxPath {
      */
     public static MailboxPath forUser(String username, String mailboxName) {
         return new MailboxPath(MailboxConstants.USER_NAMESPACE, username, mailboxName);
-
     }
 
     private String namespace;
@@ -157,19 +138,15 @@ public class MailboxPath {
      * @param delimiter
      * @return list of hierarchy levels
      */
-    public List<MailboxPath> getHierarchyLevels(char delimiter) {
-        if (name == null) {
+    public List<MailboxPath> getHierarchyLevels(PathDelimiter pathDelimiter) {
+        if (Strings.isNullOrEmpty(name)) {
             return ImmutableList.of(this);
         }
-        ArrayList<MailboxPath> levels = new ArrayList<>();
-        int index = name.indexOf(delimiter);
-        while (index >= 0) {
-            final String levelname = name.substring(0, index);
-            levels.add(new MailboxPath(namespace, user, levelname));
-            index = name.indexOf(delimiter, ++index);
-        }
-        levels.add(this);
-        return levels;
+        List<String> nameParts = pathDelimiter.split(name);
+        return IntStream.range(1, nameParts.size() + 1)
+            .mapToObj(i -> pathDelimiter.join(Iterables.limit(nameParts, i)))
+            .map(mailboxName -> new MailboxPath(namespace, user, mailboxName))
+            .collect(Guavate.toImmutableList());
     }
 
     public String asString() {
@@ -181,58 +158,31 @@ public class MailboxPath {
         return asString();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#equals(java.lang.Object)
-     */
     @Override
-    public boolean equals(Object mailboxPath) {
-        if (this == mailboxPath)
-            return true;
+    public final boolean equals(Object o) {
+        if (o instanceof MailboxPath) {
+            MailboxPath that = (MailboxPath) o;
 
-        if (!(mailboxPath instanceof MailboxPath))
-            return false;
-        MailboxPath mp = (MailboxPath) mailboxPath;
-        if (namespace == null) {
-            if (mp.getNamespace() != null)
-                return false;
-        } else if (!namespace.equals(mp.getNamespace()))
-            return false;
-        if (user == null) {
-            if (mp.getUser() != null)
-                return false;
-        } else if (!user.equals(mp.getUser()))
-            return false;
-        if (name == null) {
-            if (mp.getName() != null)
-                return false;
-        } else if (!name.equals(mp.getName()))
-            return false;
-        return true;
+            return Objects.equals(this.namespace, that.namespace)
+                && Objects.equals(this.user, that.user)
+                && Objects.equals(this.name, that.name);
+        }
+        return false;
     }
 
     @Override
-    public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        if (getName() != null)
-            result = PRIME * result + getName().hashCode();
-        if (getUser() != null)
-            result = PRIME * result + getUser().hashCode();
-        if (getNamespace() != null)
-            result = PRIME * result + getNamespace().hashCode();
-        return result;
+    public final int hashCode() {
+        return Objects.hash(namespace, user, name);
     }
-    
+
     /**
      * Return the full name of the {@link MailboxPath}, which is constructed via the {@link #namespace} and {@link #name}
      * 
      * @param delimiter
      * @return fullName
      */
-    public String getFullName(char delimiter) {
-        return namespace + delimiter + name;
+    public String getFullName(PathDelimiter pathDelimiter) {
+        return pathDelimiter.join(namespace, name);
     }
 
 }

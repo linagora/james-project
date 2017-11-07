@@ -24,6 +24,8 @@ import java.util.List;
 import org.apache.james.imap.encode.base.ByteImapResponseWriter;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.message.response.ListResponse;
+import org.apache.james.mailbox.PathDelimiter;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +50,7 @@ public class ListingEncodingUtilsTest  {
     public void testShouldAddHasChildrenToAttributes() throws Exception {
         // Setup 
         attributesOutput.add("\\HasChildren");
-        ListResponse input = new ListResponse(false, false, false, false, true, false, nameParameter, '.');
+        ListResponse input = new ListResponse(false, false, false, false, true, false, nameParameter, MailboxConstants.DEFAULT_DELIMITER);
             
         // Exercise
         ListingEncodingUtils.encodeListingResponse(typeNameParameters, composer, input);
@@ -59,7 +61,7 @@ public class ListingEncodingUtilsTest  {
     public void testShouldAddHasNoChildrenToAttributes() throws Exception {
         // Setup 
         attributesOutput.add("\\HasNoChildren");
-        ListResponse input = new ListResponse(false, false, false, false, false, true, nameParameter, '.');
+        ListResponse input = new ListResponse(false, false, false, false, false, true, nameParameter, MailboxConstants.DEFAULT_DELIMITER);
             
         // Exercise
         ListingEncodingUtils.encodeListingResponse(typeNameParameters, composer, input);

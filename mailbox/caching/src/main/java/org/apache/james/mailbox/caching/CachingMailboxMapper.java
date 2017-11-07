@@ -21,6 +21,7 @@ package org.apache.james.mailbox.caching;
 
 import java.util.List;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxACL;
@@ -95,7 +96,7 @@ public class CachingMailboxMapper implements MailboxMapper {
     }
 
 	@Override
-	public boolean hasChildren(Mailbox mailbox, char delimiter)
+	public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter)
 			throws MailboxException, MailboxNotFoundException {
 		// TODO possible to meaningfully cache it?
 		return underlying.hasChildren(mailbox, delimiter);

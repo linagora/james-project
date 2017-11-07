@@ -19,11 +19,16 @@
 
 package org.apache.james.mpt.host;
 
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.plist.PropertyListConfiguration;
 import org.apache.james.adapter.mailbox.store.UserRepositoryAuthenticator;
 import org.apache.james.adapter.mailbox.store.UserRepositoryAuthorizator;
+import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.imap.api.ImapConfiguration;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.decode.ImapDecoder;
@@ -47,6 +52,8 @@ import com.google.common.base.Throwables;
 
 public abstract class JamesImapHostSystem implements ImapHostSystem, GrantRightsOnHost {
 
+    private final boolean supportsVirtualHosting;
+
     private MemoryUsersRepository memoryUsersRepository;
     protected Authorizator authorizator;
     protected Authenticator authenticator;
@@ -55,10 +62,22 @@ public abstract class JamesImapHostSystem implements ImapHostSystem, GrantRights
     private ImapEncoder encoder;
     private ImapProcessor processor;
 
+    public JamesImapHostSystem() {
+        supportsVirtualHosting = false;
+    }
+
+    public JamesImapHostSystem(boolean supportsVirtualHosting) {
+        this.supportsVirtualHosting = supportsVirtualHosting;
+    }
 
     @Override
     public void beforeTest() throws Exception {
-        memoryUsersRepository = MemoryUsersRepository.withoutVirtualHosting();
+        memoryUsersRepository = MemoryUsersRepository.withVirtualHosting(supportsVirtualHosting);
+        if (supportsVirtualHosting) {
+            DomainList domainList = mock(DomainList.class);
+            when(domainList.containsDomain(anyString())).thenReturn(true);
+            memoryUsersRepository.setDomainList(domainList);
+        }
         try {
             memoryUsersRepository.configure(userRepositoryConfiguration());
         } catch (ConfigurationException e) {

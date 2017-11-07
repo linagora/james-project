@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.hbase.HBaseId;
@@ -303,7 +304,7 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
     }
     
     @Override
-    public boolean hasChildren(Mailbox mailbox, char c) throws MailboxException, MailboxNotFoundException {
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter c) throws MailboxException, MailboxNotFoundException {
         HTable mailboxes = null;
         ResultScanner scanner = null;
         try {
@@ -323,7 +324,7 @@ public class HBaseMailboxMapper extends HBaseNonTransactionalMapper implements M
             SingleColumnValueFilter nameFilter = new SingleColumnValueFilter(MAILBOX_CF,
                     MAILBOX_NAME,
                     CompareOp.EQUAL,
-                    new BinaryPrefixComparator(Bytes.toBytes(mailbox.getName() + c)));
+                    new BinaryPrefixComparator(Bytes.toBytes(c.appendDelimiter(mailbox.getName()))));
             filters.addFilter(nameFilter);
             SingleColumnValueFilter namespaceFilter = new SingleColumnValueFilter(MAILBOX_CF, MAILBOX_NAMESPACE, CompareOp.EQUAL, Bytes.toBytes(mailbox.getNamespace()));
             filters.addFilter(namespaceFilter);

@@ -26,13 +26,17 @@ import org.junit.After;
 import org.junit.Before;
 
 public class InMemoryListingWithSharingTest extends ListingWithSharingTest {
-
     private ImapHostSystem system;
+    private ImapHostSystem virtualHostedSystem;
 
     @Before
     public void setUp() throws Exception {
         system = new InMemoryHostSystem();
         system.beforeTest();
+
+        virtualHostedSystem = InMemoryHostSystem.withVirtualHosting();
+        virtualHostedSystem.beforeTest();
+
         super.setUp();
     }
     
@@ -41,9 +45,15 @@ public class InMemoryListingWithSharingTest extends ListingWithSharingTest {
         return system;
     }
 
+    @Override
+    protected ImapHostSystem createImapHostSystemWithVirtualHosting() {
+        return virtualHostedSystem;
+    }
+
     @After
     public void tearDown() throws Exception {
         system.afterTest();
+        virtualHostedSystem.afterTest();
     }
     
 }

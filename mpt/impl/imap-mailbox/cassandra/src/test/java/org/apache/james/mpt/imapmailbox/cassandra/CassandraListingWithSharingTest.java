@@ -19,12 +19,16 @@
 
 package org.apache.james.mpt.imapmailbox.cassandra;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.mpt.api.ImapHostSystem;
 import org.apache.james.mpt.imapmailbox.cassandra.host.CassandraHostSystemRule;
 import org.apache.james.mpt.imapmailbox.suite.ListingWithSharingTest;
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.ClassRule;
 import org.junit.rules.RuleChain;
+
 
 public class CassandraListingWithSharingTest extends ListingWithSharingTest {
 
@@ -37,5 +41,16 @@ public class CassandraListingWithSharingTest extends ListingWithSharingTest {
     @Override
     protected ImapHostSystem createImapHostSystem() {
         return cassandraHostSystemRule.getImapHostSystem();
+    }
+
+    @Override
+    protected ImapHostSystem createImapHostSystemWithVirtualHosting() {
+        Assume.assumeTrue(false);
+        throw new NotImplementedException("It is tested with memory turned on.");
+    }
+
+    @After
+    public void cleanUp() throws Exception {
+        cassandraHostSystemRule.clean();
     }
 }

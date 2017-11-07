@@ -69,13 +69,13 @@ public class GetQuotaRootProcessor extends AbstractMailboxProcessor<GetQuotaRoot
 
     @Override
     protected void doProcess(GetQuotaRootRequest message, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-        final MailboxManager mailboxManager = getMailboxManager();
+        MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+        MailboxManager mailboxManager = getMailboxManager();
 
-        final MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(message.getMailboxName());
 
         // First check mailbox exists
         try {
+            MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(message.getMailboxName());
             if (mailboxManager.hasRight(mailboxPath, MailboxACL.Right.Read, mailboxSession)) {
                 QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(mailboxPath);
                 Quota messageQuota = quotaManager.getMessageQuota(quotaRoot);

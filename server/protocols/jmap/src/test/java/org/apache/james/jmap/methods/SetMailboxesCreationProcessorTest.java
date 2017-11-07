@@ -35,6 +35,7 @@ import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.InMemoryId.Factory;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.Before;
@@ -65,6 +66,8 @@ public class SetMailboxesCreationProcessorTest {
                 .build();
 
         MailboxSession mailboxSession = mock(MailboxSession.class);
+        when(mailboxSession.getPathDelimiter())
+            .thenReturn(MailboxConstants.DEFAULT_DELIMITER);
         when(mailboxManager.getMailbox(parentMailboxId, mailboxSession))
             .thenThrow(new MailboxException());
 

@@ -35,7 +35,9 @@ import org.apache.james.imap.message.request.LsubRequest;
 import org.apache.james.imap.message.response.LSubResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.SubscriptionManager;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.jmock.Expectations;
@@ -48,7 +50,7 @@ public class LSubProcessorTest {
 
     private static final String ROOT = "ROOT";
     
-    private static final char HIERARCHY_DELIMITER = '.';
+    private static final PathDelimiter HIERARCHY_DELIMITER = MailboxConstants.DEFAULT_DELIMITER;
 
     private static final String PARENT = ROOT
             + HIERARCHY_DELIMITER + "PARENT";
@@ -182,8 +184,8 @@ public class LSubProcessorTest {
         expectSubscriptions();
         expectOk();
 
-        LsubRequest request = new LsubRequest(command, "", ROOT
-                + HIERARCHY_DELIMITER + "%", TAG);
+        LsubRequest request = new LsubRequest(command, "",
+            HIERARCHY_DELIMITER.join(ROOT, "%"), TAG);
         processor.doProcessRequest(request, session, TAG, command, responderImpl);
 
     }
@@ -207,8 +209,8 @@ public class LSubProcessorTest {
         expectSubscriptions();
         expectOk();
 
-        LsubRequest request = new LsubRequest(command, "", ROOT
-                + HIERARCHY_DELIMITER + "%", TAG);
+        LsubRequest request = new LsubRequest(command, "",
+            HIERARCHY_DELIMITER.join(ROOT, "%"), TAG);
         processor.doProcessRequest(request, session, TAG, command, responderImpl);
 
     }

@@ -246,9 +246,7 @@ public abstract class MailboxManagerTest {
         mailboxManager.createMailbox(new MailboxPath("other_namespace", USER_1, "Other"), session);
         mailboxManager.createMailbox(MailboxPath.inbox(session), session);
         List<MailboxMetaData> metaDatas = mailboxManager.search(
-            MailboxQuery.privateMailboxesBuilder(session)
-                .matchesAllMailboxNames()
-                .build(),
+            MailboxQuery.privateMailboxes(session),
             session);
         assertThat(metaDatas).hasSize(1);
         assertThat(metaDatas.get(0).getPath()).isEqualTo(MailboxPath.inbox(session));
@@ -260,9 +258,7 @@ public abstract class MailboxManagerTest {
         mailboxManager.createMailbox(MailboxPath.forUser(USER_2, "Other"), session);
         mailboxManager.createMailbox(MailboxPath.inbox(session), session);
         List<MailboxMetaData> metaDatas = mailboxManager.search(
-            MailboxQuery.privateMailboxesBuilder(session)
-                .matchesAllMailboxNames()
-                .build(),
+            MailboxQuery.privateMailboxes(session),
             session);
         assertThat(metaDatas).hasSize(1);
         assertThat(metaDatas.get(0).getPath()).isEqualTo(MailboxPath.inbox(session));
@@ -451,9 +447,7 @@ public abstract class MailboxManagerTest {
                 .asAddition()),
             session1);
 
-        MailboxQuery mailboxQuery = MailboxQuery.builder()
-            .matchesAllMailboxNames()
-            .build();
+        MailboxQuery mailboxQuery = MailboxQuery.allMailboxes();
 
         assertThat(mailboxManager.search(mailboxQuery, session1))
             .extracting(MailboxMetaData::getPath)
@@ -475,9 +469,7 @@ public abstract class MailboxManagerTest {
                 .asAddition()),
             session1);
 
-        MailboxQuery mailboxQuery = MailboxQuery.builder()
-            .matchesAllMailboxNames()
-            .build();
+        MailboxQuery mailboxQuery = MailboxQuery.allMailboxes();
 
         assertThat(mailboxManager.search(mailboxQuery, session2))
             .extracting(MailboxMetaData::getPath)
@@ -500,9 +492,7 @@ public abstract class MailboxManagerTest {
                 .asAddition()),
             session1);
 
-        MailboxQuery mailboxQuery = MailboxQuery.builder()
-            .matchesAllMailboxNames()
-            .build();
+        MailboxQuery mailboxQuery = MailboxQuery.allMailboxes();
 
         assertThat(mailboxManager.search(mailboxQuery, session2))
             .extracting(MailboxMetaData::getPath)
@@ -527,7 +517,6 @@ public abstract class MailboxManagerTest {
 
         MailboxQuery mailboxQuery = MailboxQuery.builder()
             .username(USER_1)
-            .matchesAllMailboxNames()
             .build();
 
         assertThat(mailboxManager.search(mailboxQuery, session2))
@@ -560,7 +549,6 @@ public abstract class MailboxManagerTest {
 
         MailboxQuery mailboxQuery = MailboxQuery.builder()
             .namespace(specificNamespace)
-            .matchesAllMailboxNames()
             .build();
 
         assertThat(mailboxManager.search(mailboxQuery, session2))
@@ -852,9 +840,7 @@ public abstract class MailboxManagerTest {
                 .asRemoval()),
             session1);
 
-        MailboxQuery mailboxQuery = MailboxQuery.builder()
-            .matchesAllMailboxNames()
-            .build();
+        MailboxQuery mailboxQuery = MailboxQuery.allMailboxes();
 
         assertThat(mailboxManager.search(mailboxQuery, session2))
             .isEmpty();

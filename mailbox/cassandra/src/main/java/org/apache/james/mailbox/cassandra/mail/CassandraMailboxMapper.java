@@ -34,6 +34,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.james.backends.cassandra.init.CassandraConfiguration;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
@@ -200,10 +201,11 @@ public class CassandraMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public boolean hasChildren(Mailbox mailbox, char delimiter) {
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter) {
         return mailboxPathDAO.listUserMailboxes(mailbox.getNamespace(), mailbox.getUser())
             .thenApply(stream -> stream
-                .anyMatch(idAndPath -> idAndPath.getMailboxPath().getName().startsWith(mailbox.getName() + String.valueOf(delimiter))))
+                .anyMatch(idAndPath -> idAndPath.getMailboxPath().getName()
+                    .startsWith(delimiter.appendDelimiter(mailbox.getName()))))
             .join();
     }
 

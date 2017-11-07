@@ -18,13 +18,31 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model;
 
+import java.util.List;
+
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 public class MailboxUtil {
 
     public static boolean isMailboxChildOf(Mailbox mailbox, Mailbox potentialParent, MailboxSession mailboxSession) {
         return mailbox.getNamespace().equals(potentialParent.getNamespace())
             && mailbox.getUser().equals(potentialParent.getUser())
-            && mailbox.getName().startsWith(potentialParent.getName() + mailboxSession.getPathDelimiter());
+            && isChildren(potentialParent.getName(), mailbox.getName(), mailboxSession.getPathDelimiter());
+    }
+
+    public static boolean isChildren(String potentialParent, String potentialChild, PathDelimiter pathDelimiter) {
+        List<String> parentsParts = pathDelimiter.split(potentialParent);
+        List<String> childParts = pathDelimiter.split(potentialChild);
+
+        if (parentsParts.size() >= childParts.size()) {
+            return false;
+        }
+        return ImmutableList.copyOf(parentsParts).equals(
+            ImmutableList.copyOf(
+                Iterables.limit(childParts, parentsParts.size())));
     }
 }

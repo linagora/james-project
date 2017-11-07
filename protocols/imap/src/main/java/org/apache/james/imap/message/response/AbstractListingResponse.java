@@ -19,7 +19,10 @@
 
 package org.apache.james.imap.message.response;
 
+import java.util.Objects;
+
 import org.apache.james.imap.api.process.MailboxType;
+import org.apache.james.mailbox.PathDelimiter;
 
 /**
  * <code>LIST</code> and <code>LSUB</code> return identical data.
@@ -38,13 +41,13 @@ public abstract class AbstractListingResponse {
 
     private final boolean unmarked;
 
-    private final char hierarchyDelimiter;
+    private final PathDelimiter hierarchyDelimiter;
 
     private final String name;
 
     private final MailboxType type;
 
-    public AbstractListingResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, char hierarchyDelimiter, MailboxType type) {
+    public AbstractListingResponse(boolean noInferiors, boolean noSelect, boolean marked, boolean unmarked, boolean hasChildren, boolean hasNoChildren, String name, PathDelimiter hierarchyDelimiter, MailboxType type) {
         super();
         this.noInferiors = noInferiors;
         this.noSelect = noSelect;
@@ -62,7 +65,7 @@ public abstract class AbstractListingResponse {
      * 
      * @return hierarchy delimiter, or null if no hierarchy exists
      */
-    public final char getHierarchyDelimiter() {
+    public final PathDelimiter getHierarchyDelimiter() {
         return hierarchyDelimiter;
     }
 
@@ -149,52 +152,27 @@ public abstract class AbstractListingResponse {
     }
 
     @Override
-    public int hashCode() {
-        final int PRIME = 31;
-        int result = 1;
-        result = PRIME * result + (children ? 1231 : 1237);
-        result = PRIME * result + hierarchyDelimiter;
-        result = PRIME * result + type.ordinal();
-        result = PRIME * result + (marked ? 1231 : 1237);
-        result = PRIME * result + ((name == null) ? 0 : name.hashCode());
-        result = PRIME * result + (noChildren ? 1231 : 1237);
-        result = PRIME * result + (noInferiors ? 1231 : 1237);
-        result = PRIME * result + (noSelect ? 1231 : 1237);
-        result = PRIME * result + (unmarked ? 1231 : 1237);
-        return result;
+    public final boolean equals(Object o) {
+        if (o instanceof AbstractListingResponse) {
+            AbstractListingResponse that = (AbstractListingResponse) o;
+
+            return Objects.equals(this.children, that.children)
+                && Objects.equals(this.noChildren, that.noChildren)
+                && Objects.equals(this.noInferiors, that.noInferiors)
+                && Objects.equals(this.noSelect, that.noSelect)
+                && Objects.equals(this.marked, that.marked)
+                && Objects.equals(this.unmarked, that.unmarked)
+                && Objects.equals(this.hierarchyDelimiter, that.hierarchyDelimiter)
+                && Objects.equals(this.name, that.name)
+                && Objects.equals(this.type, that.type);
+        }
+        return false;
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final AbstractListingResponse other = (AbstractListingResponse) obj;
-        if (children != other.children)
-            return false;
-        if (hierarchyDelimiter != other.hierarchyDelimiter)
-            return false;
-        if (marked != other.marked)
-            return false;
-        if (name == null) {
-            if (other.name != null)
-                return false;
-        } else if (!name.equals(other.name))
-            return false;
-        if (noChildren != other.noChildren)
-            return false;
-        if (noInferiors != other.noInferiors)
-            return false;
-        if (noSelect != other.noSelect)
-            return false;
-        if (unmarked != other.unmarked)
-            return false;
-        if (!type.equals(other.type))
-            return false;
-        return true;
+    public final int hashCode() {
+        return Objects.hash(children, noChildren, noInferiors,
+            noSelect, marked, unmarked, hierarchyDelimiter, name, type);
     }
 
     /**

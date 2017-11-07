@@ -25,9 +25,11 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.util.List;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
@@ -44,7 +46,7 @@ import org.junit.rules.ExpectedException;
  */
 public abstract class MailboxMapperTest {
     
-    private final static char DELIMITER = '.';
+    private final static PathDelimiter DELIMITER = MailboxConstants.DEFAULT_DELIMITER;
     private final static char WILDCARD = '%';
     private final static long UID_VALIDITY = 42;
 
@@ -162,7 +164,7 @@ public abstract class MailboxMapperTest {
     @Test
     public void hasChildrenShouldNotBeAcrossUsersAndNamespace() throws MailboxException {
         saveAll();
-        assertThat(mailboxMapper.hasChildren(bobInboxMailbox, '.')).isFalse();
+        assertThat(mailboxMapper.hasChildren(bobInboxMailbox, MailboxConstants.DEFAULT_DELIMITER)).isFalse();
     }
 
     @Test
@@ -201,7 +203,8 @@ public abstract class MailboxMapperTest {
     @Test
     public void findMailboxWithPathLikeWithChildRegexShouldRetrieveChildren() throws MailboxException {
         saveAll();
-        MailboxPath regexPath = new MailboxPath(benwaWorkPath.getNamespace(), benwaWorkPath.getUser(), benwaWorkPath.getName() + WILDCARD);
+        MailboxPath regexPath = MailboxPath.forUser(benwaWorkPath.getUser(),
+            benwaWorkPath.getName() + WILDCARD);
         List<Mailbox> mailboxes = mailboxMapper.findMailboxWithPathLike(regexPath);
 
         assertMailboxes(mailboxes).containOnly(benwaWorkMailbox, benwaWorkDoneMailbox, benwaWorkTodoMailbox);
@@ -262,19 +265,27 @@ public abstract class MailboxMapperTest {
 
     private void initData() {
         benwaInboxPath = MailboxPath.forUser("benwa", "INBOX");
-        benwaWorkPath = MailboxPath.forUser("benwa", "INBOX"+DELIMITER+"work");
-        benwaWorkTodoPath = MailboxPath.forUser("benwa", "INBOX"+DELIMITER+"work"+DELIMITER+"todo");
-        benwaPersoPath = MailboxPath.forUser("benwa", "INBOX"+DELIMITER+"perso");
-        benwaWorkDonePath = MailboxPath.forUser("benwa", "INBOX"+DELIMITER+"work"+DELIMITER+"done");
+        benwaWorkPath = MailboxPath.forUser("benwa",
+            DELIMITER.join("INBOX", "work"));
+        benwaWorkTodoPath = MailboxPath.forUser("benwa",
+            DELIMITER.join("INBOX", "work", "todo"));
+        benwaPersoPath = MailboxPath.forUser("benwa",
+            DELIMITER.join("INBOX", "perso"));
+        benwaWorkDonePath = MailboxPath.forUser("benwa",
+            DELIMITER.join("INBOX", "work", "done"));
         bobInboxPath = MailboxPath.forUser("bob", "INBOX");
         bobyMailboxPath = MailboxPath.forUser("boby", "INBOX.that.is.a.trick");
         bobDifferentNamespacePath = new MailboxPath("#private_bob", "bob", "INBOX.bob");
         esnDevGroupInboxPath = new MailboxPath("#community_ESN_DEV", null, "INBOX");
-        esnDevGroupHublinPath = new MailboxPath("#community_ESN_DEV", null, "INBOX"+DELIMITER+"hublin");
-        esnDevGroupJamesPath = new MailboxPath("#community_ESN_DEV", null, "INBOX"+DELIMITER+"james");
+        esnDevGroupHublinPath = new MailboxPath("#community_ESN_DEV", null,
+            DELIMITER.join("INBOX", "hublin"));
+        esnDevGroupJamesPath = new MailboxPath("#community_ESN_DEV", null,
+            DELIMITER.join("INBOX", "james"));
         obmTeamGroupInboxPath = new MailboxPath("#community_OBM_Core_Team", null, "INBOX");
-        obmTeamGroupOPushPath = new MailboxPath("#community_OBM_Core_Team", null, "INBOX"+DELIMITER+"OPush");
-        obmTeamGroupRoundCubePath = new MailboxPath("#community_OBM_Core_Team", null, "INBOX"+DELIMITER+"roundCube");
+        obmTeamGroupOPushPath = new MailboxPath("#community_OBM_Core_Team", null,
+            DELIMITER.join("INBOX", "OPush"));
+        obmTeamGroupRoundCubePath = new MailboxPath("#community_OBM_Core_Team", null,
+            DELIMITER.join("INBOX", "roundCube"));
 
         benwaInboxMailbox = createMailbox(benwaInboxPath);
         benwaWorkMailbox = createMailbox(benwaWorkPath);

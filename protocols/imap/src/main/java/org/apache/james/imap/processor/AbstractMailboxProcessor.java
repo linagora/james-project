@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
 import javax.mail.Flags;
 
 import org.apache.james.imap.api.ImapCommand;
@@ -57,7 +58,6 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageRange.Type;
 import org.apache.james.mailbox.model.MessageResult;
@@ -247,7 +247,10 @@ abstract public class AbstractMailboxProcessor<M extends ImapRequest> extends Ab
             int msn = selected.msn(uid);
             if (msn == SelectedMailbox.NO_SUCH_MESSAGE) {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("No message found with uid " + uid + " in the uid<->msn mapping for mailbox " + selected.getPath().getFullName(mailboxSession.getPathDelimiter()) +" , this may be because it was deleted by a concurrent session. So skip it..");
+                    LOGGER.debug("No message found with uid " + uid
+                        + " in the uid<->msn mapping for mailbox "
+                        + selected.getPath().getFullName(mailboxSession.getPathDelimiter())
+                        + " , this may be because it was deleted by a concurrent session. So skip it..");
                 }  
                     
 
@@ -364,38 +367,6 @@ abstract public class AbstractMailboxProcessor<M extends ImapRequest> extends Ab
     }
 
     protected abstract void doProcess(M message, ImapSession session, String tag, ImapCommand command, Responder responder);
-
-    /**
-     * Joins the elements of a mailboxPath together and returns them as a string
-     * 
-     * @param mailboxPath
-     * @return
-     */
-    private String joinMailboxPath(MailboxPath mailboxPath, char delimiter) {
-        StringBuffer sb = new StringBuffer("");
-        if (mailboxPath.getNamespace() != null && !mailboxPath.getNamespace().equals("")) {
-            sb.append(mailboxPath.getNamespace());
-        }
-        if (mailboxPath.getUser() != null && !mailboxPath.getUser().equals("")) {
-            if (sb.length() > 0)
-                sb.append(delimiter);
-            sb.append(mailboxPath.getUser());
-        }
-        if (mailboxPath.getName() != null && !mailboxPath.getName().equals("")) {
-            if (sb.length() > 0)
-                sb.append(delimiter);
-            sb.append(mailboxPath.getName());
-        }
-        return sb.toString();
-    }
-
-    protected String mailboxName(boolean relative, MailboxPath path, char delimiter) {
-        if (relative) {
-            return path.getName();
-        } else {
-            return joinMailboxPath(path, delimiter);
-        }
-    }
 
     protected MailboxManager getMailboxManager() {
         return mailboxManager;

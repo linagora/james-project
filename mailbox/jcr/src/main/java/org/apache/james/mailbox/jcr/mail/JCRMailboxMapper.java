@@ -34,6 +34,7 @@ import org.apache.jackrabbit.commons.JcrUtils;
 import org.apache.jackrabbit.util.ISO9075;
 import org.apache.jackrabbit.util.Text;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.PathDelimiter;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.jcr.AbstractJCRScalingMapper;
@@ -207,7 +208,7 @@ public class JCRMailboxMapper extends AbstractJCRScalingMapper implements Mailbo
      * @see org.apache.james.mailbox.store.mail.MailboxMapper#hasChildren(org.apache.james.
      * imap.store.mail.model.Mailbox)
      */
-    public boolean hasChildren(Mailbox mailbox, char delimiter)
+    public boolean hasChildren(Mailbox mailbox, PathDelimiter delimiter)
             throws MailboxException, MailboxNotFoundException {
         try {
             String name = Text.escapeIllegalXpathSearchChars(mailbox.getName());
@@ -222,7 +223,7 @@ public class JCRMailboxMapper extends AbstractJCRScalingMapper implements Mailbo
                     .getQueryManager();
             String queryString = "/jcr:root/" + MAILBOXES_PATH + "/" + ISO9075.encodePath(mailbox.getNamespace()) 
                     + "//element(*,jamesMailbox:mailbox)[jcr:like(@"
-                    + JCRMailbox.NAME_PROPERTY + ",'" + name + delimiter + "%') and @" + JCRMailbox.NAMESPACE_PROPERTY +"='" + namespace + "' and @" + JCRMailbox.USER_PROPERTY + "='" + user + "']";
+                    + JCRMailbox.NAME_PROPERTY + ",'" + delimiter.appendDelimiter(name) + "%') and @" + JCRMailbox.NAMESPACE_PROPERTY +"='" + namespace + "' and @" + JCRMailbox.USER_PROPERTY + "='" + user + "']";
             QueryResult result = manager.createQuery(queryString, XPATH_LANGUAGE)
                     .execute();
             NodeIterator it = result.getNodes();

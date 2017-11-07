@@ -64,20 +64,20 @@ public abstract class AbstractMessageRangeProcessor<M extends AbstractMessageRan
 
     @Override
     protected void doProcess(M request, ImapSession session, String tag, ImapCommand command, Responder responder) {
-        final MailboxPath targetMailbox = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
-        final IdRange[] idSet = request.getIdSet();
-        final boolean useUids = request.isUseUids();
-        final SelectedMailbox currentMailbox = session.getSelected();
+        IdRange[] idSet = request.getIdSet();
+        boolean useUids = request.isUseUids();
+        SelectedMailbox currentMailbox = session.getSelected();
         try {
-            final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
-            final MailboxManager mailboxManager = getMailboxManager();
-            final boolean mailboxExists = mailboxManager.mailboxExists(targetMailbox, mailboxSession);
+            MailboxPath targetMailbox = PathConverter.forSession(session).buildFullPath(request.getMailboxName());
+            MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
+            MailboxManager mailboxManager = getMailboxManager();
+            boolean mailboxExists = mailboxManager.mailboxExists(targetMailbox, mailboxSession);
 
             if (!mailboxExists) {
                 no(command, tag, responder, HumanReadableText.FAILURE_NO_SUCH_MAILBOX, StatusResponse.ResponseCode.tryCreate());
             } else {
 
-                final MessageManager mailbox = mailboxManager.getMailbox(targetMailbox, mailboxSession);
+                MessageManager mailbox = mailboxManager.getMailbox(targetMailbox, mailboxSession);
 
                 List<IdRange> resultRanges = new ArrayList<>();
                 for (IdRange range : idSet) {
@@ -109,11 +109,11 @@ public abstract class AbstractMessageRangeProcessor<M extends AbstractMessageRan
             }
         } catch (MessageRangeException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug(getOperationName() + " failed from mailbox " + currentMailbox.getPath() + " to " + targetMailbox + " for invalid sequence-set " + ImmutableList.copyOf(idSet), e);
+                LOGGER.debug(getOperationName() + " failed from mailbox " + currentMailbox.getPath() + " to " + request.getMailboxName() + " for invalid sequence-set " + ImmutableList.copyOf(idSet), e);
             }
             taggedBad(command, tag, responder, HumanReadableText.INVALID_MESSAGESET);
         } catch (MailboxException e) {
-            LOGGER.error(getOperationName() + " failed from mailbox " + currentMailbox.getPath() + " to " + targetMailbox + " for sequence-set " + ImmutableList.copyOf(idSet), e);
+            LOGGER.error(getOperationName() + " failed from mailbox " + currentMailbox.getPath() + " to " + request.getMailboxName() + " for sequence-set " + ImmutableList.copyOf(idSet), e);
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }
     }

@@ -20,55 +20,35 @@ package org.apache.james.mailbox.store;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-import java.util.Locale;
-
-import org.apache.james.mailbox.MailboxSession.SessionType;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
+import org.junit.Before;
 import org.junit.Test;
 
 public class GroupFolderResolverTest {
 
     private static final long UID_VALIDITY = 9999;
-    private List<Locale> localePreferences = null;
-    private List<String> sharedSpaces = null;
-    private char pathSeparator = ' ';
-    
+    private GroupFolderResolver testee;
+
+    @Before
+    public void setUp() {
+        testee = new GroupFolderResolver();
+    }
+
     @Test
     public void isGroupFolderShouldReturnFalseWhenMailboxNamespaceIsNull() {
-        SimpleMailboxSession mailboxSession = new SimpleMailboxSession(1, "username", "password", localePreferences, sharedSpaces, null, pathSeparator, SessionType.User);
-        GroupFolderResolver testee =  new GroupFolderResolver(mailboxSession);
-        
         SimpleMailbox mailbox = new SimpleMailbox(new MailboxPath(null, "user", "name"), UID_VALIDITY);
         assertThat(testee.isGroupFolder(mailbox)).isFalse();
     }
     
     @Test
     public void isGroupFolderShouldReturnFalseWhenMailboxNamespaceEqualsToUserNamespace() {
-        SimpleMailboxSession mailboxSession = new SimpleMailboxSession(1, "username", "password", localePreferences, sharedSpaces, null, pathSeparator, SessionType.User);
-        GroupFolderResolver testee =  new GroupFolderResolver(mailboxSession);
-        
         SimpleMailbox mailbox = new SimpleMailbox(MailboxPath.forUser("user", "name"), UID_VALIDITY);
         assertThat(testee.isGroupFolder(mailbox)).isFalse();
     }
     
     @Test
-    public void isGroupFolderShouldReturnFalseWhenMailboxNamespaceEqualsToOtherUsersNamespace() {
-        String otherUsersSpace = "other";
-        SimpleMailboxSession mailboxSession = new SimpleMailboxSession(1, "username", "password", localePreferences, sharedSpaces, otherUsersSpace, pathSeparator, SessionType.User);
-        GroupFolderResolver testee =  new GroupFolderResolver(mailboxSession);
-        
-        SimpleMailbox mailbox = new SimpleMailbox(new MailboxPath("other", "user", "name"), UID_VALIDITY);
-        assertThat(testee.isGroupFolder(mailbox)).isFalse();
-    }
-    
-    @Test
     public void isGroupFolderShouldReturnTrueWhenMailboxNamespaceDoesntEqualToOtherUsersNamespace() {
-        String otherUsersSpace = "other";
-        SimpleMailboxSession mailboxSession = new SimpleMailboxSession(1, "username", "password", localePreferences, sharedSpaces, otherUsersSpace, pathSeparator, SessionType.User);
-        GroupFolderResolver testee =  new GroupFolderResolver(mailboxSession);
-        
         SimpleMailbox mailbox = new SimpleMailbox(new MailboxPath("namespace", "user", "name"), UID_VALIDITY);
         assertThat(testee.isGroupFolder(mailbox)).isTrue();
     }

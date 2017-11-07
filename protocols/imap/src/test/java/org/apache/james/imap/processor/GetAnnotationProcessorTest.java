@@ -28,6 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+
 import java.util.Optional;
 import java.util.Set;
 
@@ -54,13 +55,14 @@ import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.api.NoopMetricFactory;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.james.protocols.imap.DefaultNamespaceConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 public class GetAnnotationProcessorTest {
     private static final String TAG = "TAG";
@@ -113,6 +115,7 @@ public class GetAnnotationProcessorTest {
         captorResponsecode = ArgumentCaptor.forClass(ResponseCode.class);
         captorAnnotationResponse = ArgumentCaptor.forClass(AnnotationResponse.class);
 
+        when(mockImapSession.getNamespaceConfiguration()).thenReturn(new DefaultNamespaceConfiguration());
         when(mockImapSession.getState()).thenReturn(ImapSessionState.SELECTED);
         when(mockImapSession.getAttribute(ImapSessionUtils.MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY)).thenReturn(mailboxSession);
     }

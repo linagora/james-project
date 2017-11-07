@@ -60,9 +60,10 @@ public class RenameProcessor extends AbstractMailboxProcessor<RenameRequest> {
      */
     protected void doProcess(RenameRequest request, ImapSession session, String tag, ImapCommand command, Responder responder) {
         PathConverter pathConverter = PathConverter.forSession(session);
-        MailboxPath existingPath = pathConverter.buildFullPath(request.getExistingName());
-        MailboxPath newPath = pathConverter.buildFullPath(request.getNewName());
         try {
+            MailboxPath existingPath = pathConverter.buildFullPath(request.getExistingName());
+            MailboxPath newPath = pathConverter.buildFullPath(request.getNewName());
+
             final MailboxManager mailboxManager = getMailboxManager();
             MailboxSession mailboxsession = ImapSessionUtils.getMailboxSession(session);
             mailboxManager.renameMailbox(existingPath, newPath, mailboxsession);
@@ -74,21 +75,21 @@ public class RenameProcessor extends AbstractMailboxProcessor<RenameRequest> {
             unsolicitedResponses(session, responder, false);
         } catch (MailboxExistsException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Rename from " + existingPath + " to " + newPath + " failed because the target mailbox exists", e);
+                LOGGER.debug("Rename from " + request.getExistingName() + " to " + request.getNewName() + " failed because the target mailbox exists", e);
             }
             no(command, tag, responder, HumanReadableText.FAILURE_MAILBOX_EXISTS);
         } catch (MailboxNotFoundException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Rename from " + existingPath + " to " + newPath + " failed because the source mailbox not exists", e);
+                LOGGER.debug("Rename from " + request.getExistingName() + " to " + request.getNewName() + " failed because the source mailbox not exists", e);
             }
             no(command, tag, responder, HumanReadableText.MAILBOX_NOT_FOUND);
         } catch (TooLongMailboxNameException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("The mailbox name length is over limit: " + newPath.getName(), e);
+                LOGGER.debug("The mailbox name length is over limit: " + request.getNewName(), e);
             }
             taggedBad(command, tag, responder, HumanReadableText.FAILURE_MAILBOX_NAME);
         } catch (MailboxException e) {
-            LOGGER.error("Rename from " + existingPath + " to " + newPath + " failed", e);
+            LOGGER.error("Rename from " + request.getExistingName() + " to " + request.getNewName() + " failed", e);
             no(command, tag, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
         }
     }

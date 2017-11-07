@@ -22,6 +22,7 @@ package org.apache.james.mailbox.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.james.mailbox.PathDelimiter;
 import org.junit.Test;
 
 public class MailboxPathTest {
@@ -29,7 +30,7 @@ public class MailboxPathTest {
     @Test
     public void getHierarchyLevelsShouldBeOrdered() {
         assertThat(MailboxPath.forUser("user", "inbox.folder.subfolder")
-            .getHierarchyLevels('.'))
+            .getHierarchyLevels(MailboxConstants.DEFAULT_DELIMITER))
             .containsExactly(
                 MailboxPath.forUser("user", "inbox"),
                 MailboxPath.forUser("user", "inbox.folder"),
@@ -39,7 +40,7 @@ public class MailboxPathTest {
     @Test
     public void getHierarchyLevelsShouldReturnPathWhenOneLevel() {
         assertThat(MailboxPath.forUser("user", "inbox")
-            .getHierarchyLevels('.'))
+            .getHierarchyLevels(MailboxConstants.DEFAULT_DELIMITER))
             .containsExactly(
                 MailboxPath.forUser("user", "inbox"));
     }
@@ -47,7 +48,7 @@ public class MailboxPathTest {
     @Test
     public void getHierarchyLevelsShouldReturnPathWhenEmptyName() {
         assertThat(MailboxPath.forUser("user", "")
-            .getHierarchyLevels('.'))
+            .getHierarchyLevels(MailboxConstants.DEFAULT_DELIMITER))
             .containsExactly(
                 MailboxPath.forUser("user", ""));
     }
@@ -55,7 +56,7 @@ public class MailboxPathTest {
     @Test
     public void getHierarchyLevelsShouldReturnPathWhenNullName() {
         assertThat(MailboxPath.forUser("user", null)
-            .getHierarchyLevels('.'))
+            .getHierarchyLevels(MailboxConstants.DEFAULT_DELIMITER))
             .containsExactly(
                 MailboxPath.forUser("user", null));
     }

@@ -17,43 +17,30 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.model.search;
+package org.apache.james.protocols.imap;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import java.util.List;
 
-import org.junit.Test;
+import org.apache.james.imap.api.process.ImapSession;
 
-public class WildcardTest {
+import com.google.common.collect.ImmutableList;
 
-    @Test
-    public void isWildShouldBeTrue() {
-        assertThat(Wildcard.INSTANCE.isWild())
-            .isTrue();
+public class DefaultNamespaceConfiguration implements ImapSession.NamespaceConfiguration {
+    private static final String DEFAULT_PERSONAL_NAMESPACE = "";
+    public static final String DELEGATED_MAILBOXES_BASE = "Other users";
+
+    @Override
+    public String personalNamespace() {
+        return DEFAULT_PERSONAL_NAMESPACE;
     }
 
-    @Test
-    public void getCombinedNameShouldReturnWildcard() {
-        assertThat(Wildcard.INSTANCE.getCombinedName())
-            .isEqualTo(String.valueOf(MailboxNameExpression.FREEWILDCARD));
+    @Override
+    public String otherUsersNamespace() {
+        return DELEGATED_MAILBOXES_BASE;
     }
 
-    @Test
-    public void isExpressionMatchShouldMatchAnyValue() {
-        assertThat(Wildcard.INSTANCE.isExpressionMatch("any"))
-            .isTrue();
+    @Override
+    public List<String> sharedNamespacesNamespaces() {
+        return ImmutableList.of();
     }
-
-    @Test
-    public void isExpressionMatchShouldMatchEmptyValue() {
-        assertThat(Wildcard.INSTANCE.isExpressionMatch(""))
-            .isTrue();
-    }
-
-    @Test
-    public void isExpressionMatchShouldThrowOnNullValue() {
-        assertThatThrownBy(() -> Wildcard.INSTANCE.isExpressionMatch(null))
-            .isInstanceOf(NullPointerException.class);
-    }
-
 }

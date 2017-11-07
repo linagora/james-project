@@ -51,6 +51,7 @@ import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.api.NoopMetricFactory;
+import org.apache.james.protocols.imap.DefaultNamespaceConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,6 +98,7 @@ public class SetAnnotationProcessorTest {
         request = new SetAnnotationRequest(TAG, ImapCommand.anyStateCommand("Name"), ImapConstants.INBOX_NAME, MAILBOX_ANNOTATIONS);
         humanTextCaptor = ArgumentCaptor.forClass(HumanReadableText.class);
 
+        when(mockImapSession.getNamespaceConfiguration()).thenReturn(new DefaultNamespaceConfiguration());
         when(mockImapSession.getState()).thenReturn(ImapSessionState.SELECTED);
         when(mockImapSession.getAttribute(ImapSessionUtils.MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY)).thenReturn(mockMailboxSession);
     }
