@@ -24,6 +24,8 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.jpa.JPAUsersRepository;
+import org.apache.james.user.lib.UsernameValidator;
+import org.apache.james.user.lib.UsernameValidatorAggregator;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
 
@@ -40,6 +42,9 @@ public class JPAUsersRepositoryModule extends AbstractModule {
     public void configure() {
         bind(JPAUsersRepository.class).in(Scopes.SINGLETON);
         bind(UsersRepository.class).to(JPAUsersRepository.class);
+
+        bind(UsernameValidatorAggregator.class).in(Scopes.SINGLETON);
+        bind(UsernameValidator.class).to(UsernameValidatorAggregator.class);
 
         Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(JPAUsersRepositoryConfigurationPerformer.class);
     }

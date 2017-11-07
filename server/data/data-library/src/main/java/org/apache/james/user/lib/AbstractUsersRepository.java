@@ -20,36 +20,44 @@
 package org.apache.james.user.lib;
 
 import java.util.Optional;
+import java.util.stream.Stream;
+
 import javax.inject.Inject;
 
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.core.MailAddress;
 import org.apache.james.domainlist.api.DomainList;
-import org.apache.james.domainlist.api.DomainListException;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.user.api.AlreadyExistInUsersRepositoryException;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.james.core.MailAddress;
+import org.apache.james.util.OptionalUtils;
 
+import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 
 public abstract class AbstractUsersRepository implements UsersRepository, Configurable {
-
-    private DomainList domainList;
+    public static final String ENABLE_VIRTUAL_HOSTING = "enableVirtualHosting";
+    public static final String ADMINISTRATOR_ID = "administratorId";
     private boolean virtualHosting;
     private Optional<String> administratorId;
+    private DomainList domainList;
+    protected UsernameValidator usernameValidator = new UsernameValidatorAggregator(ImmutableSet.of());
+    protected UsernameValidator additionalUsernameValidator;
+    protected VirtualHostingNameValidator virtualHostingNameValidator;
 
     /**
      * @see
      * org.apache.james.lifecycle.api.Configurable#configure(org.apache.commons.configuration.HierarchicalConfiguration)
      */
     public void configure(HierarchicalConfiguration configuration) throws ConfigurationException {
-
-        virtualHosting = configuration.getBoolean("enableVirtualHosting", getDefaultVirtualHostingValue());
-        administratorId = Optional.ofNullable(configuration.getString("administratorId"));
-
+        virtualHosting = configuration.getBoolean(ENABLE_VIRTUAL_HOSTING, getDefaultVirtualHostingValue());
+        administratorId = Optional.ofNullable(configuration.getString(ADMINISTRATOR_ID));
         doConfigure(configuration);
+        this.virtualHostingNameValidator = new VirtualHostingNameValidator(virtualHosting, domainList);
+        generateUserNameValidator();
     }
 
     protected boolean getDefaultVirtualHostingValue() {
@@ -68,29 +76,18 @@ public abstract class AbstractUsersRepository implements UsersRepository, Config
         this.domainList = domainList;
     }
 
-    protected void isValidUsername(String username) throws UsersRepositoryException {
-        int i = username.indexOf("@");
-        if (supportVirtualHosting()) {
-            // need a @ in the username
-            if (i == -1) {
-                throw new UsersRepositoryException("Given Username needs to contain a @domainpart");
-            } else {
-                String domain = username.substring(i + 1);
-                try {
-                    if (!domainList.containsDomain(domain)) {
-                        throw new UsersRepositoryException("Domain does not exist in DomainList");
-                    } else {
-                    }
-                } catch (DomainListException e) {
-                    throw new UsersRepositoryException("Unable to query DomainList", e);
-                }
-            }
-        } else {
-            // @ only allowed when virtualhosting is supported
-            if (i != -1) {
-                throw new UsersRepositoryException("Given Username contains a @domainpart but virtualhosting support is disabled");
-            }
-        }
+    @Inject
+    public void setAdditionalUsernameValidator(UsernameValidator additionalUsernameValidator) {
+        this.additionalUsernameValidator = additionalUsernameValidator;
+        generateUserNameValidator();
+    }
+
+    private void generateUserNameValidator() {
+        this.usernameValidator = new UsernameValidatorAggregator(
+            Stream.concat(
+                OptionalUtils.toStream(Optional.ofNullable(additionalUsernameValidator)),
+                OptionalUtils.toStream(Optional.ofNullable(virtualHostingNameValidator)))
+                .collect(Guavate.toImmutableSet()));
     }
 
     /**
@@ -100,7 +97,7 @@ public abstract class AbstractUsersRepository implements UsersRepository, Config
     public void addUser(String username, String password) throws UsersRepositoryException {
 
         if (!contains(username)) {
-            isValidUsername(username);
+            usernameValidator.validate(username);
             doAddUser(username, password);
         } else {
             throw new AlreadyExistInUsersRepositoryException("User with username " + username + " already exists!");

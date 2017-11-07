@@ -26,6 +26,7 @@ import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.imap.encode.main.DefaultImapEncoderFactory;
 import org.apache.james.imap.main.DefaultImapDecoderFactory;
 import org.apache.james.imap.processor.main.DefaultImapProcessorFactory;
+import org.apache.james.imapserver.mailbox.ImapDelegationUsernameValidator;
 import org.apache.james.imapserver.netty.IMAPServerFactory;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.MailboxManager;
@@ -34,6 +35,7 @@ import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.modules.Names;
+import org.apache.james.user.lib.UsernameValidator;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
 
@@ -50,7 +52,14 @@ public class IMAPServerModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(IMAPModuleConfigurationPerformer.class);
+        Multibinder.newSetBinder(binder(), ConfigurationPerformer.class)
+            .addBinding()
+            .to(IMAPModuleConfigurationPerformer.class);
+
+        Multibinder.newSetBinder(binder(),
+            UsernameValidator.class)
+            .addBinding()
+            .to(ImapDelegationUsernameValidator.class);
     }
 
     @Provides

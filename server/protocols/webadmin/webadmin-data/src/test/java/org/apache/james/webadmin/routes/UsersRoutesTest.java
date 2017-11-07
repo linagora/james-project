@@ -133,6 +133,31 @@ public class UsersRoutesTest {
         }
 
         @Test
+        public void postShouldNotCreateInvalidUsers() {
+            given()
+                .body("{\"password\":\"password\"}")
+                .body("{}")
+            .when()
+                .put("user.name@" + DOMAIN)
+            .then()
+                .statusCode(400);
+
+            // No user created
+            List<Map<String, String>> users =
+                when()
+                    .get()
+                    .then()
+                    .statusCode(200)
+                    .contentType(ContentType.JSON)
+                    .extract()
+                    .body()
+                    .jsonPath()
+                    .getList(".");
+
+            assertThat(users).isEmpty();
+        }
+
+        @Test
         public void postShouldReturnUserErrorWhenWrongJsonBody() {
             given()
                 .body("{\"bad\":\"any\"}")

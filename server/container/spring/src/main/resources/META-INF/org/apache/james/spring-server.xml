@@ -316,4 +316,7 @@
 
     <bean id="jspfLogger" class="org.apache.james.smtpserver.fastfail.SPFHandler.SPFLogger"/>
 
+    <!-- To avoid a circular depandancy with Spring-->
+    <bean id="additionalUsernameValidator" class="org.apache.james.container.spring.mailbox.SpringUsernameValidator"/>
+
 </beans>

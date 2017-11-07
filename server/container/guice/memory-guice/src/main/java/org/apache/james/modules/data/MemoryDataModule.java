@@ -28,6 +28,8 @@ import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.memory.MemoryRecipientRewriteTable;
 import org.apache.james.user.api.UsersRepository;
+import org.apache.james.user.lib.UsernameValidator;
+import org.apache.james.user.lib.UsernameValidatorAggregator;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
@@ -55,6 +57,11 @@ public class MemoryDataModule extends AbstractModule {
         bind(MemoryUsersRepository.class).toInstance(MemoryUsersRepository.withVirtualHosting());
         bind(UsersRepository.class).to(MemoryUsersRepository.class);
 
+
+
+        bind(UsernameValidatorAggregator.class).in(Scopes.SINGLETON);
+        bind(UsernameValidator.class).to(UsernameValidatorAggregator.class);
+
         Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(MemoryDataConfigurationPerformer.class);
     }
 
@@ -64,17 +71,23 @@ public class MemoryDataModule extends AbstractModule {
         private final ConfigurationProvider configurationProvider;
         private final MemoryDomainList memoryDomainList;
         private final MemoryRecipientRewriteTable memoryRecipientRewriteTable;
+        private final MemoryUsersRepository memoryUsersRepository;
 
         @Inject
-        public MemoryDataConfigurationPerformer(ConfigurationProvider configurationProvider, MemoryDomainList memoryDomainList, MemoryRecipientRewriteTable memoryRecipientRewriteTable) {
+        public MemoryDataConfigurationPerformer(ConfigurationProvider configurationProvider,
+                                                MemoryDomainList memoryDomainList,
+                                                MemoryRecipientRewriteTable memoryRecipientRewriteTable,
+                                                MemoryUsersRepository memoryUsersRepository) {
             this.configurationProvider = configurationProvider;
             this.memoryDomainList = memoryDomainList;
             this.memoryRecipientRewriteTable = memoryRecipientRewriteTable;
+            this.memoryUsersRepository = memoryUsersRepository;
         }
 
         @Override
         public void initModule() {
             try {
+                memoryUsersRepository.configure(configurationProvider.getConfiguration("usersrepository"));
                 memoryDomainList.configure(configurationProvider.getConfiguration("domainlist"));
                 memoryRecipientRewriteTable.configure(configurationProvider.getConfiguration("recipientrewritetable"));
             } catch (ConfigurationException e) {
