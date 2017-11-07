@@ -71,7 +71,7 @@ public class DefaultUsersJdbcRepository extends AbstractJdbcUsersRepository {
         if (contains(username)) {
             throw new AlreadyExistInUsersRepositoryException("User " + username + " already exist");
         }
-        isValidUsername(username);
+        usernameValidator.validate(username);
         User newbie = new DefaultUser(username, "SHA");
         newbie.setPassword(password);
         doAddUser(newbie);

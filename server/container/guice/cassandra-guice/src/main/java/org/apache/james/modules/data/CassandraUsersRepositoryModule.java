@@ -25,6 +25,8 @@ import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.cassandra.CassandraUsersRepository;
+import org.apache.james.user.lib.UsernameValidator;
+import org.apache.james.user.lib.UsernameValidatorAggregator;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.ConfigurationProvider;
 
@@ -39,6 +41,9 @@ import com.google.inject.multibindings.Multibinder;
 public class CassandraUsersRepositoryModule extends AbstractModule {
     @Override
     public void configure() {
+        bind(UsernameValidatorAggregator.class).in(Scopes.SINGLETON);
+        bind(UsernameValidator.class).to(UsernameValidatorAggregator.class);
+
         bind(CassandraUsersRepository.class).in(Scopes.SINGLETON);
         bind(UsersRepository.class).to(CassandraUsersRepository.class);
         Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
