@@ -32,7 +32,7 @@ import org.apache.james.imap.encode.FakeImapSession;
 import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
@@ -102,12 +102,12 @@ public abstract class JamesImapHostSystem implements ImapHostSystem, GrantRights
         mailboxManager.endProcessingRequest(mailboxSession);
     }
 
-    public void grantRights(MailboxPath mailboxPath, String userName, MailboxACL.Rfc4314Rights rights) throws Exception {
+    public void grantRights(MailboxPath mailboxPath, String userName, MailboxShares.Rfc4314Rights rights) throws Exception {
         MailboxManager mailboxManager = getMailboxManager();
         MailboxSession mailboxSession = mailboxManager.createSystemSession(mailboxPath.getUser());
         mailboxManager.startProcessingRequest(mailboxSession);
         mailboxManager.setRights(mailboxPath,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(userName)
                 .rights(rights)
                 .asAddition()),

@@ -43,14 +43,14 @@ import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.ReadOnlyException;
 import org.apache.james.mailbox.model.ComposedMessageId;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxCounters;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
@@ -243,7 +243,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
      * In this implementation, all permanent flags are shared, ergo we simply
      * return {@link #getPermanentFlags(MailboxSession)}
      * 
-     * @see UnionMailboxACLResolver#isReadWrite(MailboxACLRights, Flags)
+     * @see UnionMailboxSharesResolver#isReadWrite(MailboxShares, Flags)
      * 
      * @param session
      * @return
@@ -507,7 +507,7 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
             recent = new ArrayList<>();
             break;
         }
-        MailboxACL resolvedAcl = storeRightManager.getResolvedMailboxACL(mailbox, mailboxSession);
+        MailboxShares resolvedAcl = storeRightManager.getResolvedMailboxShares(mailbox, mailboxSession);
         return new MailboxMetaData(recent, permanentFlags, uidValidity, uidNext, highestModSeq, messageCount, unseenCount, firstUnseen, isWriteable(mailboxSession), isModSeqPermanent(mailboxSession), resolvedAcl);
     }
 

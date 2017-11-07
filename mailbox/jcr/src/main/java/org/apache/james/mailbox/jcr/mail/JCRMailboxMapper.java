@@ -39,10 +39,10 @@ import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.jcr.AbstractJCRScalingMapper;
 import org.apache.james.mailbox.jcr.MailboxSessionJCRRepository;
 import org.apache.james.mailbox.jcr.mail.model.JCRMailbox;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 
@@ -254,13 +254,13 @@ public class JCRMailboxMapper extends AbstractJCRScalingMapper implements Mailbo
     }
 
     @Override
-    public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
-        mailbox.setACL(mailbox.getACL().apply(mailboxACLCommand));
+    public void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWith) throws MailboxException {
+        mailbox.setACL(mailbox.getACL().apply(shareWith));
     }
 
     @Override
-    public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
-        mailbox.setACL(mailboxACL);
+    public void setACL(Mailbox mailbox, MailboxShares mailboxShares) throws MailboxException {
+        mailbox.setACL(mailboxShares);
     }
 
     @Override

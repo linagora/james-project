@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestMessageId;
@@ -49,7 +49,7 @@ public class StoreMessageIdManagerSideEffectTest extends AbstractMessageIdManage
         MessageId.Factory messageIdFactory = new TestMessageId.Factory();
         MailboxManager mailboxManager = mock(MailboxManager.class);
         when(mailboxManager.myRights(any(MailboxId.class), any(MailboxSession.class)))
-            .thenReturn(MailboxACL.FULL_RIGHTS);
+            .thenReturn(MailboxShares.FULL_RIGHTS);
 
         MessageIdManager messageIdManager = new StoreMessageIdManager(mailboxManager,
             testMailboxSessionMapperFactory, dispatcher, messageIdFactory,

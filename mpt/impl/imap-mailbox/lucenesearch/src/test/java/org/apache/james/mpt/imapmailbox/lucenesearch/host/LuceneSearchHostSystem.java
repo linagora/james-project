@@ -35,9 +35,9 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.JPAId;
 import org.apache.james.mailbox.jpa.JPAId.Factory;
@@ -115,7 +115,7 @@ public class LuceneSearchHostSystem extends JamesImapHostSystem {
             FSDirectory fsDirectory = FSDirectory.open(tempFile);
             MessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
 
-            MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+            MailboxSharesResolver aclResolver = new UnionMailboxSharesResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
             MessageParser messageParser = new MessageParser();
 

@@ -44,8 +44,8 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.DefaultMailboxes;
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -1176,7 +1176,7 @@ public abstract class SetMailboxesMethodTest {
                 "    {" +
                 "      \"update\": {" +
                 "        \"" + mailboxId.serialize() + "\" : {" +
-                "          \"sharedWith\" : {\"user\": [\"a\", \"w\"]}" +
+                "          \"sharedWith\" : {\"user@" + USERS_DOMAIN + "\": [\"a\", \"w\"]}" +
                 "        }" +
                 "      }" +
                 "    }," +
@@ -1285,7 +1285,7 @@ public abstract class SetMailboxesMethodTest {
     @Test
     public void updateShouldApplyWhenSettingNewACL() {
         String myBox = "myBox";
-        String user = "user";
+        String user = "user@" + USERS_DOMAIN;
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, myBox);
         String requestBody =
             "[" +
@@ -1321,7 +1321,7 @@ public abstract class SetMailboxesMethodTest {
     @Test
     public void updateShouldModifyStoredDataWhenUpdatingACL() {
         String myBox = "myBox";
-        String user = "user";
+        String user = "user@" + USERS_DOMAIN;
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, myBox);
 
         with()
@@ -1421,8 +1421,8 @@ public abstract class SetMailboxesMethodTest {
     @Test
     public void updateShouldModifyStoredDataWhenSwitchingACLUser() {
         String myBox = "myBox";
-        String user1 = "user1";
-        String user2 = "user2";
+        String user1 = "user1@" + USERS_DOMAIN;
+        String user2 = "user2@" + USERS_DOMAIN;
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, myBox);
 
         with()
@@ -1492,11 +1492,11 @@ public abstract class SetMailboxesMethodTest {
                 "]")
             .post("/jmap");
 
-        MailboxACL acl = jmapServer.getProbe(ACLProbeImpl.class)
+        MailboxShares acl = jmapServer.getProbe(ACLProbeImpl.class)
             .retrieveRights(MailboxPath.forUser(username, myBox));
 
         assertThat(acl.getEntries())
-            .doesNotContainKeys(MailboxACL.EntryKey.createUserEntryKey(username));
+            .doesNotContainKeys(MailboxShares.EntryKey.createUserEntryKey(username));
     }
 
     @Test

@@ -31,12 +31,12 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
@@ -190,42 +190,42 @@ public class DefaultMailboxesProvisioningFilterThreadTest {
         }
 
         @Override
-        public boolean hasRight(MailboxId mailboxId, MailboxACL.Right right, MailboxSession session) throws MailboxException {
+        public boolean hasRight(MailboxId mailboxId, MailboxShares.Right right, MailboxSession session) throws MailboxException {
             return false;
         }
 
         @Override
-        public boolean hasRight(MailboxPath mailboxPath, MailboxACL.Right right, MailboxSession session) throws MailboxException {
+        public boolean hasRight(MailboxPath mailboxPath, MailboxShares.Right right, MailboxSession session) throws MailboxException {
             return false;
         }
 
         @Override
-        public MailboxACL.Rfc4314Rights myRights(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+        public MailboxShares.Rfc4314Rights myRights(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
             throw new NotImplementedException();
         }
 
         @Override
-        public MailboxACL.Rfc4314Rights myRights(MailboxId mailboxId, MailboxSession session) throws MailboxException {
+        public MailboxShares.Rfc4314Rights myRights(MailboxId mailboxId, MailboxSession session) throws MailboxException {
             throw new NotImplementedException();
         }
 
         @Override
-        public MailboxACL.Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxACL.EntryKey identifier, MailboxSession session) throws MailboxException {
+        public MailboxShares.Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxShares.EntryKey identifier, MailboxSession session) throws MailboxException {
             throw new NotImplementedException();
         }
 
         @Override
-        public void applyRightsCommand(MailboxPath mailboxPath, MailboxACL.ACLCommand mailboxACLCommand, MailboxSession session) throws MailboxException {
+        public void applyRightsCommand(MailboxPath mailboxPath, MailboxShares.ShareWith shareWith, MailboxSession session) throws MailboxException {
             throw new NotImplementedException();
         }
 
         @Override
-        public void setRights(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+        public void setRights(MailboxId mailboxId, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
             throw new NotImplementedException();
         }
 
         @Override
-        public void setRights(MailboxPath mailboxPath, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+        public void setRights(MailboxPath mailboxPath, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
             throw new NotImplementedException();
         }
 

@@ -28,10 +28,10 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL.Entry;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.NameType;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Entry;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.NameType;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.assertj.core.data.MapEntry;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * @author Peter Palaga
  */
-public class MailboxACLTest {
+public class MailboxSharesTest {
 
     private static final String USER_1 = "user1";
     private static final String USER_2 = "user2";
@@ -55,7 +55,7 @@ public class MailboxACLTest {
 
     private Properties u1u2g1g2Properties;
 
-    private MailboxACL u1u2g1g2ACL;
+    private MailboxShares u1u2g1g2ACL;
 
     @Before
     public void setUp() throws Exception {
@@ -63,11 +63,11 @@ public class MailboxACLTest {
         u1u2g1g2Properties = new Properties();
 
         u1u2g1g2Properties.setProperty(USER_1, aeik);
-        u1u2g1g2Properties.setProperty(MailboxACL.DEFAULT_NEGATIVE_MARKER + USER_1, lprs);
+        u1u2g1g2Properties.setProperty(MailboxShares.DEFAULT_NEGATIVE_MARKER + USER_1, lprs);
         u1u2g1g2Properties.setProperty(USER_2, lprs);
-        u1u2g1g2Properties.setProperty(MailboxACL.DEFAULT_NEGATIVE_MARKER + USER_2, twx);
+        u1u2g1g2Properties.setProperty(MailboxShares.DEFAULT_NEGATIVE_MARKER + USER_2, twx);
 
-        u1u2g1g2ACL = new MailboxACL(u1u2g1g2Properties);
+        u1u2g1g2ACL = new MailboxShares(u1u2g1g2Properties);
 
     }
 
@@ -75,10 +75,10 @@ public class MailboxACLTest {
     public void testUnionACLNew() throws UnsupportedRightException {
 
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
-        expectedEntries.put(MailboxACL.OWNER_KEY, MailboxACL.FULL_RIGHTS);
+        expectedEntries.put(MailboxShares.OWNER_KEY, MailboxShares.FULL_RIGHTS);
 
-        MailboxACL toAdd = MailboxACL.OWNER_FULL_ACL;
-        MailboxACL result = u1u2g1g2ACL.union(toAdd);
+        MailboxShares toAdd = MailboxShares.OWNER_FULL_ACL;
+        MailboxShares result = u1u2g1g2ACL.union(toAdd);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -89,9 +89,9 @@ public class MailboxACLTest {
     public void testUnionEntryNew() throws UnsupportedRightException {
 
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
-        expectedEntries.put(MailboxACL.OWNER_KEY, MailboxACL.FULL_RIGHTS);
+        expectedEntries.put(MailboxShares.OWNER_KEY, MailboxShares.FULL_RIGHTS);
 
-        MailboxACL result = u1u2g1g2ACL.union(MailboxACL.OWNER_KEY, MailboxACL.FULL_RIGHTS);
+        MailboxShares result = u1u2g1g2ACL.union(MailboxShares.OWNER_KEY, MailboxShares.FULL_RIGHTS);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -104,8 +104,8 @@ public class MailboxACLTest {
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
         expectedEntries.put(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(aeik + lprs));
 
-        MailboxACL toAdd = new MailboxACL(new Entry(USER_1, lprs));
-        MailboxACL result = u1u2g1g2ACL.union(toAdd);
+        MailboxShares toAdd = new MailboxShares(new Entry(USER_1, lprs));
+        MailboxShares result = u1u2g1g2ACL.union(toAdd);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -118,7 +118,7 @@ public class MailboxACLTest {
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
         expectedEntries.put(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(aeik + lprs));
 
-        MailboxACL result = u1u2g1g2ACL.union(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(lprs));
+        MailboxShares result = u1u2g1g2ACL.union(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(lprs));
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -141,8 +141,8 @@ public class MailboxACLTest {
         /* actually no change expected */
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
 
-        MailboxACL toRemove = MailboxACL.OWNER_FULL_ACL;
-        MailboxACL result = u1u2g1g2ACL.except(toRemove);
+        MailboxShares toRemove = MailboxShares.OWNER_FULL_ACL;
+        MailboxShares result = u1u2g1g2ACL.except(toRemove);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -155,7 +155,7 @@ public class MailboxACLTest {
         /* actually no change expected */
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
 
-        MailboxACL result = u1u2g1g2ACL.except(MailboxACL.OWNER_KEY, MailboxACL.FULL_RIGHTS);
+        MailboxShares result = u1u2g1g2ACL.except(MailboxShares.OWNER_KEY, MailboxShares.FULL_RIGHTS);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -168,8 +168,8 @@ public class MailboxACLTest {
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
         expectedEntries.put(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(ik));
 
-        MailboxACL toRemove = new MailboxACL(new Entry(USER_1, ae));
-        MailboxACL result = u1u2g1g2ACL.except(toRemove);
+        MailboxShares toRemove = new MailboxShares(new Entry(USER_1, ae));
+        MailboxShares result = u1u2g1g2ACL.except(toRemove);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -182,7 +182,7 @@ public class MailboxACLTest {
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
         expectedEntries.put(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(ik));
 
-        MailboxACL result = u1u2g1g2ACL.except(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(ae));
+        MailboxShares result = u1u2g1g2ACL.except(EntryKey.deserialize(USER_1), Rfc4314Rights.fromSerializedRfc4314Rights(ae));
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -195,8 +195,8 @@ public class MailboxACLTest {
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
         expectedEntries.remove(EntryKey.deserialize(USER_1));
 
-        MailboxACL toRemove = new MailboxACL(new Entry(USER_1, MailboxACL.FULL_RIGHTS.serialize()));
-        MailboxACL result = u1u2g1g2ACL.except(toRemove);
+        MailboxShares toRemove = new MailboxShares(new Entry(USER_1, MailboxShares.FULL_RIGHTS.serialize()));
+        MailboxShares result = u1u2g1g2ACL.except(toRemove);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -209,7 +209,7 @@ public class MailboxACLTest {
         Map<EntryKey, Rfc4314Rights> expectedEntries = new HashMap<>(u1u2g1g2ACL.getEntries());
         expectedEntries.remove(EntryKey.deserialize(USER_1));
 
-        MailboxACL result = u1u2g1g2ACL.except(EntryKey.deserialize(USER_1), MailboxACL.FULL_RIGHTS);
+        MailboxShares result = u1u2g1g2ACL.except(EntryKey.deserialize(USER_1), MailboxShares.FULL_RIGHTS);
 
         Map<EntryKey, Rfc4314Rights> foundEntries = result.getEntries();
 
@@ -218,51 +218,51 @@ public class MailboxACLTest {
 
     @Test
     public void propertiesConstructorShouldAcceptNullValues() throws Exception {
-        assertThat(new MailboxACL((Properties) null))
-            .isEqualTo(MailboxACL.EMPTY);
+        assertThat(new MailboxShares((Properties) null))
+            .isEqualTo(MailboxShares.EMPTY);
     }
 
     @Test
     public void applyShouldNotThrowWhenRemovingANonExistingEntry() throws Exception{
-        assertThat(MailboxACL.EMPTY
-            .apply(MailboxACL.command().forUser("bob").noRights().asReplacement()))
-            .isEqualTo(MailboxACL.EMPTY);
+        assertThat(MailboxShares.EMPTY
+            .apply(MailboxShares.command().forUser("bob").noRights().asReplacement()))
+            .isEqualTo(MailboxShares.EMPTY);
     }
 
     @Test
     public void usersACLShouldReturnEmptyMapWhenEmpty() {
-        assertThat(MailboxACL.EMPTY.ofPositiveNameType(NameType.user))
+        assertThat(MailboxShares.EMPTY.ofPositiveNameType(NameType.user))
             .isEmpty();
     }
 
     @Test
     public void usersACLShouldReturnEmptyMapWhenNoUserEntry() {
-        MailboxACL mailboxACL = new MailboxACL(
-                ImmutableMap.of(EntryKey.createGroupEntryKey("group"), MailboxACL.FULL_RIGHTS,
-                    EntryKey.createGroupEntryKey("group2"), MailboxACL.NO_RIGHTS));
-        assertThat(mailboxACL.ofPositiveNameType(NameType.user))
+        MailboxShares mailboxShares = new MailboxShares(
+                ImmutableMap.of(EntryKey.createGroupEntryKey("group"), MailboxShares.FULL_RIGHTS,
+                    EntryKey.createGroupEntryKey("group2"), MailboxShares.NO_RIGHTS));
+        assertThat(mailboxShares.ofPositiveNameType(NameType.user))
             .isEmpty();
     }
 
     @Test
     public void usersACLShouldReturnOnlyUsersMapWhenSomeUserEntries() throws Exception {
-        MailboxACL.Rfc4314Rights rights = MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights("aei");
-        MailboxACL mailboxACL = new MailboxACL(
-            ImmutableMap.of(EntryKey.createUserEntryKey("user1"), MailboxACL.FULL_RIGHTS,
-                EntryKey.createGroupEntryKey("group"), MailboxACL.FULL_RIGHTS,
+        MailboxShares.Rfc4314Rights rights = MailboxShares.Rfc4314Rights.fromSerializedRfc4314Rights("aei");
+        MailboxShares mailboxShares = new MailboxShares(
+            ImmutableMap.of(EntryKey.createUserEntryKey("user1"), MailboxShares.FULL_RIGHTS,
+                EntryKey.createGroupEntryKey("group"), MailboxShares.FULL_RIGHTS,
                 EntryKey.createUserEntryKey("user2"), rights,
-                EntryKey.createGroupEntryKey("group2"), MailboxACL.NO_RIGHTS));
-        assertThat(mailboxACL.ofPositiveNameType(NameType.user))
+                EntryKey.createGroupEntryKey("group2"), MailboxShares.NO_RIGHTS));
+        assertThat(mailboxShares.ofPositiveNameType(NameType.user))
             .containsOnly(
-                MapEntry.entry(EntryKey.createUserEntryKey("user1"), MailboxACL.FULL_RIGHTS),
+                MapEntry.entry(EntryKey.createUserEntryKey("user1"), MailboxShares.FULL_RIGHTS),
                 MapEntry.entry(EntryKey.createUserEntryKey("user2"), rights));
     }
 
     @Test
     public void ofPositiveNameTypeShouldFilterOutNegativeEntries() throws Exception {
-        MailboxACL mailboxACL = new MailboxACL(
-            ImmutableMap.of(EntryKey.createUserEntryKey("user1", NEGATIVE), MailboxACL.FULL_RIGHTS));
-        assertThat(mailboxACL.ofPositiveNameType(NameType.user))
+        MailboxShares mailboxShares = new MailboxShares(
+            ImmutableMap.of(EntryKey.createUserEntryKey("user1", NEGATIVE), MailboxShares.FULL_RIGHTS));
+        assertThat(mailboxShares.ofPositiveNameType(NameType.user))
             .isEmpty();
     }
 }

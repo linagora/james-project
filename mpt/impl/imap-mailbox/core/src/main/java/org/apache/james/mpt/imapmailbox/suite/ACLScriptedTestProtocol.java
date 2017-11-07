@@ -2,7 +2,7 @@ package org.apache.james.mpt.imapmailbox.suite;
 
 import java.util.Locale;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mpt.api.HostSystem;
 import org.apache.james.mpt.api.ImapHostSystem;
@@ -17,9 +17,9 @@ public class ACLScriptedTestProtocol extends ImapScriptedTestProtocol {
         GrantRightsOnHost grantRightsOnHost;
         MailboxPath mailboxPath;
         String userName;
-        MailboxACL.Rfc4314Rights rights;
+        MailboxShares.Rfc4314Rights rights;
 
-        GrantRightsCommand(GrantRightsOnHost grantRightsOnHost, MailboxPath mailboxPath, String userName, MailboxACL.Rfc4314Rights rights) {
+        GrantRightsCommand(GrantRightsOnHost grantRightsOnHost, MailboxPath mailboxPath, String userName, MailboxShares.Rfc4314Rights rights) {
             this.grantRightsOnHost = grantRightsOnHost;
             this.mailboxPath = mailboxPath;
             this.userName = userName;
@@ -56,7 +56,7 @@ public class ACLScriptedTestProtocol extends ImapScriptedTestProtocol {
         this.mailboxMessageAppender = mailboxMessageAppender;
     }
 
-    public ACLScriptedTestProtocol withGrantRights(MailboxPath mailboxPath, String userName, MailboxACL.Rfc4314Rights rights) {
+    public ACLScriptedTestProtocol withGrantRights(MailboxPath mailboxPath, String userName, MailboxShares.Rfc4314Rights rights) {
         return (ACLScriptedTestProtocol) withPreparedCommand(new GrantRightsCommand(grantRightsOnHost, mailboxPath, userName, rights));
     }
     

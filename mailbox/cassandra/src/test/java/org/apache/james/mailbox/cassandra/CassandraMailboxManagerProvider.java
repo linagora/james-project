@@ -21,9 +21,9 @@ package org.apache.james.mailbox.cassandra;
 
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.Authenticator;
@@ -50,10 +50,10 @@ public class CassandraMailboxManagerProvider {
             cassandraTypesProvider,
             messageIdFactory);
 
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+        MailboxSharesResolver sharesResolver = new UnionMailboxSharesResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
         MessageParser messageParser = new MessageParser();
-        StoreRightManager storeRightManager = new StoreRightManager(mapperFactory, aclResolver, groupMembershipResolver);
+        StoreRightManager storeRightManager = new StoreRightManager(mapperFactory, sharesResolver, groupMembershipResolver);
 
         Authenticator noAuthenticator = null;
         Authorizator noAuthorizator = null;

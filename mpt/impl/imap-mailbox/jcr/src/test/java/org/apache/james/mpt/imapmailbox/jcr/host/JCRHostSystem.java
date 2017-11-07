@@ -31,9 +31,9 @@ import org.apache.james.imap.processor.main.DefaultImapProcessorFactory;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.jcr.GlobalMailboxSessionJCRRepository;
 import org.apache.james.mailbox.jcr.JCRMailboxManager;
 import org.apache.james.mailbox.jcr.JCRMailboxSessionMapperFactory;
@@ -91,7 +91,7 @@ public class JCRHostSystem extends JamesImapHostSystem {
             JCRModSeqProvider modSeqProvider = new JCRModSeqProvider(locker, sessionRepos);
             JCRMailboxSessionMapperFactory mf = new JCRMailboxSessionMapperFactory(sessionRepos, uidProvider, modSeqProvider);
 
-            MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+            MailboxSharesResolver aclResolver = new UnionMailboxSharesResolver();
             GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
             MessageParser messageParser = new MessageParser();
 

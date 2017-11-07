@@ -20,7 +20,7 @@
 
 package org.apache.james.mailbox.exception;
 
-import org.apache.james.mailbox.model.MailboxACL.Right;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 
 /**
  * Thrown when the current system does not support the given right.

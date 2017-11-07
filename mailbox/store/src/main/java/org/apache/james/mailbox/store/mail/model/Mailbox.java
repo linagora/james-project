@@ -19,7 +19,7 @@
 package org.apache.james.mailbox.store.mail.model;
 
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 
@@ -84,14 +84,14 @@ public interface Mailbox {
      *
      * @return ACL
      */
-    MailboxACL getACL();
+    MailboxShares getACL();
     
     /**
      * Sets the current ACL for this mailbox.
      *
      * @param acl
      */
-    void setACL(MailboxACL acl);
+    void setACL(MailboxShares acl);
 
     boolean isChildOf(Mailbox potentialParent, MailboxSession mailboxSession);
     

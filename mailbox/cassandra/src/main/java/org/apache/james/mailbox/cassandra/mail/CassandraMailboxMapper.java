@@ -39,10 +39,10 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.TooLongMailboxNameException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -118,7 +118,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
     }
 
     private CompletableFuture<Optional<SimpleMailbox>> retrieveMailbox(CassandraId mailboxId) {
-        CompletableFuture<MailboxACL> aclCompletableFuture = cassandraACLMapper.getACL(mailboxId);
+        CompletableFuture<MailboxShares> aclCompletableFuture = cassandraACLMapper.getACL(mailboxId);
 
         CompletableFuture<Optional<SimpleMailbox>> simpleMailboxFuture = mailboxDAO.retrieveMailbox(mailboxId);
 
@@ -128,7 +128,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
             this::addAcl);
     }
 
-    private Optional<SimpleMailbox> addAcl(MailboxACL acl, Optional<SimpleMailbox> mailboxOptional) {
+    private Optional<SimpleMailbox> addAcl(MailboxShares acl, Optional<SimpleMailbox> mailboxOptional) {
         mailboxOptional.ifPresent(mailbox -> mailbox.setACL(acl));
         return mailboxOptional;
     }
@@ -221,15 +221,15 @@ public class CassandraMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
+    public void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWithCommand) throws MailboxException {
         CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
-        cassandraACLMapper.updateACL(cassandraId, mailboxACLCommand);
+        cassandraACLMapper.updateACL(cassandraId, shareWithCommand);
     }
 
     @Override
-    public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
+    public void setACL(Mailbox mailbox, MailboxShares shareWith) throws MailboxException {
         CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
-        cassandraACLMapper.setACL(cassandraId, mailboxACL);
+        cassandraACLMapper.setACL(cassandraId, shareWith);
     }
 
     @Override
@@ -271,7 +271,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
             .collect(Guavate.toImmutableList());
     }
 
-    private Stream<CassandraId> toAuthorizedMailboxIds(Map<CassandraId, MailboxACL.Rfc4314Rights> map, Right right) {
+    private Stream<CassandraId> toAuthorizedMailboxIds(Map<CassandraId, MailboxShares.Rfc4314Rights> map, Right right) {
         return map.entrySet()
             .stream()
             .filter(Throwing.predicate(entry -> entry.getValue().contains(right)))

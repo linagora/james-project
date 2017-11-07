@@ -22,9 +22,9 @@ package org.apache.james.mailbox.maildir;
 import java.io.IOException;
 
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
@@ -43,10 +43,10 @@ public class MaildirMailboxManagerProvider {
         MaildirStore store = new MaildirStore(temporaryFolder.newFolder().getPath() + configuration, new JVMMailboxPathLocker());
         MaildirMailboxSessionMapperFactory mf = new MaildirMailboxSessionMapperFactory(store);
 
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+        MailboxSharesResolver sharedResolver = new UnionMailboxSharesResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
         MessageParser messageParser = new MessageParser();
-        StoreRightManager storeRightManager = new StoreRightManager(mf, aclResolver, groupMembershipResolver);
+        StoreRightManager storeRightManager = new StoreRightManager(mf, sharedResolver, groupMembershipResolver);
 
         Authenticator noAuthenticator = null;
         Authorizator noAuthorizator = null;

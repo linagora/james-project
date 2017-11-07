@@ -23,10 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.apache.james.jmap.model.mailbox.Rights.Right;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Entry;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Entry;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -103,7 +103,7 @@ public class RightsTest {
 
     @Test
     public void fromACLShouldFilterOutGroups() throws Exception {
-        MailboxACL acl = new MailboxACL(ImmutableMap.of(
+        MailboxShares acl = new MailboxShares(ImmutableMap.of(
             EntryKey.createGroupEntryKey("group"), Rfc4314Rights.fromSerializedRfc4314Rights("aet")));
 
         assertThat(Rights.fromACL(acl))
@@ -112,7 +112,7 @@ public class RightsTest {
 
     @Test
     public void fromACLShouldFilterNegatedUsers() throws Exception {
-        MailboxACL acl = new MailboxACL(ImmutableMap.of(
+        MailboxShares acl = new MailboxShares(ImmutableMap.of(
             EntryKey.createUserEntryKey("user", NEGATIVE), Rfc4314Rights.fromSerializedRfc4314Rights("aet")));
 
         assertThat(Rights.fromACL(acl))
@@ -121,7 +121,7 @@ public class RightsTest {
 
     @Test
     public void fromACLShouldAcceptUsers() throws Exception {
-        MailboxACL acl = new MailboxACL(ImmutableMap.of(
+        MailboxShares acl = new MailboxShares(ImmutableMap.of(
             EntryKey.createUserEntryKey("user"), Rfc4314Rights.fromSerializedRfc4314Rights("aet")));
 
         assertThat(Rights.fromACL(acl))
@@ -132,7 +132,7 @@ public class RightsTest {
 
     @Test
     public void fromACLShouldFilterOutUnknownRights() throws Exception {
-        MailboxACL acl = new MailboxACL(ImmutableMap.of(
+        MailboxShares acl = new MailboxShares(ImmutableMap.of(
             EntryKey.createUserEntryKey("user"), Rfc4314Rights.fromSerializedRfc4314Rights("aetpk")));
 
         assertThat(Rights.fromACL(acl))
@@ -142,15 +142,15 @@ public class RightsTest {
     }
 
     @Test
-    public void toMailboxAclShouldReturnEmptyAclWhenEmpty() {
+    public void toMailboxSharesShouldReturnEmptyAclWhenEmpty() {
         Rights rights = Rights.EMPTY;
 
-        assertThat(rights.toMailboxAcl())
-            .isEqualTo(new MailboxACL());
+        assertThat(rights.toMailboxShares())
+            .isEqualTo(new MailboxShares());
     }
 
     @Test
-    public void toMailboxAclShouldReturnAclConversion() throws Exception {
+    public void toMailboxSharesShouldReturnAclConversion() throws Exception {
         String user1 = "user1";
         String user2 = "user2";
         Rights rights = Rights.builder()
@@ -158,10 +158,10 @@ public class RightsTest {
             .delegateTo(new Rights.Username(user2), Right.Expunge, Right.Lookup)
             .build();
 
-        assertThat(rights.toMailboxAcl())
-            .isEqualTo(new MailboxACL(
-                new Entry(user1, MailboxACL.Right.Administer, MailboxACL.Right.DeleteMessages),
-                new Entry(user2, MailboxACL.Right.PerformExpunge, MailboxACL.Right.Lookup)));
+        assertThat(rights.toMailboxShares())
+            .isEqualTo(new MailboxShares(
+                new Entry(user1, MailboxShares.Right.Administer, MailboxShares.Right.DeleteMessages),
+                new Entry(user2, MailboxShares.Right.PerformExpunge, MailboxShares.Right.Lookup)));
     }
 
     @Test

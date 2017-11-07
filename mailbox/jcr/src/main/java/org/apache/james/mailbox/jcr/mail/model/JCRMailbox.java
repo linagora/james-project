@@ -27,9 +27,9 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.jcr.JCRId;
 import org.apache.james.mailbox.jcr.JCRImapConstants;
 import org.apache.james.mailbox.jcr.Persistent;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxUtil;
 import org.slf4j.Logger;
@@ -313,16 +313,16 @@ public class JCRMailbox implements Mailbox, JCRImapConstants, Persistent{
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getACL()
      */
     @Override
-    public MailboxACL getACL() {
+    public MailboxShares getACL() {
         // TODO ACL support
-        return MailboxACL.OWNER_FULL_ACL;
+        return MailboxShares.OWNER_FULL_ACL;
     }
 
     /* (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setACL(org.apache.james.mailbox.MailboxACL)
+     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setACL(org.apache.james.mailbox.MailboxShares)
      */
     @Override
-    public void setACL(MailboxACL acl) {
+    public void setACL(MailboxShares acl) {
         // TODO ACL support
     }
 

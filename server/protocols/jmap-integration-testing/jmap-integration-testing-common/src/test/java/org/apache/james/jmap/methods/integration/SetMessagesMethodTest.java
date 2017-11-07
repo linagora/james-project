@@ -65,7 +65,7 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.ComposedMessageId;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -1174,7 +1174,7 @@ public abstract class SetMessagesMethodTest {
         dataProbe.addUser(alice, "alicepassword");
         MailboxId aliceOutbox = mailboxProbe.createMailbox("#private", alice, DefaultMailboxes.OUTBOX);
 
-        aclProbe.replaceRights(MailboxPath.forUser(alice, DefaultMailboxes.OUTBOX), USERNAME, MailboxACL.FULL_RIGHTS);
+        aclProbe.replaceRights(MailboxPath.forUser(alice, DefaultMailboxes.OUTBOX), USERNAME, MailboxShares.FULL_RIGHTS);
 
         String messageCreationId = "creationId1337";
         String fromAddress = USERNAME;

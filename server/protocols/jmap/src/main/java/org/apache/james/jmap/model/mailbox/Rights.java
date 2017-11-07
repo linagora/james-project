@@ -29,9 +29,9 @@ import java.util.function.BinaryOperator;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.util.GuavaUtils;
 import org.apache.james.util.OptionalUtils;
@@ -53,18 +53,18 @@ public class Rights {
     static final Optional<Boolean> UNSUPPORTED = Optional.empty();
 
     public enum Right {
-        Administer(MailboxACL.Right.Administer),
-        Expunge(MailboxACL.Right.PerformExpunge),
-        Insert(MailboxACL.Right.Insert),
-        Lookup(MailboxACL.Right.Lookup),
-        Read(MailboxACL.Right.Read),
-        Seen(MailboxACL.Right.WriteSeenFlag),
-        DeleteMessages(MailboxACL.Right.DeleteMessages),
-        Write(MailboxACL.Right.Write);
+        Administer(MailboxShares.Right.Administer),
+        Expunge(MailboxShares.Right.PerformExpunge),
+        Insert(MailboxShares.Right.Insert),
+        Lookup(MailboxShares.Right.Lookup),
+        Read(MailboxShares.Right.Read),
+        Seen(MailboxShares.Right.WriteSeenFlag),
+        DeleteMessages(MailboxShares.Right.DeleteMessages),
+        Write(MailboxShares.Right.Write);
 
-        private final MailboxACL.Right right;
+        private final MailboxShares.Right right;
 
-        Right(MailboxACL.Right right) {
+        Right(MailboxShares.Right right) {
             this.right = right;
         }
 
@@ -73,11 +73,11 @@ public class Rights {
             return right.asCharacter();
         }
 
-        public MailboxACL.Right toMailboxRight() {
+        public MailboxShares.Right toMailboxRight() {
             return right;
         }
 
-        public static Optional<Right> forRight(MailboxACL.Right right) {
+        public static Optional<Right> forRight(MailboxShares.Right right) {
             return OptionalUtils.executeIfEmpty(
                 Arrays.stream(values())
                     .filter(jmapRight -> jmapRight.right == right)
@@ -161,7 +161,7 @@ public class Rights {
         return new Builder();
     }
 
-    public static Rights fromACL(MailboxACL acl) {
+    public static Rights fromACL(MailboxShares acl) {
         return acl.getEntries()
             .entrySet()
             .stream()
@@ -171,13 +171,13 @@ public class Rights {
             .build();
     }
 
-    private static Builder toRightsBuilder(Map.Entry<EntryKey, MailboxACL.Rfc4314Rights> entry) {
+    private static Builder toRightsBuilder(Map.Entry<EntryKey, MailboxShares.Rfc4314Rights> entry) {
         return builder().delegateTo(
             new Username(entry.getKey().getName()),
             fromACL(entry.getValue()));
     }
 
-    private static List<Right> fromACL(MailboxACL.Rfc4314Rights rights) {
+    private static List<Right> fromACL(MailboxShares.Rfc4314Rights rights) {
         return rights.list()
             .stream()
             .flatMap(right -> OptionalUtils.toStream(Right.forRight(right)))
@@ -189,7 +189,7 @@ public class Rights {
             LOGGER.info("Negative keys are not supported");
             return false;
         }
-        if (key.getNameType() != MailboxACL.NameType.user) {
+        if (key.getNameType() != MailboxShares.NameType.user) {
             LOGGER.info(key.getNameType() + " is not supported. Only 'user' is.");
             return false;
         }
@@ -228,17 +228,17 @@ public class Rights {
                 .collect(Guavate.toImmutableListMultimap(Pair::getKey, Pair::getValue)));
     }
 
-    public MailboxACL toMailboxAcl() {
-        BinaryOperator<MailboxACL> union = Throwing.binaryOperator(MailboxACL::union);
+    public MailboxShares toMailboxShares() {
+        BinaryOperator<MailboxShares> union = Throwing.binaryOperator(MailboxShares::union);
 
         return rights.asMap()
             .entrySet()
             .stream()
-            .map(entry -> new MailboxACL(
+            .map(entry -> new MailboxShares(
                 ImmutableMap.of(
                     EntryKey.createUserEntryKey(entry.getKey().value),
-                    toMailboxAclRights(entry.getValue()))))
-            .reduce(MailboxACL.EMPTY, union);
+                    toRights(entry.getValue()))))
+            .reduce(MailboxShares.EMPTY, union);
     }
 
     public Optional<Boolean> mayReadItems(Username username) {
@@ -271,7 +271,7 @@ public class Rights {
             .map(rightList -> rightList.contains(right));
     }
 
-    private Rfc4314Rights toMailboxAclRights(Collection<Right> rights) {
+    private Rfc4314Rights toRights(Collection<Right> rights) {
         BinaryOperator<Rfc4314Rights> union = Throwing.binaryOperator(Rfc4314Rights::union);
 
         return rights.stream()

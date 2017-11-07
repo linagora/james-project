@@ -33,7 +33,7 @@ import static org.apache.james.mailbox.hbase.HBaseNames.SUBSCRIPTION_CF;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxManagerTest;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.hbase.mail.HBaseModSeqProvider;
 import org.apache.james.mailbox.hbase.mail.HBaseUidProvider;
@@ -66,7 +66,7 @@ public class HBaseMailboxManagerTest extends MailboxManagerTest {
         MessageId.Factory messageIdFactory = new DefaultMessageId.Factory();
         HBaseMailboxSessionMapperFactory mapperFactory = new HBaseMailboxSessionMapperFactory(CLUSTER.getConf(),
             uidProvider, modSeqProvider, messageIdFactory);
-        StoreRightManager storeRightManager = new StoreRightManager(mapperFactory, new UnionMailboxACLResolver(), new SimpleGroupMembershipResolver());
+        StoreRightManager storeRightManager = new StoreRightManager(mapperFactory, new UnionMailboxSharesResolver(), new SimpleGroupMembershipResolver());
 
         Authenticator noAuthenticator = null;
         Authorizator noAuthorizator = null;

@@ -35,7 +35,7 @@ import java.util.Set;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxId;
@@ -91,7 +91,7 @@ public class StoreMailboxManagerAnnotationTest {
                 Mapper.Transaction<?> transaction = (Mapper.Transaction<?>) invocationOnMock.getArguments()[0];
                 return transaction.run();
             });
-        when(storeRightManager.hasRight(any(Mailbox.class), any(MailboxACL.Right.class), any(MailboxSession.class)))
+        when(storeRightManager.hasRight(any(Mailbox.class), any(MailboxShares.Right.class), any(MailboxSession.class)))
             .thenReturn(true);
 
         annotationManager = spy(new StoreMailboxAnnotationManager(mailboxSessionMapperFactory,

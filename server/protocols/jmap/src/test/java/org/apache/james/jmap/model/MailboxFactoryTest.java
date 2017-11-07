@@ -29,7 +29,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.manager.ManagerTestResources;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.SimpleMailboxMetaData;
@@ -191,9 +191,9 @@ public class MailboxFactoryTest {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
         mailboxManager.applyRightsCommand(inbox,
-            MailboxACL.command()
+            MailboxShares.command()
                 .forUser(otherUser)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition(),
             mailboxSession);
 
@@ -231,9 +231,9 @@ public class MailboxFactoryTest {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
         mailboxManager.applyRightsCommand(inbox,
-            MailboxACL.command()
+            MailboxShares.command()
                 .forUser(otherUser)
-                .rights(MailboxACL.Right.Insert, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Insert, MailboxShares.Right.Lookup)
                 .asAddition(),
             mailboxSession);
 
@@ -256,9 +256,9 @@ public class MailboxFactoryTest {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
         mailboxManager.applyRightsCommand(inbox,
-            MailboxACL.command()
+            MailboxShares.command()
                 .forUser(otherUser)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition(),
             mailboxSession);
 
@@ -281,9 +281,9 @@ public class MailboxFactoryTest {
         MailboxPath inbox = MailboxPath.forUser(user, "inbox");
         Optional<MailboxId> mailboxId = mailboxManager.createMailbox(inbox, mailboxSession);
         mailboxManager.applyRightsCommand(inbox,
-            MailboxACL.command()
+            MailboxShares.command()
                 .forUser(otherUser)
-                .rights(MailboxACL.Right.DeleteMessages, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.DeleteMessages, MailboxShares.Right.Lookup)
                 .asAddition(),
             mailboxSession);
 

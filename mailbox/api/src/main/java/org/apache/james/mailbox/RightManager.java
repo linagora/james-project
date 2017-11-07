@@ -20,21 +20,21 @@
 package org.apache.james.mailbox;
 
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 
 public interface RightManager {
     /**
      * Tells whether the given {@link MailboxSession}'s user has the given
-     * {@link MailboxACL.Right} for this {@link MessageManager}'s mailbox.
+     * {@link MailboxShares.Right} for this {@link MessageManager}'s mailbox.
      *
      * @param mailboxPath MailboxPath of the mailbox we want to check
      * @param right Right we want to check.
      * @param session Session of the user we want to check this right against.
      * @return true if the given {@link MailboxSession}'s user has the given
-     *         {@link MailboxACL.Right} for this {@link MessageManager}'s
+     *         {@link MailboxShares.Right} for this {@link MessageManager}'s
      *         mailbox; false otherwise.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
@@ -42,13 +42,13 @@ public interface RightManager {
 
     /**
      * Tells whether the given {@link MailboxSession}'s user has the given
-     * {@link MailboxACL.Right} for this {@link MessageManager}'s mailbox.
+     * {@link MailboxShares.Right} for this {@link MessageManager}'s mailbox.
      *
      * @param mailboxId MailboxId of the mailbox we want to check
      * @param right Right we want to check.
      * @param session Session of the user we want to check this right against.
      * @return true if the given {@link MailboxSession}'s user has the given
-     *         {@link MailboxACL.Right} for this {@link MessageManager}'s
+     *         {@link MailboxShares.Right} for this {@link MessageManager}'s
      *         mailbox; false otherwise.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
@@ -75,7 +75,7 @@ public interface RightManager {
      * @return result suitable for the LISTRIGHTS IMAP command
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
-    MailboxACL.Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxACL.EntryKey identifier, MailboxSession session) throws MailboxException;
+    MailboxShares.Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxShares.EntryKey identifier, MailboxSession session) throws MailboxException;
 
     /**
      * Returns the rights applicable to the user who has sent the current
@@ -84,11 +84,11 @@ public interface RightManager {
      * @param mailboxPath Path of the mailbox you want to get your rights on.
      * @param session The session used to determine the user we should retrieve the rights of.
      * @return the rights applicable to the user who has sent the request,
-     *         returns {@link MailboxACL#NO_RIGHTS} if
+     *         returns {@link MailboxShares#NO_RIGHTS} if
      *         {@code session.getUser()} is null.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
-    MailboxACL.Rfc4314Rights myRights(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
+    MailboxShares.Rfc4314Rights myRights(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
 
 
     /**
@@ -98,40 +98,40 @@ public interface RightManager {
      * @param mailboxId Id of the mailbox you want to get your rights on.
      * @param session The session used to determine the user we should retrieve the rights of.
      * @return the rights applicable to the user who has sent the request,
-     *         returns {@link MailboxACL#NO_RIGHTS} if
+     *         returns {@link MailboxShares#NO_RIGHTS} if
      *         {@code session.getUser()} is null.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
-    MailboxACL.Rfc4314Rights myRights(MailboxId mailboxId, MailboxSession session) throws MailboxException;
+    MailboxShares.Rfc4314Rights myRights(MailboxId mailboxId, MailboxSession session) throws MailboxException;
 
     /**
      * Update the Mailbox ACL of the designated mailbox. We can either ADD REPLACE or REMOVE entries.
      *
      * @param mailboxPath Path of the mailbox you want to apply rights on.
-     * @param mailboxACLCommand Update to perform.
+     * @param shareWith Update to perform.
      * @param session The session used to determine the user used to apply rights.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
-    void applyRightsCommand(MailboxPath mailboxPath, MailboxACL.ACLCommand mailboxACLCommand, MailboxSession session) throws MailboxException;
+    void applyRightsCommand(MailboxPath mailboxPath, MailboxShares.ShareWith shareWith, MailboxSession session) throws MailboxException;
 
     /**
      * Reset the Mailbox ACL of the designated mailbox.
      *
      * @param mailboxPath Path of the mailbox you want to set the rights.
-     * @param mailboxACL New ACL value
+     * @param mailboxShares New ACL value
      * @param session The session used to determine the user used to set rights.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
-    void setRights(MailboxPath mailboxPath, MailboxACL mailboxACL, MailboxSession session) throws MailboxException;
+    void setRights(MailboxPath mailboxPath, MailboxShares mailboxShares, MailboxSession session) throws MailboxException;
 
 
     /**
      * Reset the Mailbox ACL of the designated mailbox.
      *
      * @param mailboxId Id of the mailbox you want to set the rights.
-     * @param mailboxACL New ACL value
+     * @param mailboxShares New ACL value
      * @param session The session used to determine the user used to set rights.
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
-    void setRights(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException;
+    void setRights(MailboxId mailboxId, MailboxShares mailboxShares, MailboxSession session) throws MailboxException;
 }

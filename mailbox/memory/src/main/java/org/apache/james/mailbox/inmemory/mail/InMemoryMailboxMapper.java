@@ -28,11 +28,11 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.NameType;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.NameType;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -158,13 +158,13 @@ public class InMemoryMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException{
-        mailboxesByPath.get(mailbox.generateAssociatedPath()).setACL(mailbox.getACL().apply(mailboxACLCommand));
+    public void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWith) throws MailboxException{
+        mailboxesByPath.get(mailbox.generateAssociatedPath()).setACL(mailbox.getACL().apply(shareWith));
     }
 
     @Override
-    public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
-        mailboxesByPath.get(mailbox.generateAssociatedPath()).setACL(mailboxACL);
+    public void setACL(Mailbox mailbox, MailboxShares mailboxShares) throws MailboxException {
+        mailboxesByPath.get(mailbox.generateAssociatedPath()).setACL(mailboxShares);
     }
 
     @Override
@@ -179,7 +179,7 @@ public class InMemoryMailboxMapper implements MailboxMapper {
         return Optional.ofNullable(
             mailbox.getACL()
                 .ofPositiveNameType(NameType.user)
-                .get(MailboxACL.EntryKey.createUserEntryKey(userName)))
+                .get(MailboxShares.EntryKey.createUserEntryKey(userName)))
             .map(rights -> rights.contains(right))
             .orElse(false);
     }

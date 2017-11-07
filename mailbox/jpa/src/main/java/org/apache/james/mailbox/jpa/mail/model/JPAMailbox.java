@@ -29,7 +29,7 @@ import javax.persistence.Table;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.jpa.JPAId;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -236,12 +236,12 @@ public class JPAMailbox implements Mailbox {
     }
     
     @Override
-    public MailboxACL getACL() {
-        return MailboxACL.EMPTY;
+    public MailboxShares getACL() {
+        return MailboxShares.EMPTY;
     }
 
     @Override
-    public void setACL(MailboxACL acl) {
+    public void setACL(MailboxShares acl) {
     }
 
     @Override

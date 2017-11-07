@@ -21,22 +21,22 @@ package org.apache.james.mailbox.acl;
 
 import java.util.Objects;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 
 public class PositiveUserACLChanged {
-    private final MailboxACL oldACL;
-    private final MailboxACL newACL;
+    private final MailboxShares oldACL;
+    private final MailboxShares newACL;
 
-    public PositiveUserACLChanged(MailboxACL oldACL, MailboxACL newACL) {
+    public PositiveUserACLChanged(MailboxShares oldACL, MailboxShares newACL) {
         this.oldACL = oldACL;
         this.newACL = newACL;
     }
 
-    public MailboxACL getOldACL() {
+    public MailboxShares getOldACL() {
         return oldACL;
     }
 
-    public MailboxACL getNewACL() {
+    public MailboxShares getNewACL() {
         return newACL;
     }
 

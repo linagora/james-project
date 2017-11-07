@@ -19,7 +19,7 @@
 package org.apache.james.mailbox.store.mail.model.impl;
 
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -35,7 +35,7 @@ public class SimpleMailbox implements Mailbox {
     private String user;
     private String name;
     private final long uidValidity;
-    private MailboxACL acl = MailboxACL.EMPTY;
+    private MailboxShares acl = MailboxShares.EMPTY;
 
     public SimpleMailbox(MailboxPath path, long uidValidity, MailboxId mailboxId) {
         this.id = mailboxId;
@@ -55,7 +55,7 @@ public class SimpleMailbox implements Mailbox {
         this.user = mailbox.getUser();
         this.name = mailbox.getName();
         this.uidValidity = mailbox.getUidValidity();
-        this.acl = new MailboxACL(mailbox.getACL().getEntries());
+        this.acl = new MailboxShares(mailbox.getACL().getEntries());
     }
 
     /**
@@ -158,12 +158,12 @@ public class SimpleMailbox implements Mailbox {
     }
 
     @Override
-    public MailboxACL getACL() {
+    public MailboxShares getACL() {
         return acl;
     }
 
     @Override
-    public void setACL(MailboxACL acl) {
+    public void setACL(MailboxShares acl) {
         this.acl = acl;
     }
 

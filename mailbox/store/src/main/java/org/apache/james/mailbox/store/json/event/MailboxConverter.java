@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.event.EventFactory;
-import org.apache.james.mailbox.store.json.MailboxACLJsonConverter;
+import org.apache.james.mailbox.store.json.MailboxSharesJsonConverter;
 import org.apache.james.mailbox.store.json.event.dto.MailboxDataTransferObject;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxIdDeserialisationException;
@@ -51,7 +51,7 @@ public class MailboxConverter {
             mailboxDataTransferObject.getName()),
             mailboxDataTransferObject.getUidValidity());
         try {
-            mailbox.setACL(MailboxACLJsonConverter.toACL(mailboxDataTransferObject.getSerializedACL()));
+            mailbox.setACL(MailboxSharesJsonConverter.toACL(mailboxDataTransferObject.getSerializedACL()));
             mailbox.setMailboxId(mailboxIdDeserializer.deserialize(mailboxDataTransferObject.getSerializedMailboxId()));
         } catch (IOException e) {
             LOGGER.warn("Failed to deserialize ACL", e);
@@ -82,7 +82,7 @@ public class MailboxConverter {
 
     private String getSerializedACL(Mailbox mailbox) {
         try {
-            return MailboxACLJsonConverter.toJson(mailbox.getACL());
+            return MailboxSharesJsonConverter.toJson(mailbox.getACL());
         } catch (JsonProcessingException e) {
             return "{\"entries\":{}}";
         }

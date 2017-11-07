@@ -23,15 +23,15 @@ package org.apache.james.mailbox.model;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.NameType;
-import org.apache.james.mailbox.model.MailboxACL.SpecialName;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.NameType;
+import org.apache.james.mailbox.model.MailboxShares.SpecialName;
 import org.junit.Test;
 
 /**
  * @author Peter Palaga
  */
-public class MailboxACLEntryKeyTest {
+public class MailboxSharesEntryKeyTest {
     private static final String GROUP_1 = "group1";
     private static final String USER_1 = "user1";
 
@@ -43,19 +43,19 @@ public class MailboxACLEntryKeyTest {
 
     @Test
     public void testNegativeUser() throws UnsupportedRightException {
-        assertThat(EntryKey.deserialize(MailboxACL.DEFAULT_NEGATIVE_MARKER + USER_1))
+        assertThat(EntryKey.deserialize(MailboxShares.DEFAULT_NEGATIVE_MARKER + USER_1))
             .isEqualTo(new EntryKey(USER_1, NameType.user, true));
     }
 
     @Test
     public void testGroup() throws UnsupportedRightException {
-        assertThat(EntryKey.deserialize(MailboxACL.DEFAULT_GROUP_MARKER + GROUP_1))
+        assertThat(EntryKey.deserialize(MailboxShares.DEFAULT_GROUP_MARKER + GROUP_1))
             .isEqualTo(new EntryKey(GROUP_1, NameType.group, false));
     }
 
     @Test
     public void testNegativeGroup() throws UnsupportedRightException {
-        assertThat(EntryKey.deserialize(String.valueOf(MailboxACL.DEFAULT_NEGATIVE_MARKER) + MailboxACL.DEFAULT_GROUP_MARKER + GROUP_1))
+        assertThat(EntryKey.deserialize(String.valueOf(MailboxShares.DEFAULT_NEGATIVE_MARKER) + MailboxShares.DEFAULT_GROUP_MARKER + GROUP_1))
             .isEqualTo(new EntryKey(GROUP_1, NameType.group, true));
     }
 
@@ -67,7 +67,7 @@ public class MailboxACLEntryKeyTest {
 
     @Test
     public void testNegativeOwner() throws UnsupportedRightException {
-        assertThat(EntryKey.deserialize(MailboxACL.DEFAULT_NEGATIVE_MARKER + SpecialName.owner.toString()))
+        assertThat(EntryKey.deserialize(MailboxShares.DEFAULT_NEGATIVE_MARKER + SpecialName.owner.toString()))
             .isEqualTo(new EntryKey(SpecialName.owner.toString(), NameType.special, true));
     }
 
@@ -79,7 +79,7 @@ public class MailboxACLEntryKeyTest {
 
     @Test
     public void testNegativeAnybody() throws UnsupportedRightException {
-        assertThat(EntryKey.deserialize(MailboxACL.DEFAULT_NEGATIVE_MARKER + SpecialName.anybody.toString()))
+        assertThat(EntryKey.deserialize(MailboxShares.DEFAULT_NEGATIVE_MARKER + SpecialName.anybody.toString()))
             .isEqualTo(new EntryKey(SpecialName.anybody.toString(), NameType.special, true));
     }
 
@@ -91,7 +91,7 @@ public class MailboxACLEntryKeyTest {
 
     @Test
     public void testNegativeAuthenticated() throws UnsupportedRightException {
-        assertThat(EntryKey.deserialize(MailboxACL.DEFAULT_NEGATIVE_MARKER + SpecialName.authenticated.toString()))
+        assertThat(EntryKey.deserialize(MailboxShares.DEFAULT_NEGATIVE_MARKER + SpecialName.authenticated.toString()))
             .isEqualTo(new EntryKey(SpecialName.authenticated.toString(), NameType.special, true));
     }
 
@@ -104,19 +104,19 @@ public class MailboxACLEntryKeyTest {
     @Test
     public void testSerializeNegativeUser() throws UnsupportedRightException {
         assertThat(new EntryKey(USER_1, NameType.user, true).serialize())
-            .isEqualTo(MailboxACL.DEFAULT_NEGATIVE_MARKER + USER_1);
+            .isEqualTo(MailboxShares.DEFAULT_NEGATIVE_MARKER + USER_1);
     }
 
     @Test
     public void testSerializeGroup() throws UnsupportedRightException {
         assertThat(new EntryKey(GROUP_1, NameType.group, false).serialize())
-            .isEqualTo(MailboxACL.DEFAULT_GROUP_MARKER + GROUP_1);
+            .isEqualTo(MailboxShares.DEFAULT_GROUP_MARKER + GROUP_1);
     }
 
     @Test
     public void testSerializeNegativeGroup() throws UnsupportedRightException {
         assertThat(new EntryKey(GROUP_1, NameType.group, true).serialize())
-            .isEqualTo(String.valueOf(MailboxACL.DEFAULT_NEGATIVE_MARKER) + MailboxACL.DEFAULT_GROUP_MARKER + GROUP_1);
+            .isEqualTo(String.valueOf(MailboxShares.DEFAULT_NEGATIVE_MARKER) + MailboxShares.DEFAULT_GROUP_MARKER + GROUP_1);
     }
 
     @Test
@@ -128,7 +128,7 @@ public class MailboxACLEntryKeyTest {
     @Test
     public void testSerializeNegativeOwner() throws UnsupportedRightException {
         assertThat(new EntryKey(SpecialName.owner.toString(), NameType.special, true).serialize())
-            .isEqualTo(MailboxACL.DEFAULT_NEGATIVE_MARKER + SpecialName.owner.toString());
+            .isEqualTo(MailboxShares.DEFAULT_NEGATIVE_MARKER + SpecialName.owner.toString());
     }
 
     @Test
@@ -140,7 +140,7 @@ public class MailboxACLEntryKeyTest {
     @Test
     public void testSerializeNegativeAnybody() throws UnsupportedRightException {
         assertThat(new EntryKey(SpecialName.anybody.toString(), NameType.special, true).serialize())
-            .isEqualTo(MailboxACL.DEFAULT_NEGATIVE_MARKER + SpecialName.anybody.toString());
+            .isEqualTo(MailboxShares.DEFAULT_NEGATIVE_MARKER + SpecialName.anybody.toString());
     }
 
     @Test
@@ -152,6 +152,6 @@ public class MailboxACLEntryKeyTest {
     @Test
     public void testSerializeNegativeAuthenticated() throws UnsupportedRightException {
         assertThat(new EntryKey(SpecialName.authenticated.toString(), NameType.special, true).serialize())
-            .isEqualTo(MailboxACL.DEFAULT_NEGATIVE_MARKER + SpecialName.authenticated.toString());
+            .isEqualTo(MailboxShares.DEFAULT_NEGATIVE_MARKER + SpecialName.authenticated.toString());
     }
 }

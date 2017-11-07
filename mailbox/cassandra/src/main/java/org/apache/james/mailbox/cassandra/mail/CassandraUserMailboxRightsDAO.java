@@ -42,8 +42,8 @@ import org.apache.james.mailbox.acl.PositiveUserACLChanged;
 import org.apache.james.mailbox.acl.PositiveUserACLDiff;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.apache.james.util.FluentFutureStream;
 
 import com.datastax.driver.core.PreparedStatement;
@@ -106,7 +106,7 @@ public class CassandraUserMailboxRightsDAO {
             addAll(cassandraId, positiveUserAclDiff.changedEntries()));
     }
 
-    private CompletableFuture<Stream<Void>> removeAll(CassandraId cassandraId, Stream<MailboxACL.Entry> removedEntries) {
+    private CompletableFuture<Stream<Void>> removeAll(CassandraId cassandraId, Stream<MailboxShares.Entry> removedEntries) {
         return FluentFutureStream.of(removedEntries
             .map(entry -> cassandraAsyncExecutor.executeVoid(
                 delete.bind()
@@ -115,7 +115,7 @@ public class CassandraUserMailboxRightsDAO {
         .completableFuture();
     }
 
-    private CompletableFuture<Stream<Void>> addAll(CassandraId cassandraId, Stream<MailboxACL.Entry> addedEntries) {
+    private CompletableFuture<Stream<Void>> addAll(CassandraId cassandraId, Stream<MailboxShares.Entry> addedEntries) {
         return FluentFutureStream.of(addedEntries
             .map(entry -> cassandraAsyncExecutor.executeVoid(
                 insert.bind()

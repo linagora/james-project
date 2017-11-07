@@ -50,10 +50,10 @@ import com.google.common.collect.ImmutableMap;
  * {@link #hashCode()} and {@link #equals(Object)}.
  *
  */
-public class MailboxACL {
+public class MailboxShares {
 
-    public static ACLCommand.Builder command() {
-        return new ACLCommand.Builder();
+    public static ShareWith.Builder command() {
+        return new ShareWith.Builder();
     }
 
     private static EnumSet<Right> copyOf(Collection<Right> collection) {
@@ -87,16 +87,16 @@ public class MailboxACL {
     public static final char ADD_RIGHTS_MARKER = '+';
 
     /**
-     * Marks groups when (de)serializing {@link MailboxACLEntryKey}s.
+     * Marks groups when (de)serializing {@link EntryKey}s.
      *
-     * @see MailboxACLEntryKey#serialize()
+     * @see EntryKey#serialize()
      */
     public static final char DEFAULT_GROUP_MARKER = '$';
 
     /**
-     * Marks negative when (de)serializing {@link MailboxACLEntryKey}s.
+     * Marks negative when (de)serializing {@link EntryKey}s.
      *
-     * @see MailboxACLEntryKey#serialize()
+     * @see EntryKey#serialize()
      */
     public static final char DEFAULT_NEGATIVE_MARKER = '-';
 
@@ -161,17 +161,17 @@ public class MailboxACL {
     }
 
     /**
-     * Holds the collection of {@link MailboxACL.Right}s.
+     * Holds the collection of {@link MailboxShares.Right}s.
      *
      * Implementations may decide to support only a specific range of rights,
      * e.g. the Standard Rights of RFC 4314 section 2.1.
      *
      * Implementations must not allow adding or removing of elements once this
-     * MailboxACLRights are initialized.
+     * Rights are initialized.
      */
     public static class Rfc4314Rights {
         public static Rfc4314Rights allExcept(Right... rights) throws UnsupportedRightException {
-            return MailboxACL.FULL_RIGHTS
+            return MailboxShares.FULL_RIGHTS
                 .except(new Rfc4314Rights(rights));
         }
 
@@ -243,12 +243,12 @@ public class MailboxACL {
 
         /**
          * Performs the set theoretic operation of relative complement of
-         * toRemove MailboxACLRights in this MailboxACLRights.
+         * toRemove Rights in this Rights.
          *
          * A schematic example: "lrw".except("w") returns "lr".
          *
          * Implementations must return a new unmodifiable instance of
-         * {@link MailboxACL.MailboxACLRights}. However, implementations may decide to
+         * {@link MailboxShares.Rights}. However, implementations may decide to
          * return this or toRemove parameter value in case the result would be
          * equal to the respective one of those.
          *
@@ -295,7 +295,7 @@ public class MailboxACL {
         }
 
         /**
-         * Returns a serialized form of this {@link MailboxACL.Right} as
+         * Returns a serialized form of this {@link MailboxShares.Right} as
          * {@link String}.
          *
          * @return a {@link String}
@@ -318,7 +318,7 @@ public class MailboxACL {
          * A schematic example: "lr".union("rw") returns "lrw".
          *
          * Implementations must return a new unmodifiable instance of
-         * {@link MailboxACL.Rfc4314Rights}.
+         * {@link MailboxShares.Rfc4314Rights}.
          *
          * @param toAdd
          * @return union of this and toAdd
@@ -354,7 +354,7 @@ public class MailboxACL {
     }
 
     /**
-     * The key used in {@link MailboxACL#getEntries()}. Implementations should
+     * The key used in {@link MailboxShares#getEntries()}. Implementations should
      * override {@link #hashCode()} and {@link #equals(Object)} in such a way
      * that all of {@link #getName()}, {@link #getNameType()} and
      * {@link #isNegative()} are significant.
@@ -382,10 +382,10 @@ public class MailboxACL {
         private final boolean negative;
 
         /**
-         * Creates a new instance of SimpleMailboxACLEntryKey from the given
+         * Creates a new instance of EntryKey from the given
          * serialized {@link String}. It supposes that negative rights are
-         * marked with {@link MailboxACL#DEFAULT_NEGATIVE_MARKER} and that
-         * groups are marked with {@link MailboxACL#DEFAULT_GROUP_MARKER}.
+         * marked with {@link MailboxShares#DEFAULT_NEGATIVE_MARKER} and that
+         * groups are marked with {@link MailboxShares#DEFAULT_GROUP_MARKER}.
          * 
          * @param serialized
          */
@@ -437,7 +437,7 @@ public class MailboxACL {
 
         /**
          * Returns the name of a user or of a group to which this
-         * {@link MailboxACL.MailboxACLEntryKey} applies.
+         * {@link MailboxShares.EntryKey} applies.
          *
          * @return User name, group name or special name.
          */
@@ -459,16 +459,16 @@ public class MailboxACL {
         }
 
         /**
-         * If true the {@link MailboxACL.MailboxACLRights} returned by
-         * {@link MailboxACLEntry#getRights()} should be interpreted as
+         * If true the {@link MailboxShares.Rights} returned by
+         * {@link Entry#getRights()} should be interpreted as
          * "negative rights" as described in RFC4314: If the identifier "-fred"
          * is granted the "w" right, that indicates that the "w" right is to be
          * removed from users matching the identifier "fred", even though the
          * user "fred" might have the "w" right as a consequence of some other
          * identifier in the ACL.
          *
-         * Note that {@link MailboxACLEntry#getName()} does not start with "-"
-         * when {@link MailboxACLEntry#getRights()} returns true.
+         * Note that {@link Entry#getName()} does not start with "-"
+         * when {@link Entry#getRights()} returns true.
          *
          * @return
          */
@@ -477,7 +477,7 @@ public class MailboxACL {
         }
 
         /**
-         * Returns a serialized form of this {@link MailboxACL.MailboxACLEntryKey} as a
+         * Returns a serialized form of this {@link MailboxShares.EntryKey} as a
          * {@link String}. Implementations should choose a consistent way how
          * all of {@link #getName()}, {@link #getNameType()} and
          * {@link #isNegative()} get serialized.
@@ -497,8 +497,8 @@ public class MailboxACL {
          * 4314 examples and is also understood by at least Cyrus IMAP. Having
          * '-' before the identifier specifies negative rights.</cite>
          *
-         * @see MailboxACL#DEFAULT_GROUP_MARKER
-         * @see MailboxACL#DEFAULT_NEGATIVE_MARKER
+         * @see MailboxShares#DEFAULT_GROUP_MARKER
+         * @see MailboxShares#DEFAULT_NEGATIVE_MARKER
          *
          * @return serialized form as a {@link String}
          */
@@ -515,7 +515,7 @@ public class MailboxACL {
     }
 
 
-    public static class ACLCommand {
+    public static class ShareWith {
 
         public static class Builder {
 
@@ -565,26 +565,26 @@ public class MailboxACL {
                 return this;
             }
 
-            public ACLCommand asReplacement() {
+            public ShareWith asReplacement() {
                 editMode = EditMode.REPLACE;
                 return build();
             }
 
-            public ACLCommand asAddition() {
+            public ShareWith asAddition() {
                 editMode = EditMode.ADD;
                 return build();
             }
 
-            public ACLCommand asRemoval() {
+            public ShareWith asRemoval() {
                 editMode = EditMode.REMOVE;
                 return build();
             }
 
-            public ACLCommand build() {
+            public ShareWith build() {
                 Preconditions.checkState(key != null);
                 Preconditions.checkState(editMode != null);
                 Preconditions.checkState(rights != null);
-                return new ACLCommand(key, editMode, rights);
+                return new ShareWith(key, editMode, rights);
             }
 
         }
@@ -593,7 +593,7 @@ public class MailboxACL {
         private final EditMode editMode;
         private final Rfc4314Rights rights;
 
-        private ACLCommand(EntryKey key, EditMode editMode, Rfc4314Rights rights) {
+        private ShareWith(EntryKey key, EditMode editMode, Rfc4314Rights rights) {
             this.key = key;
             this.editMode = editMode;
             this.rights = rights;
@@ -612,8 +612,8 @@ public class MailboxACL {
         }
 
         public final boolean equals(Object o) {
-            if (o instanceof ACLCommand) {
-                ACLCommand that = (ACLCommand) o;
+            if (o instanceof ShareWith) {
+                ShareWith that = (ShareWith) o;
 
                 return Objects.equals(this.key, that.key)
                     && Objects.equals(this.editMode, that.editMode)
@@ -631,13 +631,13 @@ public class MailboxACL {
     public static final EntryKey ANYBODY_NEGATIVE_KEY;
     public static final EntryKey AUTHENTICATED_KEY;
     public static final EntryKey AUTHENTICATED_NEGATIVE_KEY;
-    public static final MailboxACL EMPTY;
+    public static final MailboxShares EMPTY;
 
     public static final Rfc4314Rights FULL_RIGHTS;
 
     public static final Rfc4314Rights NO_RIGHTS;
-    public static final MailboxACL OWNER_FULL_ACL;
-    public static final MailboxACL OWNER_FULL_EXCEPT_ADMINISTRATION_ACL;
+    public static final MailboxShares OWNER_FULL_ACL;
+    public static final MailboxShares OWNER_FULL_EXCEPT_ADMINISTRATION_ACL;
 
     public static final EntryKey OWNER_KEY;
     public static final EntryKey OWNER_NEGATIVE_KEY;
@@ -648,13 +648,13 @@ public class MailboxACL {
             ANYBODY_NEGATIVE_KEY = new EntryKey(SpecialName.anybody.name(), NameType.special, true);
             AUTHENTICATED_KEY = new EntryKey(SpecialName.authenticated.name(), NameType.special, false);
             AUTHENTICATED_NEGATIVE_KEY = new EntryKey(SpecialName.authenticated.name(), NameType.special, true);
-            EMPTY = new MailboxACL();
+            EMPTY = new MailboxShares();
             FULL_RIGHTS =  new Rfc4314Rights(Right.allRights);
             NO_RIGHTS = new Rfc4314Rights();
             OWNER_KEY = new EntryKey(SpecialName.owner.name(), NameType.special, false);
             OWNER_NEGATIVE_KEY = new EntryKey(SpecialName.owner.name(), NameType.special, true);
-            OWNER_FULL_ACL = new MailboxACL(new Entry[] { new Entry(MailboxACL.OWNER_KEY, MailboxACL.FULL_RIGHTS) });
-            OWNER_FULL_EXCEPT_ADMINISTRATION_ACL = new MailboxACL(new Entry[] { new Entry(MailboxACL.OWNER_KEY, MailboxACL.FULL_RIGHTS.except(new Rfc4314Rights(Right.Administer))) });
+            OWNER_FULL_ACL = new MailboxShares(new Entry[] { new Entry(MailboxShares.OWNER_KEY, MailboxShares.FULL_RIGHTS) });
+            OWNER_FULL_EXCEPT_ADMINISTRATION_ACL = new MailboxShares(new Entry[] { new Entry(MailboxShares.OWNER_KEY, MailboxShares.FULL_RIGHTS.except(new Rfc4314Rights(Right.Administer))) });
         } catch (UnsupportedRightException e) {
             throw new RuntimeException(e);
         }
@@ -673,21 +673,21 @@ public class MailboxACL {
     private final Map<EntryKey, Rfc4314Rights> entries;
 
     /**
-     * Creates a new instance of SimpleMailboxACL containing no entries.
+     * Creates a new instance of MailboxShares containing no entries.
      * 
      */
-    public MailboxACL() {
+    public MailboxShares() {
         this(ImmutableMap.of());
     }
 
     /**
-     * Creates a new instance of SimpleMailboxACL from the given array of
+     * Creates a new instance of MailboxShares from the given array of
      * entries.
      * 
      * @param entries
      */
     @SafeVarargs
-    public MailboxACL(Map.Entry<EntryKey, Rfc4314Rights>... entries) {
+    public MailboxShares(Map.Entry<EntryKey, Rfc4314Rights>... entries) {
         this(ImmutableMap.copyOf(
             Optional.ofNullable(entries)
                 .map(array -> Arrays.stream(array)
@@ -696,34 +696,33 @@ public class MailboxACL {
     }
 
     /**
-     * Creates a new instance of SimpleMailboxACL from the given {@link Map} of
+     * Creates a new instance of MailboxShares from the given {@link Map} of
      * entries.
      *
      * @param entries
      */
-    public MailboxACL(Map<EntryKey, Rfc4314Rights> entries) {
+    public MailboxShares(Map<EntryKey, Rfc4314Rights> entries) {
         Preconditions.checkNotNull(entries);
 
         this.entries = ImmutableMap.copyOf(entries);
     }
 
     /**
-     * Creates a new instance of SimpleMailboxACL from {@link Properties}. The
+     * Creates a new instance of MailboxShares from {@link Properties}. The
      * keys and values from the <code>props</code> parameter are parsed by the
      * {@link String} constructors of {@link EntryKey} and
-     * {@link Rfc4314Rights} respectively.
      * 
      * @param props
      * @throws UnsupportedRightException
      */
-    public MailboxACL(Properties props) throws UnsupportedRightException {
+    public MailboxShares(Properties props) throws UnsupportedRightException {
         this(toMap(props));
     }
 
     public boolean equals(Object o) {
-        if (o instanceof MailboxACL) {
-            MailboxACL acl = (MailboxACL) o;
-            return Objects.equals(this.getEntries(), acl.getEntries());
+        if (o instanceof MailboxShares) {
+            MailboxShares shares = (MailboxShares) o;
+            return Objects.equals(this.getEntries(), shares.getEntries());
         }
         return false;
     }
@@ -735,31 +734,31 @@ public class MailboxACL {
     /**
      * Apply the given ACL update on current ACL and return the result as a new ACL.
      *
-     * @param aclUpdate Update to perform
+     * @param shareWith Update to perform
      * @return Copy of current ACL updated
      * @throws UnsupportedRightException
      */
-    public MailboxACL apply(ACLCommand aclUpdate) throws UnsupportedRightException {
-        switch (aclUpdate.getEditMode()) {
+    public MailboxShares apply(ShareWith shareWith) throws UnsupportedRightException {
+        switch (shareWith.getEditMode()) {
             case ADD:
-                return union(aclUpdate.getEntryKey(), aclUpdate.getRights());
+                return union(shareWith.getEntryKey(), shareWith.getRights());
             case REMOVE:
-                return except(aclUpdate.getEntryKey(), aclUpdate.getRights());
+                return except(shareWith.getEntryKey(), shareWith.getRights());
             case REPLACE:
-                return replace(aclUpdate.getEntryKey(), aclUpdate.getRights());
+                return replace(shareWith.getEntryKey(), shareWith.getRights());
         }
         throw new RuntimeException("Unknown edit mode");
     }
 
     /**
      * Performs the set theoretic operation of relative complement of toRemove
-     * {@link MailboxACL} in this {@link MailboxACL}.
+     * {@link MailboxShares} in this {@link MailboxShares}.
      *
      * A schematic example: "user1:lr;user2:lrwt".except("user1:w;user2:t")
      * returns "user1:lr;user2:lrw".
      *
      * Implementations must return a new unmodifiable instance of
-     * {@link MailboxACL}. However, implementations may decide to return this or
+     * {@link MailboxShares}. However, implementations may decide to return this or
      * toRemove parameter value in case the result would be equal to the
      * respective one of those.
      *
@@ -771,8 +770,8 @@ public class MailboxACL {
      * @return
      * @throws UnsupportedRightException
      */
-    public MailboxACL except(MailboxACL other) throws UnsupportedRightException {
-        return new MailboxACL(entries.entrySet()
+    public MailboxShares except(MailboxShares other) throws UnsupportedRightException {
+        return new MailboxShares(entries.entrySet()
             .stream()
             .map(entry -> Pair.of(
                 entry.getKey(),
@@ -787,8 +786,8 @@ public class MailboxACL {
             .orElse(thisRight);
     }
 
-    public MailboxACL except(EntryKey key, Rfc4314Rights mailboxACLRights) throws UnsupportedRightException {
-        return except(new MailboxACL(new Entry(key, mailboxACLRights)));
+    public MailboxShares except(EntryKey key, Rfc4314Rights rights) throws UnsupportedRightException {
+        return except(new MailboxShares(new Entry(key, rights)));
     }
 
     /**
@@ -802,15 +801,15 @@ public class MailboxACL {
 
     /**
      * Replaces the entry corresponding to the given {@code key} with
-     * {@code toAdd}link MailboxACLRights}.
+     * {@code toAdd}link Rights}.
      *
      * Implementations must return a new unmodifiable instance of
-     * {@link MailboxACL}. However, implementations may decide to return this in
+     * {@link MailboxShares}. However, implementations may decide to return this in
      * case the result would be equal to it.
      *
      * Implementations must ensure that the result does not contain entries with
      * empty rigths. E.g. "user1:lr;user2:lrwt".replace("user1",
-     * MailboxACLRights.EMPTY) should return "user2:lrwt" rather than
+     * Rights.EMPTY) should return "user2:lrwt" rather than
      * "user1:;user2:lrwt". The same result should be returned by
      * "user1:lr;user2:lrwt".replace("user1", null).
      *
@@ -819,9 +818,9 @@ public class MailboxACL {
      * @return
      * @throws UnsupportedRightException
      */
-    public MailboxACL replace(EntryKey key, Rfc4314Rights replacement) throws UnsupportedRightException {
+    public MailboxShares replace(EntryKey key, Rfc4314Rights replacement) throws UnsupportedRightException {
         if (entries.containsKey(key)) {
-            return new MailboxACL(
+            return new MailboxShares(
                 entries.entrySet()
                     .stream()
                     .map(entry -> Pair.of(entry.getKey(),
@@ -831,7 +830,7 @@ public class MailboxACL {
         } else {
             return Optional.ofNullable(replacement)
                 .filter(rights -> !rights.isEmpty())
-                .map(replacementValue ->  new MailboxACL(
+                .map(replacementValue ->  new MailboxShares(
                     ImmutableMap.<EntryKey, Rfc4314Rights>builder()
                         .putAll(entries)
                         .put(key, replacementValue)
@@ -847,15 +846,15 @@ public class MailboxACL {
     }
 
     /**
-     * Performs the set theoretic operation of union of this {@link MailboxACL}
-     * and toAdd {@link MailboxACL}.
+     * Performs the set theoretic operation of union of this {@link MailboxShares}
+     * and toAdd {@link MailboxShares}.
      *
      * A schematic example:
      * "user1:lr;user2:lrwt".union("user1:at;-$group1:lrwt") returns
      * "user1:alrt;user2:lrwt;-$group1:lrwt".
      *
      * Implementations must return a new unmodifiable instance of
-     * {@link MailboxACL}. However, implementations may decide to return this or
+     * {@link MailboxShares}. However, implementations may decide to return this or
      * toAdd parameter value in case the result would be equal to the respective
      * one of those.
      *
@@ -864,8 +863,8 @@ public class MailboxACL {
      * @return
      * @throws UnsupportedRightException
      */
-    public MailboxACL union(MailboxACL other) throws UnsupportedRightException {
-        return new MailboxACL(
+    public MailboxShares union(MailboxShares other) throws UnsupportedRightException {
+        return new MailboxShares(
             Stream.concat(
                     this.entries.entrySet().stream(),
                     other.getEntries().entrySet().stream())
@@ -883,8 +882,8 @@ public class MailboxACL {
                 Throwing.binaryOperator(Rfc4314Rights::union));
     }
 
-    public MailboxACL union(EntryKey key, Rfc4314Rights mailboxACLRights) throws UnsupportedRightException {
-        return union(new MailboxACL(new Entry(key, mailboxACLRights)));
+    public MailboxShares union(EntryKey key, Rfc4314Rights rights) throws UnsupportedRightException {
+        return union(new MailboxShares(new Entry(key, rights)));
     }
 
     public Map<EntryKey, Rfc4314Rights> ofPositiveNameType(NameType nameType) {

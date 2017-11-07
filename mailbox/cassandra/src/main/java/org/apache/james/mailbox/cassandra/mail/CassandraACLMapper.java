@@ -43,8 +43,8 @@ import org.apache.james.mailbox.cassandra.table.CassandraACLTable;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxTable;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.store.json.MailboxACLJsonConverter;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.store.json.MailboxSharesJsonConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,36 +113,36 @@ public class CassandraACLMapper {
                 .where(eq(CassandraMailboxTable.ID, bindMarker(CassandraACLTable.ID))));
     }
 
-    public CompletableFuture<MailboxACL> getACL(CassandraId cassandraId) {
+    public CompletableFuture<MailboxShares> getACL(CassandraId cassandraId) {
         return getStoredACLRow(cassandraId)
             .thenApply(resultSet -> getAcl(cassandraId, resultSet));
     }
 
-    private MailboxACL getAcl(CassandraId cassandraId, ResultSet resultSet) {
+    private MailboxShares getAcl(CassandraId cassandraId, ResultSet resultSet) {
         if (resultSet.isExhausted()) {
-            return MailboxACL.EMPTY;
+            return MailboxShares.EMPTY;
         }
         String serializedACL = resultSet.one().getString(CassandraACLTable.ACL);
         return deserializeACL(cassandraId, serializedACL);
     }
 
-    public void updateACL(CassandraId cassandraId, MailboxACL.ACLCommand command) throws MailboxException {
-        MailboxACL replacement = MailboxACL.EMPTY.apply(command);
+    public void updateACL(CassandraId cassandraId, MailboxShares.ShareWith command) throws MailboxException {
+        MailboxShares replacement = MailboxShares.EMPTY.apply(command);
 
         PositiveUserACLChanged positiveUserAclChanged = updateAcl(cassandraId, aclWithVersion -> aclWithVersion.apply(command), replacement);
 
         userMailboxRightsDAO.update(cassandraId, positiveUserAclChanged).join();
     }
 
-    public void setACL(CassandraId cassandraId, MailboxACL mailboxACL) throws MailboxException {
+    public void setACL(CassandraId cassandraId, MailboxShares mailboxShares) throws MailboxException {
         PositiveUserACLChanged positiveUserAclChanged = updateAcl(cassandraId,
-            acl -> new ACLWithVersion(acl.version, mailboxACL),
-            mailboxACL);
+            acl -> new ACLWithVersion(acl.version, mailboxShares),
+            mailboxShares);
 
         userMailboxRightsDAO.update(cassandraId, positiveUserAclChanged).join();
     }
 
-    private PositiveUserACLChanged updateAcl(CassandraId cassandraId, Function<ACLWithVersion, ACLWithVersion> aclTransformation, MailboxACL replacement) throws MailboxException {
+    private PositiveUserACLChanged updateAcl(CassandraId cassandraId, Function<ACLWithVersion, ACLWithVersion> aclTransformation, MailboxShares replacement) throws MailboxException {
         try {
             return new FunctionRunnerWithRetry(maxRetry)
                 .executeAndRetrieveObject(
@@ -151,9 +151,9 @@ public class CassandraACLMapper {
                         return getAclWithVersion(cassandraId)
                             .map(aclWithVersion ->
                                 updateStoredACL(cassandraId, aclTransformation.apply(aclWithVersion))
-                                    .map(newACL -> new PositiveUserACLChanged(aclWithVersion.mailboxACL, newACL)))
+                                    .map(newACL -> new PositiveUserACLChanged(aclWithVersion.mailboxShares, newACL)))
                             .orElseGet(() -> insertACL(cassandraId, replacement)
-                                .map(newACL -> new PositiveUserACLChanged(MailboxACL.EMPTY, newACL)));
+                                .map(newACL -> new PositiveUserACLChanged(MailboxShares.EMPTY, newACL)));
                     });
         } catch (LightweightTransactionException e) {
             throw new MailboxException("Exception during lightweight transaction", e);
@@ -166,28 +166,28 @@ public class CassandraACLMapper {
                 .setUUID(CassandraACLTable.ID, cassandraId.asUuid()));
     }
 
-    private Optional<MailboxACL> updateStoredACL(CassandraId cassandraId, ACLWithVersion aclWithVersion) {
+    private Optional<MailboxShares> updateStoredACL(CassandraId cassandraId, ACLWithVersion aclWithVersion) {
         try {
             return executor.executeReturnApplied(
                 conditionalUpdateStatement.bind()
                     .setUUID(CassandraACLTable.ID, cassandraId.asUuid())
-                    .setString(CassandraACLTable.ACL,  MailboxACLJsonConverter.toJson(aclWithVersion.mailboxACL))
+                    .setString(CassandraACLTable.ACL,  MailboxSharesJsonConverter.toJson(aclWithVersion.mailboxShares))
                     .setLong(CassandraACLTable.VERSION, aclWithVersion.version + 1)
                     .setLong(OLD_VERSION, aclWithVersion.version))
                 .thenApply(Optional::of)
-                .thenApply(optional -> optional.filter(b -> b).map(any -> aclWithVersion.mailboxACL))
+                .thenApply(optional -> optional.filter(b -> b).map(any -> aclWithVersion.mailboxShares))
                 .join();
         } catch (JsonProcessingException exception) {
             throw Throwables.propagate(exception);
         }
     }
 
-    private Optional<MailboxACL> insertACL(CassandraId cassandraId, MailboxACL acl) {
+    private Optional<MailboxShares> insertACL(CassandraId cassandraId, MailboxShares acl) {
         try {
             return executor.executeReturnApplied(
                 conditionalInsertStatement.bind()
                     .setUUID(CassandraACLTable.ID, cassandraId.asUuid())
-                    .setString(CassandraACLTable.ACL, MailboxACLJsonConverter.toJson(acl)))
+                    .setString(CassandraACLTable.ACL, MailboxSharesJsonConverter.toJson(acl)))
                 .thenApply(Optional::of)
                 .thenApply(optional -> optional.filter(b -> b).map(any -> acl))
                 .join();
@@ -208,30 +208,30 @@ public class CassandraACLMapper {
                 deserializeACL(cassandraId, row.getString(CassandraACLTable.ACL))));
     }
 
-    private MailboxACL deserializeACL(CassandraId cassandraId, String serializedACL) {
+    private MailboxShares deserializeACL(CassandraId cassandraId, String serializedACL) {
         try {
-            return MailboxACLJsonConverter.toACL(serializedACL);
+            return MailboxSharesJsonConverter.toACL(serializedACL);
         } catch(IOException exception) {
             LOG.error("Unable to read stored ACL. " +
                 "We will use empty ACL instead." +
                 "Mailbox is {} ." +
                 "ACL is {}", cassandraId, serializedACL, exception);
-            return MailboxACL.EMPTY;
+            return MailboxShares.EMPTY;
         }
     }
 
     private class ACLWithVersion {
         private final long version;
-        private final MailboxACL mailboxACL;
+        private final MailboxShares mailboxShares;
 
-        public ACLWithVersion(long version, MailboxACL mailboxACL) {
+        public ACLWithVersion(long version, MailboxShares mailboxShares) {
             this.version = version;
-            this.mailboxACL = mailboxACL;
+            this.mailboxShares = mailboxShares;
         }
 
-        public ACLWithVersion apply(MailboxACL.ACLCommand command) {
+        public ACLWithVersion apply(MailboxShares.ShareWith command) {
             try {
-                return new ACLWithVersion(version, mailboxACL.apply(command));
+                return new ACLWithVersion(version, mailboxShares.apply(command));
             } catch(UnsupportedRightException exception) {
                 throw Throwables.propagate(exception);
             }

@@ -21,50 +21,50 @@ package org.apache.james.mailbox.acl;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 
 public class PositiveUserACLDiff {
 
-    public static PositiveUserACLDiff computeDiff(MailboxACL oldACL, MailboxACL newACL) {
+    public static PositiveUserACLDiff computeDiff(MailboxShares oldACL, MailboxShares newACL) {
         return new PositiveUserACLDiff(oldACL, newACL);
     }
 
-    private final MailboxACL oldACL;
-    private final MailboxACL newACL;
+    private final MailboxShares oldACL;
+    private final MailboxShares newACL;
 
-    private PositiveUserACLDiff(MailboxACL oldACL, MailboxACL newACL) {
+    private PositiveUserACLDiff(MailboxShares oldACL, MailboxShares newACL) {
         this.oldACL = oldACL;
         this.newACL = newACL;
     }
 
-    public Stream<MailboxACL.Entry> addedEntries() {
-        Map<MailboxACL.EntryKey, MailboxACL.Rfc4314Rights> oldEntries = oldACL.ofPositiveNameType(MailboxACL.NameType.user);
+    public Stream<MailboxShares.Entry> addedEntries() {
+        Map<MailboxShares.EntryKey, MailboxShares.Rfc4314Rights> oldEntries = oldACL.ofPositiveNameType(MailboxShares.NameType.user);
 
-        return newACL.ofPositiveNameType(MailboxACL.NameType.user)
+        return newACL.ofPositiveNameType(MailboxShares.NameType.user)
             .entrySet()
             .stream()
             .filter(entry -> !oldEntries.containsKey(entry.getKey()))
-            .map(entry -> new MailboxACL.Entry(entry.getKey(), entry.getValue()));
+            .map(entry -> new MailboxShares.Entry(entry.getKey(), entry.getValue()));
     }
 
-    public Stream<MailboxACL.Entry> removedEntries() {
-        Map<MailboxACL.EntryKey, MailboxACL.Rfc4314Rights> newEntries = newACL.ofPositiveNameType(MailboxACL.NameType.user);
+    public Stream<MailboxShares.Entry> removedEntries() {
+        Map<MailboxShares.EntryKey, MailboxShares.Rfc4314Rights> newEntries = newACL.ofPositiveNameType(MailboxShares.NameType.user);
 
-        return oldACL.ofPositiveNameType(MailboxACL.NameType.user)
+        return oldACL.ofPositiveNameType(MailboxShares.NameType.user)
             .entrySet()
             .stream()
             .filter(entry -> !newEntries.containsKey(entry.getKey()))
-            .map(entry -> new MailboxACL.Entry(entry.getKey(), entry.getValue()));
+            .map(entry -> new MailboxShares.Entry(entry.getKey(), entry.getValue()));
     }
 
-    public Stream<MailboxACL.Entry> changedEntries() {
-        Map<MailboxACL.EntryKey, MailboxACL.Rfc4314Rights> oldEntries = oldACL.ofPositiveNameType(MailboxACL.NameType.user);
+    public Stream<MailboxShares.Entry> changedEntries() {
+        Map<MailboxShares.EntryKey, MailboxShares.Rfc4314Rights> oldEntries = oldACL.ofPositiveNameType(MailboxShares.NameType.user);
 
-        return newACL.ofPositiveNameType(MailboxACL.NameType.user)
+        return newACL.ofPositiveNameType(MailboxShares.NameType.user)
             .entrySet()
             .stream()
             .filter(entry -> oldEntries.containsKey(entry.getKey())
                 && !oldEntries.get(entry.getKey()).equals(entry.getValue()))
-            .map(entry -> new MailboxACL.Entry(entry.getKey(), entry.getValue()));
+            .map(entry -> new MailboxShares.Entry(entry.getKey(), entry.getValue()));
     }
 }

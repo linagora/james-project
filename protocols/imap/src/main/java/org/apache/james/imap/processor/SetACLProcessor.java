@@ -37,10 +37,10 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EditMode;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
@@ -76,17 +76,17 @@ public class SetACLProcessor extends AbstractMailboxProcessor<SetACLRequest> imp
             String rights = message.getRights();
             if (rights != null && rights.length() > 0) {
                 switch (rights.charAt(0)) {
-                case MailboxACL.ADD_RIGHTS_MARKER:
+                case MailboxShares.ADD_RIGHTS_MARKER:
                     editMode = EditMode.ADD;
                     rights = rights.substring(1);
                     break;
-                case MailboxACL.REMOVE_RIGHTS_MARKER:
+                case MailboxShares.REMOVE_RIGHTS_MARKER:
                     editMode = EditMode.REMOVE;
                     rights = rights.substring(1);
                     break;
                 }
             }
-            Rfc4314Rights mailboxAclRights = Rfc4314Rights.fromSerializedRfc4314Rights(rights);
+            Rfc4314Rights rfc4314Rights = Rfc4314Rights.fromSerializedRfc4314Rights(rights);
 
             MailboxPath mailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
             // Check that mailbox exists
@@ -102,13 +102,13 @@ public class SetACLProcessor extends AbstractMailboxProcessor<SetACLRequest> imp
              * would be used if the mailbox did not exist, thus revealing no
              * existence information, much less the mailbox’s ACL.
              */
-            if (!mailboxManager.hasRight(mailboxPath, MailboxACL.Right.Lookup, mailboxSession)) {
+            if (!mailboxManager.hasRight(mailboxPath, MailboxShares.Right.Lookup, mailboxSession)) {
                 no(command, tag, responder, HumanReadableText.MAILBOX_NOT_FOUND);
             }
             /* RFC 4314 section 4. */
-            else if (!mailboxManager.hasRight(mailboxPath, MailboxACL.Right.Administer, mailboxSession)) {
+            else if (!mailboxManager.hasRight(mailboxPath, MailboxShares.Right.Administer, mailboxSession)) {
                 Object[] params = new Object[] {
-                        MailboxACL.Right.Administer.toString(),
+                        MailboxShares.Right.Administer.toString(),
                         command.getName(),
                         mailboxName
                 };
@@ -130,7 +130,7 @@ public class SetACLProcessor extends AbstractMailboxProcessor<SetACLRequest> imp
                 // steps.
 
                 mailboxManager.applyRightsCommand(mailboxPath,
-                    MailboxACL.command().key(key).mode(editMode).rights(mailboxAclRights).build(),
+                    MailboxShares.command().key(key).mode(editMode).rights(rfc4314Rights).build(),
                     mailboxSession);
 
                 okComplete(command, tag, responder);

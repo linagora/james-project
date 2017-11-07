@@ -22,9 +22,9 @@ package org.apache.james.mailbox.jcr;
 import org.apache.jackrabbit.core.RepositoryImpl;
 import org.apache.jackrabbit.core.config.RepositoryConfig;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jcr.mail.JCRModSeqProvider;
 import org.apache.james.mailbox.jcr.mail.JCRUidProvider;
@@ -62,13 +62,13 @@ public class JCRMailboxManagerProvider {
         JCRModSeqProvider modSeqProvider = new JCRModSeqProvider(locker, sessionRepos);
         JCRMailboxSessionMapperFactory mf = new JCRMailboxSessionMapperFactory(sessionRepos, uidProvider, modSeqProvider);
 
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+        MailboxSharesResolver sharesResolver = new UnionMailboxSharesResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
         MessageParser messageParser = new MessageParser();
 
         Authenticator noAuthenticator = null;
         Authorizator noAuthorizator = null;
-        StoreRightManager storeRightManager = new StoreRightManager(mf, aclResolver, groupMembershipResolver);
+        StoreRightManager storeRightManager = new StoreRightManager(mf, sharesResolver, groupMembershipResolver);
         StoreMailboxAnnotationManager annotationManager = new StoreMailboxAnnotationManager(mf, storeRightManager);
         DefaultDelegatingMailboxListener delegatingListener = new DefaultDelegatingMailboxListener();
         MailboxEventDispatcher mailboxEventDispatcher = new MailboxEventDispatcher(delegatingListener);

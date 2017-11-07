@@ -22,7 +22,7 @@ package org.apache.james.mailbox;
 import java.io.Serializable;
 import java.util.List;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -143,18 +143,18 @@ public interface MailboxListener {
     /**
      * A mailbox event related to updated ACL
      */
-    abstract class MailboxACLUpdated extends MessageEvent {
+    abstract class MailboxSharesUpdated extends MessageEvent {
 
         /**
          * 
          */
         private static final long serialVersionUID = 1L;
 
-        public MailboxACLUpdated(MailboxSession session, MailboxPath path) {
+        public MailboxSharesUpdated(MailboxSession session, MailboxPath path) {
             super(session, path);
         }
 
-        public abstract MailboxACL getUpdatedACL();
+        public abstract MailboxShares getUpdatedACL();
     }
     
     /**

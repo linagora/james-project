@@ -27,7 +27,7 @@ import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 
 /**
  * Describes the current state of a mailbox.
@@ -45,9 +45,9 @@ public class MailboxMetaData implements MessageManager.MetaData {
     private final boolean writeable;
     private final long highestModSeq;
     private final boolean modSeqPermanent;
-    private final MailboxACL acl;
+    private final MailboxShares acl;
 
-    public MailboxMetaData(List<MessageUid> recent, Flags permanentFlags, long uidValidity, MessageUid uidNext, long highestModSeq, long messageCount, long unseenCount, MessageUid firstUnseen, boolean writeable, boolean modSeqPermanent, MailboxACL acl) {
+    public MailboxMetaData(List<MessageUid> recent, Flags permanentFlags, long uidValidity, MessageUid uidNext, long highestModSeq, long messageCount, long unseenCount, MessageUid firstUnseen, boolean writeable, boolean modSeqPermanent, MailboxShares acl) {
         super();
         this.recent = Optional.ofNullable(recent).orElseGet(ArrayList::new);
         this.highestModSeq = highestModSeq;
@@ -120,7 +120,7 @@ public class MailboxMetaData implements MessageManager.MetaData {
     }
 
     @Override
-    public MailboxACL getACL() {
+    public MailboxShares getACL() {
         return acl;
     }
 }

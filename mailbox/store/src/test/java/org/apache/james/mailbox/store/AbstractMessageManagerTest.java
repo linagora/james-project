@@ -30,7 +30,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.fixture.MailboxFixture;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.junit.Test;
 
 public abstract class AbstractMessageManagerTest {
@@ -58,22 +58,22 @@ public abstract class AbstractMessageManagerTest {
 
     @Test
     public void getMetadataShouldListUsersAclWhenShared() throws Exception {
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(BOB).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(CEDRIC).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
+        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxShares.command().forUser(BOB).rights(MailboxShares.Right.Read).asAddition(), aliceSession);
+        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxShares.command().forUser(CEDRIC).rights(MailboxShares.Right.Read).asAddition(), aliceSession);
         MessageManager messageManager = mailboxManager.getMailbox(INBOX_ALICE, aliceSession);
 
         MessageManager.MetaData actual = messageManager.getMetaData(NO_RESET_RECENT, aliceSession, MessageManager.MetaData.FetchGroup.NO_COUNT);
-        assertThat(actual.getACL().getEntries()).containsKeys(MailboxACL.EntryKey.createUserEntryKey(BOB), MailboxACL.EntryKey.createUserEntryKey(CEDRIC));
+        assertThat(actual.getACL().getEntries()).containsKeys(MailboxShares.EntryKey.createUserEntryKey(BOB), MailboxShares.EntryKey.createUserEntryKey(CEDRIC));
     }
 
     @Test
     public void getMetadataShouldNotExposeOtherUsersWhenSessionIsNotOwner() throws Exception {
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(BOB).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
-        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxACL.command().forUser(CEDRIC).rights(MailboxACL.Right.Read).asAddition(), aliceSession);
+        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxShares.command().forUser(BOB).rights(MailboxShares.Right.Read).asAddition(), aliceSession);
+        mailboxManager.applyRightsCommand(INBOX_ALICE, MailboxShares.command().forUser(CEDRIC).rights(MailboxShares.Right.Read).asAddition(), aliceSession);
         MessageManager messageManager = mailboxManager.getMailbox(INBOX_ALICE, aliceSession);
 
         MessageManager.MetaData actual = messageManager.getMetaData(NO_RESET_RECENT, bobSession, MessageManager.MetaData.FetchGroup.NO_COUNT);
-        assertThat(actual.getACL().getEntries()).containsOnlyKeys(MailboxACL.EntryKey.createUserEntryKey(BOB));
+        assertThat(actual.getACL().getEntries()).containsOnlyKeys(MailboxShares.EntryKey.createUserEntryKey(BOB));
     }
 
 }

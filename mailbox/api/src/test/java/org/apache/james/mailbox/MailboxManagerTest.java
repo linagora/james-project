@@ -32,7 +32,7 @@ import org.apache.james.mailbox.MailboxManager.MailboxCapabilities;
 import org.apache.james.mailbox.exception.AnnotationException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxManager;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxId;
@@ -445,9 +445,9 @@ public abstract class MailboxManagerTest {
         MailboxPath inbox1 = MailboxPath.inbox(session1);
         mailboxManager.createMailbox(inbox1, session1);
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_1)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -469,9 +469,9 @@ public abstract class MailboxManagerTest {
         MailboxPath inbox1 = MailboxPath.inbox(session1);
         mailboxManager.createMailbox(inbox1, session1);
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -494,9 +494,9 @@ public abstract class MailboxManagerTest {
         mailboxManager.createMailbox(inbox1, session1);
         mailboxManager.createMailbox(inbox2, session2);
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -519,9 +519,9 @@ public abstract class MailboxManagerTest {
         mailboxManager.createMailbox(inbox1, session1);
         mailboxManager.createMailbox(inbox2, session2);
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -546,15 +546,15 @@ public abstract class MailboxManagerTest {
         mailboxManager.createMailbox(inbox1, session1);
         mailboxManager.createMailbox(mailboxPath1, session1);
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
         mailboxManager.setRights(mailboxPath1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
 
@@ -631,9 +631,9 @@ public abstract class MailboxManagerTest {
             .getMessageId();
 
         mailboxManager.setRights(delegatedMailboxPath,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_1)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             sessionFromDelegater);
 
@@ -666,9 +666,9 @@ public abstract class MailboxManagerTest {
             .getMessageId();
 
         mailboxManager.setRights(delegatedMailboxPath,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_1)
-                .rights(MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Lookup)
                 .asAddition()),
             sessionFromDelegater);
 
@@ -839,16 +839,16 @@ public abstract class MailboxManagerTest {
         MailboxPath inbox1 = MailboxPath.inbox(session1);
         mailboxManager.createMailbox(inbox1, session1);
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asAddition()),
             session1);
 
         mailboxManager.setRights(inbox1,
-            MailboxACL.EMPTY.apply(MailboxACL.command()
+            MailboxShares.EMPTY.apply(MailboxShares.command()
                 .forUser(USER_2)
-                .rights(MailboxACL.Right.Read, MailboxACL.Right.Lookup)
+                .rights(MailboxShares.Right.Read, MailboxShares.Right.Lookup)
                 .asRemoval()),
             session1);
 

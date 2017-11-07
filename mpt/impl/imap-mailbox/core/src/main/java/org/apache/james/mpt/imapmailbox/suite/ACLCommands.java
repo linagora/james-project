@@ -21,7 +21,7 @@ package org.apache.james.mpt.imapmailbox.suite;
 
 import java.util.Locale;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mpt.api.ImapHostSystem;
 import org.apache.james.mpt.imapmailbox.GrantRightsOnHost;
@@ -42,7 +42,7 @@ public abstract class ACLCommands implements ImapTestConstants {
     private ImapHostSystem system;
     private GrantRightsOnHost grantRightsOnHost;
 
-    private MailboxACL.Rfc4314Rights readWriteSeenRight;
+    private MailboxShares.Rfc4314Rights readWriteSeenRight;
     private ACLScriptedTestProtocol scriptedTestProtocol;
 
     @Before
@@ -53,7 +53,7 @@ public abstract class ACLCommands implements ImapTestConstants {
         scriptedTestProtocol = new ACLScriptedTestProtocol(grantRightsOnHost, appender, "/org/apache/james/imap/scripts/", system)
                 .withUser(USER, PASSWORD)
                 .withLocale(Locale.US);
-        readWriteSeenRight = MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights("rsw");
+        readWriteSeenRight = MailboxShares.Rfc4314Rights.fromSerializedRfc4314Rights("rsw");
     }
 
     @Test

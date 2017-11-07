@@ -46,9 +46,9 @@ import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.Before;
 import org.junit.Test;
@@ -113,7 +113,7 @@ public class DeleteACLProcessorTest {
     
     @Test
     public void testNoListRight() throws Exception {
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Lookup, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Lookup, mailboxSession))
             .thenReturn(false);
 
         subject.doProcess(deleteACLRequest, responder, imapSession);
@@ -129,9 +129,9 @@ public class DeleteACLProcessorTest {
 
     @Test
     public void testNoAdminRight() throws Exception {
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Lookup, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Lookup, mailboxSession))
             .thenReturn(true);
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Administer, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Administer, mailboxSession))
             .thenReturn(false);
 
         subject.doProcess(deleteACLRequest, responder, imapSession);
@@ -164,17 +164,17 @@ public class DeleteACLProcessorTest {
     
     @Test
     public void testDelete() throws MailboxException {
-        MailboxACL acl = MailboxACL.OWNER_FULL_ACL;
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Lookup, mailboxSession))
+        MailboxShares mailboxShares = MailboxShares.OWNER_FULL_ACL;
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Lookup, mailboxSession))
             .thenReturn(true);
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Administer, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Administer, mailboxSession))
             .thenReturn(true);
-        when(metaData.getACL()).thenReturn(acl);
+        when(metaData.getACL()).thenReturn(mailboxShares);
 
         subject.doProcess(deleteACLRequest, responder, imapSession);
 
         verify(mailboxManager).applyRightsCommand(path,
-            MailboxACL.command().key(user1Key).noRights().asReplacement(),
+            MailboxShares.command().key(user1Key).noRights().asReplacement(),
             mailboxSession);
 
         verify(responder, times(1)).respond(argumentCaptor.capture());

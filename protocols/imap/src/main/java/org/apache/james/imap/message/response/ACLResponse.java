@@ -23,20 +23,20 @@ import java.util.Map.Entry;
 
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 
 /**
  * ACL Response.
  * 
  */
 public final class ACLResponse implements ImapResponseMessage {
-    private final MailboxACL acl;
+    private final MailboxShares acl;
 
     private final String mailboxName;
 
-    public ACLResponse(String mailboxName, MailboxACL acl) {
+    public ACLResponse(String mailboxName, MailboxShares acl) {
         super();
         this.mailboxName = mailboxName;
         this.acl = acl;
@@ -53,7 +53,7 @@ public final class ACLResponse implements ImapResponseMessage {
         return false;
     }
 
-    public MailboxACL getAcl() {
+    public MailboxShares getAcl() {
         return acl;
     }
 

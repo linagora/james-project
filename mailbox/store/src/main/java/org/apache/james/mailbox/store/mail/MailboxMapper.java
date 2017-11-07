@@ -22,10 +22,10 @@ import java.util.List;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.transaction.Mapper;
 
@@ -110,17 +110,17 @@ public interface MailboxMapper extends Mapper {
      * Update the ACL of the stored mailbox.
      *
      * @param mailbox Mailbox for whom we want to update ACL
-     * @param mailboxACLCommand Update to perform
+     * @param shareWith Update to perform
      */
-    void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException;
+    void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWith) throws MailboxException;
 
     /**
      * Reset the ACL of the stored mailbox.
      *
      * @param mailbox Mailbox for whom we want to update ACL
-     * @param mailboxACL New value of the ACL for this mailbox
+     * @param mailboxShares New value of the ACL for this mailbox
      */
-    void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException;
+    void setACL(Mailbox mailbox, MailboxShares mailboxShares) throws MailboxException;
 
     /**
      * Return a unmodifable {@link List} of all {@link Mailbox} 

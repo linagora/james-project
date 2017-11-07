@@ -22,9 +22,9 @@ import java.util.UUID;
 
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.hbase.HBaseId;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxUtil;
 
@@ -209,16 +209,16 @@ public class HBaseMailbox implements Mailbox {
      * @see org.apache.james.mailbox.store.mail.model.Mailbox#getACL()
      */
     @Override
-    public MailboxACL getACL() {
+    public MailboxShares getACL() {
         // TODO ACL support
-        return MailboxACL.OWNER_FULL_ACL;
+        return MailboxShares.OWNER_FULL_ACL;
     }
 
     /* (non-Javadoc)
-     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setACL(org.apache.james.mailbox.MailboxACL)
+     * @see org.apache.james.mailbox.store.mail.model.Mailbox#setACL(org.apache.james.mailbox.MailboxShares)
      */
     @Override
-    public void setACL(MailboxACL acl) {
+    public void setACL(MailboxShares acl) {
         // TODO ACL support
     }
 

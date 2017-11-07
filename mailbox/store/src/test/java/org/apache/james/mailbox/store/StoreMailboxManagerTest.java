@@ -27,14 +27,14 @@ import static org.mockito.Mockito.when;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.NotAdminException;
 import org.apache.james.mailbox.exception.UserDoesNotExistException;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
@@ -75,7 +75,7 @@ public class StoreMailboxManagerTest {
         FakeAuthenticator authenticator = new FakeAuthenticator();
         authenticator.addUser(CURRENT_USER, CURRENT_USER_PASSWORD);
         authenticator.addUser(ADMIN, ADMIN_PASSWORD);
-        StoreRightManager storeRightManager = new StoreRightManager(mockedMapperFactory, new UnionMailboxACLResolver(), new SimpleGroupMembershipResolver());
+        StoreRightManager storeRightManager = new StoreRightManager(mockedMapperFactory, new UnionMailboxSharesResolver(), new SimpleGroupMembershipResolver());
 
         DefaultDelegatingMailboxListener delegatingListener = new DefaultDelegatingMailboxListener();
         MailboxEventDispatcher mailboxEventDispatcher = new MailboxEventDispatcher(delegatingListener);
@@ -120,7 +120,7 @@ public class StoreMailboxManagerTest {
     @Test(expected = MailboxNotFoundException.class)
     public void getMailboxShouldThrowWhenMailboxDoesNotMatchUserWithoutRight() throws Exception {
         Mailbox mockedMailbox = mock(Mailbox.class);
-        when(mockedMailbox.getACL()).thenReturn(new MailboxACL());
+        when(mockedMailbox.getACL()).thenReturn(new MailboxShares());
         when(mockedMailbox.getUser()).thenReturn("other.user");
         when(mockedMailbox.getMailboxId()).thenReturn(MAILBOX_ID);
         when(mockedMailboxMapper.findMailboxById(MAILBOX_ID)).thenReturn(mockedMailbox);

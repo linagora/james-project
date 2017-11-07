@@ -24,7 +24,7 @@ import java.util.function.BiFunction;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
@@ -85,7 +85,7 @@ public class InMemoryIntegrationResources implements IntegrationResources<StoreM
         fakeAuthenticator.addUser(ManagerTestResources.USER, ManagerTestResources.USER_PASS);
         fakeAuthenticator.addUser(ManagerTestResources.OTHER_USER, ManagerTestResources.OTHER_USER_PASS);
         InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
-        StoreRightManager storeRightManager = new StoreRightManager(mailboxSessionMapperFactory, new UnionMailboxACLResolver(), groupMembershipResolver);
+        StoreRightManager storeRightManager = new StoreRightManager(mailboxSessionMapperFactory, new UnionMailboxSharesResolver(), groupMembershipResolver);
         StoreMailboxAnnotationManager annotationManager = annotationManagerBiFunction
             .apply(storeRightManager, mailboxSessionMapperFactory);
 
@@ -109,7 +109,7 @@ public class InMemoryIntegrationResources implements IntegrationResources<StoreM
     public StoreMailboxManager createMailboxManager(GroupMembershipResolver groupMembershipResolver,
                                                     Authenticator authenticator, Authorizator authorizator) throws MailboxException {
         InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
-        StoreRightManager storeRightManager = new StoreRightManager(mailboxSessionMapperFactory, new UnionMailboxACLResolver(), groupMembershipResolver);
+        StoreRightManager storeRightManager = new StoreRightManager(mailboxSessionMapperFactory, new UnionMailboxSharesResolver(), groupMembershipResolver);
         StoreMailboxAnnotationManager annotationManager = new StoreMailboxAnnotationManager(mailboxSessionMapperFactory, storeRightManager);
 
         DefaultDelegatingMailboxListener delegatingListener = new DefaultDelegatingMailboxListener();

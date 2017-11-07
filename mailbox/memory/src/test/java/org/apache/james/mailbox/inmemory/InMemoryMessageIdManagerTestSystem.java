@@ -32,10 +32,10 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.mailbox.store.MessageIdManagerTestSystem;
@@ -123,7 +123,7 @@ public class InMemoryMessageIdManagerTestSystem extends MessageIdManagerTestSyst
     }
 
     @Override
-    public void setACL(MailboxId mailboxId, MailboxACL mailboxAcl, MailboxSession session) throws MailboxException {
-        mailboxManager.setRights(mailboxId, mailboxAcl, session);
+    public void setACL(MailboxId mailboxId, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
+        mailboxManager.setRights(mailboxId, mailboxShares, session);
     }
 }

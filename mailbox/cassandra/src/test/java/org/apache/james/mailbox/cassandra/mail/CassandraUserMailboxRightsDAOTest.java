@@ -26,11 +26,11 @@ import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.acl.PositiveUserACLChanged;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Entry;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxACL.Right;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Entry;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -41,7 +41,7 @@ public class CassandraUserMailboxRightsDAOTest {
     private static final String USER_NAME = "userName";
     private static final EntryKey ENTRY_KEY = EntryKey.createUserEntryKey(USER_NAME);
     private static final CassandraId MAILBOX_ID = CassandraId.timeBased();
-    private static final Rfc4314Rights RIGHTS = MailboxACL.FULL_RIGHTS;
+    private static final Rfc4314Rights RIGHTS = MailboxShares.FULL_RIGHTS;
     private static final Rfc4314Rights OTHER_RIGHTS = new Rfc4314Rights(Right.Administer, Right.Read);
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
@@ -64,8 +64,8 @@ public class CassandraUserMailboxRightsDAOTest {
     @Test
     public void saveShouldInsertNewEntry() throws Exception {
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
-            MailboxACL.EMPTY,
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)))).join();
+            MailboxShares.EMPTY,
+            new MailboxShares(new Entry(ENTRY_KEY, RIGHTS)))).join();
 
         assertThat(testee.retrieve(USER_NAME, MAILBOX_ID).join())
             .contains(RIGHTS);
@@ -74,12 +74,12 @@ public class CassandraUserMailboxRightsDAOTest {
     @Test
     public void saveOnSecondShouldOverwrite() throws Exception {
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
-            MailboxACL.EMPTY,
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)))).join();
+            MailboxShares.EMPTY,
+            new MailboxShares(new Entry(ENTRY_KEY, RIGHTS)))).join();
 
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)),
-            new MailboxACL(new Entry(ENTRY_KEY, OTHER_RIGHTS)))).join();
+            new MailboxShares(new Entry(ENTRY_KEY, RIGHTS)),
+            new MailboxShares(new Entry(ENTRY_KEY, OTHER_RIGHTS)))).join();
 
         assertThat(testee.retrieve(USER_NAME, MAILBOX_ID).join())
             .contains(OTHER_RIGHTS);
@@ -94,13 +94,13 @@ public class CassandraUserMailboxRightsDAOTest {
     @Test
     public void deleteShouldDeleteWhenExisting() throws Exception {
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
-            MailboxACL.EMPTY,
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)))).join();
+            MailboxShares.EMPTY,
+            new MailboxShares(new Entry(ENTRY_KEY, RIGHTS)))).join();
 
 
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)),
-            MailboxACL.EMPTY)).join();
+            new MailboxShares(new Entry(ENTRY_KEY, RIGHTS)),
+            MailboxShares.EMPTY)).join();
 
         assertThat(testee.retrieve(USER_NAME, MAILBOX_ID).join())
             .isEmpty();

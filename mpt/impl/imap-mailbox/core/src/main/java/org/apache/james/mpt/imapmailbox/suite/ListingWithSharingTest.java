@@ -21,7 +21,7 @@ package org.apache.james.mpt.imapmailbox.suite;
 
 import java.util.Locale;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mpt.api.ImapHostSystem;
 import org.apache.james.mpt.imapmailbox.ImapTestConstants;
@@ -56,8 +56,8 @@ public abstract class ListingWithSharingTest implements ImapTestConstants {
         scriptedTestProtocol
             .withMailbox(OTHER_USER_SHARED_MAILBOX)
             .withMailbox(OTHER_USER_SHARED_MAILBOX_CHILD)
-            .withRights(OTHER_USER_SHARED_MAILBOX, USER, MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights("r"))
-            .withRights(OTHER_USER_SHARED_MAILBOX_CHILD, USER, MailboxACL.Rfc4314Rights.fromSerializedRfc4314Rights("r"))
+            .withRights(OTHER_USER_SHARED_MAILBOX, USER, MailboxShares.Rfc4314Rights.fromSerializedRfc4314Rights("r"))
+            .withRights(OTHER_USER_SHARED_MAILBOX_CHILD, USER, MailboxShares.Rfc4314Rights.fromSerializedRfc4314Rights("r"))
             .withLocale(Locale.US)
             .run("ListWithSharedMailbox");
     }

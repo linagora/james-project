@@ -35,7 +35,7 @@ import javax.mail.Flags.Flag;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
@@ -686,12 +686,12 @@ public class LuceneMailboxMessageSearchIndexTest {
         }
 
         @Override
-        public MailboxACL getACL() {
-            return MailboxACL.OWNER_FULL_ACL;
+        public MailboxShares getACL() {
+            return MailboxShares.OWNER_FULL_ACL;
         }
 
         @Override
-        public void setACL(MailboxACL acl) {
+        public void setACL(MailboxShares acl) {
             throw new UnsupportedOperationException("Not supported");
         }
 

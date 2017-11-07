@@ -46,11 +46,11 @@ import org.apache.james.mailbox.MessageManager.MetaData;
 import org.apache.james.mailbox.MessageManager.MetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EditMode;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EditMode;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.junit.Before;
 import org.junit.Test;
@@ -117,7 +117,7 @@ public class SetACLProcessorTest {
     public void testUnsupportedRight() throws Exception {
         SetACLRequest setACLRequest = new SetACLRequest("TAG", ImapCommand.anyStateCommand("Name"), MAILBOX_NAME, USER_1, UNSUPPORTED_RIGHT);
 
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Lookup, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Lookup, mailboxSession))
             .thenReturn(false);
 
         subject.doProcess(setACLRequest, responder, imapSession);
@@ -133,9 +133,9 @@ public class SetACLProcessorTest {
     
     @Test
     public void testNoAdminRight() throws Exception {
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Lookup, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Lookup, mailboxSession))
             .thenReturn(true);
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Administer, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Administer, mailboxSession))
             .thenReturn(false);
 
         subject.doProcess(replaceAclRequest, responder, imapSession);
@@ -181,9 +181,9 @@ public class SetACLProcessorTest {
     }
     
     private void testOp(String prefix, EditMode editMode) throws MailboxException {
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Lookup, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Lookup, mailboxSession))
             .thenReturn(true);
-        when(mailboxManager.hasRight(path, MailboxACL.Right.Administer, mailboxSession))
+        when(mailboxManager.hasRight(path, MailboxShares.Right.Administer, mailboxSession))
             .thenReturn(true);
 
 
@@ -191,7 +191,7 @@ public class SetACLProcessorTest {
         subject.doProcess(r, responder, imapSession);
 
         verify(mailboxManager).applyRightsCommand(path,
-            MailboxACL.command().key(user1Key).rights(setRights).mode(editMode).build(),
+            MailboxShares.command().key(user1Key).rights(setRights).mode(editMode).build(),
             mailboxSession);
 
         verify(responder, times(1)).respond(argumentCaptor.capture());

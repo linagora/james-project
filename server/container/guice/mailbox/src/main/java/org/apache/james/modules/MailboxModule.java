@@ -19,9 +19,9 @@
 package org.apache.james.modules;
 
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.utils.GuiceProbe;
 
 import com.google.inject.AbstractModule;
@@ -37,8 +37,8 @@ public class MailboxModule extends AbstractModule {
         probeMultiBinder.addBinding().to(QuotaProbesImpl.class);
         probeMultiBinder.addBinding().to(ACLProbeImpl.class);
 
-        bind(UnionMailboxACLResolver.class).in(Scopes.SINGLETON);
-        bind(MailboxACLResolver.class).to(UnionMailboxACLResolver.class);
+        bind(UnionMailboxSharesResolver.class).in(Scopes.SINGLETON);
+        bind(MailboxSharesResolver.class).to(UnionMailboxSharesResolver.class);
         bind(SimpleGroupMembershipResolver.class).in(Scopes.SINGLETON);
         bind(GroupMembershipResolver.class).to(SimpleGroupMembershipResolver.class);
     }

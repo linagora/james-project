@@ -21,7 +21,7 @@
 package org.apache.james.mailbox.acl;
 
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 
 /**
  * Implements the interpretation of ACLs.
@@ -39,19 +39,19 @@ import org.apache.james.mailbox.model.MailboxACL;
  * given mailbox name by using the MYRIGHTS command. </cite>
  * 
  */
-public interface MailboxACLResolver {
+public interface MailboxSharesResolver {
 
     /**
-     * Applies global ACL to the given <code>resourceACL</code>. From RFC 4314:
+     * Applies global ACL to the given <code>mailboxShares</code>. From RFC 4314:
      * An implementation [...] MAY force rights to always or never be granted to
      * particular identifiers.
      * 
-     * @param resourceACL
+     * @param mailboxShares
      * @param resourceOwnerIsGroup
      * @return
      * @throws UnsupportedRightException
      */
-    MailboxACL applyGlobalACL(MailboxACL resourceACL, boolean resourceOwnerIsGroup) throws UnsupportedRightException;
+    MailboxShares applyGlobalACL(MailboxShares mailboxShares, boolean resourceOwnerIsGroup) throws UnsupportedRightException;
 
     /**
      * Computes a result suitable for the LISTRIGHTS IMAP command. The result is
@@ -68,13 +68,13 @@ public interface MailboxACLResolver {
      * @param resourceOwnerIsGroup
      *            true if the {@code resourceOwner} is a group of users, false
      *            otherwise.
-     * @return an array of {@link MailboxACLRights}. The first element is the
+     * @return an array of {@link MailboxShares.Rfc4314Rights}. The first element is the
      *         set of implicit (global) rights which does not need to be set
      *         explicitly for the given identifier. Further elements are groups
      *         of rights which can be set for the given identifier and resource.
      * @throws UnsupportedRightException
      */
-    MailboxACL.Rfc4314Rights[] listRights(MailboxACL.EntryKey key, GroupMembershipResolver groupMembershipResolver, String resourceOwner, boolean resourceOwnerIsGroup) throws UnsupportedRightException;
+    MailboxShares.Rfc4314Rights[] listRights(MailboxShares.EntryKey key, GroupMembershipResolver groupMembershipResolver, String resourceOwner, boolean resourceOwnerIsGroup) throws UnsupportedRightException;
 
     /**
      * Computes the rights which apply to the given user and resource. Global
@@ -86,19 +86,19 @@ public interface MailboxACLResolver {
      *            given context.
      * @param groupMembershipResolver
      *            this resolver is used when checking whether any group rights
-     *            contained in resourceACL are applicable for the requestUser.
-     * @param resourceACL
+     *            contained in mailboxShares are applicable for the requestUser.
+     * @param mailboxShares
      *            the ACL defining the access right for the resource in
      *            question.
      * @param resourceOwner
      *            this user name is used as a replacement for the "owner" place
-     *            holder in the resourceACL.
+     *            holder in the mailboxShares.
      * @param resourceOwnerIsGroup
      *            true if the resourceOwner is a group of users, false
      *            otherwise.
      * @return the rights applicable for the given user and resource.
      * @throws UnsupportedRightException
      */
-    MailboxACL.Rfc4314Rights resolveRights(String requestUser, GroupMembershipResolver groupMembershipResolver, MailboxACL resourceACL, String resourceOwner, boolean resourceOwnerIsGroup) throws UnsupportedRightException;
+    MailboxShares.Rfc4314Rights resolveRights(String requestUser, GroupMembershipResolver groupMembershipResolver, MailboxShares mailboxShares, String resourceOwner, boolean resourceOwnerIsGroup) throws UnsupportedRightException;
 
 }

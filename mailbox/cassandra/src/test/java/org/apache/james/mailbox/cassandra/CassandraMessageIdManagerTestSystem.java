@@ -30,9 +30,9 @@ import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.CurrentQuotaManager;
 import org.apache.james.mailbox.quota.QuotaManager;
@@ -136,7 +136,7 @@ public class CassandraMessageIdManagerTestSystem extends MessageIdManagerTestSys
     }
 
     @Override
-    public void setACL(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
-        cassandraMailboxManager.setRights(mailboxId, mailboxACL, session);
+    public void setACL(MailboxId mailboxId, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
+        cassandraMailboxManager.setRights(mailboxId, mailboxShares, session);
     }
 }

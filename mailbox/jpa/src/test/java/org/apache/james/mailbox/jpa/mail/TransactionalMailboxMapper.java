@@ -24,10 +24,10 @@ import java.util.List;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.transaction.Mapper;
@@ -80,13 +80,13 @@ public class TransactionalMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
-        wrapped.updateACL(mailbox, mailboxACLCommand);
+    public void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWith) throws MailboxException {
+        wrapped.updateACL(mailbox, shareWith);
     }
 
     @Override
-    public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
-        wrapped.setACL(mailbox, mailboxACL);
+    public void setACL(Mailbox mailbox, MailboxShares mailboxShares) throws MailboxException {
+        wrapped.setACL(mailbox, mailboxShares);
     }
 
     @Override

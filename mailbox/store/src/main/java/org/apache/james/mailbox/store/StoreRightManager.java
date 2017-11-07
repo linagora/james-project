@@ -19,6 +19,7 @@
 
 package org.apache.james.mailbox.store;
 
+import java.util.Map;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -27,16 +28,18 @@ import javax.mail.Flags;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.RightManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
+import org.apache.james.mailbox.exception.DifferentDomainException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.ACLCommand;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.NameType;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Right;
+import org.apache.james.mailbox.model.MailboxShares.ShareWith;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.transaction.Mapper;
@@ -48,12 +51,12 @@ import com.google.common.collect.ImmutableMap;
 public class StoreRightManager implements RightManager {
 
     private final MailboxSessionMapperFactory mailboxSessionMapperFactory;
-    private final MailboxACLResolver aclResolver;
+    private final MailboxSharesResolver aclResolver;
     private final GroupMembershipResolver groupMembershipResolver;
 
     @Inject
     public StoreRightManager(MailboxSessionMapperFactory mailboxSessionMapperFactory,
-                             MailboxACLResolver aclResolver,
+                             MailboxSharesResolver aclResolver,
                              GroupMembershipResolver groupMembershipResolver) {
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.aclResolver = aclResolver;
@@ -100,7 +103,7 @@ public class StoreRightManager implements RightManager {
                     mailbox.getUser(),
                     new GroupFolderResolver(session).isGroupFolder(mailbox)))
                 .sneakyThrow())
-            .orElse(MailboxACL.NO_RIGHTS);
+            .orElse(MailboxShares.NO_RIGHTS);
     }
 
     @Override
@@ -111,10 +114,15 @@ public class StoreRightManager implements RightManager {
     }
 
     @Override
-    public void applyRightsCommand(MailboxPath mailboxPath, ACLCommand mailboxACLCommand, MailboxSession session) throws MailboxException {
+    public void applyRightsCommand(MailboxPath mailboxPath, ShareWith mailboxSharesCommand, MailboxSession session) throws MailboxException {
+        assertSharesBelongsToUserDomain(mailboxPath.getUser(), mailboxSharesCommand);
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
-        mapper.execute(Mapper.toTransaction(() -> mapper.updateACL(mailbox, mailboxACLCommand)));
+        mapper.execute(Mapper.toTransaction(() -> mapper.updateACL(mailbox, mailboxSharesCommand)));
+    }
+
+    private void assertSharesBelongsToUserDomain(String user, ShareWith mailboxSharesCommand) throws DifferentDomainException {
+        assertSharesBelongsToUserDomain(user, ImmutableMap.of(mailboxSharesCommand.getEntryKey(), mailboxSharesCommand.getRights()));
     }
 
     public boolean isReadWrite(MailboxSession session, Mailbox mailbox, Flags sharedPermanentFlags) throws UnsupportedRightException {
@@ -152,23 +160,48 @@ public class StoreRightManager implements RightManager {
     }
 
     @Override
-    public void setRights(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+    public void setRights(MailboxId mailboxId, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxById(mailboxId);
 
-        setRights(mailbox.generateAssociatedPath(), mailboxACL, session);
+        setRights(mailbox.generateAssociatedPath(), mailboxShares, session);
     }
 
     @Override
-    public void setRights(MailboxPath mailboxPath, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
+    public void setRights(MailboxPath mailboxPath, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
+        assertSharesBelongsToUserDomain(mailboxPath.getUser(), mailboxShares.getEntries());
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         Mailbox mailbox = mapper.findMailboxByPath(mailboxPath);
 
-        setRights(mailboxACL, mapper, mailbox);
+        setRights(mailboxShares, mapper, mailbox);
     }
 
-    private void setRights(MailboxACL mailboxACL, MailboxMapper mapper, Mailbox mailbox) throws MailboxException {
-        mapper.execute(Mapper.toTransaction(() -> mapper.setACL(mailbox, mailboxACL)));
+    @VisibleForTesting
+    void assertSharesBelongsToUserDomain(String user, Map<EntryKey, Rfc4314Rights> entries) throws DifferentDomainException {
+        if (entries.keySet().stream()
+            .filter(entry -> !entry.getNameType().equals(NameType.special))
+            .map(EntryKey::getName)
+            .anyMatch(name -> areDomainsDifferent(name, user))) {
+            throw new DifferentDomainException();
+        }
+    }
+
+    @VisibleForTesting
+    boolean areDomainsDifferent(String user, String otherUser) {
+        return !extractDomain(user).equals(extractDomain(otherUser));
+    }
+
+    @VisibleForTesting 
+    Optional<String> extractDomain(String user) {
+        String[] split = user.split("@");
+        if (split.length == 2) {
+            return Optional.of(split[1]);
+        }
+        return Optional.empty();
+    }
+
+    private void setRights(MailboxShares mailboxShares, MailboxMapper mapper, Mailbox mailbox) throws MailboxException {
+        mapper.execute(Mapper.toTransaction(() -> mapper.setACL(mailbox, mailboxShares)));
     }
 
     /**
@@ -179,8 +212,8 @@ public class StoreRightManager implements RightManager {
      *         there are any).
      * @throws UnsupportedRightException
      */
-    public MailboxACL getResolvedMailboxACL(Mailbox mailbox, MailboxSession mailboxSession) throws UnsupportedRightException {
-        MailboxACL acl = aclResolver.applyGlobalACL(
+    public MailboxShares getResolvedMailboxShares(Mailbox mailbox, MailboxSession mailboxSession) throws UnsupportedRightException {
+        MailboxShares acl = aclResolver.applyGlobalACL(
             mailbox.getACL(),
             new GroupFolderResolver(mailboxSession).isGroupFolder(mailbox));
 
@@ -189,20 +222,20 @@ public class StoreRightManager implements RightManager {
 
     /**
      * ACL is sensible information and as such we should expose as few information as possible
-     * to users. This method allows to filter a {@link MailboxACL} in order to present it to
+     * to users. This method allows to filter a {@link MailboxShares} in order to present it to
      * the connected user.
      */
     @VisibleForTesting
-    static MailboxACL filteredForSession(Mailbox mailbox, MailboxACL acl, MailboxSession mailboxSession) throws UnsupportedRightException {
+    static MailboxShares filteredForSession(Mailbox mailbox, MailboxShares acl, MailboxSession mailboxSession) throws UnsupportedRightException {
         if (mailboxSession.getUser().isSameUser(mailbox.getUser())) {
             return acl;
         }
 
-        MailboxACL.EntryKey userAsKey = MailboxACL.EntryKey.createUserEntryKey(mailboxSession.getUser().getUserName());
+        MailboxShares.EntryKey userAsKey = MailboxShares.EntryKey.createUserEntryKey(mailboxSession.getUser().getUserName());
         Rfc4314Rights rights = acl.getEntries().getOrDefault(userAsKey, new Rfc4314Rights());
-        if (rights.contains(MailboxACL.Right.Administer)) {
+        if (rights.contains(MailboxShares.Right.Administer)) {
             return acl;
         }
-        return new MailboxACL(ImmutableMap.of(userAsKey, rights));
+        return new MailboxShares(ImmutableMap.of(userAsKey, rights));
     }
 }

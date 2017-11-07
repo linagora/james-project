@@ -21,7 +21,7 @@ package org.apache.james.mailbox.store.json;
 
 import java.io.IOException;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
-public class MailboxACLJsonConverter {
+public class MailboxSharesJsonConverter {
 
     interface Rfc4314RightsMixIn {
         @JsonValue
@@ -40,7 +40,7 @@ public class MailboxACLJsonConverter {
     static class ACLKeyDeserializer extends KeyDeserializer {
         @Override
         public Object deserializeKey(String key, DeserializationContext deserializationContext) throws IOException {
-            return MailboxACL.EntryKey.deserialize(key);
+            return MailboxShares.EntryKey.deserialize(key);
         }
     }
 
@@ -48,17 +48,17 @@ public class MailboxACLJsonConverter {
 
     static {
         SimpleModule module = new SimpleModule()
-                .addKeyDeserializer(MailboxACL.EntryKey.class, new ACLKeyDeserializer());
+                .addKeyDeserializer(MailboxShares.EntryKey.class, new ACLKeyDeserializer());
         objectMapper
-            .addMixIn(MailboxACL.Rfc4314Rights.class, Rfc4314RightsMixIn.class)
+            .addMixIn(MailboxShares.Rfc4314Rights.class, Rfc4314RightsMixIn.class)
             .registerModule(module);
     }
 
-    public static String toJson(MailboxACL acl) throws JsonProcessingException {
+    public static String toJson(MailboxShares acl) throws JsonProcessingException {
         return objectMapper.writeValueAsString(acl);
     }
     
-    public static MailboxACL toACL(String jsonACLString) throws IOException {
-        return objectMapper.readValue(jsonACLString, MailboxACL.class);
+    public static MailboxShares toACL(String jsonACLString) throws IOException {
+        return objectMapper.readValue(jsonACLString, MailboxShares.class);
     }
 }

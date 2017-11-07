@@ -23,9 +23,9 @@ import javax.persistence.EntityManagerFactory;
 
 import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.MailboxACLResolver;
+import org.apache.james.mailbox.acl.MailboxSharesResolver;
 import org.apache.james.mailbox.acl.SimpleGroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.mail.JPAModSeqProvider;
 import org.apache.james.mailbox.jpa.mail.JPAUidProvider;
@@ -52,13 +52,13 @@ public class JpaMailboxManagerProvider {
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
         JPAMailboxSessionMapperFactory mf = new JPAMailboxSessionMapperFactory(entityManagerFactory, new JPAUidProvider(locker, entityManagerFactory), new JPAModSeqProvider(locker, entityManagerFactory));
 
-        MailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+        MailboxSharesResolver sharesResolver = new UnionMailboxSharesResolver();
         GroupMembershipResolver groupMembershipResolver = new SimpleGroupMembershipResolver();
         MessageParser messageParser = new MessageParser();
 
         Authenticator noAuthenticator = null;
         Authorizator noAuthorizator = null;
-        StoreRightManager storeRightManager = new StoreRightManager(mf, aclResolver, groupMembershipResolver);
+        StoreRightManager storeRightManager = new StoreRightManager(mf, sharesResolver, groupMembershipResolver);
         DefaultDelegatingMailboxListener delegatingListener = new DefaultDelegatingMailboxListener();
         MailboxEventDispatcher mailboxEventDispatcher = new MailboxEventDispatcher(delegatingListener);
         StoreMailboxAnnotationManager annotationManager = new StoreMailboxAnnotationManager(mf, storeRightManager,

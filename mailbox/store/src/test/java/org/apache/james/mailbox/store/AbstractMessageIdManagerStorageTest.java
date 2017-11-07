@@ -37,9 +37,9 @@ import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.fixture.MailboxFixture;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.FetchGroupImpl;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxACL.Right;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
@@ -541,8 +541,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void getMessagesShouldReturnMessagesWhenReadDelegated() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Read))
                     .asAddition()),
@@ -560,8 +560,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void getMessagesShouldNotReturnMessagesWhenNotReadDelegated() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.Read))
                     .asAddition()),
@@ -577,8 +577,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void setFlagsShouldUpdateFlagsWhenWriteDelegated() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Write))
                     .asAddition()),
@@ -598,8 +598,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void setFlagsShouldNotUpdateFlagsWhenNotWriteDelegated() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.Write))
                     .asAddition()),
@@ -621,8 +621,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxesShouldAllowCopyingMessageFromReadOnlySharedMailbox() throws Exception {
         //Given
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Read))
                     .asAddition()),
@@ -646,8 +646,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxesShouldDenyCopyingMessageFromNotReadSharedMailbox() throws Exception {
         //Given
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.Read))
                     .asAddition()),
@@ -674,8 +674,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxesShouldAllowCopyingToAInsertSharedMailbox() throws Exception {
         //Given
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Insert, Right.Read))
                     .asAddition()),
@@ -702,8 +702,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxesShouldDenyCopyingToANonInsertSharedMailbox() throws Exception {
         //Given
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.Insert))
                     .asAddition()),
@@ -734,8 +734,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxesShouldAllowMovingMessagesFromASharedMailboxWhenDeleteRight() throws Exception {
         //Given
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Lookup, Right.Read, Right.DeleteMessages))
                     .asAddition()),
@@ -762,8 +762,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxesShouldDenyMovingMessagesFromASharedMailboxWhenNoDeleteRight() throws Exception {
         //Given
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.DeleteMessages))
                     .asAddition()),
@@ -794,10 +794,10 @@ public abstract class AbstractMessageIdManagerStorageTest {
     public void setInMailboxShouldAllowDistinctMailboxSetForShareeAndOwner() throws Exception {
         //Given
         testingData.setACL(aliceMailbox2.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
-                    .rights(MailboxACL.FULL_RIGHTS)
+                    .rights(MailboxShares.FULL_RIGHTS)
                     .asAddition()),
             aliceSession);
         MessageId messageId = testingData.persist(aliceMailbox1.getMailboxId(), messageUid1, FLAGS, aliceSession);
@@ -835,8 +835,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void deleteShouldRemoveMessagesFromSharedMailboxWhenAllowed() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Read, Right.Lookup, Right.DeleteMessages))
                     .asAddition()),
@@ -853,8 +853,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void deleteShouldNotRemoveMessagesFromSharedMailboxWhenNotAllowed() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.DeleteMessages))
                     .asAddition()),
@@ -874,8 +874,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void accessibleMessagesShouldReturnMessagesWhenReadDelegated() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Read, Right.Lookup))
                     .asAddition()),
@@ -891,8 +891,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void accessibleMessagesShouldNotReturnMessagesWhenNotReadDelegated() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(Rfc4314Rights.allExcept(Right.Read))
                     .asAddition()),
@@ -908,8 +908,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void setInMailboxesShouldSanitizeFlagsWhenNoWriteRight() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Read, Right.Lookup, Right.Insert))
                     .asAddition()),
@@ -928,8 +928,8 @@ public abstract class AbstractMessageIdManagerStorageTest {
     @Test
     public void setInMailboxesShouldPreserveFlagsWhenWriteRight() throws Exception {
         testingData.setACL(aliceMailbox1.getMailboxId(),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .forUser(MailboxFixture.BOB)
                     .rights(new Rfc4314Rights(Right.Read, Right.Lookup, Right.Insert, Right.Write))
                     .asAddition()),

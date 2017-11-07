@@ -48,9 +48,9 @@ import org.apache.james.mailbox.MailboxPathLocker.LockAwareExecution;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,7 @@ public class MaildirFolder {
     private Optional<MessageUid> lastUid;
     private int messageCount = 0;
     private long uidValidity = -1;
-    private MailboxACL acl;
+    private MailboxShares acl;
     private boolean messageNameStrictParse = false;
 
     private final MailboxPathLocker locker;
@@ -902,7 +902,7 @@ public class MaildirFolder {
         return getRootFile().getAbsolutePath();
     }
     
-    public MailboxACL getACL(MailboxSession session) throws MailboxException {
+    public MailboxShares getACL(MailboxSession session) throws MailboxException {
         if (acl == null) {
             acl = readACL(session);
         }
@@ -915,9 +915,9 @@ public class MaildirFolder {
      * @param session
      * @throws MailboxException if there are problems with the aclFile file
      */
-    private MailboxACL readACL(MailboxSession session) throws MailboxException {
+    private MailboxShares readACL(MailboxSession session) throws MailboxException {
         // FIXME Do we need this locking?
-        return locker.executeWithLock(session, path, (LockAwareExecution<MailboxACL>) () -> {
+        return locker.executeWithLock(session, path, (LockAwareExecution<MailboxShares>) () -> {
             File f = aclFile;
             InputStream in = null;
             Properties props = new Properties();
@@ -933,14 +933,14 @@ public class MaildirFolder {
                 }
             }
 
-            return new MailboxACL(props);
+            return new MailboxShares(props);
 
         }, true);
         
     }
     
-    public void setACL(MailboxSession session, MailboxACL acl) throws MailboxException {
-        MailboxACL old = this.acl;
+    public void setACL(MailboxSession session, MailboxShares acl) throws MailboxException {
+        MailboxShares old = this.acl;
         if (old != acl && (old == null || !old.equals(acl))) {
             /* change only if different */
             saveACL(acl, session);
@@ -949,7 +949,7 @@ public class MaildirFolder {
         
     }
 
-    private void saveACL(final MailboxACL acl, MailboxSession session) throws MailboxException {
+    private void saveACL(final MailboxShares acl, MailboxSession session) throws MailboxException {
         // FIXME Do we need this locking?
         locker.executeWithLock(session, path, new LockAwareExecution<Void>() {
             

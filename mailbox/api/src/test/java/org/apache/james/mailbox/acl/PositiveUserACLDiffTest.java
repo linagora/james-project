@@ -21,11 +21,11 @@ package org.apache.james.mailbox.acl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Entry;
-import org.apache.james.mailbox.model.MailboxACL.EntryKey;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxACL.Right;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Entry;
+import org.apache.james.mailbox.model.MailboxShares.EntryKey;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.junit.Test;
 
 public class PositiveUserACLDiffTest {
@@ -36,21 +36,21 @@ public class PositiveUserACLDiffTest {
     @Test
     public void addedEntriesShouldReturnEmptyWhenSameACL() {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY,
-            MailboxACL.EMPTY);
+            MailboxShares.EMPTY,
+            MailboxShares.EMPTY);
 
         assertThat(positiveUserAclDiff.addedEntries()).isEmpty();
     }
 
     @Test
     public void addedEntriesShouldReturnEmptyWhenSameNonEmptyACL() throws UnsupportedRightException {
-        MailboxACL mailboxACL = MailboxACL.EMPTY.apply(
-            MailboxACL.command()
+        MailboxShares mailboxShares = MailboxShares.EMPTY.apply(
+            MailboxShares.command()
                 .key(ENTRY_KEY)
                 .rights(RIGHTS)
                 .asAddition());
 
-        PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(mailboxACL, mailboxACL);
+        PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(mailboxShares, mailboxShares);
 
         assertThat(positiveUserAclDiff.addedEntries()).isEmpty();
     }
@@ -58,21 +58,21 @@ public class PositiveUserACLDiffTest {
     @Test
     public void removedEntriesShouldReturnEmptyWhenSameACL() {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY,
-            MailboxACL.EMPTY);
+            MailboxShares.EMPTY,
+            MailboxShares.EMPTY);
 
         assertThat(positiveUserAclDiff.removedEntries()).isEmpty();
     }
 
     @Test
     public void removedEntriesShouldReturnEmptyWhenSameNonEmptyACL() throws UnsupportedRightException {
-        MailboxACL mailboxACL = MailboxACL.EMPTY.apply(
-            MailboxACL.command()
+        MailboxShares mailboxShares = MailboxShares.EMPTY.apply(
+            MailboxShares.command()
                 .key(ENTRY_KEY)
                 .rights(RIGHTS)
                 .asAddition());
 
-        PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(mailboxACL, mailboxACL);
+        PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(mailboxShares, mailboxShares);
 
         assertThat(positiveUserAclDiff.removedEntries()).isEmpty();
     }
@@ -80,30 +80,30 @@ public class PositiveUserACLDiffTest {
     @Test
     public void changedEntriesShouldReturnEmptyWhenSameACL() {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY,
-            MailboxACL.EMPTY);
+            MailboxShares.EMPTY,
+            MailboxShares.EMPTY);
 
         assertThat(positiveUserAclDiff.changedEntries()).isEmpty();
     }
 
     @Test
     public void changedEntriesShouldReturnEmptyWhenSameNonEmptyACL() throws UnsupportedRightException {
-        MailboxACL mailboxACL = MailboxACL.EMPTY.apply(
-            MailboxACL.command()
+        MailboxShares mailboxShares = MailboxShares.EMPTY.apply(
+            MailboxShares.command()
                 .key(ENTRY_KEY)
                 .rights(RIGHTS)
                 .asAddition());
 
-        PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(mailboxACL, mailboxACL);
+        PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(mailboxShares, mailboxShares);
 
         assertThat(positiveUserAclDiff.changedEntries()).isEmpty();
     }
     @Test
     public void addedEntriesShouldReturnNewEntryWhenAddedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY,
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY,
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()));
@@ -115,9 +115,9 @@ public class PositiveUserACLDiffTest {
     @Test
     public void changedEntriesShouldReturnEmptyWhenAddedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY,
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY,
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()));
@@ -129,9 +129,9 @@ public class PositiveUserACLDiffTest {
     @Test
     public void removedEntriesShouldReturnEmptyWhenAddedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY,
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY,
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()));
@@ -143,12 +143,12 @@ public class PositiveUserACLDiffTest {
     @Test
     public void addedEntriesShouldReturnEmptyWhenRemovedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()),
-            MailboxACL.EMPTY);
+            MailboxShares.EMPTY);
 
         assertThat(positiveUserAclDiff.addedEntries())
             .isEmpty();
@@ -157,12 +157,12 @@ public class PositiveUserACLDiffTest {
     @Test
     public void changedEntriesShouldReturnEmptyWhenRemovedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()),
-            MailboxACL.EMPTY);
+            MailboxShares.EMPTY);
 
         assertThat(positiveUserAclDiff.changedEntries())
             .isEmpty();
@@ -171,12 +171,12 @@ public class PositiveUserACLDiffTest {
     @Test
     public void removedEntriesShouldReturnEntryWhenRemovedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()),
-            MailboxACL.EMPTY);
+            MailboxShares.EMPTY);
 
         assertThat(positiveUserAclDiff.removedEntries())
             .containsOnly(new Entry(ENTRY_KEY, RIGHTS));
@@ -185,13 +185,13 @@ public class PositiveUserACLDiffTest {
     @Test
     public void removedEntriesShouldReturnEmptyWhenChangedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(Right.Lookup)
                     .asAddition()));
@@ -203,13 +203,13 @@ public class PositiveUserACLDiffTest {
     @Test
     public void addedEntriesShouldReturnEmptyWhenChangedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(RIGHTS)
                     .asAddition()),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(Right.Lookup)
                     .asAddition()));
@@ -221,18 +221,18 @@ public class PositiveUserACLDiffTest {
     @Test
     public void changedEntriesShouldReturnEntryWhenChangedEntry() throws Exception {
         PositiveUserACLDiff positiveUserAclDiff = PositiveUserACLDiff.computeDiff(
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(Right.Administer)
                     .asAddition()),
-            MailboxACL.EMPTY.apply(
-                MailboxACL.command()
+            MailboxShares.EMPTY.apply(
+                MailboxShares.command()
                     .key(ENTRY_KEY)
                     .rights(Right.Lookup)
                     .asAddition()));
 
         assertThat(positiveUserAclDiff.changedEntries())
-            .containsOnly(new Entry(ENTRY_KEY, new Rfc4314Rights(MailboxACL.Right.Lookup)));
+            .containsOnly(new Entry(ENTRY_KEY, new Rfc4314Rights(MailboxShares.Right.Lookup)));
     }
 }

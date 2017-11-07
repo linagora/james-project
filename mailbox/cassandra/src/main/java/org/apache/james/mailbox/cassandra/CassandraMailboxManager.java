@@ -27,7 +27,7 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.Authenticator;
@@ -89,7 +89,7 @@ public class CassandraMailboxManager extends StoreMailboxManager {
     @Override
     protected Mailbox doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
         SimpleMailbox cassandraMailbox = new SimpleMailbox(mailboxPath, randomUidValidity());
-        cassandraMailbox.setACL(MailboxACL.EMPTY);
+        cassandraMailbox.setACL(MailboxShares.EMPTY);
         return cassandraMailbox;
     }
 

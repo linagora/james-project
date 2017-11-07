@@ -48,9 +48,9 @@
     <bean id="mailboxcopier" class="org.apache.james.mailbox.copier.MailboxCopierImpl"/>
 
     <!-- 
-      Mailbox ACL Resolver
+      Mailbox shares Resolver
      -->
-    <bean id="aclResolver" class="org.apache.james.mailbox.acl.UnionMailboxACLResolver"/>
+    <bean id="sharesResolver" class="org.apache.james.mailbox.acl.UnionMailboxSharesResolver"/>
     <!-- 
       Group Membership Resolver
      -->
@@ -67,7 +67,7 @@
 
     <bean id="storeRightManager" class="org.apache.james.mailbox.store.StoreRightManager" >
         <constructor-arg index="0" ref="messageMapperFactory" />
-        <constructor-arg index="1" ref="aclResolver" />
+        <constructor-arg index="1" ref="sharesResolver" />
         <constructor-arg index="2" ref="groupMembershipResolver" />
     </bean>
 

@@ -34,11 +34,11 @@ import org.apache.james.mailbox.maildir.MaildirFolder;
 import org.apache.james.mailbox.maildir.MaildirId;
 import org.apache.james.mailbox.maildir.MaildirMessageName;
 import org.apache.james.mailbox.maildir.MaildirStore;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -336,18 +336,18 @@ public class MaildirMailboxMapper extends NonTransactionalMapper implements Mail
     }
 
     @Override
-    public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
+    public void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWith) throws MailboxException {
         MaildirFolder folder = maildirStore.createMaildirFolder(mailbox);
-        MailboxACL newACL = mailbox.getACL().apply(mailboxACLCommand);
+        MailboxShares newACL = mailbox.getACL().apply(shareWith);
         folder.setACL(session, newACL);
         mailbox.setACL(newACL);
     }
 
     @Override
-    public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
+    public void setACL(Mailbox mailbox, MailboxShares mailboxShares) throws MailboxException {
         MaildirFolder folder = maildirStore.createMaildirFolder(mailbox);
-        folder.setACL(session, mailboxACL);
-        mailbox.setACL(mailboxACL);
+        folder.setACL(session, mailboxShares);
+        mailbox.setACL(mailboxShares);
     }
 
     @Override

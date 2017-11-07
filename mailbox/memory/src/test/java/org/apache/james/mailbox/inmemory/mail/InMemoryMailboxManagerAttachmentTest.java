@@ -27,7 +27,7 @@ import java.io.InputStream;
 
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
-import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
+import org.apache.james.mailbox.acl.UnionMailboxSharesResolver;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
 import org.apache.james.mailbox.inmemory.InMemoryMessageId;
@@ -59,7 +59,7 @@ public class InMemoryMailboxManagerAttachmentTest extends AbstractMailboxManager
         Authorizator noAuthorizator = null;
         MessageId.Factory messageIdFactory = new InMemoryMessageId.Factory();
         GroupMembershipResolver groupMembershipResolver = null;
-        UnionMailboxACLResolver aclResolver = new UnionMailboxACLResolver();
+        UnionMailboxSharesResolver aclResolver = new UnionMailboxSharesResolver();
         StoreRightManager storeRightManager = new StoreRightManager(mailboxSessionMapperFactory, aclResolver, groupMembershipResolver);
 
         DefaultDelegatingMailboxListener delegatingListener = new DefaultDelegatingMailboxListener();

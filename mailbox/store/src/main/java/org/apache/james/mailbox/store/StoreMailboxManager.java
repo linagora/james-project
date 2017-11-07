@@ -46,9 +46,6 @@ import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.NotAdminException;
 import org.apache.james.mailbox.exception.UserDoesNotExistException;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxConstants;
@@ -56,6 +53,9 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxMetaData.Selectability;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.model.MessageRange;
@@ -789,23 +789,23 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
-    public Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxACL.EntryKey key, MailboxSession session) throws MailboxException {
+    public Rfc4314Rights[] listRigths(MailboxPath mailboxPath, MailboxShares.EntryKey key, MailboxSession session) throws MailboxException {
         return storeRightManager.listRigths(mailboxPath, key, session);
     }
 
     @Override
-    public void applyRightsCommand(MailboxPath mailboxPath, MailboxACL.ACLCommand mailboxACLCommand, MailboxSession session) throws MailboxException {
-        storeRightManager.applyRightsCommand(mailboxPath, mailboxACLCommand, session);
+    public void applyRightsCommand(MailboxPath mailboxPath, MailboxShares.ShareWith shareWith, MailboxSession session) throws MailboxException {
+        storeRightManager.applyRightsCommand(mailboxPath, shareWith, session);
     }
 
     @Override
-    public void setRights(MailboxPath mailboxPath, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
-        storeRightManager.setRights(mailboxPath, mailboxACL, session);
+    public void setRights(MailboxPath mailboxPath, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
+        storeRightManager.setRights(mailboxPath, mailboxShares, session);
     }
 
     @Override
-    public void setRights(MailboxId mailboxId, MailboxACL mailboxACL, MailboxSession session) throws MailboxException {
-        storeRightManager.setRights(mailboxId, mailboxACL, session);
+    public void setRights(MailboxId mailboxId, MailboxShares mailboxShares, MailboxSession session) throws MailboxException {
+        storeRightManager.setRights(mailboxId, mailboxShares, session);
     }
 
     @Override

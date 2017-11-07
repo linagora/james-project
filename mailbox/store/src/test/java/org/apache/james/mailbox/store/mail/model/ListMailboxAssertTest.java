@@ -26,7 +26,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -89,7 +89,7 @@ public class ListMailboxAssertTest {
             }
             
             @Override
-            public void setACL(MailboxACL acl) {
+            public void setACL(MailboxShares acl) {
             }
             
             @Override
@@ -118,7 +118,7 @@ public class ListMailboxAssertTest {
             }
             
             @Override
-            public MailboxACL getACL() {
+            public MailboxShares getACL() {
                 return null;
             }
 

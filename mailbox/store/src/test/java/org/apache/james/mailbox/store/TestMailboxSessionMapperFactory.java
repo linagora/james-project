@@ -41,10 +41,10 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.SubscriptionException;
 import org.apache.james.mailbox.fixture.MailboxFixture;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxShares;
+import org.apache.james.mailbox.model.MailboxShares.Right;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -138,12 +138,12 @@ public class TestMailboxSessionMapperFactory extends MailboxSessionMapperFactory
             }
 
             @Override
-            public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
+            public void updateACL(Mailbox mailbox, MailboxShares.ShareWith shareWith) throws MailboxException {
                 throw new NotImplementedException("Not implemented");
             }
 
             @Override
-            public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
+            public void setACL(Mailbox mailbox, MailboxShares mailboxShares) throws MailboxException {
                 throw new NotImplementedException("Not implemented");
             }
 

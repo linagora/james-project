@@ -20,22 +20,22 @@
 
 package org.apache.james.mailbox.model;
 
-import static org.apache.james.mailbox.model.MailboxACL.Right.Administer;
-import static org.apache.james.mailbox.model.MailboxACL.Right.CreateMailbox;
-import static org.apache.james.mailbox.model.MailboxACL.Right.DeleteMailbox;
-import static org.apache.james.mailbox.model.MailboxACL.Right.DeleteMessages;
-import static org.apache.james.mailbox.model.MailboxACL.Right.Insert;
-import static org.apache.james.mailbox.model.MailboxACL.Right.Lookup;
-import static org.apache.james.mailbox.model.MailboxACL.Right.PerformExpunge;
-import static org.apache.james.mailbox.model.MailboxACL.Right.Post;
-import static org.apache.james.mailbox.model.MailboxACL.Right.Read;
-import static org.apache.james.mailbox.model.MailboxACL.Right.Write;
-import static org.apache.james.mailbox.model.MailboxACL.Right.WriteSeenFlag;
+import static org.apache.james.mailbox.model.MailboxShares.Right.Administer;
+import static org.apache.james.mailbox.model.MailboxShares.Right.CreateMailbox;
+import static org.apache.james.mailbox.model.MailboxShares.Right.DeleteMailbox;
+import static org.apache.james.mailbox.model.MailboxShares.Right.DeleteMessages;
+import static org.apache.james.mailbox.model.MailboxShares.Right.Insert;
+import static org.apache.james.mailbox.model.MailboxShares.Right.Lookup;
+import static org.apache.james.mailbox.model.MailboxShares.Right.PerformExpunge;
+import static org.apache.james.mailbox.model.MailboxShares.Right.Post;
+import static org.apache.james.mailbox.model.MailboxShares.Right.Read;
+import static org.apache.james.mailbox.model.MailboxShares.Right.Write;
+import static org.apache.james.mailbox.model.MailboxShares.Right.WriteSeenFlag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.apache.james.mailbox.exception.UnsupportedRightException;
-import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
+import org.apache.james.mailbox.model.MailboxShares.Rfc4314Rights;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,8 +55,8 @@ public class Rfc4314RightsTest {
         aeik = Rfc4314Rights.fromSerializedRfc4314Rights("aeik");
         lprs = Rfc4314Rights.fromSerializedRfc4314Rights("lprs");
         twx = Rfc4314Rights.fromSerializedRfc4314Rights("twx");
-        full = MailboxACL.FULL_RIGHTS;
-        none = MailboxACL.NO_RIGHTS;
+        full = MailboxShares.FULL_RIGHTS;
+        none = MailboxShares.NO_RIGHTS;
     }
     
     @Test(expected=NullPointerException.class)
@@ -235,7 +235,7 @@ public class Rfc4314RightsTest {
 
     @Test
     public void allExceptShouldReturnFullWhenProvidedEmpty() throws UnsupportedRightException {
-        assertThat(Rfc4314Rights.allExcept()).isEqualTo(MailboxACL.FULL_RIGHTS);
+        assertThat(Rfc4314Rights.allExcept()).isEqualTo(MailboxShares.FULL_RIGHTS);
     }
 
     @Test

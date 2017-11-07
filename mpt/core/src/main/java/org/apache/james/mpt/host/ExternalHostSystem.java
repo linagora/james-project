@@ -20,7 +20,7 @@
 package org.apache.james.mpt.host;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxShares;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
@@ -115,7 +115,7 @@ public class ExternalHostSystem extends ExternalSessionFactory implements ImapHo
     }
 
     @Override
-    public void grantRights(MailboxPath mailboxPath, String userName, MailboxACL.Rfc4314Rights rights) throws Exception {
+    public void grantRights(MailboxPath mailboxPath, String userName, MailboxShares.Rfc4314Rights rights) throws Exception {
         throw new NotImplementedException();
     }
 }
