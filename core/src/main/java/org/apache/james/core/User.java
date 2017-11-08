@@ -23,12 +23,17 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.james.mailbox.model.MailboxConstants;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 public class User {
+
+    private static final String DEFAULT_DELIMITER = String.valueOf(MailboxConstants.DEFAULT_DELIMITER);
+
     public static User fromUsername(String username) {
         Preconditions.checkNotNull(username);
         Preconditions.checkArgument(!Strings.isNullOrEmpty(username));
@@ -66,6 +71,7 @@ public class User {
         Preconditions.checkNotNull(localPart);
         Preconditions.checkArgument(!localPart.isEmpty(), "username should not be empty");
         Preconditions.checkArgument(!localPart.contains("@"), "username can not contain domain delimiter");
+        Preconditions.checkArgument(!localPart.contains(DEFAULT_DELIMITER), "username can not contain default delimiter '" + DEFAULT_DELIMITER + "'");
 
         Preconditions.checkArgument(!isEmptyString(domainPart), "domain part can not be empty");
         Preconditions.checkArgument(!containsDomainDelimiter(domainPart), "domain can not contain domain delimiter");

@@ -20,6 +20,7 @@
 package org.apache.james.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import java.util.AbstractMap;
@@ -108,6 +109,17 @@ public class DataCommandsIntegrationTest {
         ServerCmd.doMain(new String[] {"-h", "127.0.0.1", "-p", "9999", "ADDUSER", MAIL_ADDRESS, PASSWORD});
 
         assertThat(dataProbe.listUsers()).contains(MAIL_ADDRESS);
+    }
+
+    @Test
+    public void addUserShouldNotAddUserWithIMAPSeparator() throws Exception {
+        dataProbe.addDomain(DOMAIN);
+
+        assertThatThrownBy(() ->
+            ServerCmd.doMain(new String[] {"-h", "127.0.0.1", "-p", "9999", "ADDUSER", "user.name@domain", PASSWORD}))
+            .hasMessage("User name local part can not contain '.'");
+
+        assertThat(dataProbe.listUsers()).doesNotContain(MAIL_ADDRESS);
     }
 
     @Test

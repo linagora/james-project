@@ -143,6 +143,18 @@ public class UserTest {
     }
 
     @Test
+    public void fromUsernameShouldThrowWhenUserPartContainsDefaultDelimiter() {
+        assertThatThrownBy(() -> User.fromUsername("aa.bb@cc"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void fromUsernameShouldThrowWhenUserPartContainsDefaultDelimiterWithoutDomainPart() {
+        assertThatThrownBy(() -> User.fromUsername("aa.bb"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     public void fromUsernameShouldParseUsernameWithDomain() {
         assertThat(User.fromUsername("aa@bb"))
             .isEqualTo(User.from("aa", Optional.of("bb")));
