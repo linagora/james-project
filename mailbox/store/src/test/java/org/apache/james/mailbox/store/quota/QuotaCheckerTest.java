@@ -24,10 +24,14 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.OverQuotaException;
+import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.QuotaRoot;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -39,9 +43,11 @@ public class QuotaCheckerTest {
     public static final QuotaRoot QUOTA_ROOT = QuotaRootImpl.quotaRoot("benwa");
     public static final MailboxPath MAILBOX_PATH = MailboxPath.forUser("benwa", "INBOX");
     public static final SimpleMailbox MAILBOX = new SimpleMailbox(MAILBOX_PATH, 10);
+    public static final MailboxId MAILBOX_ID = TestId.of(1);
 
     private QuotaRootResolver mockedQuotaRootResolver;
     private QuotaManager mockedQuotaManager;
+    private MailboxSession mailboxSession = new MockMailboxSession("test");
 
     @Before
     public void setUp() {

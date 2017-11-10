@@ -150,7 +150,7 @@ public class InMemoryIntegrationResources implements IntegrationResources<StoreM
             mailboxManager
         );
 
-        ListeningCurrentQuotaUpdater listeningCurrentQuotaUpdater = new ListeningCurrentQuotaUpdater(currentQuotaManager, quotaRootResolver);
+        ListeningCurrentQuotaUpdater listeningCurrentQuotaUpdater = new ListeningCurrentQuotaUpdater(currentQuotaManager, quotaRootResolver, mailboxManager.getMapperFactory());
         StoreQuotaManager quotaManager = new StoreQuotaManager(currentQuotaManager, maxQuotaManager);
         quotaManager.setCalculateWhenUnlimited(false);
         mailboxManager.setQuotaManager(quotaManager);

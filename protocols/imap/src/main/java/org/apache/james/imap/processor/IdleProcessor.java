@@ -46,6 +46,7 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
@@ -89,9 +90,10 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
             final MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
             final SelectedMailbox sm = session.getSelected();
             final IdleMailboxListener idleListener;
+            final MailboxId mailboxId = mailboxManager.getMailbox(sm.getPath(), mailboxSession).getId();
             if (sm != null) {
                 idleListener = new IdleMailboxListener(session, responder);
-                mailboxManager.addListener(sm.getPath(), idleListener , mailboxSession);
+                mailboxManager.addListener(mailboxId, idleListener , mailboxSession);
             } else {
                 idleListener = null;
             }
@@ -115,7 +117,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
 
                     if (idleListener != null) {
                         try {
-                            mailboxManager.removeListener(sm.getPath(), idleListener, mailboxSession);
+                            mailboxManager.removeListener(mailboxId, idleListener, mailboxSession);
                         } catch (MailboxException e) {
                                 LOGGER.error("Unable to remove idle listener for mailbox {0}", sm.getPath(), e);
                         }

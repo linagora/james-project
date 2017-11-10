@@ -25,11 +25,13 @@ import static org.mockito.Mockito.verify;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.TestId;
 import org.junit.Before;
 import org.junit.Test;
 
 public class SynchronousEventDeliveryTest {
-
+    private static final MailboxId MAILBOX_ID = TestId.of(1);
     private MailboxListener mailboxListener;
     private SynchronousEventDelivery synchronousEventDelivery;
 
@@ -41,14 +43,14 @@ public class SynchronousEventDeliveryTest {
 
     @Test
     public void deliverShouldWork() {
-        MailboxListener.Event event = new MailboxListener.Event(null, null) {};
+        MailboxListener.Event event = new MailboxListener.Event(null, MAILBOX_ID) {};
         synchronousEventDelivery.deliver(mailboxListener, event);
         verify(mailboxListener).event(event);
     }
 
     @Test
     public void deliverShouldNotPropagateException() {
-        MailboxListener.Event event = new MailboxListener.Event(new MockMailboxSession("test"), null) {};
+        MailboxListener.Event event = new MailboxListener.Event(new MockMailboxSession("test"), MAILBOX_ID) {};
         doThrow(new RuntimeException()).when(mailboxListener).event(event);
         synchronousEventDelivery.deliver(mailboxListener, event);
         verify(mailboxListener).event(event);

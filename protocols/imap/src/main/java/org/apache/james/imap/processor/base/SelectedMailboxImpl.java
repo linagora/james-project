@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
@@ -39,6 +40,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -60,6 +62,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
     private final MailboxManager mailboxManager;
 
     private MailboxPath path;
+    private MailboxId mailboxId;
 
     private final ImapSession session;
 
@@ -89,9 +92,11 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
         uidMsnConverter = new UidMsnConverter();
 
-        mailboxManager.addListener(path, this, mailboxSession);
-
         MessageManager messageManager = mailboxManager.getMailbox(path, mailboxSession);
+        mailboxId = messageManager.getId();
+
+        mailboxManager.addListener(mailboxId, this, mailboxSession);
+
         applicableFlags = messageManager.getApplicableFlags(mailboxSession);
         uidMsnConverter.addAll(ImmutableList.copyOf(
             messageManager.search(new SearchQuery(SearchQuery.all()), mailboxSession)));
@@ -121,7 +126,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
         MailboxSession mailboxSession = ImapSessionUtils.getMailboxSession(session);
 
         try {
-            mailboxManager.removeListener(path, this, mailboxSession);
+            mailboxManager.removeListener(mailboxId, this, mailboxSession);
         } catch (MailboxException e) {
             LOGGER.error("Unable to remove listener " + this + " from mailbox while closing it", e);
         }
@@ -162,6 +167,11 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
     @Override
     public synchronized MailboxPath getPath() {
         return path;
+    }
+
+    @Override
+    public synchronized MailboxId getId() {
+        return mailboxId;
     }
 
     private void checkExpungedRecents() {
@@ -308,7 +318,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
     public synchronized void event(Event event) {
 
         // Check if the event was for the mailbox we are observing
-        if (event.getMailboxPath().equals(getPath())) {
+        if (event.getMailboxId().equals(getId())) {
             final long eventSessionId = event.getSession().getSessionId();
             if (event instanceof MessageEvent) {
                 final MessageEvent messageEvent = (MessageEvent) event;
@@ -346,8 +356,8 @@ public class SelectedMailboxImpl implements SelectedMailbox, MailboxListener{
 
                             while (flags.hasNext()) {
                                 if (Flag.RECENT.equals(flags.next())) {
-                                    MailboxPath path = sm.getPath();
-                                    if (path != null && path.equals(event.getMailboxPath())) {
+                                    MailboxId mailboxId = sm.getId();
+                                    if (mailboxId != null && mailboxId.equals(event.getMailboxId())) {
                                         sm.addRecent(u.getUid());
                                     }
                                 }

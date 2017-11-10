@@ -25,7 +25,9 @@ import java.util.Optional;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.Before;
@@ -35,8 +37,9 @@ public class GlobalRegistrationTest {
     public static final MailboxPath INBOX = MailboxPath.forUser("btellier@apache.org", "INBOX");
     public static final MailboxPath NEW_PATH = MailboxPath.forUser("btellier@apache.org", "INBOX.new");
     public static final int UID_VALIDITY = 45;
-    public static final SimpleMailbox MAILBOX = new SimpleMailbox(INBOX, UID_VALIDITY);
-    public static final SimpleMailbox NEW_MAILBOX = new SimpleMailbox(NEW_PATH, UID_VALIDITY);
+    public static final MailboxId MAILBOX_ID = TestId.of(1);
+    public static final SimpleMailbox MAILBOX = new SimpleMailbox(INBOX, UID_VALIDITY, MAILBOX_ID);
+    public static final SimpleMailbox NEW_MAILBOX = new SimpleMailbox(NEW_PATH, UID_VALIDITY, MAILBOX_ID);
 
     private GlobalRegistration globalRegistration;
     private EventFactory eventFactory;
@@ -51,28 +54,28 @@ public class GlobalRegistrationTest {
 
     @Test
     public void pathToIndexShouldNotBeChangedByDefault() {
-        assertThat(globalRegistration.getPathToIndex(INBOX).get()).isEqualTo(INBOX);
+        assertThat(globalRegistration.getPathToIndex(MAILBOX_ID)).isNotPresent();
     }
 
     @Test
-    public void pathToIndexShouldNotBeChangedByAddedEvents() {
-        MailboxListener.Event event = eventFactory.mailboxAdded(session, MAILBOX);
+    public void pathToIndexShouldNotBeChangedByRenamedEvents() {
+        MailboxListener.Event event = eventFactory.mailboxRenamed(session, INBOX, new SimpleMailbox(NEW_PATH, 42, MAILBOX_ID));
         globalRegistration.event(event);
-        assertThat(globalRegistration.getPathToIndex(INBOX).get()).isEqualTo(INBOX);
+        assertThat(globalRegistration.getPathToIndex(MAILBOX_ID).get()).isEqualTo(NEW_PATH);
     }
 
     @Test
     public void pathToIndexShouldBeNullifiedByDeletedEvents() {
         MailboxListener.Event event = eventFactory.mailboxDeleted(session, MAILBOX);
         globalRegistration.event(event);
-        assertThat(globalRegistration.getPathToIndex(INBOX)).isEqualTo(Optional.empty());
+        assertThat(globalRegistration.getPathToIndex(MAILBOX_ID)).isEqualTo(Optional.empty());
     }
 
     @Test
     public void pathToIndexShouldBeModifiedByRenamedEvents() {
         MailboxListener.Event event = eventFactory.mailboxRenamed(session, INBOX, NEW_MAILBOX);
         globalRegistration.event(event);
-        assertThat(globalRegistration.getPathToIndex(INBOX).get()).isEqualTo(NEW_PATH);
+        assertThat(globalRegistration.getPathToIndex(MAILBOX_ID).get()).isEqualTo(NEW_PATH);
     }
 
 

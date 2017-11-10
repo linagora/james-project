@@ -3,6 +3,7 @@ package org.apache.james.mailbox.caching.guava;
 import org.apache.james.mailbox.caching.MailboxByPathCache;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
@@ -28,11 +29,16 @@ public class GuavaMailboxByPathCache extends AbstractGuavaCache implements Mailb
 	
 	@Override
 	public Mailbox findMailboxByPath(MailboxPath mailboxName, MailboxMapper underlying) throws MailboxNotFoundException, MailboxException {
-		
+
 		return wrapper.get(mailboxName, underlying);
 	}
-	
-//	alternative plain implementation - review and choose the better
+
+	@Override
+	public Mailbox findMailboxById(MailboxId mailboxId, MailboxMapper underlying) throws MailboxNotFoundException, MailboxException {
+		return underlying.findMailboxById(mailboxId);
+	}
+
+	//	alternative plain implementation - review and choose the better
 //	public Mailbox findMailboxByPath(MailboxPath mailboxName, MailboxMapper underlying) throws MailboxNotFoundException, MailboxException {
 //		Mailbox mailbox = findMailboxByPathCache.getIfPresent(mailboxName.toString());
 //		if (mailbox != null)

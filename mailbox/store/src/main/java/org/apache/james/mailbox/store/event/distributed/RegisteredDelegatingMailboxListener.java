@@ -25,7 +25,9 @@ import java.util.Set;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.event.EventDelivery;
 import org.apache.james.mailbox.store.event.EventSerializer;
 import org.apache.james.mailbox.store.event.MailboxListenerRegistry;
@@ -42,6 +44,7 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
 
     private final MailboxListenerRegistry mailboxListenerRegistry;
     private final MailboxPathRegister mailboxPathRegister;
+    private final MailboxSessionMapperFactory mailboxSessionMapperFactory;
     private final Publisher publisher;
     private final EventSerializer eventSerializer;
     private final EventDelivery eventDelivery;
@@ -50,10 +53,12 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
                                                Publisher publisher,
                                                MessageConsumer messageConsumer,
                                                MailboxPathRegister mailboxPathRegister,
+                                               MailboxSessionMapperFactory mailboxSessionMapperFactory,
                                                EventDelivery eventDelivery) throws Exception {
         this.eventSerializer = eventSerializer;
         this.publisher = publisher;
         this.mailboxPathRegister = mailboxPathRegister;
+        this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.mailboxListenerRegistry = new MailboxListenerRegistry();
         this.eventDelivery = eventDelivery;
         messageConsumer.setMessageReceiver(this);
@@ -63,8 +68,9 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
     public RegisteredDelegatingMailboxListener(EventSerializer eventSerializer,
                                                Publisher publisher,
                                                MessageConsumer messageConsumer,
-                                               MailboxPathRegister mailboxPathRegister) throws Exception {
-        this(eventSerializer, publisher, messageConsumer, mailboxPathRegister, new SynchronousEventDelivery());
+                                               MailboxPathRegister mailboxPathRegister,
+                                               MailboxSessionMapperFactory mailboxSessionMapperFactory) throws Exception {
+        this(eventSerializer, publisher, messageConsumer, mailboxPathRegister, mailboxSessionMapperFactory, new SynchronousEventDelivery());
     }
 
     @Override
@@ -78,9 +84,9 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
     }
 
     @Override
-    public void addListener(MailboxPath path, MailboxListener listener, MailboxSession session) throws MailboxException {
-        mailboxListenerRegistry.addListener(path, listener);
-        mailboxPathRegister.register(path);
+    public void addListener(MailboxId mailboxId, MailboxListener listener, MailboxSession session) throws MailboxException {
+        mailboxListenerRegistry.addListener(mailboxId, listener);
+        mailboxPathRegister.register(getMailboxPath(mailboxId, session));
     }
 
     @Override
@@ -92,9 +98,9 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
     }
 
     @Override
-    public void removeListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
-        mailboxListenerRegistry.removeListener(mailboxPath, listener);
-        mailboxPathRegister.unregister(mailboxPath);
+    public void removeListener(MailboxId mailboxId, MailboxListener listener, MailboxSession session) throws MailboxException {
+        mailboxListenerRegistry.removeListener(mailboxId, listener);
+        mailboxPathRegister.unregister(getMailboxPath(mailboxId, session));
     }
 
     @Override
@@ -122,15 +128,20 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
         }
     }
 
+    private MailboxPath getMailboxPath(MailboxId mailboxId, MailboxSession session) throws MailboxException {
+        return mailboxSessionMapperFactory.getMailboxMapper(session)
+            .findMailboxById(mailboxId)
+            .generateAssociatedPath();
+    }
+
     private void deliverToMailboxPathRegisteredListeners(Event event) throws MailboxException {
-        Collection<MailboxListener> listenerSnapshot = mailboxListenerRegistry.getLocalMailboxListeners(event.getMailboxPath());
+        Collection<MailboxListener> listenerSnapshot = mailboxListenerRegistry.getLocalMailboxListeners(event.getMailboxId());
         if (event instanceof MailboxDeletion && listenerSnapshot.size() > 0) {
-            mailboxListenerRegistry.deleteRegistryFor(event.getMailboxPath());
-            mailboxPathRegister.doCompleteUnRegister(event.getMailboxPath());
+            mailboxListenerRegistry.deleteRegistryFor(event.getMailboxId());
+            mailboxPathRegister.doCompleteUnRegister(getMailboxPath(event.getMailboxId(), event.getSession()));
         } else if (event instanceof MailboxRenamed && listenerSnapshot.size() > 0) {
             MailboxRenamed renamed = (MailboxRenamed) event;
-            mailboxListenerRegistry.handleRename(renamed.getMailboxPath(), renamed.getNewPath());
-            mailboxPathRegister.doRename(renamed.getMailboxPath(), renamed.getNewPath());
+            mailboxPathRegister.doRename(renamed.getOldPath(), renamed.getNewPath());
         }
         for (MailboxListener listener : listenerSnapshot) {
             eventDelivery.deliver(listener, event);
@@ -145,8 +156,8 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
         }
     }
 
-    private void sendToRemoteJames(Event event) {
-        Set<Topic> topics = mailboxPathRegister.getTopics(event.getMailboxPath());
+    private void sendToRemoteJames(Event event) throws MailboxException {
+        Set<Topic> topics = mailboxPathRegister.getTopics(getMailboxPath(event.getMailboxId(), event.getSession()));
         topics.remove(mailboxPathRegister.getLocalTopic());
         if (topics.size() > 0) {
             sendEventToRemotesJamesByTopic(event, topics);

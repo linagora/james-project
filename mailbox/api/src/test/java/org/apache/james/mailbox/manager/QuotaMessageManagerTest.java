@@ -22,6 +22,7 @@ package org.apache.james.mailbox.manager;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.OverQuotaException;
@@ -53,6 +54,7 @@ public abstract class QuotaMessageManagerTest<T extends MailboxManager> {
     private MailboxSession session;
     private MailboxPath inbox;
     private MailboxPath subFolder;
+    private MailboxId inboxId;
 
     protected abstract ManagerTestResources<T> createResources() throws Exception;
 
@@ -65,6 +67,7 @@ public abstract class QuotaMessageManagerTest<T extends MailboxManager> {
         session = resources.getSession();
         inbox = resources.getInbox();
         subFolder = resources.getSubFolder();
+        inboxId = resources.getInboxId();
         maxQuotaManager = resources.getMaxQuotaManager();
         quotaRootResolver = resources.getQuotaRootResolver();
     }

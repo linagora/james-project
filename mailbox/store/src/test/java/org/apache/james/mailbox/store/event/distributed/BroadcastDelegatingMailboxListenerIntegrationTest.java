@@ -27,6 +27,7 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.TestMessageId;
@@ -52,6 +53,8 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
 
     public static final MailboxPath MAILBOX_PATH_1 = MailboxPath.forUser("user", "mbx");
     public static final MailboxPath MAILBOX_PATH_2 = MailboxPath.forUser("user", "mbx.other");
+    public static final MailboxId MAILBOX_ID_1 = TestId.of(1);
+    public static final MailboxId MAILBOX_ID_2 = TestId.of(2);
     public static final String TOPIC = "TOPIC";
     public static final ImmutableMap<MessageUid, MailboxMessage> EMPTY_MESSAGE_CACHE = ImmutableMap.<MessageUid, MailboxMessage>of();
     private BroadcastDelegatingMailboxListener broadcastDelegatingMailboxListener1;
@@ -108,15 +111,14 @@ public class BroadcastDelegatingMailboxListenerIntegrationTest {
         broadcastDelegatingMailboxListener1.addGlobalListener(eventCollectorEach1, mailboxSession);
         broadcastDelegatingMailboxListener2.addGlobalListener(eventCollectorEach2, mailboxSession);
         broadcastDelegatingMailboxListener3.addGlobalListener(eventCollectorEach3, mailboxSession);
-        broadcastDelegatingMailboxListener1.addListener(MAILBOX_PATH_1, eventCollectorMailbox1, mailboxSession);
-        broadcastDelegatingMailboxListener2.addListener(MAILBOX_PATH_1, eventCollectorMailbox2, mailboxSession);
-        broadcastDelegatingMailboxListener3.addListener(MAILBOX_PATH_2, eventCollectorMailbox3, mailboxSession);
+        broadcastDelegatingMailboxListener1.addListener(MAILBOX_ID_1, eventCollectorMailbox1, mailboxSession);
+        broadcastDelegatingMailboxListener2.addListener(MAILBOX_ID_1, eventCollectorMailbox2, mailboxSession);
+        broadcastDelegatingMailboxListener3.addListener(MAILBOX_ID_2, eventCollectorMailbox3, mailboxSession);
     }
 
     @Test
     public void mailboxEventListenersShouldBeTriggeredIfRegistered() throws Exception {
-        SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42);
-        simpleMailbox.setMailboxId(TestId.of(52));
+        SimpleMailbox simpleMailbox = new SimpleMailbox(MAILBOX_PATH_1, 42, MAILBOX_ID_1);
         final MailboxListener.Event event = new EventFactory().added(mailboxSession, new TreeMap<>(), simpleMailbox, EMPTY_MESSAGE_CACHE);
 
         broadcastDelegatingMailboxListener1.event(event);

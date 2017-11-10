@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 
 import com.google.common.collect.HashMultimap;
@@ -33,44 +34,44 @@ import com.google.common.collect.Multimaps;
 
 public class MailboxListenerRegistry {
 
-    private final Multimap<MailboxPath, MailboxListener> listeners;
+    private final Multimap<MailboxId, MailboxListener> listeners;
     private final ConcurrentLinkedQueue<MailboxListener> globalListeners;
 
     public MailboxListenerRegistry() {
         this.globalListeners = new ConcurrentLinkedQueue<>();
-        this.listeners = Multimaps.synchronizedMultimap(HashMultimap.<MailboxPath, MailboxListener>create());
+        this.listeners = Multimaps.synchronizedMultimap(HashMultimap.<MailboxId, MailboxListener>create());
     }
 
-    public void addListener(MailboxPath path, MailboxListener listener) throws MailboxException {
-        listeners.put(path, listener);
+    public void addListener(MailboxId mailboxId, MailboxListener listener) throws MailboxException {
+        listeners.put(mailboxId, listener);
     }
 
     public void addGlobalListener(MailboxListener listener) throws MailboxException {
         globalListeners.add(listener);
     }
 
-    public void removeListener(MailboxPath mailboxPath, MailboxListener listener) throws MailboxException {
-        listeners.remove(mailboxPath, listener);
+    public void removeListener(MailboxId mailboxId, MailboxListener listener) throws MailboxException {
+        listeners.remove(mailboxId, listener);
     }
 
     public void removeGlobalListener(MailboxListener listener) throws MailboxException {
         globalListeners.remove(listener);
     }
 
-    public List<MailboxListener> getLocalMailboxListeners(MailboxPath path) {
-        return ImmutableList.copyOf(listeners.get(path));
+    public List<MailboxListener> getLocalMailboxListeners(MailboxId mailboxId) {
+        return ImmutableList.copyOf(listeners.get(mailboxId));
     }
 
     public List<MailboxListener> getGlobalListeners() {
         return ImmutableList.copyOf(globalListeners);
     }
 
-    public void deleteRegistryFor(MailboxPath path) {
-        listeners.removeAll(path);
+    public void deleteRegistryFor(MailboxId mailboxId) {
+        listeners.removeAll(mailboxId);
     }
 
-    public void handleRename(MailboxPath oldName, MailboxPath newName) {
-        listeners.putAll(newName, listeners.removeAll(oldName));
+    public static void main(String[] agrs) throws Exception {
+        Multimap<MailboxId, MailboxListener> listeners;
+        System.out.println("VO vin");
     }
-
 }

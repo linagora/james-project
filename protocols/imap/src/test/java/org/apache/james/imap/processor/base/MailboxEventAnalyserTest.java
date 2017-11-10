@@ -76,7 +76,7 @@ public class MailboxEventAnalyserTest {
         }
     }
 
-
+    private static final MailboxId MAILBOX_ID = TestId.of(1);
     private static final MessageUid MESSAGE_UID = MessageUid.of(1);
     private static final MockMailboxSession MAILBOX_SESSION = new MockMailboxSession("user");
     private static final MockMailboxSession OTHER_MAILBOX_SESSION = new MockMailboxSession("user");
@@ -110,14 +110,16 @@ public class MailboxEventAnalyserTest {
             .thenReturn(ImmutableList.of(MESSAGE_UID).iterator());
         when(messageManager.getMessages(any(), any(), any()))
             .thenReturn(new SingleMessageResultIterator(messageResult));
+        when(messageManager.getId())
+            .thenReturn(MAILBOX_ID);
 
         testee = new SelectedMailboxImpl(mailboxManager, imapSession, MAILBOX_PATH);
     }
 
     @Test
     public void testShouldBeNoSizeChangeOnOtherEvent() throws Exception {
-        MailboxListener.Event event = new MailboxListener.Event(MAILBOX_SESSION, MAILBOX_PATH) {};
-      
+        MailboxListener.Event event = new MailboxListener.Event(MAILBOX_SESSION, MAILBOX_ID) {};
+
         testee.event(event);
 
         assertThat(testee.isSizeChanged()).isFalse();
@@ -125,13 +127,13 @@ public class MailboxEventAnalyserTest {
 
     @Test
     public void testShouldBeNoSizeChangeOnAdded() throws Exception {
-        testee.event(new FakeMailboxListenerAdded(MAILBOX_SESSION, ImmutableList.of(MessageUid.of(11)), MAILBOX_PATH));
+        testee.event(new FakeMailboxListenerAdded(MAILBOX_SESSION, ImmutableList.of(MessageUid.of(11)), MAILBOX_ID));
         assertThat(testee.isSizeChanged()).isTrue();
     }
 
     @Test
     public void testShouldNoSizeChangeAfterReset() throws Exception {
-        testee.event(new FakeMailboxListenerAdded(MAILBOX_SESSION, ImmutableList.of(MessageUid.of(11)), MAILBOX_PATH));
+        testee.event(new FakeMailboxListenerAdded(MAILBOX_SESSION, ImmutableList.of(MessageUid.of(11)), MAILBOX_ID));
         testee.resetEvents();
 
         assertThat(testee.isSizeChanged()).isFalse();
@@ -147,7 +149,7 @@ public class MailboxEventAnalyserTest {
                 .oldFlags(new Flags())
                 .newFlags(new Flags())
                 .build()),
-            MAILBOX_PATH);
+            MAILBOX_ID);
         testee.event(update);
 
         assertThat(testee.flagUpdateUids()).isEmpty();
@@ -165,7 +167,7 @@ public class MailboxEventAnalyserTest {
                 .oldFlags(new Flags())
                 .newFlags(new Flags(Flags.Flag.ANSWERED))
                 .build()),
-            MAILBOX_PATH);
+            MAILBOX_ID);
         testee.event(update);
 
        assertThat(testee.flagUpdateUids().iterator()).containsExactly(uid);
@@ -184,7 +186,7 @@ public class MailboxEventAnalyserTest {
                 .oldFlags(new Flags())
                 .newFlags(new Flags(Flags.Flag.ANSWERED))
                 .build()),
-            MAILBOX_PATH);
+            MAILBOX_ID);
         analyser.event(update);
         analyser.event(update);
         analyser.deselect();
@@ -204,7 +206,7 @@ public class MailboxEventAnalyserTest {
                 .oldFlags(new Flags())
                 .newFlags(new Flags(Flags.Flag.ANSWERED))
                 .build()),
-            MAILBOX_PATH);
+            MAILBOX_ID);
         testee.event(update);
         testee.setSilentFlagChanges(true);
         testee.event(update);
@@ -222,7 +224,7 @@ public class MailboxEventAnalyserTest {
                 .oldFlags(new Flags())
                 .newFlags(new Flags())
                 .build()),
-            MAILBOX_PATH);
+            MAILBOX_ID);
         testee.event(update);
         testee.setSilentFlagChanges(true);
         testee.event(update);
@@ -240,7 +242,7 @@ public class MailboxEventAnalyserTest {
                 .oldFlags(new Flags())
                 .newFlags(new Flags(Flags.Flag.RECENT))
                 .build()),
-            MAILBOX_PATH);
+            MAILBOX_ID);
         testee.event(update);
 
         assertThat(testee.flagUpdateUids().iterator()).isEmpty();

@@ -24,6 +24,7 @@ import java.util.Optional;
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 
 /**
@@ -88,6 +89,8 @@ public interface SelectedMailbox {
      * @return path
      */
     MailboxPath getPath();
+
+    MailboxId getId();
 
     /**
      * Is the given uid recent ?

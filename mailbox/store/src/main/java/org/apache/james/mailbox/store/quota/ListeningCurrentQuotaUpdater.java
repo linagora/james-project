@@ -25,8 +25,10 @@ import javax.inject.Inject;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.QuotaRoot;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
+import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,11 +38,15 @@ public class ListeningCurrentQuotaUpdater implements MailboxListener, QuotaUpdat
 
     private final StoreCurrentQuotaManager currentQuotaManager;
     private final QuotaRootResolver quotaRootResolver;
+    private final MailboxSessionMapperFactory mailboxSessionMapperFactory;
 
     @Inject
-    public ListeningCurrentQuotaUpdater(StoreCurrentQuotaManager currentQuotaManager, QuotaRootResolver quotaRootResolver) {
+    public ListeningCurrentQuotaUpdater(StoreCurrentQuotaManager currentQuotaManager,
+                                        QuotaRootResolver quotaRootResolver,
+                                        MailboxSessionMapperFactory mailboxSessionMapperFactory) {
         this.currentQuotaManager = currentQuotaManager;
         this.quotaRootResolver = quotaRootResolver;
+        this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
     }
 
     @Override
@@ -56,7 +62,10 @@ public class ListeningCurrentQuotaUpdater implements MailboxListener, QuotaUpdat
     @Override
     public void event(Event event) {
         try {
-            QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(event.getMailboxPath());
+            MailboxPath mailboxPath = mailboxSessionMapperFactory.getMailboxMapper(event.getSession())
+                .findMailboxById(event.getMailboxId())
+                .generateAssociatedPath();
+            QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(mailboxPath);
             if (event instanceof Added) {
                 handleAddedEvent((Added) event, quotaRoot);
             } else if (event instanceof Expunged) {

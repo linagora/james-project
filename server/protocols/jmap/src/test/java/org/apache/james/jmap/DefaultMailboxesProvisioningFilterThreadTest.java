@@ -106,11 +106,11 @@ public class DefaultMailboxesProvisioningFilterThreadTest {
         }
 
         @Override
-        public void addListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
+        public void addListener(MailboxId mailboxId, MailboxListener listener, MailboxSession session) throws MailboxException {
         }
 
         @Override
-        public void removeListener(MailboxPath mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException {
+        public void removeListener(MailboxId mailboxPath, MailboxListener listner, MailboxSession session) throws MailboxException {
         }
 
         @Override

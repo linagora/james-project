@@ -79,9 +79,10 @@ public class EventConverter {
                 ((MailboxListener.FlagsUpdated) event).getUids(),
                 ((MailboxListener.FlagsUpdated) event).getUpdatedFlags());
         } else if ( event instanceof MailboxListener.MailboxRenamed) {
+            MailboxListener.MailboxRenamed mailboxRenamed = (MailboxListener.MailboxRenamed) event;
             return constructMailboxRenamedProxy(event.getSession(),
                 mailboxDataTransferObject,
-                event.getMailboxPath());
+                mailboxRenamed.getOldPath());
         } else if (event instanceof MailboxListener.MailboxDeletion) {
             return constructMailboxEventProxy(EventType.MAILBOX_DELETED,
                 event.getSession(),

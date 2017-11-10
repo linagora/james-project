@@ -23,24 +23,24 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.james.mailbox.MailboxListener;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 
 public class GlobalRegistration implements MailboxListener {
 
-    private final ConcurrentHashMap<MailboxPath, Boolean> isPathDeleted;
-    private final ConcurrentHashMap<MailboxPath, MailboxPath> nameCorrespondence;
+    private final ConcurrentHashMap<MailboxId, Boolean> isPathDeleted;
+    private final ConcurrentHashMap<MailboxId, MailboxPath> nameCorrespondence;
 
     public GlobalRegistration() {
         this.isPathDeleted = new ConcurrentHashMap<>();
         this.nameCorrespondence = new ConcurrentHashMap<>();
     }
 
-    public Optional<MailboxPath> getPathToIndex(MailboxPath mailboxPath) {
-        if (isPathDeleted.get(mailboxPath) != null) {
+    public Optional<MailboxPath> getPathToIndex(MailboxId mailboxId) {
+        if (isPathDeleted.get(mailboxId) != null) {
             return Optional.empty();
         }
-        return Optional.of(
-            Optional.ofNullable(nameCorrespondence.get(mailboxPath)).orElse(mailboxPath));
+        return Optional.ofNullable(nameCorrespondence.get(mailboxId));
     }
 
     @Override
@@ -56,9 +56,9 @@ public class GlobalRegistration implements MailboxListener {
     @Override
     public void event(Event event) {
         if (event instanceof MailboxDeletion) {
-            isPathDeleted.put(event.getMailboxPath(), true);
+            isPathDeleted.put(event.getMailboxId(), true);
         } else if (event instanceof MailboxRenamed) {
-            nameCorrespondence.put(event.getMailboxPath(), ((MailboxRenamed) event).getNewPath());
+            nameCorrespondence.put(event.getMailboxId(), ((MailboxRenamed) event).getNewPath());
         }
     }
 }

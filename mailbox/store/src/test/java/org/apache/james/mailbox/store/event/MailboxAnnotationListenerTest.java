@@ -47,8 +47,6 @@ import org.mockito.MockitoAnnotations;
 import com.google.common.collect.ImmutableList;
 
 public class MailboxAnnotationListenerTest {
-    private static final MailboxPath MAILBOX_PATH = new MailboxPath("namespace", "user", "name");
-
     private static final MailboxAnnotationKey PRIVATE_KEY = new MailboxAnnotationKey("/private/comment");
     private static final MailboxAnnotationKey SHARED_KEY = new MailboxAnnotationKey("/shared/comment");
 
@@ -84,7 +82,7 @@ public class MailboxAnnotationListenerTest {
 
     @Test
     public void eventShouldDoNothingIfDoNotHaveMailboxDeletionEvent() {
-        MailboxListener.Event event = new MailboxListener.Event(null, MAILBOX_PATH) {};
+        MailboxListener.Event event = new MailboxListener.Event(null, mailboxId) {};
         listener.event(event);
 
         verifyNoMoreInteractions(mailboxSessionMapperFactory);

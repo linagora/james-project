@@ -108,7 +108,7 @@ public class JPAHostSystem extends JamesImapHostSystem {
         JpaCurrentQuotaManager currentQuotaManager = new JpaCurrentQuotaManager(entityManagerFactory);
         maxQuotaManager = new JPAPerUserMaxQuotaManager(entityManagerFactory);
         StoreQuotaManager storeQuotaManager = new StoreQuotaManager(currentQuotaManager, maxQuotaManager);
-        ListeningCurrentQuotaUpdater quotaUpdater = new ListeningCurrentQuotaUpdater(currentQuotaManager, quotaRootResolver);
+        ListeningCurrentQuotaUpdater quotaUpdater = new ListeningCurrentQuotaUpdater(currentQuotaManager, quotaRootResolver, mapperFactory);
 
         mailboxManager.setQuotaManager(storeQuotaManager);
         mailboxManager.setQuotaUpdater(quotaUpdater);

@@ -33,7 +33,9 @@ import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.acl.GroupMembershipResolver;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMail;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
@@ -53,6 +55,9 @@ public class ManagerTestResources<T extends MailboxManager> {
     private MailboxPath inbox;
     private MessageManager messageManager;
     private MailboxPath subFolder;
+
+    private MailboxId inboxId;
+    private MailboxId subFolderId;
 
     private MailboxSession session;
 
@@ -80,8 +85,8 @@ public class ManagerTestResources<T extends MailboxManager> {
     }
 
     public void createMailboxes() throws MailboxException {
-        mailboxManager.createMailbox(inbox, session);
-        mailboxManager.createMailbox(subFolder, session);
+        inboxId = mailboxManager.createMailbox(inbox, session).get();
+        subFolderId = mailboxManager.createMailbox(subFolder, session).get();
         messageManager = mailboxManager.getMailbox(inbox, session);
     }
 
@@ -111,6 +116,10 @@ public class ManagerTestResources<T extends MailboxManager> {
 
     public MailboxPath getInbox() {
         return inbox;
+    }
+
+    public MailboxId getInboxId() {
+        return inboxId;
     }
 
     public MailboxManager getMailboxManager() {

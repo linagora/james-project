@@ -3,6 +3,7 @@ package org.apache.james.mailbox.caching;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxListenerSupport;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,12 +61,12 @@ public class CacheInvalidatingMailboxListener implements MailboxListener {
 
     private void invalidateMetadata(Event event) throws MailboxException {
         //HMM, race conditions welcome?
-        mailboxMetadataCache.invalidate(mailboxCacheByPath.findMailboxByPath(event.getMailboxPath(), null));
+        mailboxMetadataCache.invalidate(mailboxCacheByPath.findMailboxById(event.getMailboxId(), null));
 
     }
 
-    private void invalidateMailbox(Event event) {
-        mailboxCacheByPath.invalidate(event.getMailboxPath());
+    private void invalidateMailbox(Event event) throws MailboxException {
+        mailboxCacheByPath.invalidate(mailboxCacheByPath.findMailboxById(event.getMailboxId(), null).generateAssociatedPath());
     }
 
 }

@@ -48,7 +48,7 @@ public class EventFactory {
         private final Mailbox mailbox;
 
         public AddedImpl(MailboxSession session, Mailbox mailbox, SortedMap<MessageUid, MessageMetaData> uids, Map<MessageUid, MailboxMessage> availableMessages) {
-            super(session, new StoreMailboxPath(mailbox));
+            super(session, mailbox.getMailboxId());
             this.added = ImmutableMap.copyOf(uids);
             this.mailbox = mailbox;
             this.availableMessages = ImmutableMap.copyOf(availableMessages);
@@ -76,7 +76,7 @@ public class EventFactory {
         private final Mailbox mailbox;
 
         public ExpungedImpl(MailboxSession session, Mailbox mailbox,  Map<MessageUid, MessageMetaData> uids) {
-            super(session,  new StoreMailboxPath(mailbox));
+            super(session, mailbox.getMailboxId());
             this.uids = ImmutableMap.copyOf(uids);
             this.mailbox = mailbox;
         }
@@ -102,7 +102,7 @@ public class EventFactory {
         private final List<UpdatedFlags> uFlags;
 
         public FlagsUpdatedImpl(MailboxSession session, Mailbox mailbox, List<MessageUid> uids, List<UpdatedFlags> uFlags) {
-            super(session, new StoreMailboxPath(mailbox));
+            super(session, mailbox.getMailboxId());
             this.uids = ImmutableList.copyOf(uids);
             this.uFlags = ImmutableList.copyOf(uFlags);
             this.mailbox = mailbox;
@@ -126,7 +126,7 @@ public class EventFactory {
         private final Mailbox mailbox;
 
         public MailboxDeletionImpl(MailboxSession session, Mailbox mailbox) {
-            super(session, new StoreMailboxPath(mailbox));
+            super(session, mailbox.getMailboxId());
             this.mailbox = mailbox;
         }
 
@@ -142,7 +142,7 @@ public class EventFactory {
         private final Mailbox mailbox;
 
         public MailboxAddedImpl(MailboxSession session, Mailbox mailbox) {
-            super(session,  new StoreMailboxPath(mailbox));
+            super(session, mailbox.getMailboxId());
             this.mailbox = mailbox;
         }
 
@@ -156,16 +156,23 @@ public class EventFactory {
     public final class MailboxRenamedEventImpl extends MailboxListener.MailboxRenamed implements MailboxAware {
 
         private final MailboxPath newPath;
+        private final MailboxPath oldPath;
         private final Mailbox newMailbox;
 
         public MailboxRenamedEventImpl(MailboxSession session, MailboxPath oldPath, Mailbox newMailbox) {
-            super(session, oldPath);
+            super(session, newMailbox.getMailboxId());
             this.newPath = new StoreMailboxPath(newMailbox);
             this.newMailbox = newMailbox;
+            this.oldPath = oldPath;
         }
 
         public MailboxPath getNewPath() {
             return newPath;
+        }
+
+        @Override
+        public MailboxPath getOldPath() {
+            return oldPath;
         }
 
         @Override

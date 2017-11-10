@@ -34,9 +34,11 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.Quota;
 import org.apache.james.mailbox.model.QuotaRoot;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.quota.QuotaImpl;
@@ -52,6 +54,7 @@ public class GetQuotaRootProcessorTest {
 
     private static final QuotaRoot QUOTA_ROOT = QuotaRootImpl.quotaRoot("plop");
     public static final MailboxPath MAILBOX_PATH = MailboxPath.forUser("plop", "INBOX");
+    public static final MailboxId MAILBOX_ID = TestId.of(1);
     public static final Quota MESSAGE_QUOTA = QuotaImpl.quota(24, 1589);
     public static final Quota STORAGE_QUOTA = QuotaImpl.quota(240, 15890);
 

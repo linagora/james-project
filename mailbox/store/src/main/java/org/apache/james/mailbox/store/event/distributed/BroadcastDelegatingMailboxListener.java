@@ -24,7 +24,7 @@ import java.util.Collection;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.event.EventDelivery;
 import org.apache.james.mailbox.store.event.EventSerializer;
 import org.apache.james.mailbox.store.event.MailboxListenerRegistry;
@@ -77,13 +77,13 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
     }
 
     @Override
-    public void addListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
-        mailboxListenerRegistry.addListener(mailboxPath, listener);
+    public void addListener(MailboxId mailboxId, MailboxListener listener, MailboxSession session) throws MailboxException {
+        mailboxListenerRegistry.addListener(mailboxId, listener);
     }
 
     @Override
-    public void removeListener(MailboxPath mailboxPath, MailboxListener listener, MailboxSession session) throws MailboxException {
-        mailboxListenerRegistry.removeListener(mailboxPath, listener);
+    public void removeListener(MailboxId mailboxId, MailboxListener listener, MailboxSession session) throws MailboxException {
+        mailboxListenerRegistry.removeListener(mailboxId, listener);
     }
 
     @Override
@@ -117,12 +117,9 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
     }
 
     private void deliverToMailboxPathRegisteredListeners(Event event) {
-        Collection<MailboxListener> listenerSnapshot = mailboxListenerRegistry.getLocalMailboxListeners(event.getMailboxPath());
+        Collection<MailboxListener> listenerSnapshot = mailboxListenerRegistry.getLocalMailboxListeners(event.getMailboxId());
         if (event instanceof MailboxDeletion) {
-            mailboxListenerRegistry.deleteRegistryFor(event.getMailboxPath());
-        } else if (event instanceof MailboxRenamed) {
-            MailboxRenamed renamed = (MailboxRenamed) event;
-            mailboxListenerRegistry.handleRename(renamed.getMailboxPath(), renamed.getNewPath());
+            mailboxListenerRegistry.deleteRegistryFor(event.getMailboxId());
         }
         for (MailboxListener listener : listenerSnapshot) {
             eventDelivery.deliver(listener, event);
