@@ -65,7 +65,7 @@ public class CassandraUserMailboxRightsDAOTest {
     public void saveShouldInsertNewEntry() throws Exception {
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
             MailboxACL.EMPTY,
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)))).join();
+            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS))));
 
         assertThat(testee.retrieve(USER_NAME, MAILBOX_ID).join())
             .contains(RIGHTS);
@@ -75,11 +75,11 @@ public class CassandraUserMailboxRightsDAOTest {
     public void saveOnSecondShouldOverwrite() throws Exception {
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
             MailboxACL.EMPTY,
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)))).join();
+            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS))));
 
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
             new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)),
-            new MailboxACL(new Entry(ENTRY_KEY, OTHER_RIGHTS)))).join();
+            new MailboxACL(new Entry(ENTRY_KEY, OTHER_RIGHTS))));
 
         assertThat(testee.retrieve(USER_NAME, MAILBOX_ID).join())
             .contains(OTHER_RIGHTS);
@@ -95,12 +95,12 @@ public class CassandraUserMailboxRightsDAOTest {
     public void deleteShouldDeleteWhenExisting() throws Exception {
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
             MailboxACL.EMPTY,
-            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)))).join();
+            new MailboxACL(new Entry(ENTRY_KEY, RIGHTS))));
 
 
         testee.update(MAILBOX_ID, new PositiveUserACLChanged(
             new MailboxACL(new Entry(ENTRY_KEY, RIGHTS)),
-            MailboxACL.EMPTY)).join();
+            MailboxACL.EMPTY));
 
         assertThat(testee.retrieve(USER_NAME, MAILBOX_ID).join())
             .isEmpty();

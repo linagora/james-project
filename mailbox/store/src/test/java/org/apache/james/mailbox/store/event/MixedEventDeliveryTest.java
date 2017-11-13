@@ -29,6 +29,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.mailbox.MailboxListener;
+import org.apache.james.mailbox.model.MailboxId;
+import org.apache.james.mailbox.model.TestId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +42,7 @@ public class MixedEventDeliveryTest {
     private static final long ONE_MINUTE = 60000;
     private MixedEventDelivery mixedEventDelivery;
     private MailboxListener listener;
+    private MailboxId mailboxId = TestId.of(1);
 
     @Before
     public void setUp() {
@@ -55,14 +58,14 @@ public class MixedEventDeliveryTest {
     @Test
     public void deliverShouldWorkOnSynchronousListeners() throws Exception {
         when(listener.getExecutionMode()).thenReturn(MailboxListener.ExecutionMode.SYNCHRONOUS);
-        MailboxListener.Event event = new MailboxListener.Event(null, null) {};
+        MailboxListener.Event event = new MailboxListener.Event(null, null, mailboxId) {};
         mixedEventDelivery.deliver(listener, event);
         verify(listener).event(event);
     }
 
     @Test
     public void deliverShouldEventuallyDeliverOnAsynchronousListeners() throws Exception {
-        MailboxListener.Event event = new MailboxListener.Event(null, null) {};
+        MailboxListener.Event event = new MailboxListener.Event(null, null, mailboxId) {};
         when(listener.getExecutionMode()).thenReturn(MailboxListener.ExecutionMode.ASYNCHRONOUS);
         mixedEventDelivery.deliver(listener, event);
         verify(listener, timeout(DELIVERY_DELAY * 10)).event(event);
@@ -70,7 +73,7 @@ public class MixedEventDeliveryTest {
 
     @Test(timeout = ONE_MINUTE)
     public void deliverShouldNotBlockOnAsynchronousListeners() throws Exception {
-        MailboxListener.Event event = new MailboxListener.Event(null, null) {};
+        MailboxListener.Event event = new MailboxListener.Event(null, null, mailboxId) {};
         when(listener.getExecutionMode()).thenReturn(MailboxListener.ExecutionMode.ASYNCHRONOUS);
         final CountDownLatch latch = new CountDownLatch(1);
         doAnswer(invocation -> {

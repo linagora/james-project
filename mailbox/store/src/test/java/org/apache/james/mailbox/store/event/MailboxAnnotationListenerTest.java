@@ -84,7 +84,7 @@ public class MailboxAnnotationListenerTest {
 
     @Test
     public void eventShouldDoNothingIfDoNotHaveMailboxDeletionEvent() {
-        MailboxListener.Event event = new MailboxListener.Event(null, MAILBOX_PATH) {};
+        MailboxListener.Event event = new MailboxListener.Event(null, MAILBOX_PATH, mailboxId) {};
         listener.event(event);
 
         verifyNoMoreInteractions(mailboxSessionMapperFactory);

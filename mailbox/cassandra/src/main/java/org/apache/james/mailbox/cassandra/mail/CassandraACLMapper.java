@@ -37,6 +37,7 @@ import org.apache.james.backends.cassandra.init.CassandraConfiguration;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
 import org.apache.james.backends.cassandra.utils.FunctionRunnerWithRetry;
 import org.apache.james.backends.cassandra.utils.LightweightTransactionException;
+import org.apache.james.mailbox.acl.ACLDiff;
 import org.apache.james.mailbox.acl.PositiveUserACLChanged;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.table.CassandraACLTable;
@@ -126,20 +127,20 @@ public class CassandraACLMapper {
         return deserializeACL(cassandraId, serializedACL);
     }
 
-    public void updateACL(CassandraId cassandraId, MailboxACL.ACLCommand command) throws MailboxException {
+    public ACLDiff updateACL(CassandraId cassandraId, MailboxACL.ACLCommand command) throws MailboxException {
         MailboxACL replacement = MailboxACL.EMPTY.apply(command);
 
         PositiveUserACLChanged positiveUserAclChanged = updateAcl(cassandraId, aclWithVersion -> aclWithVersion.apply(command), replacement);
 
-        userMailboxRightsDAO.update(cassandraId, positiveUserAclChanged).join();
+        return userMailboxRightsDAO.update(cassandraId, positiveUserAclChanged);
     }
 
-    public void setACL(CassandraId cassandraId, MailboxACL mailboxACL) throws MailboxException {
+    public ACLDiff setACL(CassandraId cassandraId, MailboxACL mailboxACL) throws MailboxException {
         PositiveUserACLChanged positiveUserAclChanged = updateAcl(cassandraId,
             acl -> new ACLWithVersion(acl.version, mailboxACL),
             mailboxACL);
 
-        userMailboxRightsDAO.update(cassandraId, positiveUserAclChanged).join();
+        return userMailboxRightsDAO.update(cassandraId, positiveUserAclChanged);
     }
 
     private PositiveUserACLChanged updateAcl(CassandraId cassandraId, Function<ACLWithVersion, ACLWithVersion> aclTransformation, MailboxACL replacement) throws MailboxException {

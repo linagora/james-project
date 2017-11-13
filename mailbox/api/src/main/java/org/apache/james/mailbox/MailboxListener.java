@@ -22,7 +22,8 @@ package org.apache.james.mailbox;
 import java.io.Serializable;
 import java.util.List;
 
-import org.apache.james.mailbox.model.MailboxACL;
+import org.apache.james.mailbox.acl.ACLDiff;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.UpdatedFlags;
@@ -63,10 +64,12 @@ public interface MailboxListener {
     abstract class Event implements Serializable {
         private final MailboxSession session;
         private final MailboxPath path;
+        private final MailboxId mailboxId;
 
-        public Event(MailboxSession session, MailboxPath path) {
+        public Event(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
             this.session = session;
             this.path = path;
+            this.mailboxId = mailboxId;
         }
 
         /**
@@ -84,8 +87,13 @@ public interface MailboxListener {
          * 
          * @return path
          */
+        @Deprecated
         public MailboxPath getMailboxPath() {
             return path;
+        }
+
+        public MailboxId getMailboxId() {
+            return mailboxId;
         }
     }
 
@@ -99,8 +107,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public MailboxDeletion(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public MailboxDeletion(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
     }
 
@@ -113,8 +121,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public MailboxAdded(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public MailboxAdded(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
     }
 
@@ -127,8 +135,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public MailboxRenamed(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public MailboxRenamed(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
 
         /**
@@ -143,18 +151,19 @@ public interface MailboxListener {
     /**
      * A mailbox event related to updated ACL
      */
-    abstract class MailboxACLUpdated extends MessageEvent {
-
-        /**
-         * 
-         */
+    class MailboxACLUpdated extends Event {
+        private final ACLDiff aclDiff;
         private static final long serialVersionUID = 1L;
 
-        public MailboxACLUpdated(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public MailboxACLUpdated(MailboxSession session, MailboxPath path, MailboxId mailboxId, ACLDiff aclDiff) {
+            super(session, path, mailboxId);
+            this.aclDiff = aclDiff;
         }
 
-        public abstract MailboxACL getUpdatedACL();
+        public ACLDiff getAclDiff() {
+            return aclDiff;
+        }
+
     }
     
     /**
@@ -167,8 +176,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public MessageEvent(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public MessageEvent(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
 
         /**
@@ -181,8 +190,8 @@ public interface MailboxListener {
 
     abstract class MetaDataHoldingEvent extends MessageEvent {
 
-        public MetaDataHoldingEvent(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public MetaDataHoldingEvent(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
 
         /**
@@ -201,8 +210,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public Expunged(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public Expunged(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
         
         /**
@@ -223,8 +232,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public FlagsUpdated(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public FlagsUpdated(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
 
         public abstract List<UpdatedFlags> getUpdatedFlags();
@@ -240,8 +249,8 @@ public interface MailboxListener {
          */
         private static final long serialVersionUID = 1L;
 
-        public Added(MailboxSession session, MailboxPath path) {
-            super(session, path);
+        public Added(MailboxSession session, MailboxPath path, MailboxId mailboxId) {
+            super(session, path, mailboxId);
         }
         
         /**

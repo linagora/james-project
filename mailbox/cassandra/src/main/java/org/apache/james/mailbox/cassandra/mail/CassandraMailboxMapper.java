@@ -34,6 +34,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.james.backends.cassandra.init.CassandraConfiguration;
+import org.apache.james.mailbox.acl.ACLDiff;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
@@ -92,7 +93,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
                 .thenCompose(cassandraIdOptional ->
                     cassandraIdOptional
                         .map(CassandraMailboxPathDAO.CassandraIdAndPath::getCassandraId)
-                        .map(mailboxDAO::retrieveMailbox)
+                        .map(this::retrieveMailbox)
                         .orElse(CompletableFuture.completedFuture(Optional.empty())))
                 .join()
                 .orElseThrow(() -> new MailboxNotFoundException(path));
@@ -221,15 +222,15 @@ public class CassandraMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public void updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
+    public ACLDiff updateACL(Mailbox mailbox, MailboxACL.ACLCommand mailboxACLCommand) throws MailboxException {
         CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
-        cassandraACLMapper.updateACL(cassandraId, mailboxACLCommand);
+        return cassandraACLMapper.updateACL(cassandraId, mailboxACLCommand);
     }
 
     @Override
-    public void setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
+    public ACLDiff setACL(Mailbox mailbox, MailboxACL mailboxACL) throws MailboxException {
         CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
-        cassandraACLMapper.setACL(cassandraId, mailboxACL);
+        return cassandraACLMapper.setACL(cassandraId, mailboxACL);
     }
 
     @Override

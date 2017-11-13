@@ -28,7 +28,9 @@ import static org.mockito.Mockito.when;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.store.event.EventSerializer;
 import org.apache.james.mailbox.store.publisher.MessageConsumer;
 import org.apache.james.mailbox.store.publisher.Publisher;
@@ -43,6 +45,7 @@ public class BroadcastDelegatingMailboxListenerTest {
     private static final MailboxPath MAILBOX_PATH_NEW = new MailboxPath("namespace_new", "user_new", "name_new");
     private static final Topic TOPIC = new Topic("topic");
     private static final byte[] BYTES = new byte[0];
+    private static MailboxId mailboxId = TestId.of(1);
 
     private BroadcastDelegatingMailboxListener broadcastDelegatingMailboxListener;
     private Publisher mockedPublisher;
@@ -56,7 +59,7 @@ public class BroadcastDelegatingMailboxListenerTest {
     @Before
     public void setUp() throws Exception {
         mailboxSession = new MockMailboxSession("benwa");
-        event = new MailboxListener.Event(mailboxSession, MAILBOX_PATH) {};
+        event = new MailboxListener.Event(mailboxSession, MAILBOX_PATH, mailboxId) {};
 
         mockedEventSerializer = mock(EventSerializer.class);
         mockedPublisher = mock(Publisher.class);
@@ -166,7 +169,7 @@ public class BroadcastDelegatingMailboxListenerTest {
 
     @Test
     public void deletionDistantEventsShouldBeWellHandled() throws Exception {
-        final MailboxListener.Event event = new MailboxListener.MailboxDeletion(mailboxSession, MAILBOX_PATH);
+        final MailboxListener.Event event = new MailboxListener.MailboxDeletion(mailboxSession, MAILBOX_PATH, mailboxId);
         broadcastDelegatingMailboxListener.addListener(MAILBOX_PATH, mailboxEventCollector, mailboxSession);
         when(mockedEventSerializer.deSerializeEvent(BYTES)).thenReturn(event);
 
@@ -179,7 +182,7 @@ public class BroadcastDelegatingMailboxListenerTest {
 
     @Test
     public void renameDistantEventsShouldBeWellHandled() throws Exception {
-        final MailboxListener.Event event = new MailboxListener.MailboxRenamed(mailboxSession, MAILBOX_PATH) {
+        final MailboxListener.Event event = new MailboxListener.MailboxRenamed(mailboxSession, MAILBOX_PATH, mailboxId) {
             @Override
             public MailboxPath getNewPath() {
                 return MAILBOX_PATH_NEW;
