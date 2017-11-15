@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.queue.jms;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -47,8 +48,11 @@ import org.apache.james.queue.api.ManageableMailQueue.MailQueueIterator;
 import org.apache.james.queue.api.RawMailQueueItemDecoratorFactory;
 import org.apache.james.server.core.MailImpl;
 import org.apache.mailet.Mail;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Basic JMS test class. Extend this class and start the JMS broker in the super class,
@@ -74,11 +78,15 @@ public abstract class AbstractJMSMailQueueTest {
         queue = createQueue(connectionFactory, new RawMailQueueItemDecoratorFactory(), QUEUE_NAME);
     }
 
+    @After
+    public void tearDown() throws Exception {
+        while (queue.getSize() > 0) {
+            queue.deQueue().done(true);
+        }
+    }
+
     @Test
     public void testFIFO() throws Exception {
-        // should be empty
-        assertEquals(0, queue.getSize());
-
         Mail mail = createMail();
         Mail mail2 = createMail();
 
@@ -109,16 +117,24 @@ public abstract class AbstractJMSMailQueueTest {
         item3.done(true);
 
         TimeUnit.MILLISECONDS.sleep(200);
+    }
 
-        // should be empty
-        assertEquals(0, queue.getSize());
+    @Test
+    public void dequeueShouldPreserveSerializableAttributeClass() throws Exception {
+        Mail mail = createMail();
+        String name = "name";
+        ImmutableList<String> value = ImmutableList.of("a", "e");
+        mail.setAttribute(name, value);
+
+        queue.enQueue(mail);
+
+        MailQueueItem mailQueueItem = queue.deQueue();
+        mailQueueItem.done(true);
+        assertThat(mailQueueItem.getMail().getAttribute(name)).isEqualTo(value);
     }
 
     @Test
     public void testDelayedDeQueue() throws Exception {
-        // should be empty
-        assertEquals(0, queue.getSize());
-
         Mail mail = createMail();
         Mail mail2 = createMail();
 
@@ -144,17 +160,11 @@ public abstract class AbstractJMSMailQueueTest {
         item2.done(true);
         assertTrue(dequeueTime >= 2000);
         TimeUnit.MILLISECONDS.sleep(200);
-
-        // should be empty
-        assertEquals(0, queue.getSize());
     }
 
     @Test
     public void testFlush() throws Exception {
-        // should be empty
-        assertEquals(0, queue.getSize());
-
-        final Mail mail = createMail();
+        Mail mail = createMail();
 
         long enqueueTime = System.currentTimeMillis();
         queue.enQueue(mail, 30, TimeUnit.SECONDS);
@@ -190,8 +200,6 @@ public abstract class AbstractJMSMailQueueTest {
 
     @Test
     public void testRemoveWithRecipient() throws Exception {
-        assertEquals(0, queue.getSize());
-
         Mail mail = createMail();
         mail.setRecipients(Arrays.asList(new MailAddress("remove@me1")));
 
@@ -211,13 +219,10 @@ public abstract class AbstractJMSMailQueueTest {
 
         assertEquals(1, queue.remove(ManageableMailQueue.Type.Recipient, "remove@me2"));
         assertEquals(0, queue.getSize());
-
     }
 
     @Test
     public void testRemoveWithSender() throws Exception {
-        assertEquals(0, queue.getSize());
-
         MailImpl mail = createMail();
         mail.setSender(new MailAddress("remove@me1"));
 
@@ -242,8 +247,6 @@ public abstract class AbstractJMSMailQueueTest {
 
     @Test
     public void testRemoveWithName() throws Exception {
-        assertEquals(0, queue.getSize());
-
         MailImpl mail = createMail();
         mail.setName("remove@me1");
 

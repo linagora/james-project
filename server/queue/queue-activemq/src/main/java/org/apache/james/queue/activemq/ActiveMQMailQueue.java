@@ -118,14 +118,14 @@ public class ActiveMQMailQueue extends JMSMailQueue implements ActiveMQSupport {
         if (message instanceof BlobMessage) {
             try {
                 BlobMessage blobMessage = (BlobMessage) message;
-                try {
+//                try {
                     // store URL and queueName for later usage
-                    mail.setAttribute(JAMES_BLOB_URL, blobMessage.getURL());
+//                    mail.setAttribute(JAMES_BLOB_URL, blobMessage.getURL());
                     mail.setAttribute(JAMES_QUEUE_NAME, queueName);
-                } catch (MalformedURLException e) {
-                    // Ignore on error
-                    LOGGER.debug("Unable to get url from blobmessage for mail " + mail.getName());
-                }
+//                } catch (MalformedURLException e) {
+//                    // Ignore on error
+//                    LOGGER.debug("Unable to get url from blobmessage for mail " + mail.getName());
+//                }
                 MimeMessageSource source = new MimeMessageBlobMessageSource(blobMessage);
                 mail.setMessage(new MimeMessageCopyOnWriteProxy(source));
             

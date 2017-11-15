@@ -47,8 +47,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.MimeMessage;
 
-import org.apache.james.server.core.MailImpl;
-import org.apache.james.server.core.MimeMessageCopyOnWriteProxy;
+import org.apache.james.core.MailAddress;
 import org.apache.james.lifecycle.api.Disposable;
 import org.apache.james.metrics.api.Metric;
 import org.apache.james.metrics.api.MetricFactory;
@@ -57,8 +56,9 @@ import org.apache.james.queue.api.MailPrioritySupport;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.queue.api.ManageableMailQueue;
+import org.apache.james.server.core.MailImpl;
+import org.apache.james.server.core.MimeMessageCopyOnWriteProxy;
 import org.apache.mailet.Mail;
-import org.apache.james.core.MailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -448,11 +448,8 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
      * @param value
      * @return convertedValue
      */
-    protected Object convertAttributeValue(Object value) {
-        if (value == null || value instanceof String || value instanceof Byte || value instanceof Long || value instanceof Double || value instanceof Boolean || value instanceof Integer || value instanceof Short || value instanceof Float) {
-            return value;
-        }
-        return value.toString();
+    protected Serializable convertAttributeValue(Serializable value) {
+        return value;
     }
 
     @Override
