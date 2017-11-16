@@ -43,6 +43,8 @@ public class DockerCassandraRule implements TestRule {
 
     private static final Logger logger = LoggerFactory.getLogger(DockerCassandraRule.class);
 
+    public static final int DEFAULT_ITERATIONS_BETWEEN_RESTART = 10;
+
     private static final int CASSANDRA_PORT = 9042;
     private static final String CASSANDRA_CONFIG_DIR = "$CASSANDRA_CONFIG";
     private static final String CASSANDRA_YAML = CASSANDRA_CONFIG_DIR + "/cassandra.yaml";
@@ -143,6 +145,18 @@ public class DockerCassandraRule implements TestRule {
 
     public void unpause() {
         client.unpauseContainerCmd(cassandraContainer.getContainerId());
+    }
+
+    public TestRule getLifecycleTestRule(int iterationsBetweenRestart) {
+        return ContainerLifecycleConfiguration.builder()
+            .iterationsBetweenRestart(iterationsBetweenRestart)
+            .container(cassandraContainer)
+            .build()
+            .asTestRule();
+    }
+
+    public TestRule defaultLifecycleTestRule() {
+        return getLifecycleTestRule(DEFAULT_ITERATIONS_BETWEEN_RESTART);
     }
 
 }

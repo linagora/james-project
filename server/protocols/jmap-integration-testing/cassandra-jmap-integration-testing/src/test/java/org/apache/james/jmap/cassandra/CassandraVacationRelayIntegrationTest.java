@@ -27,6 +27,7 @@ import org.apache.james.dnsservice.api.InMemoryDNSService;
 import org.apache.james.jmap.VacationRelayIntegrationTest;
 import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.rules.TestRule;
 
 public class CassandraVacationRelayIntegrationTest extends VacationRelayIntegrationTest {
 
@@ -34,6 +35,9 @@ public class CassandraVacationRelayIntegrationTest extends VacationRelayIntegrat
 
     @ClassRule
     public static DockerCassandraRule cassandra = new DockerCassandraRule();
+
+    @Rule
+    public TestRule cassandraLifecycleTestRule = cassandra.defaultLifecycleTestRule();
     
     @Rule
     public CassandraJmapTestRule jamesServerRule = CassandraJmapTestRule.defaultTestRule();

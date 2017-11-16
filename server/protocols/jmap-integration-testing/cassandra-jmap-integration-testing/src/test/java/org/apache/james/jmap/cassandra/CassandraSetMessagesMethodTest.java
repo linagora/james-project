@@ -22,7 +22,6 @@ package org.apache.james.jmap.cassandra;
 import org.apache.james.CassandraJmapTestRule;
 import org.apache.james.DockerCassandraRule;
 import org.apache.james.GuiceJamesServer;
-import org.apache.james.backends.cassandra.ContainerLifecycleConfiguration;
 import org.apache.james.jmap.methods.integration.SetMessagesMethodTest;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.model.MessageId;
@@ -37,13 +36,11 @@ public class CassandraSetMessagesMethodTest extends SetMessagesMethodTest {
     @ClassRule
     public static DockerCassandraRule cassandra = new DockerCassandraRule();
 
-    public static ContainerLifecycleConfiguration cassandraLifecycleConfiguration = ContainerLifecycleConfiguration.builder().iterationsBetweenRestart(20).container(cassandra.getRawContainer()).build();
-
     @Rule
     public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
 
     @Rule
-    public TestRule cassandraLifecycleTestRule = cassandraLifecycleConfiguration.asTestRule();
+    public TestRule cassandraLifecycleTestRule = cassandra.defaultLifecycleTestRule();
 
     @Override
     protected GuiceJamesServer createJmapServer() {

@@ -18,9 +18,11 @@
  ****************************************************************/
 
 package org.apache.james;
+
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.james.backends.cassandra.init.CassandraSessionConfiguration;
+import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.testcontainers.containers.GenericContainer;
@@ -85,6 +87,14 @@ public class DockerCassandraRule implements GuiceModuleTestRule {
 
     public void unpause() {
         cassandraContainer.unpause();
+    }
+
+    public TestRule getLifecycleTestRule(int iterationsBetweenRestart) {
+        return cassandraContainer.getLifecycleTestRule(iterationsBetweenRestart);
+    }
+
+    public TestRule defaultLifecycleTestRule() {
+        return cassandraContainer.defaultLifecycleTestRule();
     }
 
 }

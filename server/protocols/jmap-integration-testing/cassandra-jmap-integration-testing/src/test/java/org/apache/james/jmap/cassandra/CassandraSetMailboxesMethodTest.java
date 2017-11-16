@@ -26,11 +26,15 @@ import org.apache.james.jmap.methods.integration.SetMailboxesMethodTest;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.rules.TestRule;
 
 public class CassandraSetMailboxesMethodTest extends SetMailboxesMethodTest {
 
     @ClassRule
     public static DockerCassandraRule cassandra = new DockerCassandraRule();
+
+    @Rule
+    public TestRule cassandraLifecycleTestRule = cassandra.defaultLifecycleTestRule();
     
     @Rule 
     public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();

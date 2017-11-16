@@ -26,11 +26,15 @@ import org.apache.james.jmap.JMAPAuthenticationTest;
 import org.apache.james.util.date.ZonedDateTimeProvider;
 import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.rules.TestRule;
 
 public class CassandraJmapAuthenticationTest extends JMAPAuthenticationTest {
 
     @ClassRule
     public static DockerCassandraRule cassandra = new DockerCassandraRule();
+
+    @Rule
+    public TestRule cassandraLifecycleTestRule = cassandra.defaultLifecycleTestRule();
     
     @Rule 
     public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();

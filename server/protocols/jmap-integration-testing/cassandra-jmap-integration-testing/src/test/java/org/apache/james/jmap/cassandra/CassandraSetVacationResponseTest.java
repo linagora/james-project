@@ -25,11 +25,15 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.methods.integration.SetVacationResponseTest;
 import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.rules.TestRule;
 
 public class CassandraSetVacationResponseTest extends SetVacationResponseTest {
 
     @ClassRule
     public static DockerCassandraRule cassandra = new DockerCassandraRule();
+
+    @Rule
+    public TestRule cassandraLifecycleTestRule = cassandra.defaultLifecycleTestRule();
     
     @Rule 
     public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
