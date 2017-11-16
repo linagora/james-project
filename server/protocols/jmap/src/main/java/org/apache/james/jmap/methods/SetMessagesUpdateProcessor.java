@@ -30,11 +30,14 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.mail.Flags;
 
+import org.apache.james.jmap.exceptions.DraftMessageMailboxUpdateException;
 import org.apache.james.jmap.model.MessageProperties;
 import org.apache.james.jmap.model.SetError;
 import org.apache.james.jmap.model.SetMessagesRequest;
 import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.jmap.model.UpdateMessagePatch;
+import org.apache.james.jmap.model.mailbox.Role;
+import org.apache.james.jmap.utils.SystemMailboxesProvider;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
@@ -61,6 +64,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
 
     private final UpdateMessagePatchConverter updatePatchConverter;
     private final MessageIdManager messageIdManager;
+    private final SystemMailboxesProvider systemMailboxesProvider;
     private final Factory mailboxIdFactory;
     private final MetricFactory metricFactory;
 
@@ -68,9 +72,10 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
     @VisibleForTesting SetMessagesUpdateProcessor(
         UpdateMessagePatchConverter updatePatchConverter,
         MessageIdManager messageIdManager,
-        Factory mailboxIdFactory, MetricFactory metricFactory) {
+        SystemMailboxesProvider systemMailboxesProvider, Factory mailboxIdFactory, MetricFactory metricFactory) {
         this.updatePatchConverter = updatePatchConverter;
         this.messageIdManager = messageIdManager;
+        this.systemMailboxesProvider = systemMailboxesProvider;
         this.mailboxIdFactory = mailboxIdFactory;
         this.metricFactory = metricFactory;
     }
@@ -95,11 +100,14 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
                         SetMessagesResponse.Builder builder) {
         try {
             List<MessageResult> messages = messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, mailboxSession);
+            assertValidUpdate(messages, updateMessagePatch, mailboxSession);
 
             if (messages.isEmpty()) {
                 addMessageIdNotFoundToResponse(messageId, builder);
             } else {
-                setInMailboxes(messageId, updateMessagePatch, mailboxSession);
+                setInMailboxes(messageId, updateMessagePatch,
+                    messages.stream().map(MessageResult::getFlags),
+                    mailboxSession);
                 Optional<MailboxException> updateError = messages.stream()
                     .flatMap(message -> updateFlags(messageId, updateMessagePatch, mailboxSession, message))
                     .findAny();
@@ -109,6 +117,8 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
                     builder.updated(ImmutableList.of(messageId));
                 }
             }
+        } catch (DraftMessageMailboxUpdateException e) {
+            handleDraftMessageMailboxUpdateException(messageId, builder, e);
         } catch (MailboxException e) {
             handleMessageUpdateException(messageId, builder, e);
         } catch (IllegalArgumentException e) {
@@ -120,6 +130,69 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
             handleInvalidRequest(builder, messageId, ImmutableList.of(invalidPropertyKeywords));
         }
 
+    }
+
+    private void assertValidUpdate(List<MessageResult> messagesToBeUpdated, UpdateMessagePatch updateMessagePatch, MailboxSession session) throws MailboxException {
+        List<MailboxId> draftMailboxes = mailboxIdFor(Role.DRAFTS, session);
+        List<Flags> futureFlags = patchFlags(messagesToBeUpdated, updateMessagePatch);
+        List<MailboxId> targetMailboxes = getTargetedMailboxes(messagesToBeUpdated, updateMessagePatch);
+
+        boolean targetHasDraft = targetMailboxes.stream().anyMatch(draftMailboxes::contains);
+        boolean targetHasNonDraft = targetMailboxes.stream().anyMatch(id -> !draftMailboxes.contains(id));
+
+        assertValidUpdate(futureFlags, targetHasDraft, targetHasNonDraft);
+    }
+
+    private void assertValidUpdate(List<Flags> futureFlags, boolean targetHasDraft, boolean targetHasNonDraft) throws DraftMessageMailboxUpdateException {
+        assertMessageIsNotInDraftAndNonDraftMailboxes(targetHasDraft, targetHasNonDraft);
+        assertNoNonDraftMessageInsideDraftMailbox(futureFlags, targetHasDraft);
+        assertNoDraftMessageOutOfDraftMailbox(futureFlags, targetHasNonDraft);
+    }
+
+    private void assertMessageIsNotInDraftAndNonDraftMailboxes(boolean targetHasDraft, boolean targetHasNonDraft) throws DraftMessageMailboxUpdateException {
+        if (targetHasDraft && targetHasNonDraft) {
+            throw new DraftMessageMailboxUpdateException("One can not have a message in mailboxes that don't have all the `draft` role");
+        }
+    }
+
+    private void assertNoNonDraftMessageInsideDraftMailbox(List<Flags> futureFlags, boolean targetHasDraft) throws DraftMessageMailboxUpdateException {
+        if (targetHasDraft) {
+            boolean anyNonDraftMessage = futureFlags.stream().anyMatch(flags -> !flags.contains(Flags.Flag.DRAFT));
+            if (anyNonDraftMessage) {
+                throw new DraftMessageMailboxUpdateException("Messages without '$Draft' keyword are prohibited in drafts mailboxes");
+            }
+        }
+    }
+
+    private void assertNoDraftMessageOutOfDraftMailbox(List<Flags> futureFlags, boolean targetHasNonDraft) throws DraftMessageMailboxUpdateException {
+        if (targetHasNonDraft) {
+            boolean anyDraftMessage = futureFlags.stream().anyMatch(flags -> flags.contains(Flags.Flag.DRAFT));
+            if (anyDraftMessage) {
+                throw new DraftMessageMailboxUpdateException("Messages with '$Draft' keyword are prohibited in non drafts mailboxes");
+            }
+        }
+    }
+
+    private List<MailboxId> getTargetedMailboxes(List<MessageResult> messagesToBeUpdated, UpdateMessagePatch updateMessagePatch) {
+        ImmutableList<MailboxId> previousMailboxes = messagesToBeUpdated.stream()
+            .map(MessageResult::getMailboxId)
+            .collect(Guavate.toImmutableList());
+        return updateMessagePatch.getMailboxIds()
+            .map(ids -> ids.stream().map(mailboxIdFactory::fromString).collect(Guavate.toImmutableList()))
+            .orElse(previousMailboxes);
+    }
+
+    private List<Flags> patchFlags(List<MessageResult> messagesToBeUpdated, UpdateMessagePatch updateMessagePatch) {
+        return messagesToBeUpdated.stream()
+            .map(MessageResult::getFlags)
+            .map(updateMessagePatch::applyToStateNoReset)
+            .collect(Guavate.toImmutableList());
+    }
+
+    private List<MailboxId> mailboxIdFor(Role role, MailboxSession session) throws MailboxException {
+        return systemMailboxesProvider.getMailboxByRole(role, session)
+            .map(MessageManager::getId)
+            .collect(Guavate.toImmutableList());
     }
 
     private Stream<MailboxException> updateFlags(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, MessageResult messageResult) {
@@ -134,7 +207,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
         }
     }
 
-    private void setInMailboxes(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession) throws MailboxException {
+    private void setInMailboxes(MessageId messageId, UpdateMessagePatch updateMessagePatch, Stream<Flags> originalFlags, MailboxSession mailboxSession) throws MailboxException {
         Optional<List<String>> serializedMailboxIds = updateMessagePatch.getMailboxIds();
         if (serializedMailboxIds.isPresent()) {
             List<MailboxId> mailboxIds = serializedMailboxIds.get()
@@ -153,6 +226,16 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
                         .properties(ImmutableSet.of(MessageProperties.MessageProperty.id))
                         .description("message not found")
                         .build()));
+    }
+
+    private SetMessagesResponse.Builder handleDraftMessageMailboxUpdateException(MessageId messageId,
+                                                                     SetMessagesResponse.Builder builder,
+                                                                     DraftMessageMailboxUpdateException e) {
+        return builder.notUpdated(ImmutableMap.of(messageId, SetError.builder()
+            .type("invalidArguments")
+            .properties(MessageProperties.MessageProperty.mailboxIds)
+            .description(e.getMessage())
+            .build()));
     }
 
     private SetMessagesResponse.Builder handleMessageUpdateException(MessageId messageId,

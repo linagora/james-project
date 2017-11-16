@@ -17,10 +17,33 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.exceptions;
+package org.apache.james.jmap.methods.integration.cucumber;
 
-public class InvalidDraftKeywordsException extends IllegalArgumentException {
-    public InvalidDraftKeywordsException(String s) {
-        super(s);
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.james.mailbox.model.MessageId;
+
+import cucumber.runtime.java.guice.ScenarioScoped;
+
+@ScenarioScoped
+public class MessageIdStepdefs {
+
+    private final Map<String, MessageId> messageIdsByName;
+
+    @Inject
+    private MessageIdStepdefs() {
+        this.messageIdsByName = new HashMap<>();
     }
+
+    public MessageId getMessageId(String name) {
+        return messageIdsByName.get(name);
+    }
+
+    public MessageId addMessageId(String name, MessageId messageId) {
+        return messageIdsByName.put(name, messageId);
+    }
+
 }

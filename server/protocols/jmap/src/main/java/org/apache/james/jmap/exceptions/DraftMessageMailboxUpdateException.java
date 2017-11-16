@@ -19,8 +19,11 @@
 
 package org.apache.james.jmap.exceptions;
 
-public class InvalidDraftKeywordsException extends IllegalArgumentException {
-    public InvalidDraftKeywordsException(String s) {
-        super(s);
+import org.apache.james.mailbox.exception.MailboxException;
+
+public class DraftMessageMailboxUpdateException extends MailboxException {
+
+    public DraftMessageMailboxUpdateException(String message) {
+        super(message);
     }
 }
