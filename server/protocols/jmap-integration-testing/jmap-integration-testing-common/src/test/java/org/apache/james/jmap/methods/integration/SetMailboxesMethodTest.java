@@ -860,6 +860,68 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
+    public void setMailboxesShouldReturnNotCreatedWhenCreatingASystemMailbox() {
+        String requestBody =
+                "[" +
+                    "  [ \"setMailboxes\"," +
+                    "    {" +
+                    "      \"create\": {" +
+                    "        \"create-id01\" : {" +
+                    "          \"name\" : \"Outbox\"" +
+                    "        }" +
+                    "      }" +
+                    "    }," +
+                    "    \"#0\"" +
+                    "  ]" +
+                    "]";
+
+            given()
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+            .when()
+                .post("/jmap")
+            .then()
+                .statusCode(200)
+                .body(NAME, equalTo("mailboxesSet"))
+                .body(ARGUMENTS + ".notCreated", aMapWithSize(1))
+                .body(ARGUMENTS + ".notCreated", hasEntry(equalTo("create-id01"), Matchers.allOf(
+                            hasEntry(equalTo("type"), equalTo("invalidArguments")),
+                            hasEntry(equalTo("description"), equalTo("System mailboxes cannot be created by JMAP")))
+                        ));
+    }
+
+    @Test
+    public void setMailboxesShouldReturnNotCreatedWhenCreatingASystemMailboxWithDifferentCase() {
+        String requestBody =
+                "[" +
+                    "  [ \"setMailboxes\"," +
+                    "    {" +
+                    "      \"create\": {" +
+                    "        \"create-id01\" : {" +
+                    "          \"name\" : \"OuTbOX\"" +
+                    "        }" +
+                    "      }" +
+                    "    }," +
+                    "    \"#0\"" +
+                    "  ]" +
+                    "]";
+
+            given()
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+            .when()
+                .post("/jmap")
+            .then()
+                .statusCode(200)
+                .body(NAME, equalTo("mailboxesSet"))
+                .body(ARGUMENTS + ".notCreated", aMapWithSize(1))
+                .body(ARGUMENTS + ".notCreated", hasEntry(equalTo("create-id01"), Matchers.allOf(
+                            hasEntry(equalTo("type"), equalTo("invalidArguments")),
+                            hasEntry(equalTo("description"), equalTo("System mailboxes cannot be created by JMAP")))
+                        ));
+    }
+
+    @Test
     public void setMailboxesShouldReturnDestroyedMailbox() {
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox");
         String requestBody =

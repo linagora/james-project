@@ -29,6 +29,7 @@ import javax.inject.Inject;
 
 import org.apache.james.jmap.exceptions.MailboxNotOwnedException;
 import org.apache.james.jmap.exceptions.MailboxParentNotFoundException;
+import org.apache.james.jmap.exceptions.SystemMailboxNotCreatableException;
 import org.apache.james.jmap.model.MailboxCreationId;
 import org.apache.james.jmap.model.MailboxFactory;
 import org.apache.james.jmap.model.SetError;
@@ -36,6 +37,7 @@ import org.apache.james.jmap.model.SetMailboxesRequest;
 import org.apache.james.jmap.model.SetMailboxesResponse;
 import org.apache.james.jmap.model.mailbox.Mailbox;
 import org.apache.james.jmap.model.mailbox.MailboxCreateRequest;
+import org.apache.james.jmap.model.mailbox.Role;
 import org.apache.james.jmap.utils.DependencyGraph.CycleDetectedException;
 import org.apache.james.jmap.utils.SortingHierarchicalCollections;
 import org.apache.james.mailbox.MailboxManager;
@@ -115,6 +117,7 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
             Map<MailboxCreationId, MailboxId> creationIdsToCreatedMailboxId, SetMailboxesResponse.Builder builder) {
         try {
             ensureValidMailboxName(mailboxRequest, mailboxSession);
+            checkRole(Role.from(mailboxRequest.getName()));
             MailboxPath mailboxPath = computeMailboxPath(mailboxRequest, creationIdsToCreatedMailboxId, mailboxSession);
             Optional<MailboxId> mailboxId = mailboxManager.createMailbox(mailboxPath, mailboxSession);
             Optional<Mailbox> mailbox = mailboxId.flatMap(id -> mailboxFactory.builder()
@@ -141,7 +144,7 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
                 .type("invalidArguments")
                 .description("The mailbox can not be created with a parent mailbox belonging to another user")
                 .build());
-        } catch (MailboxNameException | MailboxParentNotFoundException e) {
+        } catch (MailboxNameException | MailboxParentNotFoundException | SystemMailboxNotCreatableException e) {
             builder.notCreated(mailboxCreationId, SetError.builder()
                     .type("invalidArguments")
                     .description(e.getMessage())
@@ -167,6 +170,12 @@ public class SetMailboxesCreationProcessor implements SetMailboxesProcessor {
         char pathDelimiter = mailboxSession.getPathDelimiter();
         if (name.contains(String.valueOf(pathDelimiter))) {
             throw new MailboxNameException(String.format("The mailbox '%s' contains an illegal character: '%c'", name, pathDelimiter));
+        }
+    }
+
+    private void checkRole(Optional<Role> role) throws SystemMailboxNotCreatableException {
+        if (role.map(Role::isSystemRole).orElse(false)) {
+            throw new SystemMailboxNotCreatableException("System mailboxes cannot be created by JMAP");
         }
     }
 
