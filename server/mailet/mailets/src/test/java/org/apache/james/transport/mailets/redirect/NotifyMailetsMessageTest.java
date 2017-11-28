@@ -29,6 +29,7 @@ import javax.mail.Message.RecipientType;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeUtility;
 
 import org.apache.james.core.MailAddress;
 import org.apache.mailet.base.test.FakeMail;
@@ -210,5 +211,72 @@ public class NotifyMailetsMessageTest {
                 "Message details:\n" +
                 "  MAIL FROM: null\n" +
                 "  Size (in bytes): 6\n");
+    }
+
+    @Test
+    public void generateMessageShouldDecodeEncodedSubject() throws Exception {
+        String content = "MIME-Version: 1.0\r\n" +
+            "Subject: =?UTF-8?Q?Cl=c3=b4ture_&_Paie_du_mois?=\r\n" +
+            "Content-Type: text/plain; charset=utf-8\r\n" +
+            "\r\n" +
+            "test\r\n";
+
+        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()), new ByteArrayInputStream(content.getBytes()));
+        FakeMail mail = FakeMail.from(message);
+
+        String generateMessage = new NotifyMailetsMessage().generateMessage("my message", mail);
+
+        assertThat(generateMessage).contains("Subject: Clôture & Paie du mois");
+    }
+
+    @Test
+    public void generateMessageShouldDecodeEncodedFrom() throws Exception {
+        String content = "MIME-Version: 1.0\r\n" +
+            "From: =?UTF-8?Q?=F0=9F=90=83@linagora.com?=\r\n" +
+            "Content-Type: text/plain; charset=utf-8\r\n" +
+            "\r\n" +
+            "test\r\n";
+
+        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()), new ByteArrayInputStream(content.getBytes()));
+        FakeMail mail = FakeMail.from(message);
+
+        String generateMessage = new NotifyMailetsMessage().generateMessage("my message", mail);
+
+        assertThat(generateMessage).contains("  From: \n" +
+            "🐃@linagora.com");
+    }
+
+    @Test
+    public void generateMessageShouldDecodeEncodedTo() throws Exception {
+        String content = "MIME-Version: 1.0\r\n" +
+            "To: =?UTF-8?Q?=F0=9F=9A=BE@linagora.com?=\r\n" +
+            "Content-Type: text/plain; charset=utf-8\r\n" +
+            "\r\n" +
+            "test\r\n";
+
+        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()), new ByteArrayInputStream(content.getBytes()));
+        FakeMail mail = FakeMail.from(message);
+
+        String generateMessage = new NotifyMailetsMessage().generateMessage("my message", mail);
+
+        assertThat(generateMessage).contains("  To: \n" +
+            "🚾@linagora.com");
+    }
+
+    @Test
+    public void generateMessageShouldDecodeEncodedCc() throws Exception {
+        String content = "MIME-Version: 1.0\r\n" +
+            "Cc: =?UTF-8?Q?=F0=9F=9A=B2@linagora.com?=\r\n" +
+            "Content-Type: text/plain; charset=utf-8\r\n" +
+            "\r\n" +
+            "test\r\n";
+
+        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()), new ByteArrayInputStream(content.getBytes()));
+        FakeMail mail = FakeMail.from(message);
+
+        String generateMessage = new NotifyMailetsMessage().generateMessage("my message", mail);
+
+        assertThat(generateMessage).contains("  CC: \n" +
+            "🚲@linagora.com");
     }
 }

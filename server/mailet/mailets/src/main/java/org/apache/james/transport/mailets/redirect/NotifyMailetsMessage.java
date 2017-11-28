@@ -19,10 +19,12 @@
 
 package org.apache.james.transport.mailets.redirect;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeUtility;
 
 import org.apache.mailet.Mail;
 import org.apache.james.core.MailAddress;
@@ -30,8 +32,12 @@ import org.apache.mailet.base.RFC2822Headers;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class NotifyMailetsMessage {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotifyMailetsMessage.class);
 
     private static final char LINE_BREAK = '\n';
 
@@ -52,7 +58,8 @@ public class NotifyMailetsMessage {
             .append(LINE_BREAK);
 
         if (message.getSubject() != null) {
-            builder.append("  Subject: " + message.getSubject())
+            builder.append("  Subject: ")
+                .append(safelyDecode(message.getSubject()))
                 .append(LINE_BREAK);
         }
         if (message.getSentDate() != null) {
@@ -88,12 +95,23 @@ public class NotifyMailetsMessage {
         return builder.toString();
     }
 
+    private String safelyDecode(String text) {
+        try {
+            return MimeUtility.decodeText(text);
+        } catch (UnsupportedEncodingException e) {
+            LOGGER.error("Could not decode following value {}", text, e);
+
+            return text;
+        }
+    }
+
     private void appendAddresses(StringBuilder builder, String title, String[] addresses) {
         if (addresses != null) {
             builder.append("  " + title + ": ")
                 .append(LINE_BREAK);
             for (String address : flatten(addresses)) {
-                builder.append(address + " ")
+                builder.append(safelyDecode(address))
+                    .append(" ")
                     .append(LINE_BREAK);
             }
             builder.append(LINE_BREAK);
