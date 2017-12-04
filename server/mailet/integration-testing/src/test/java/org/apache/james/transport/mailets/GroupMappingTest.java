@@ -41,9 +41,10 @@ import org.apache.james.mailets.configuration.ProcessorConfiguration;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.transport.matchers.All;
+import org.apache.james.transport.matchers.IsSmtpRelayAllowed;
 import org.apache.james.transport.matchers.RecipientIsLocal;
 import org.apache.james.transport.matchers.RelayLimit;
-import org.apache.james.transport.matchers.SMTPAuthSuccessful;
+import org.apache.james.util.streams.FakeSmtp;
 import org.apache.james.util.streams.SwarmGenericContainer;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.IMAPMessageReader;
@@ -58,6 +59,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.testcontainers.containers.wait.HostPortWaitStrategy;
 
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
@@ -89,8 +91,10 @@ public class GroupMappingTest {
     private RequestSpecification restApiRequest;
 
     @Rule
-    public final SwarmGenericContainer fakeSmtp = new SwarmGenericContainer("weave/rest-smtp-sink:latest")
-        .withExposedPorts(25);
+    public final SwarmGenericContainer fakeSmtp = new FakeSmtp()
+        .withExposedPorts(25)
+        .withAffinityToContainer()
+        .waitingFor(new HostPortWaitStrategy());
 
     private final InMemoryDNSService inMemoryDNSService = new InMemoryDNSService();
     @Rule
@@ -99,6 +103,7 @@ public class GroupMappingTest {
     private InetAddress containerIp;
     @Before
     public void setup() throws Exception {
+        FakeSmtp.await(fakeSmtp);
 
         containerIp = InetAddress.getByName(fakeSmtp.getContainerIp());
         inMemoryDNSService.registerRecord("yopmail.com", containerIp, "yopmail.com");
@@ -119,7 +124,7 @@ public class GroupMappingTest {
                     .mailet(Null.class)
                     .build())
                 .addMailet(MailetConfiguration.builder()
-                    .matcher(SMTPAuthSuccessful.class)
+                    .matcher(IsSmtpRelayAllowed.class)
                     .mailet(ToProcessor.class)
                     .addProperty("processor", "transport")
                     .build())
@@ -163,7 +168,9 @@ public class GroupMappingTest {
                 .build())
             .build();
 
-        jamesServer = new TemporaryJamesServer(temporaryFolder, mailetContainer, (binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
+        jamesServer = TemporaryJamesServer.builder()
+            .withOverrides(binder -> binder.bind(DNSService.class).toInstance(inMemoryDNSService))
+            .build(temporaryFolder, mailetContainer);
 
         Duration slowPacedPollInterval = Duration.FIVE_HUNDRED_MILLISECONDS;
         calmlyAwait = Awaitility.with().pollInterval(slowPacedPollInterval).and().with().pollDelay(slowPacedPollInterval).await();

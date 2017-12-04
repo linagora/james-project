@@ -61,7 +61,7 @@
                 <processor>local-address-error</processor>
                 <notice>550 - Requested action not taken: no such user here</notice>
             </mailet>
-            <mailet match="SMTPAuthSuccessful" class="SetMailAttribute">
+            <mailet match="IsSmtpRelayAllowed" class="SetMailAttribute">
                 <RelayAllowed>true</RelayAllowed>
             </mailet>
             <mailet match="SentByMailet" class="SetMailAttribute">

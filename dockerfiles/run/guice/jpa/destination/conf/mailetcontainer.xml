@@ -69,7 +69,7 @@
                 <notice>550 - Requested action not taken: no such user here</notice>
             </mailet>
 
-            <mailet match="SMTPAuthSuccessful" class="ToProcessor">
+            <mailet match="IsSmtpRelayAllowed" class="ToProcessor">
                 <processor>relay</processor>
             </mailet>
             <mailet match="SentByMailet" class="ToProcessor">

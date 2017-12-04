@@ -39,6 +39,7 @@ import org.apache.james.transport.mailets.managesieve.ManageSieveMailet;
 import org.apache.james.transport.matchers.All;
 import org.apache.james.transport.matchers.HasMailAttribute;
 import org.apache.james.transport.matchers.InSpammerBlacklist;
+import org.apache.james.transport.matchers.IsSmtpRelayAllowed;
 import org.apache.james.transport.matchers.RecipientIs;
 import org.apache.james.transport.matchers.RecipientIsLocal;
 import org.apache.james.transport.matchers.RelayLimit;
@@ -78,7 +79,7 @@ public class CommonProcessors {
                         .addProperty("spamChecked", "true")
                         .build())
                 .addMailet(MailetConfiguration.builder()
-                        .matcher(SMTPAuthSuccessful.class)
+                        .matcher(IsSmtpRelayAllowed.class)
                         .mailet(ToProcessor.class)
                         .addProperty("processor", "transport")
                         .build())
@@ -162,7 +163,7 @@ public class CommonProcessors {
                         .mailet(LocalDelivery.class)
                         .build())
                 .addMailet(MailetConfiguration.builder()
-                        .matcher(SMTPAuthSuccessful.class)
+                        .matcher(IsSmtpRelayAllowed.class)
                         .mailet(RemoteDelivery.class)
                         .addProperty("outgoingQueue", "outgoing")
                         .addProperty("delayTime", "5000, 100000, 500000")
