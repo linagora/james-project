@@ -25,12 +25,15 @@ import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
+
 import org.apache.james.mailbox.inmemory.quota.InMemoryPerUserMaxQuotaManager;
 import org.apache.james.mailbox.model.Quota;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.utils.JsonTransformer;
+import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,7 +77,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.COUNT_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .as(Long.class);
@@ -91,7 +94,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.COUNT_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .as(Long.class);
@@ -101,20 +104,41 @@ public class GlobalQuotaRoutesTest {
 
     @Test
     public void putCountShouldRejectInvalid() throws Exception {
-        given()
+        Map<String, Object> errors = given()
             .body("invalid")
             .put(GlobalQuotaRoutes.COUNT_ENDPOINT)
         .then()
-            .statusCode(400);
+            .statusCode(HttpStatus.BAD_REQUEST_400)
+            .contentType(ContentType.JSON)
+            .extract()
+            .body()
+            .jsonPath()
+            .getMap(".");
+
+        assertThat(errors)
+            .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
+            .containsEntry("type", "InvalidArgument")
+            .containsEntry("message", "Invalid quota. Need to be an integer value greater than 0")
+            .containsEntry("cause", "For input string: \"invalid\"");
     }
 
     @Test
     public void putCountShouldRejectNegative() throws Exception {
-        given()
+        Map<String, Object> errors = given()
             .body("-1")
             .put(GlobalQuotaRoutes.COUNT_ENDPOINT)
         .then()
-            .statusCode(400);
+            .statusCode(HttpStatus.BAD_REQUEST_400)
+            .contentType(ContentType.JSON)
+            .extract()
+            .body()
+            .jsonPath()
+            .getMap(".");
+
+        assertThat(errors)
+            .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
+            .containsEntry("type", "InvalidArgument")
+            .containsEntry("message", "Invalid quota. Need to be an integer value greater than 0");
     }
 
     @Test
@@ -123,7 +147,7 @@ public class GlobalQuotaRoutesTest {
             .body("42")
             .put(GlobalQuotaRoutes.COUNT_ENDPOINT)
         .then()
-            .statusCode(204);
+            .statusCode(HttpStatus.NO_CONTENT_204);
 
         assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(42);
     }
@@ -135,7 +159,7 @@ public class GlobalQuotaRoutesTest {
         given()
             .delete(GlobalQuotaRoutes.COUNT_ENDPOINT)
         .then()
-            .statusCode(204);
+            .statusCode(HttpStatus.NO_CONTENT_204);
 
         assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(Quota.UNLIMITED);
     }
@@ -146,7 +170,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.SIZE_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .as(Long.class);
@@ -164,7 +188,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.SIZE_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .as(Long.class);
@@ -174,20 +198,41 @@ public class GlobalQuotaRoutesTest {
 
     @Test
     public void putSizeShouldRejectInvalid() throws Exception {
-        given()
+        Map<String, Object> errors = given()
             .body("invalid")
             .put(GlobalQuotaRoutes.SIZE_ENDPOINT)
         .then()
-            .statusCode(400);
+            .statusCode(HttpStatus.BAD_REQUEST_400)
+            .contentType(ContentType.JSON)
+            .extract()
+            .body()
+            .jsonPath()
+            .getMap(".");
+
+        assertThat(errors)
+            .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
+            .containsEntry("type", "InvalidArgument")
+            .containsEntry("message", "Invalid quota. Need to be an integer value greater than 0")
+            .containsEntry("cause", "For input string: \"invalid\"");
     }
 
     @Test
     public void putSizeShouldRejectNegative() throws Exception {
-        given()
+        Map<String, Object> errors = given()
             .body("-1")
             .put(GlobalQuotaRoutes.SIZE_ENDPOINT)
         .then()
-            .statusCode(400);
+            .statusCode(HttpStatus.BAD_REQUEST_400)
+            .contentType(ContentType.JSON)
+            .extract()
+            .body()
+            .jsonPath()
+            .getMap(".");
+
+        assertThat(errors)
+            .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
+            .containsEntry("type", "InvalidArgument")
+            .containsEntry("message", "Invalid quota. Need to be an integer value greater than 0");
     }
 
     @Test
@@ -196,7 +241,7 @@ public class GlobalQuotaRoutesTest {
             .body("42")
             .put(GlobalQuotaRoutes.SIZE_ENDPOINT)
         .then()
-            .statusCode(204);
+            .statusCode(HttpStatus.NO_CONTENT_204);
 
         assertThat(maxQuotaManager.getDefaultMaxStorage()).isEqualTo(42);
     }
@@ -208,7 +253,7 @@ public class GlobalQuotaRoutesTest {
         given()
             .delete(GlobalQuotaRoutes.COUNT_ENDPOINT)
         .then()
-            .statusCode(204);
+            .statusCode(HttpStatus.NO_CONTENT_204);
 
         assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(Quota.UNLIMITED);
     }
@@ -224,7 +269,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.QUOTA_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .jsonPath();
@@ -239,7 +284,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.QUOTA_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .jsonPath();
@@ -257,7 +302,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.QUOTA_ENDPOINT)
             .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .jsonPath();
@@ -276,7 +321,7 @@ public class GlobalQuotaRoutesTest {
             given()
                 .get(GlobalQuotaRoutes.QUOTA_ENDPOINT)
                 .then()
-                .statusCode(200)
+                .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .extract()
                 .jsonPath();
@@ -291,7 +336,7 @@ public class GlobalQuotaRoutesTest {
             .body("{\"count\":52,\"size\":42}")
             .put(GlobalQuotaRoutes.QUOTA_ENDPOINT)
         .then()
-            .statusCode(204);
+            .statusCode(HttpStatus.NO_CONTENT_204);
 
         assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(52);
         assertThat(maxQuotaManager.getDefaultMaxStorage()).isEqualTo(42);
@@ -303,7 +348,7 @@ public class GlobalQuotaRoutesTest {
             .body("{\"count\":-1,\"size\":-1}")
             .put(GlobalQuotaRoutes.QUOTA_ENDPOINT)
         .then()
-            .statusCode(204);
+            .statusCode(HttpStatus.NO_CONTENT_204);
 
         assertThat(maxQuotaManager.getDefaultMaxMessage()).isEqualTo(Quota.UNLIMITED);
         assertThat(maxQuotaManager.getDefaultMaxStorage()).isEqualTo(Quota.UNLIMITED);

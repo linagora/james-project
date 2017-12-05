@@ -49,6 +49,8 @@ import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.util.streams.Iterators;
 import org.apache.james.webadmin.Constants;
 import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.utils.ErrorResponder;
+import org.apache.james.webadmin.utils.ErrorResponder.ErrorType;
 import org.apache.james.webadmin.utils.JsonExtractException;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
@@ -115,8 +117,9 @@ public class GroupsRoutes implements Routes {
     @Path(ROOT_PATH)
     @ApiOperation(value = "getting groups list")
     @ApiResponses(value = {
-        @ApiResponse(code = 200, message = "OK", response = List.class),
-        @ApiResponse(code = 500, message = "Internal server error - Something went bad on the server side.")
+        @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = List.class),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500,
+            message = "Internal server error - Something went bad on the server side.")
     })
     public Set<String> listGroups(Request request, Response response) throws RecipientRewriteTableException {
         return Optional.ofNullable(recipientRewriteTable.getAllMappings())
@@ -141,11 +144,12 @@ public class GroupsRoutes implements Routes {
                 MAILADDRESS_ASCII_DISCLAIMER)
     })
     @ApiResponses(value = {
-        @ApiResponse(code = 200, message = "OK", response = List.class),
-        @ApiResponse(code = 400, message = GROUP_ADDRESS + " or group structure format is not valid"),
-        @ApiResponse(code = 403, message = "server doesn't own the domain"),
-        @ApiResponse(code = 409, message = "requested group address is already used for another purpose"),
-        @ApiResponse(code = 500, message = "Internal server error - Something went bad on the server side.")
+        @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = List.class),
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = GROUP_ADDRESS + " or group structure format is not valid"),
+        @ApiResponse(code = HttpStatus.FORBIDDEN_403, message = "server doesn't own the domain"),
+        @ApiResponse(code = HttpStatus.CONFLICT_409, message = "requested group address is already used for another purpose"),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500,
+            message = "Internal server error - Something went bad on the server side.")
     })
     public HaltException addToGroup(Request request, Response response) throws JsonExtractException, AddressException, RecipientRewriteTableException, UsersRepositoryException, DomainListException {
         MailAddress groupAddress = parseMailAddress(request.params(GROUP_ADDRESS));
@@ -158,13 +162,21 @@ public class GroupsRoutes implements Routes {
 
     private void ensureRegisteredDomain(String domain) throws DomainListException {
         if (!domainList.containsDomain(domain)) {
-            throw halt(HttpStatus.FORBIDDEN_403);
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.FORBIDDEN_403)
+                .type(ErrorType.INVALID_ARGUMENT)
+                .message("Server doesn't own the domain: " + domain)
+                .haltError();
         }
     }
 
     private void ensureNotShadowingAnotherAddress(MailAddress groupAddress) throws UsersRepositoryException {
         if (usersRepository.contains(groupAddress.asString())) {
-            throw halt(HttpStatus.CONFLICT_409);
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.CONFLICT_409)
+                .type(ErrorType.INVALID_ARGUMENT)
+                .message("Requested group address is already used for another purpose")
+                .haltError();
         }
     }
 
@@ -177,9 +189,11 @@ public class GroupsRoutes implements Routes {
         @ApiImplicitParam(required = true, dataType = "string", name = USER_ADDRESS, paramType = "path")
     })
     @ApiResponses(value = {
-        @ApiResponse(code = 200, message = "OK", response = List.class),
-        @ApiResponse(code = 400, message = GROUP_ADDRESS + " or group structure format is not valid"),
-        @ApiResponse(code = 500, message = "Internal server error - Something went bad on the server side.")
+        @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = List.class),
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400,
+            message = GROUP_ADDRESS + " or group structure format is not valid"),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500,
+            message = "Internal server error - Something went bad on the server side.")
     })
     public HaltException removeFromGroup(Request request, Response response) throws JsonExtractException, AddressException, RecipientRewriteTableException {
         MailAddress groupAddress = parseMailAddress(request.params(GROUP_ADDRESS));
@@ -195,10 +209,11 @@ public class GroupsRoutes implements Routes {
         @ApiImplicitParam(required = true, dataType = "string", name = GROUP_ADDRESS, paramType = "path")
     })
     @ApiResponses(value = {
-        @ApiResponse(code = 200, message = "OK", response = List.class),
-        @ApiResponse(code = 400, message = "The group is not an address"),
-        @ApiResponse(code = 404, message = "The group does not exist"),
-        @ApiResponse(code = 500, message = "Internal server error - Something went bad on the server side.")
+        @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = List.class),
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "The group is not an address"),
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The group does not exist"),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500,
+            message = "Internal server error - Something went bad on the server side.")
     })
     public ImmutableSortedSet<String> listGroupMembers(Request request, Response response) throws RecipientRewriteTable.ErrorMappingException, RecipientRewriteTableException {
         MailAddress groupAddress = parseMailAddress(request.params(GROUP_ADDRESS));
@@ -217,16 +232,30 @@ public class GroupsRoutes implements Routes {
             String decodedAddress = URLDecoder.decode(address, "UTF-8");
             return new MailAddress(decodedAddress);
         } catch (AddressException e) {
-            throw halt(HttpStatus.BAD_REQUEST_400);
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.BAD_REQUEST_400)
+                .type(ErrorType.INVALID_ARGUMENT)
+                .message("The group is not an email address")
+                .cause(e)
+                .haltError();
         } catch (UnsupportedEncodingException e) {
             LOGGER.error("UTF-8 should be a valid encoding");
-            throw halt(HttpStatus.INTERNAL_SERVER_ERROR_500);
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
+                .type(ErrorType.SERVER_ERROR)
+                .message("Internal server error - Something went bad on the server side.")
+                .cause(e)
+                .haltError();
         }
     }
 
     private void ensureNonEmptyMappings(Mappings mappings) {
         if (mappings == null || mappings.isEmpty()) {
-            throw halt(HttpStatus.NOT_FOUND_404);
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.NOT_FOUND_404)
+                .type(ErrorType.INVALID_ARGUMENT)
+                .message("The group does not exist")
+                .haltError();
         }
     }
 }
