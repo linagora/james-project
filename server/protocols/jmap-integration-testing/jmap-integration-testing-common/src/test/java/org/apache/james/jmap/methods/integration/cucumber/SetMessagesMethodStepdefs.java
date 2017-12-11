@@ -204,21 +204,44 @@ public class SetMessagesMethodStepdefs {
 
     @When("^\"([^\"]*)\" marks the message \"([^\"]*)\" as flagged$")
     public void flag(String username, String message) throws Throwable {
-        MessageId messageId = messageIdStepdefs.getMessageId(message);
+        userStepdefs.execWithUser(username, () -> {
+            MessageId messageId = messageIdStepdefs.getMessageId(message);
 
-        httpClient.post("[" +
-            "  [" +
-            "    \"setMessages\","+
-            "    {" +
-            "      \"update\": { \"" + messageId.serialize() + "\" : {" +
-            "        \"isFlagged\": true" +
-            "      }}" +
-            "    }," +
-            "    \"#0\"" +
-            "  ]" +
-            "]");
-        mainStepdefs.awaitMethod.run();
+            httpClient.post("[" +
+                "  [" +
+                "    \"setMessages\"," +
+                "    {" +
+                "      \"update\": { \"" + messageId.serialize() + "\" : {" +
+                "        \"isFlagged\": true" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]");
+            mainStepdefs.awaitMethod.run();
+        });
     }
+
+    @When("^\"([^\"]*)\" marks the message \"([^\"]*)\" as draft")
+    public void draft(String username, String message) throws Throwable {
+        userStepdefs.execWithUser(username, () -> {
+            MessageId messageId = messageIdStepdefs.getMessageId(message);
+
+            httpClient.post("[" +
+                "  [" +
+                "    \"setMessages\"," +
+                "    {" +
+                "      \"update\": { \"" + messageId.serialize() + "\" : {" +
+                "        \"isDraft\": true" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]");
+            mainStepdefs.awaitMethod.run();
+        });
+    }
+
 
     @When("^\"([^\"]*)\" destroys message \"([^\"]*)\"$")
     public void destroyMessage(String username, String message) throws Throwable {
