@@ -222,6 +222,27 @@ public class SetMessagesMethodStepdefs {
         });
     }
 
+    @When("^\"([^\"]*)\" marks the message \"([^\"]*)\" as daft")
+    public void draft(String username, String message) throws Throwable {
+        userStepdefs.execWithUser(username, () -> {
+            MessageId messageId = messageIdStepdefs.getMessageId(message);
+
+            httpClient.post("[" +
+                "  [" +
+                "    \"setMessages\"," +
+                "    {" +
+                "      \"update\": { \"" + messageId.serialize() + "\" : {" +
+                "        \"isDraft\": true" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]");
+            mainStepdefs.awaitMethod.run();
+        });
+    }
+
+
     @When("^\"([^\"]*)\" destroys message \"([^\"]*)\"$")
     public void destroyMessage(String username, String message) throws Throwable {
         MessageId messageId = messageIdStepdefs.getMessageId(message);
