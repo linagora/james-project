@@ -222,7 +222,7 @@ public class SetMessagesMethodStepdefs {
         });
     }
 
-    @When("^\"([^\"]*)\" marks the message \"([^\"]*)\" as daft")
+    @When("^\"([^\"]*)\" marks the message \"([^\"]*)\" as draft")
     public void draft(String username, String message) throws Throwable {
         userStepdefs.execWithUser(username, () -> {
             MessageId messageId = messageIdStepdefs.getMessageId(message);

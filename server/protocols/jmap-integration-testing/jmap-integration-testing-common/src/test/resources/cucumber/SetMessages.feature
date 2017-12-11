@@ -182,7 +182,7 @@ Feature: SetMessages method on shared folders
 
   Scenario: A user can update $Draft keyword using isDraft property
     Given "bob@domain.tld" has a mailbox "Drafts"
-    When "bob@domain.tld" marks the message "mBob" as daft
+    When "bob@domain.tld" marks the message "mBob" as draft
     Then message "mBob" is updated
 
   Scenario: A user can copy draft out of draft mailbox
