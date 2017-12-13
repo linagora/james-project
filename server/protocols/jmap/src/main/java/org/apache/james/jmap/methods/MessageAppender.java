@@ -20,6 +20,7 @@
 package org.apache.james.jmap.methods;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -35,6 +36,7 @@ import org.apache.james.jmap.model.OldKeyword;
 import org.apache.james.mailbox.AttachmentManager;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.AttachmentNotFoundException;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -50,33 +52,40 @@ import org.slf4j.LoggerFactory;
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.github.steveash.guavate.Guavate;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 public class MessageAppender {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageAppender.class);
 
     private final MailboxManager mailboxManager;
+    private final MessageIdManager messageIdManager;
     private final AttachmentManager attachmentManager;
     private final MIMEMessageConverter mimeMessageConverter;
 
     @Inject
-    public MessageAppender(MailboxManager mailboxManager, AttachmentManager attachmentManager, MIMEMessageConverter mimeMessageConverter) {
+    public MessageAppender(MailboxManager mailboxManager, MessageIdManager messageIdManager, AttachmentManager attachmentManager, MIMEMessageConverter mimeMessageConverter) {
         this.mailboxManager = mailboxManager;
+        this.messageIdManager = messageIdManager;
         this.attachmentManager = attachmentManager;
         this.mimeMessageConverter = mimeMessageConverter;
     }
 
-    public MessageFactory.MetaDataWithContent appendMessageInMailbox(CreationMessageEntry createdEntry,
-                                                                     MessageManager mailbox,
-                                                                     MailboxSession session) throws MailboxException {
+    public MessageFactory.MetaDataWithContent appendMessageInMailboxes(CreationMessageEntry createdEntry,
+                                                                       List<MailboxId> targetMailboxes,
+                                                                       MailboxSession session) throws MailboxException {
+        Preconditions.checkArgument(!targetMailboxes.isEmpty());
         ImmutableList<MessageAttachment> messageAttachments = getMessageAttachments(session, createdEntry.getValue().getAttachments());
         byte[] messageContent = mimeMessageConverter.convert(createdEntry, messageAttachments);
         SharedByteArrayInputStream content = new SharedByteArrayInputStream(messageContent);
         Date internalDate = Date.from(createdEntry.getValue().getDate().toInstant());
 
         boolean notRecent = false;
-
+        MessageManager mailbox = mailboxManager.getMailbox(targetMailboxes.get(0), session);
         ComposedMessageId message = mailbox.appendMessage(content, internalDate, session, notRecent, getFlags(createdEntry.getValue()));
+        if (targetMailboxes.size() > 1) {
+            messageIdManager.setInMailboxes(message.getMessageId(), targetMailboxes, session);
+        }
 
         return MessageFactory.MetaDataWithContent.builder()
             .uid(message.getUid())
@@ -90,6 +99,12 @@ public class MessageAppender {
             .build();
     }
 
+    public MessageFactory.MetaDataWithContent appendMessageInMailbox(CreationMessageEntry createdEntry,
+                                                                       MailboxId targetMailbox,
+                                                                       MailboxSession session) throws MailboxException {
+        return appendMessageInMailboxes(createdEntry, ImmutableList.of(targetMailbox), session);
+    }
+
     private Flags getFlags(CreationMessage message) {
         return message.getOldKeyword()
                 .map(OldKeyword::asFlags)
@@ -100,14 +115,6 @@ public class MessageAppender {
     private Keywords keywordsOrDefault(CreationMessage message) {
         return message.getKeywords()
                 .orElse(Keywords.DEFAULT_VALUE);
-    }
-
-    public MessageFactory.MetaDataWithContent appendMessageInMailbox(CreationMessageEntry createdEntry,
-                                                                     MailboxId mailboxId,
-                                                                     MailboxSession session) throws MailboxException {
-        return appendMessageInMailbox(createdEntry,
-            mailboxManager.getMailbox(mailboxId, session),
-            session);
     }
 
     private ImmutableList<MessageAttachment> getMessageAttachments(MailboxSession session, ImmutableList<Attachment> attachments) throws MailboxException {

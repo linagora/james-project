@@ -19,9 +19,12 @@
 
 package org.apache.james.jmap.methods;
 
+import static org.apache.james.jmap.methods.Pipeline.endWith;
+
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
+import javax.mail.MessagingException;
 
 import org.apache.james.jmap.api.vacation.AccountId;
 import org.apache.james.jmap.api.vacation.NotificationRegistry;
@@ -33,10 +36,12 @@ import org.apache.james.jmap.model.SetVacationRequest;
 import org.apache.james.jmap.model.SetVacationResponse;
 import org.apache.james.jmap.model.VacationResponse;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 
 public class SetVacationResponseMethod implements Method {
 
@@ -85,47 +90,56 @@ public class SetVacationResponseMethod implements Method {
     }
 
     private Stream<JmapResponse> process(ClientId clientId, MailboxSession mailboxSession, SetVacationRequest setVacationRequest) {
-        if (!setVacationRequest.isValid()) {
-            return Stream.of(JmapResponse
-                .builder()
-                .clientId(clientId)
-                .error(ErrorResponse.builder()
-                    .type(INVALID_ARGUMENTS1)
-                    .description(INVALID_ARGUMENT_DESCRIPTION)
-                    .build())
+        AccountId accountId = AccountId.fromString(mailboxSession.getUser().getUserName());
+        VacationResponse vacationResponse = setVacationRequest.getUpdate().get(Vacation.ID);
+        try {
+            return Stream.of(Pipeline
+                .forOperations(
+                    whenNot(setVacationRequest.isValid())
+                        .then(invalidRequest(clientId)),
+                    whenNot(vacationResponse.isValid())
+                        .then(invalidVacationResponse(clientId, vacationResponse)),
+                    endWith(modifyVacation(clientId, accountId, vacationResponse)))
+                .executeFirst(JmapResponse.builder())
                 .build());
+        } catch (MailboxException | MessagingException e) {
+            throw Throwables.propagate(e);
         }
-
-        return process(clientId,
-            AccountId.fromString(mailboxSession.getUser().getUserName()),
-            setVacationRequest.getUpdate().get(Vacation.ID));
     }
 
+    private Pipeline.Operation<JmapResponse.Builder> invalidRequest(ClientId clientId) {
+        return builder -> builder.clientId(clientId)
+            .error(ErrorResponse.builder()
+                .type(INVALID_ARGUMENTS1)
+                .description(INVALID_ARGUMENT_DESCRIPTION)
+                .build());
+    }
 
-    private Stream<JmapResponse> process(ClientId clientId, AccountId accountId, VacationResponse vacationResponse) {
-        if (vacationResponse.isValid()) {
-            vacationRepository.modifyVacation(accountId, vacationResponse.getPatch()).join();
-            notificationRegistry.flush(accountId).join();
-            return Stream.of(JmapResponse.builder()
-                .clientId(clientId)
-                .responseName(RESPONSE_NAME)
-                .response(SetVacationResponse.builder()
-                    .updatedId(Vacation.ID)
-                    .build())
+    private Pipeline.Operation<JmapResponse.Builder> invalidVacationResponse(ClientId clientId, VacationResponse vacationResponse) {
+        return builder -> builder.clientId(clientId)
+            .responseName(RESPONSE_NAME)
+            .response(SetVacationResponse.builder()
+                .notUpdated(Vacation.ID,
+                    SetError.builder()
+                        .type(INVALID_ARGUMENTS)
+                        .description(ERROR_MESSAGE_BASE + vacationResponse.getId())
+                        .build())
                 .build());
-        } else {
-            return Stream.of(JmapResponse.builder()
-                .clientId(clientId)
-                .responseName(RESPONSE_NAME)
-                .response(SetVacationResponse.builder()
-                    .notUpdated(Vacation.ID,
-                        SetError.builder()
-                            .type(INVALID_ARGUMENTS)
-                            .description(ERROR_MESSAGE_BASE + vacationResponse.getId())
-                            .build())
-                    .build())
+    }
+
+    private Pipeline.Operation<JmapResponse.Builder> modifyVacation(ClientId clientId, AccountId accountId, VacationResponse vacationResponse) {
+        vacationRepository.modifyVacation(accountId, vacationResponse.getPatch()).join();
+        notificationRegistry.flush(accountId).join();
+        return builder -> builder
+            .clientId(clientId)
+            .responseName(RESPONSE_NAME)
+            .response(SetVacationResponse.builder()
+                .updatedId(Vacation.ID)
                 .build());
-        }
+    }
+
+    private Pipeline.ConditionalStep.Factory<JmapResponse.Builder> whenNot(boolean b) {
+        return Pipeline.when(!b);
     }
 
 }

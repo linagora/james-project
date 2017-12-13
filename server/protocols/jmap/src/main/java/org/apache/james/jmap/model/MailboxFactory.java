@@ -128,6 +128,10 @@ public class MailboxFactory {
             .build();
     }
 
+    public Mailbox fromMessageManager(MessageManager messageManager, MailboxSession mailboxSession) throws MailboxException {
+        return fromMessageManager(messageManager, Optional.empty(), mailboxSession);
+    }
+
     private MailboxNamespace getNamespace(MailboxPath mailboxPath, boolean isOwner) {
         if (isOwner) {
             return MailboxNamespace.personal();

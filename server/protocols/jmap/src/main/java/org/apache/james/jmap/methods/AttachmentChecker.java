@@ -23,7 +23,6 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import org.apache.james.jmap.exceptions.AttachmentsNotFoundException;
 import org.apache.james.jmap.model.Attachment;
 import org.apache.james.jmap.model.BlobId;
 import org.apache.james.mailbox.AttachmentManager;
@@ -43,12 +42,9 @@ public class AttachmentChecker {
         this.attachmentManager = attachmentManager;
     }
 
-    public void assertAttachmentsExist(ValueWithId.CreationMessageEntry entry, MailboxSession session) throws AttachmentsNotFoundException, MailboxException {
+    public List<BlobId> listAttachmentNotFounds(ValueWithId.CreationMessageEntry entry, MailboxSession session) throws MailboxException {
         List<Attachment> attachments = entry.getValue().getAttachments();
-        List<BlobId> notFounds = listAttachmentsNotFound(attachments, session);
-        if (!notFounds.isEmpty()) {
-            throw new AttachmentsNotFoundException(notFounds);
-        }
+        return listAttachmentsNotFound(attachments, session);
     }
 
     private List<BlobId> listAttachmentsNotFound(List<Attachment> attachments, MailboxSession session) throws MailboxException {

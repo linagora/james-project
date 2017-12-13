@@ -20,6 +20,7 @@
 package org.apache.james.jmap.methods;
 
 import static org.apache.james.jmap.methods.Method.JMAP_PREFIX;
+import static org.apache.james.jmap.methods.Pipeline.endWith;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,12 +30,10 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.mail.MessagingException;
 
-import org.apache.james.jmap.exceptions.AttachmentsNotFoundException;
-import org.apache.james.jmap.exceptions.InvalidDraftKeywordsException;
-import org.apache.james.jmap.exceptions.InvalidMailboxForCreationException;
-import org.apache.james.jmap.exceptions.MailboxNotOwnedException;
+import org.apache.james.jmap.methods.Pipeline.MailboxConditionSupplier;
 import org.apache.james.jmap.methods.ValueWithId.CreationMessageEntry;
 import org.apache.james.jmap.methods.ValueWithId.MessageWithId;
+import org.apache.james.jmap.model.BlobId;
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import org.apache.james.jmap.model.Envelope;
@@ -64,8 +63,10 @@ import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.FunctionChainer;
+import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 
 public class SetMessagesCreationProcessor implements SetMessagesProcessor {
@@ -109,106 +110,86 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
         return responseBuilder.build();
     }
 
-    private void handleCreate(CreationMessageEntry create, Builder responseBuilder, MailboxSession mailboxSession) {
+    private Builder handleCreate(CreationMessageEntry create, Builder responseBuilder, MailboxSession mailboxSession) {
         try {
-            assertIsUserOwnerOfMailboxes(create, mailboxSession);
-            performCreate(create, responseBuilder, mailboxSession);
-        } catch (MailboxSendingNotAllowedException e) {
-            responseBuilder.notCreated(create.getCreationId(), 
-                    SetError.builder()
-                        .type("invalidProperties")
-                        .properties(MessageProperty.from)
-                        .description("Invalid 'from' field. Must be " +
-                                e.getAllowedFrom())
-                        .build());
-
-        } catch (InvalidDraftKeywordsException e) {
-            responseBuilder.notCreated(create.getCreationId(),
-                SetError.builder()
-                    .type("invalidProperties")
-                    .properties(MessageProperty.keywords)
-                    .description(e.getMessage())
-                    .build());
-
-        } catch (AttachmentsNotFoundException e) {
-            responseBuilder.notCreated(create.getCreationId(), 
-                    SetMessagesError.builder()
-                        .type("invalidProperties")
-                        .properties(MessageProperty.attachments)
-                        .attachmentsNotFound(e.getAttachmentIds())
-                        .description("Attachment not found")
-                        .build());
-            
-        } catch (InvalidMailboxForCreationException e) {
-            responseBuilder.notCreated(create.getCreationId(), 
-                    SetError.builder()
-                        .type("invalidProperties")
-                        .properties(MessageProperty.mailboxIds)
-                        .description("Message creation is only supported in mailboxes with role Draft and Outbox")
-                        .build());
-
-        } catch (MailboxInvalidMessageCreationException e) {
-            responseBuilder.notCreated(create.getCreationId(),
-                    buildSetErrorFromValidationResult(create.getValue().validate()));
-
+            List<MailboxId> mailboxIds = toMailboxIds(create);
+            return Pipeline
+                .forOperations(
+                    when(mailboxIds.isEmpty())
+                        .then(invalidEmptyMailboxIds(create)),
+                    whenNot(allMailboxOwned(mailboxIds, mailboxSession))
+                        .then(invalidMailboxOwner(create)),
+                    when(isTargeting(create, mailboxSession, Role.OUTBOX))
+                        .then(outboxPipeline(create, mailboxSession)),
+                    when(isDraftSaving(create))
+                        .then(saveDraftPipeline(create, mailboxSession)),
+                    when(isTargeting(create, mailboxSession, Role.DRAFTS))
+                        .then(invalidDraftFlag(create)),
+                    endWith(invalidMailboxIds(create)))
+                .executeFirst(responseBuilder);
         } catch (MailboxNotFoundException e) {
-            responseBuilder.notCreated(create.getCreationId(), 
+            return responseBuilder.notCreated(create.getCreationId(),
                     SetError.builder()
                         .type("error")
                         .description(e.getMessage())
                         .build());
 
-        } catch (MailboxNotOwnedException e) {
-            LOG.error("Appending message in an unknown mailbox", e);
-            responseBuilder.notCreated(create.getCreationId(), 
-                    SetError.builder()
-                        .type("error")
-                        .properties(MessageProperty.mailboxIds)
-                        .description("MailboxId invalid")
-                        .build());
-
         } catch (MailboxException | MessagingException e) {
             LOG.error("Unexpected error while creating message", e);
-            responseBuilder.notCreated(create.getCreationId(), 
+            return responseBuilder.notCreated(create.getCreationId(),
                     SetError.builder()
                         .type("error")
                         .description("unexpected error")
                         .build());
         }
     }
-    
-    private void performCreate(CreationMessageEntry entry, Builder responseBuilder, MailboxSession session) throws MailboxException, InvalidMailboxForCreationException, MessagingException, AttachmentsNotFoundException {
-        if (isAppendToMailboxWithRole(Role.OUTBOX, entry.getValue(), session)) {
-            sendMailViaOutbox(entry, responseBuilder, session);
-        } else if (isDraft(entry.getValue())) {
-            assertNoOutbox(entry, session);
-            saveDraft(entry, responseBuilder, session);
-        } else {
-            if (isAppendToMailboxWithRole(Role.DRAFTS, entry.getValue(), session)) {
-                throw new InvalidDraftKeywordsException("A draft message should be flagged as Draft");
-            }
-            throw new InvalidMailboxForCreationException("The only implemented feature is sending via outbox and draft saving");
-        }
+
+    private MailboxConditionSupplier isDraftSaving(CreationMessageEntry create) {
+        return () -> isDraft(create.getValue());
     }
 
-    private void assertNoOutbox(CreationMessageEntry entry, MailboxSession session) throws MailboxException {
-        if (isTargettingAMailboxWithRole(Role.OUTBOX, entry.getValue(), session)) {
-            throw new InvalidMailboxForCreationException("Mailbox ids can combine Outbox with other mailbox");
-        }
+    private MailboxConditionSupplier isTargeting(CreationMessageEntry create, MailboxSession mailboxSession, Role role) {
+        return () -> isAppendToMailboxWithRole(role, create.getValue(), mailboxSession);
     }
 
-    private void sendMailViaOutbox(CreationMessageEntry entry, Builder responseBuilder, MailboxSession session) throws AttachmentsNotFoundException, MailboxException, MessagingException {
-        validateArguments(entry, session);
-        MessageWithId created = handleOutboxMessages(entry, session);
-        responseBuilder.created(created.getCreationId(), created.getValue());
+    private ImmutableList<MailboxId> toMailboxIds(CreationMessageEntry create) {
+        return create.getValue().getMailboxIds()
+            .stream()
+            .distinct()
+            .map(mailboxIdFactory::fromString)
+            .collect(Guavate.toImmutableList());
     }
 
-    private void saveDraft(CreationMessageEntry entry, Builder responseBuilder, MailboxSession session) throws AttachmentsNotFoundException, MailboxException, MessagingException {
-        attachmentChecker.assertAttachmentsExist(entry, session);
-        MessageWithId created = handleDraftMessages(entry, session);
-        responseBuilder.created(created.getCreationId(), created.getValue());
+    private Pipeline<Builder> outboxPipeline(CreationMessageEntry entry, MailboxSession session) throws MailboxException, MessagingException {
+        CreationMessage creationMessage = entry.getValue();
+        return Pipeline.forOperations(
+            whenNot(creationMessage.isValid())
+                .then(invalidMessage(entry)),
+            whenNot(isSender(creationMessage.getFrom(), session))
+                .then(invalidSender(entry, session)),
+            checkAttachmentStep(entry, session),
+            endWith(builder -> sendMail(entry, builder, session)));
     }
 
+    private Pipeline<Builder> saveDraftPipeline(CreationMessageEntry entry, MailboxSession session) throws MailboxException, MessagingException {
+        return Pipeline.forOperations(
+            when(() -> isTargetingAMailboxWithRole(Role.OUTBOX, entry, session))
+                .then(invalidMailboxIds(entry)),
+            checkAttachmentStep(entry, session),
+            Pipeline.endWith(builder -> {
+                MessageWithId created = handleDraftMessages(entry, session);
+                return builder.created(created.getCreationId(), created.getValue());
+            }));
+    }
+
+    private Builder sendMail(CreationMessageEntry entry, Builder responseBuilder, MailboxSession session) throws MailboxException, MessagingException {
+        MetaDataWithContent newMessage = messageAppender.appendMessageInMailboxes(entry, toMailboxIds(entry), session);
+        Message jmapMessage = messageFactory.fromMetaDataWithContent(newMessage);
+        Envelope envelope = Envelope.fromMessage(jmapMessage);
+        messageSender.sendMessage(newMessage, envelope, session);
+        MessageWithId created = new MessageWithId(entry.getCreationId(), jmapMessage);
+        return responseBuilder.created(created.getCreationId(), created.getValue());
+    }
 
     private Boolean isDraft(CreationMessage creationMessage) {
         if (creationMessage.getOldKeyword().isPresent()) {
@@ -222,51 +203,8 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
             .orElse(false);
     }
 
-    private void validateArguments(CreationMessageEntry entry, MailboxSession session) throws MailboxInvalidMessageCreationException, AttachmentsNotFoundException, MailboxException {
-        CreationMessage message = entry.getValue();
-        if (!message.isValid()) {
-            throw new MailboxInvalidMessageCreationException();
-        }
-        attachmentChecker.assertAttachmentsExist(entry, session);
-    }
-
-    @VisibleForTesting void assertIsUserOwnerOfMailboxes(CreationMessageEntry entry, MailboxSession session) throws MailboxNotOwnedException {
-        if (containsMailboxNotOwn(entry.getValue().getMailboxIds(), session)) {
-            throw new MailboxNotOwnedException();
-        }
-    }
-
-    private boolean containsMailboxNotOwn(List<String> mailboxIds, MailboxSession session) {
-        FunctionChainer<MailboxId, MessageManager> findMailbox = Throwing.function(mailboxId -> mailboxManager.getMailbox(mailboxId, session));
-        return mailboxIds.stream()
-            .map(mailboxIdFactory::fromString)
-            .map(findMailbox.sneakyThrow())
-            .map(Throwing.function(MessageManager::getMailboxPath))
-            .anyMatch(path -> !path.belongsTo(session));
-    }
-
-    private MessageWithId handleOutboxMessages(CreationMessageEntry entry, MailboxSession session) throws MailboxException, MessagingException {
-        assertUserIsSender(session, entry.getValue().getFrom());
-        MessageManager outbox = getMailboxWithRole(session, Role.OUTBOX).orElseThrow(() -> new MailboxNotFoundException(Role.OUTBOX.serialize()));
-        MetaDataWithContent newMessage = messageAppender.appendMessageInMailbox(entry, outbox, session);
-        Message jmapMessage = messageFactory.fromMetaDataWithContent(newMessage);
-        Envelope envelope = Envelope.fromMessage(jmapMessage);
-        messageSender.sendMessage(newMessage, envelope, session);
-        return new ValueWithId.MessageWithId(entry.getCreationId(), jmapMessage);
-    }
-
-    private void assertUserIsSender(MailboxSession session, Optional<DraftEmailer> from) throws MailboxSendingNotAllowedException {
-        if (!from.flatMap(DraftEmailer::getEmail)
-                .filter(email -> session.getUser().isSameUser(email))
-                .isPresent()) {
-            String allowedSender = session.getUser().getUserName();
-            throw new MailboxSendingNotAllowedException(allowedSender);
-        }
-    }
-
     private MessageWithId handleDraftMessages(CreationMessageEntry entry, MailboxSession session) throws MailboxException, MessagingException {
-        MessageManager draftMailbox = getMailboxWithRole(session, Role.DRAFTS).orElseThrow(() -> new MailboxNotFoundException(Role.DRAFTS.serialize()));
-        MetaDataWithContent newMessage = messageAppender.appendMessageInMailbox(entry, draftMailbox, session);
+        MetaDataWithContent newMessage = messageAppender.appendMessageInMailboxes(entry, toMailboxIds(entry), session);
         Message jmapMessage = messageFactory.fromMetaDataWithContent(newMessage);
         return new ValueWithId.MessageWithId(entry.getCreationId(), jmapMessage);
     }
@@ -277,28 +215,29 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
                 .orElse(false);
     }
 
-    private boolean isTargettingAMailboxWithRole(Role role, CreationMessage entry, MailboxSession mailboxSession) throws MailboxException {
+    private boolean isTargetingAMailboxWithRole(Role role, CreationMessageEntry entry, MailboxSession mailboxSession) throws MailboxException {
         return getMailboxWithRole(mailboxSession, role)
-                .map(entry::isIn)
+                .map(entry.getValue()::isIn)
                 .orElse(false);
     }
 
     private Optional<MessageManager> getMailboxWithRole(MailboxSession mailboxSession, Role role) throws MailboxException {
         return systemMailboxesProvider.getMailboxByRole(role, mailboxSession).findFirst();
     }
-    
-    private SetError buildSetErrorFromValidationResult(List<ValidationResult> validationErrors) {
-        return SetError.builder()
-                .type("invalidProperties")
-                .properties(collectMessageProperties(validationErrors))
-                .description(formatValidationErrorMessge(validationErrors))
-                .build();
+
+    @VisibleForTesting
+    boolean allMailboxOwned(List<MailboxId> mailboxIds, MailboxSession session) {
+        FunctionChainer<MailboxId, MessageManager> findMailbox = Throwing.function(mailboxId -> mailboxManager.getMailbox(mailboxId, session));
+        return mailboxIds.stream()
+            .map(findMailbox.sneakyThrow())
+            .map(Throwing.function(MessageManager::getMailboxPath))
+            .allMatch(path -> path.belongsTo(session));
     }
 
-    private String formatValidationErrorMessge(List<ValidationResult> validationErrors) {
-        return validationErrors.stream()
-                .map(err -> err.getProperty() + ": " + err.getErrorMessage())
-                .collect(Collectors.joining("\\n"));
+    private boolean isSender(Optional<DraftEmailer> from, MailboxSession session) {
+        return from.flatMap(DraftEmailer::getEmail)
+            .filter(email -> session.getUser().isSameUser(email))
+            .isPresent();
     }
 
     private Set<MessageProperties.MessageProperty> collectMessageProperties(List<ValidationResult> validationErrors) {
@@ -307,6 +246,103 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
                 .flatMap(err -> propertiesSplitter.splitToList(err.getProperty()).stream())
                 .flatMap(MessageProperty::find)
                 .collect(Collectors.toSet());
+    }
+
+    private Pipeline.ConditionalStep<Builder> checkAttachmentStep(CreationMessageEntry entry, MailboxSession session) throws MailboxException {
+        List<BlobId> attachmentNotFound = attachmentChecker.listAttachmentNotFounds(entry, session);
+        return whenNot(attachmentNotFound.isEmpty())
+            .then(invalidAttachments(entry, attachmentNotFound));
+    }
+
+    private Pipeline.Operation<Builder> invalidAttachments(CreationMessageEntry entry, List<BlobId> attachmentNotFound) {
+        return builder -> builder.notCreated(entry.getCreationId(),
+            SetMessagesError.builder()
+                .type("invalidProperties")
+                .properties(MessageProperty.attachments)
+                .attachmentsNotFound(attachmentNotFound)
+                .description("Attachment not found")
+                .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidSender(CreationMessageEntry entry, MailboxSession session) {
+        String allowedSender = session.getUser().getUserName();
+        return builder -> builder.notCreated(entry.getCreationId(),
+            SetError.builder()
+                .type("invalidProperties")
+                .properties(MessageProperty.from)
+                .description("Invalid 'from' field. Must be " +
+                    allowedSender)
+                .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidMessage(CreationMessageEntry entry) {
+        return builder -> builder.notCreated(entry.getCreationId(),
+            buildSetErrorFromValidationResult(entry.getValue().validate()));
+    }
+
+    private SetError buildSetErrorFromValidationResult(List<ValidationResult> validationErrors) {
+        return SetError.builder()
+            .type("invalidProperties")
+            .properties(collectMessageProperties(validationErrors))
+            .description(formatValidationErrorMessge(validationErrors))
+            .build();
+    }
+
+    private String formatValidationErrorMessge(List<ValidationResult> validationErrors) {
+        return validationErrors.stream()
+            .map(err -> err.getProperty() + ": " + err.getErrorMessage())
+            .collect(Collectors.joining("\\n"));
+    }
+
+    private Pipeline.Operation<Builder> invalidMailboxOwner(CreationMessageEntry create) {
+        return builder -> {
+            LOG.error("Appending message in an unknown mailbox");
+            return builder.notCreated(create.getCreationId(),
+                SetError.builder()
+                    .type("error")
+                    .properties(MessageProperty.mailboxIds)
+                    .description("MailboxId invalid")
+                    .build());
+        };
+    }
+
+    private Pipeline.Operation<Builder> invalidEmptyMailboxIds(CreationMessageEntry create) {
+        return builder -> builder.notCreated(create.getCreationId(),
+            SetError.builder()
+                .type("invalidProperties")
+                .properties(MessageProperty.mailboxIds)
+                .description("Message needs to be in at least one mailbox")
+                .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidDraftFlag(CreationMessageEntry entry) {
+        return responseBuilder -> responseBuilder.notCreated(entry.getCreationId(),
+            SetError.builder()
+                .type("invalidProperties")
+                .properties(MessageProperty.keywords)
+                .description("A draft message should be flagged as Draft")
+                .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidMailboxIds(CreationMessageEntry entry) {
+        return responseBuilder -> responseBuilder.notCreated(entry.getCreationId(),
+            SetError.builder()
+                .type("invalidProperties")
+                .properties(MessageProperty.mailboxIds)
+                .description("Message creation is only supported in mailboxes with role Draft and Outbox")
+                .build());
+    }
+
+    private Pipeline.ConditionalStep.Factory<Builder> when(boolean b) {
+        return Pipeline.when(b);
+    }
+
+    private Pipeline.ConditionalStep.Factory<Builder> whenNot(boolean b) {
+        return Pipeline.when(!b);
+    }
+
+    private Pipeline.ConditionalStep.Factory<Builder> when(MailboxConditionSupplier condition) {
+        return Pipeline.when(condition);
     }
 
 }

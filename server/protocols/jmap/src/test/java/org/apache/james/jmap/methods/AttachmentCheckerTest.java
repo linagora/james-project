@@ -19,11 +19,10 @@
 
 package org.apache.james.jmap.methods;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.apache.james.jmap.exceptions.AttachmentsNotFoundException;
 import org.apache.james.jmap.model.Attachment;
 import org.apache.james.jmap.model.BlobId;
 import org.apache.james.jmap.model.CreationMessage;
@@ -37,7 +36,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 public class AttachmentCheckerTest {
 
@@ -62,12 +60,12 @@ public class AttachmentCheckerTest {
     }
 
     @Test
-    public void assertAttachmentsExistShouldThrowWhenUnknownBlobId() throws MailboxException {
+    public void listAttachmentNotFoundsShouldReturnBlobIdsWhenUnknown() throws MailboxException {
         BlobId unknownBlobId = BlobId.of("unknownBlobId");
         AttachmentId unknownAttachmentId = AttachmentId.from(unknownBlobId.getRawValue());
         when(attachmentManager.exists(unknownAttachmentId, session)).thenReturn(false);
 
-        assertThatThrownBy(() -> sut.assertAttachmentsExist(
+        assertThat(sut.listAttachmentNotFounds(
             new ValueWithId.CreationMessageEntry(
                 creationMessageId,
                 creationMessageBuilder.attachments(
@@ -75,27 +73,28 @@ public class AttachmentCheckerTest {
                     .build()
             ),
             session))
-            .isInstanceOf(AttachmentsNotFoundException.class);
+            .containsOnly(unknownBlobId);
     }
 
     @Test
-    public void assertAttachmentsExistShouldNotThrowWhenAttachmentExists() throws Exception {
+    public void listAttachmentNotFoundsShouldReturnEmptyWhenKnown() throws Exception {
         BlobId blobId = BlobId.of("unknownBlobId");
         AttachmentId attachmentId = AttachmentId.from(blobId.getRawValue());
         when(attachmentManager.exists(attachmentId, session)).thenReturn(true);
 
-        sut.assertAttachmentsExist(
-            new ValueWithId.CreationMessageEntry(
-                creationMessageId,
-                creationMessageBuilder.attachments(
-                    Attachment.builder().size(12L).type("image/jpeg").blobId(blobId).build())
-                    .build()
-            ),
-            session);
+        assertThat(
+            sut.listAttachmentNotFounds(
+                new ValueWithId.CreationMessageEntry(
+                    creationMessageId,
+                    creationMessageBuilder.attachments(
+                        Attachment.builder().size(12L).type("image/jpeg").blobId(blobId).build())
+                        .build()),
+                session))
+            .isEmpty();
     }
 
     @Test
-    public void assertAttachmentsExistShouldThrowWhenUnknownBlobIds() throws MailboxException {
+    public void listAttachmentNotFoundsShouldReturnAllBlobIdsWhenAllUnknown() throws MailboxException {
         BlobId unknownBlobId1 = BlobId.of("unknownBlobId1");
         BlobId unknownBlobId2 = BlobId.of("unknownBlobId2");
         AttachmentId unknownAttachmentId1 = AttachmentId.from(unknownBlobId1.getRawValue());
@@ -104,21 +103,20 @@ public class AttachmentCheckerTest {
         when(attachmentManager.exists(unknownAttachmentId1, session)).thenReturn(false);
         when(attachmentManager.exists(unknownAttachmentId2, session)).thenReturn(false);
 
-        assertThatThrownBy(() -> sut.assertAttachmentsExist(
-            new ValueWithId.CreationMessageEntry(
-                creationMessageId,
-                creationMessageBuilder.attachments(
-                    Attachment.builder().size(12L).type("image/jpeg").blobId(unknownBlobId1).build(),
-                    Attachment.builder().size(23L).type("image/git").blobId(unknownBlobId2).build())
-                    .build()
-            ),
-            session))
-            .isInstanceOf(AttachmentsNotFoundException.class)
-            .matches(e -> ((AttachmentsNotFoundException)e).getAttachmentIds().containsAll(ImmutableSet.of(unknownBlobId1, unknownBlobId2)));
+        assertThat(
+            sut.listAttachmentNotFounds(
+                new ValueWithId.CreationMessageEntry(
+                    creationMessageId,
+                    creationMessageBuilder.attachments(
+                        Attachment.builder().size(12L).type("image/jpeg").blobId(unknownBlobId1).build(),
+                        Attachment.builder().size(23L).type("image/git").blobId(unknownBlobId2).build())
+                        .build()),
+                session))
+            .containsOnly(unknownBlobId1, unknownBlobId2);
     }
 
     @Test
-    public void assertAttachmentsExistShouldNotThrowWhenKnownBlobIds() throws Exception {
+    public void listAttachmentNotFoundsShouldReturnEmptyWhenAllKnown() throws Exception {
         BlobId blobId1 = BlobId.of("unknownBlobId1");
         BlobId blobId2 = BlobId.of("unknownBlobId2");
         AttachmentId attachmentId1 = AttachmentId.from(blobId1.getRawValue());
@@ -127,19 +125,40 @@ public class AttachmentCheckerTest {
         when(attachmentManager.exists(attachmentId1, session)).thenReturn(true);
         when(attachmentManager.exists(attachmentId2, session)).thenReturn(true);
 
-        sut.assertAttachmentsExist(
-            new ValueWithId.CreationMessageEntry(
-                creationMessageId,
-                creationMessageBuilder.attachments(
-                    Attachment.builder().size(12L).type("image/jpeg").blobId(blobId1).build(),
-                    Attachment.builder().size(23L).type("image/git").blobId(blobId2).build())
-                    .build()
-            ),
-            session);
+        assertThat(
+            sut.listAttachmentNotFounds(
+                new ValueWithId.CreationMessageEntry(
+                    creationMessageId,
+                    creationMessageBuilder.attachments(
+                        Attachment.builder().size(12L).type("image/jpeg").blobId(blobId1).build(),
+                        Attachment.builder().size(23L).type("image/git").blobId(blobId2).build())
+                        .build()),
+                session))
+            .isEmpty();
     }
 
     @Test
-    public void assertAttachmentsExistShouldThrowWhenAtLeastOneUnknownBlobId() throws MailboxException {
+    public void listAttachmentNotFoundsShouldReturnEmptyWhenEmpty() throws Exception {
+        BlobId blobId1 = BlobId.of("unknownBlobId1");
+        BlobId blobId2 = BlobId.of("unknownBlobId2");
+        AttachmentId attachmentId1 = AttachmentId.from(blobId1.getRawValue());
+        AttachmentId attachmentId2 = AttachmentId.from(blobId2.getRawValue());
+
+        when(attachmentManager.exists(attachmentId1, session)).thenReturn(true);
+        when(attachmentManager.exists(attachmentId2, session)).thenReturn(true);
+
+        assertThat(
+            sut.listAttachmentNotFounds(
+                new ValueWithId.CreationMessageEntry(
+                    creationMessageId,
+                    creationMessageBuilder.attachments()
+                        .build()),
+                session))
+            .isEmpty();
+    }
+
+    @Test
+    public void listAttachmentNotFoundsShouldReturnOnlyUnknownBlobIds() throws MailboxException {
         BlobId blobId1 = BlobId.of("unknownBlobId1");
         BlobId unknownBlobId2 = BlobId.of("unknownBlobId2");
         AttachmentId attachmentId1 = AttachmentId.from(blobId1.getRawValue());
@@ -148,18 +167,16 @@ public class AttachmentCheckerTest {
         when(attachmentManager.exists(attachmentId1, session)).thenReturn(true);
         when(attachmentManager.exists(unknownAttachmentId2, session)).thenReturn(false);
 
-        assertThatThrownBy(() -> sut.assertAttachmentsExist(
-            new ValueWithId.CreationMessageEntry(
-                creationMessageId,
-                creationMessageBuilder.attachments(
-                    Attachment.builder().size(12L).type("image/jpeg").blobId(blobId1).build(),
-                    Attachment.builder().size(23L).type("image/git").blobId(unknownBlobId2).build())
-                    .build()
-            ),
-            session))
-            .isInstanceOf(AttachmentsNotFoundException.class)
-            .matches(e -> ((AttachmentsNotFoundException)e).getAttachmentIds()
-                .containsAll(ImmutableSet.of(unknownBlobId2)));
+        assertThat(
+            sut.listAttachmentNotFounds(
+                new ValueWithId.CreationMessageEntry(
+                    creationMessageId,
+                    creationMessageBuilder.attachments(
+                        Attachment.builder().size(12L).type("image/jpeg").blobId(blobId1).build(),
+                        Attachment.builder().size(23L).type("image/git").blobId(unknownBlobId2).build())
+                        .build()),
+                session))
+            .containsOnly(unknownBlobId2);
     }
 
 }

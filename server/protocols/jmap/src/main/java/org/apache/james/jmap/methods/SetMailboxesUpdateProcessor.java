@@ -20,15 +20,15 @@
 package org.apache.james.jmap.methods;
 
 import static org.apache.james.jmap.methods.Method.JMAP_PREFIX;
+import static org.apache.james.jmap.methods.Pipeline.endWith;
+import static org.apache.james.jmap.methods.Pipeline.nested;
 
 import java.util.Optional;
 
 import javax.inject.Inject;
+import javax.mail.MessagingException;
 
-import org.apache.james.jmap.exceptions.MailboxHasChildException;
-import org.apache.james.jmap.exceptions.MailboxNotOwnedException;
 import org.apache.james.jmap.exceptions.MailboxParentNotFoundException;
-import org.apache.james.jmap.exceptions.SystemMailboxNotUpdatableException;
 import org.apache.james.jmap.model.MailboxFactory;
 import org.apache.james.jmap.model.SetError;
 import org.apache.james.jmap.model.SetMailboxesRequest;
@@ -46,7 +46,6 @@ import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.DifferentDomainException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
-import org.apache.james.mailbox.exception.MailboxNameException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.TooLongMailboxNameException;
 import org.apache.james.mailbox.model.MailboxId;
@@ -60,8 +59,8 @@ import org.slf4j.LoggerFactory;
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 
 public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
@@ -94,90 +93,104 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
         return responseBuilder.build();
     }
 
-    private void handleUpdate(MailboxId mailboxId, MailboxUpdateRequest updateRequest, Builder responseBuilder, MailboxSession mailboxSession) {
+    private Builder handleUpdate(MailboxId mailboxId, MailboxUpdateRequest updateRequest, Builder responseBuilder, MailboxSession mailboxSession) {
         try {
-            validateMailboxName(updateRequest, mailboxSession);
-            Mailbox mailbox = getMailbox(mailboxId, mailboxSession);
-            assertNotSharedOutboxOrDraftMailbox(mailbox, updateRequest);
-            assertSystemMailboxesAreNotUpdated(mailbox, updateRequest);
-            validateParent(mailbox, updateRequest, mailboxSession);
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxId, mailboxSession);
+            Mailbox mailbox = mailboxFactory.fromMessageManager(messageManager, mailboxSession);
+            char pathDelimiter = mailboxSession.getPathDelimiter();
+            MailboxPath originMailboxPath = messageManager.getMailboxPath();
 
-            updateMailbox(mailbox, updateRequest, mailboxSession);
-            responseBuilder.updated(mailboxId);
-
-        } catch (SystemMailboxNotUpdatableException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
-                    .type("invalidArguments")
-                    .description("Cannot update a system mailbox.")
-                    .build());
+            return Pipeline.forOperations(
+                when(nameContainsPathDelimiter(updateRequest, pathDelimiter))
+                    .then(invalidMailboxNameContainsDelimiter(mailboxId, updateRequest, pathDelimiter)),
+                when(nameMatchesSystemMailbox(updateRequest))
+                    .then(invalidSystemMailboxName(mailboxId, updateRequest)),
+                when(sharingOutbox(mailbox, updateRequest))
+                    .then(invalidArgument(mailboxId, "Sharing 'Outbox' is forbidden")),
+                when(sharingDraft(mailbox, updateRequest))
+                    .then(invalidArgument(mailboxId, "Sharing 'Drafts' is forbidden")),
+                when(isForbiddenSystemMailboxUpdate(mailbox, updateRequest))
+                    .then(invalidSystemMailboxUpdate(mailboxId)),
+                validateParentStep(mailbox, updateRequest, mailboxSession),
+                endWith(nested(
+                    updateMailboxPipeline(mailbox, updateRequest, originMailboxPath, mailboxSession))))
+                .executeFirst(responseBuilder);
         } catch (TooLongMailboxNameException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                 .type("invalidArguments")
                 .description("The mailbox name length is too long")
                 .build());
-        } catch (MailboxNameException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
-                    .type("invalidArguments")
-                    .description(e.getMessage())
-                    .build());
         } catch (MailboxNotFoundException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                     .type("notFound")
                     .description(String.format("The mailbox '%s' was not found", mailboxId.serialize()))
                     .build());
         } catch (MailboxParentNotFoundException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                     .type("notFound")
                     .description(String.format("The parent mailbox '%s' was not found.", e.getParentId()))
                     .build());
-        } catch (MailboxHasChildException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
-                    .type("invalidArguments")
-                    .description("Cannot update a parent mailbox.")
-                    .build());
-        } catch (MailboxNotOwnedException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
-                    .type("invalidArguments")
-                    .description("Parent mailbox is not owned.")
-                    .build());
         } catch (MailboxExistsException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                     .type("invalidArguments")
                     .description("Cannot rename a mailbox to an already existing mailbox.")
                     .build());
         } catch (DifferentDomainException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                 .type("invalidArguments")
                 .description("Cannot share a mailbox to another domain")
                 .build());
         } catch (IllegalArgumentException e) {
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                 .type("invalidArguments")
                 .description(e.getMessage())
                 .build());
         } catch (MailboxException e) {
             LOGGER.error("Error while updating mailbox", e);
-            responseBuilder.notUpdated(mailboxId, SetError.builder()
+            return responseBuilder.notUpdated(mailboxId, SetError.builder()
                     .type( "anErrorOccurred")
                     .description("An error occurred when updating the mailbox")
                     .build());
+        } catch (MessagingException e) {
+            throw Throwables.propagate(e);
         }
-   }
-
-    private void assertNotSharedOutboxOrDraftMailbox(Mailbox mailbox, MailboxUpdateRequest updateRequest) {
-        Preconditions.checkArgument(!updateRequest.getSharedWith().isPresent() || !mailbox.hasRole(Role.OUTBOX), "Sharing 'Outbox' is forbidden");
-        Preconditions.checkArgument(!updateRequest.getSharedWith().isPresent() || !mailbox.hasRole(Role.DRAFTS), "Sharing 'Draft' is forbidden");
     }
 
-    private void assertSystemMailboxesAreNotUpdated(Mailbox mailbox, MailboxUpdateRequest updateRequest) throws SystemMailboxNotUpdatableException {
-        if (mailbox.hasSystemRole()) {
-            if (OptionalUtils.containsDifferent(updateRequest.getName(), mailbox.getName())
-                || requestChanged(updateRequest.getParentId(), mailbox.getParentId())
-                || requestChanged(updateRequest.getRole(), mailbox.getRole())
-                || OptionalUtils.containsDifferent(updateRequest.getSortOrder(), mailbox.getSortOrder())) {
-                throw new SystemMailboxNotUpdatableException();
-            }
-        }
+    private Pipeline.Step<Builder> updateMailboxPipeline(Mailbox mailbox, MailboxUpdateRequest updateRequest, MailboxPath originMailboxPath, MailboxSession mailboxSession) throws MailboxException, MessagingException {
+        MailboxPath destinationMailboxPath = computeNewMailboxPath(mailbox, originMailboxPath, updateRequest, mailboxSession);
+
+        Pipeline.Operation<Builder> finalOperation = builder -> builder.updated(mailbox.getId());
+        return Pipeline
+            .forOperations(
+                when(updateRequest.getSharedWith().isPresent())
+                    .then(setRights(updateRequest, mailboxSession, originMailboxPath)),
+                whenNot(originMailboxPath.equals(destinationMailboxPath))
+                    .then(rename(mailboxSession, originMailboxPath, destinationMailboxPath)),
+                endWith(finalOperation))
+            .executeAll();
+    }
+
+    private boolean sharingDraft(Mailbox mailbox, MailboxUpdateRequest updateRequest) {
+        return sharingMailboxWithRole(mailbox, updateRequest, Role.DRAFTS);
+    }
+
+    private boolean sharingOutbox(Mailbox mailbox, MailboxUpdateRequest updateRequest) {
+        return sharingMailboxWithRole(mailbox, updateRequest, Role.OUTBOX);
+    }
+
+    private boolean sharingMailboxWithRole(Mailbox mailbox, MailboxUpdateRequest updateRequest, Role role) {
+        return !updateRequest.getSharedWith().isPresent() || !mailbox.hasRole(role);
+    }
+
+    private boolean isForbiddenSystemMailboxUpdate(Mailbox mailbox, MailboxUpdateRequest updateRequest) {
+        return mailbox.hasSystemRole() && hasForbiddenSystemMailboxUpdate(mailbox, updateRequest);
+    }
+
+    private boolean hasForbiddenSystemMailboxUpdate(Mailbox mailbox, MailboxUpdateRequest updateRequest) {
+        return OptionalUtils.containsDifferent(updateRequest.getName(), mailbox.getName())
+            || requestChanged(updateRequest.getParentId(), mailbox.getParentId())
+            || requestChanged(updateRequest.getRole(), mailbox.getRole())
+            || OptionalUtils.containsDifferent(updateRequest.getSortOrder(), mailbox.getSortOrder());
     }
 
     @VisibleForTesting
@@ -185,25 +198,6 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
         return requestValue
             .filter(value -> !requestValue.equals(storeValue))
             .isPresent();
-    }
-
-    private Mailbox getMailbox(MailboxId mailboxId, MailboxSession mailboxSession) throws MailboxNotFoundException {
-        return mailboxFactory.builder()
-                .id(mailboxId)
-                .session(mailboxSession)
-                .build()
-                .orElseThrow(() -> new MailboxNotFoundException(mailboxId));
-    }
-
-    private void validateMailboxName(MailboxUpdateRequest updateRequest, MailboxSession mailboxSession) throws MailboxNameException {
-        char pathDelimiter = mailboxSession.getPathDelimiter();
-
-        if (nameContainsPathDelimiter(updateRequest, pathDelimiter)) {
-            throw new MailboxNameException(String.format("The mailbox '%s' contains an illegal character: '%c'", updateRequest.getName().get(), pathDelimiter));
-        }
-        if (nameMatchesSystemMailbox(updateRequest)) {
-            throw new MailboxNameException(String.format("The mailbox '%s' is a system mailbox.", updateRequest.getName().get()));
-        }
     }
 
     private boolean nameMatchesSystemMailbox(MailboxUpdateRequest updateRequest) {
@@ -219,27 +213,36 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
                 .isPresent() ;
     }
 
-    private void validateParent(Mailbox mailbox, MailboxUpdateRequest updateRequest, MailboxSession mailboxSession) throws MailboxException, MailboxHasChildException {
-        if (isParentIdInRequest(updateRequest)) {
-            MailboxId newParentId = updateRequest.getParentId().get();
-            MessageManager parent = retrieveParent(mailboxSession, newParentId);
-            if (mustChangeParent(mailbox.getParentId(), newParentId)) {
-                assertNoChildren(mailbox, mailboxSession);
-                assertOwned(mailboxSession, parent);
+    private Pipeline.Step<Builder> validateParentStep(Mailbox mailbox, MailboxUpdateRequest updateRequest, MailboxSession mailboxSession) {
+        return builder -> {
+            if (isParentIdInRequest(updateRequest)) {
+                MailboxId newParentId = updateRequest.getParentId().get();
+                MessageManager parent = retrieveParent(mailboxSession, newParentId);
+                if (mustChangeParent(mailbox.getParentId(), newParentId)) {
+                    if (hasChildren(mailbox, mailboxSession)) {
+                        return Optional.of(builder.notUpdated(mailbox.getId(), SetError.builder()
+                            .type("invalidArguments")
+                            .description("Cannot update a parent mailbox.")
+                            .build()));
+                    }
+                    if (belongsToOtherUser(mailboxSession, parent)) {
+                        return Optional.of(builder.notUpdated(mailbox.getId(), SetError.builder()
+                            .type("invalidArguments")
+                            .description("Parent mailbox is not owned.")
+                            .build()));
+                    }
+                }
             }
-        }
+            return Optional.empty();
+        };
     }
 
-    private void assertNoChildren(Mailbox mailbox, MailboxSession mailboxSession) throws MailboxException, MailboxHasChildException {
-        if (mailboxUtils.hasChildren(mailbox.getId(), mailboxSession)) {
-            throw new MailboxHasChildException();
-        }
+    private boolean belongsToOtherUser(MailboxSession mailboxSession, MessageManager parent) throws MailboxException {
+        return !parent.getMailboxPath().belongsTo(mailboxSession);
     }
 
-    private void assertOwned(MailboxSession mailboxSession, MessageManager parent) throws MailboxException {
-        if (!parent.getMailboxPath().belongsTo(mailboxSession)) {
-            throw new MailboxNotOwnedException();
-        }
+    private boolean hasChildren(Mailbox mailbox, MailboxSession mailboxSession) throws MailboxException {
+        return mailboxUtils.hasChildren(mailbox.getId(), mailboxSession);
     }
 
     private MessageManager retrieveParent(MailboxSession mailboxSession, MailboxId newParentId) throws MailboxException {
@@ -261,23 +264,26 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
                 .orElse(true);
     }
 
-    private void updateMailbox(Mailbox mailbox, MailboxUpdateRequest updateRequest, MailboxSession mailboxSession) throws MailboxException {
-        MailboxPath originMailboxPath = mailboxManager.getMailbox(mailbox.getId(), mailboxSession).getMailboxPath();
-        MailboxPath destinationMailboxPath = computeNewMailboxPath(mailbox, originMailboxPath, updateRequest, mailboxSession);
-        if (updateRequest.getSharedWith().isPresent()) {
+    private Pipeline.Operation<Builder> rename(MailboxSession mailboxSession, MailboxPath originMailboxPath, MailboxPath destinationMailboxPath) throws MailboxException {
+        return builder -> {
+            mailboxManager.renameMailbox(originMailboxPath, destinationMailboxPath, mailboxSession);
+
+            subscriptionManager.unsubscribe(mailboxSession, originMailboxPath.getName());
+            subscriptionManager.subscribe(mailboxSession, destinationMailboxPath.getName());
+            return builder;
+        };
+    }
+
+    private Pipeline.Operation<Builder> setRights(MailboxUpdateRequest updateRequest, MailboxSession mailboxSession, MailboxPath originMailboxPath) throws MailboxException {
+        return builder -> {
             mailboxManager.setRights(originMailboxPath,
                 updateRequest.getSharedWith()
                     .get()
                     .removeEntriesFor(Username.forMailboxPath(originMailboxPath))
                     .toMailboxAcl(),
                 mailboxSession);
-        }
-        if (!originMailboxPath.equals(destinationMailboxPath)) {
-            mailboxManager.renameMailbox(originMailboxPath, destinationMailboxPath, mailboxSession);
-
-            subscriptionManager.unsubscribe(mailboxSession, originMailboxPath.getName());
-            subscriptionManager.subscribe(mailboxSession, destinationMailboxPath.getName());
-        }
+            return builder;
+        };
     }
 
     private MailboxPath computeNewMailboxPath(Mailbox mailbox, MailboxPath originMailboxPath, MailboxUpdateRequest updateRequest, MailboxSession mailboxSession) throws MailboxException {
@@ -311,6 +317,42 @@ public class SetMailboxesUpdateProcessor implements SetMailboxesProcessor {
         return Iterables.getLast(
                 Splitter.on(mailboxSession.getPathDelimiter())
                     .splitToList(originMailboxPath.getName()));
+    }
+
+    private Pipeline.Operation<Builder> invalidSystemMailboxUpdate(MailboxId mailboxId) {
+        return responseBuilder -> responseBuilder.notUpdated(mailboxId, SetError.builder()
+            .type("invalidArguments")
+            .description("Cannot update a system mailbox.")
+            .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidArgument(MailboxId mailboxId, String message) {
+        return builder -> builder.notUpdated(mailboxId, SetError.builder()
+            .type("invalidArguments")
+            .description(message)
+            .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidMailboxNameContainsDelimiter(MailboxId mailboxId, MailboxUpdateRequest updateRequest, char pathDelimiter) {
+        return responseBuilder -> responseBuilder.notUpdated(mailboxId, SetError.builder()
+            .type("invalidArguments")
+            .description(String.format("The mailbox '%s' contains an illegal character: '%c'", updateRequest.getName().get(), pathDelimiter))
+            .build());
+    }
+
+    private Pipeline.Operation<Builder> invalidSystemMailboxName(MailboxId mailboxId, MailboxUpdateRequest updateRequest) {
+        return responseBuilder -> responseBuilder.notUpdated(mailboxId, SetError.builder()
+            .type("invalidArguments")
+            .description(String.format("The mailbox '%s' is a system mailbox.", updateRequest.getName().get()))
+            .build());
+    }
+
+    private Pipeline.ConditionalStep.Factory<Builder> when(boolean b) {
+        return Pipeline.when(b);
+    }
+
+    private Pipeline.ConditionalStep.Factory<Builder> whenNot(boolean b) {
+        return Pipeline.when(!b);
     }
 
 }
