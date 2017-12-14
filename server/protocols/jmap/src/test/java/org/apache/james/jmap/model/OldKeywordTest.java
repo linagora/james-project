@@ -26,6 +26,7 @@ import java.util.Optional;
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 
+import org.apache.james.mailbox.FlagsBuilder;
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -37,50 +38,179 @@ public class OldKeywordTest {
     }
 
     @Test
+    public void asKeywordsShouldContainFlaggedWhenIsFlagged() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isFlagged(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from(Keyword.FLAGGED));
+    }
+
+    @Test
+    public void asKeywordsShouldNotContainFlaggedWhenIsNotFlagged() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isFlagged(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from());
+    }
+
+    @Test
+    public void asKeywordsShouldNotContainSeenWhenIsUnRead() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from());
+    }
+
+    @Test
+    public void asKeywordsShouldContainSeenWhenIsRead() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(false))
+            .computeOldKeyword();
+
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from(Keyword.SEEN));
+    }
+
+    @Test
+    public void asKeywordsShouldContainAnsweredWhenIsAnswered() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isAnswered(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from(Keyword.ANSWERED));
+    }
+
+    @Test
+    public void asKeywordsShouldNotContainAnsweredWhenIsNotAnswered() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isAnswered(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from());
+    }
+
+    @Test
+    public void asKeywordsShouldContainDraftWhenIsDraft() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isDraft(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from(Keyword.DRAFT));
+    }
+
+    @Test
+    public void asKeywordsShouldNotContainDraftWhenIsNotDraft() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isDraft(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from());
+    }
+
+    @Test
+    public void asKeywordsShouldContainForwardedWhenIsForwarded() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isForwarded(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from(Keyword.FORWARDED));
+    }
+
+    @Test
+    public void asKeywordsShouldNotContainForwardedWhenIsNotForwarded() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isForwarded(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().asKeywords())
+            .isEqualTo(Keywords.factory().from());
+    }
+
+    @Test
+    public void computeOldKeywordsShouldReturnEmptyWhenAllEmpty() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .computeOldKeyword();
+
+        assertThat(testee).isEmpty();
+    }
+
+    @Test
     public void applyStateShouldSetFlaggedOnlyWhenIsFlagged() {
-        Optional<Boolean> isUnread = Optional.empty();
-        Optional<Boolean> isFlagged = Optional.of(true);
-        Optional<Boolean> isAnswered = Optional.empty();
-        Optional<Boolean> isDraft = Optional.empty();
-        Optional<Boolean> isForwarded = Optional.empty();
-        OldKeyword testee = new OldKeyword(isUnread, isFlagged, isAnswered, isDraft, isForwarded);
-        
-        assertThat(testee.applyToState(new Flags())).isEqualTo(new Flags(Flag.FLAGGED));
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isFlagged(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().applyToState(new Flags())).isEqualTo(new Flags(Flag.FLAGGED));
     }
 
     @Test
     public void applyStateShouldRemoveFlaggedWhenEmptyIsFlaggedOnFlaggedMessage() {
-        Optional<Boolean> isUnread = Optional.empty();
-        Optional<Boolean> isFlagged = Optional.of(false);
-        Optional<Boolean> isAnswered = Optional.empty();
-        Optional<Boolean> isDraft = Optional.empty();
-        Optional<Boolean> isForwarded = Optional.empty();
-        OldKeyword testee = new OldKeyword(isUnread, isFlagged, isAnswered, isDraft, isForwarded);
-        
-        assertThat(testee.applyToState(new Flags(Flag.FLAGGED))).isEqualTo(new Flags());
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isFlagged(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().applyToState(new Flags(Flag.FLAGGED))).isEqualTo(new Flags());
     }
+
 
     @Test
     public void applyStateShouldReturnUnreadFlagWhenUnreadSetOnSeenMessage() {
-        Optional<Boolean> isUnread = Optional.of(true);
-        Optional<Boolean> isFlagged = Optional.empty();
-        Optional<Boolean> isAnswered = Optional.empty();
-        Optional<Boolean> isDraft = Optional.empty();
-        Optional<Boolean> isForwarded = Optional.empty();
-        OldKeyword testee = new OldKeyword(isUnread, isFlagged, isAnswered, isDraft, isForwarded);
-        
-        assertThat(testee.applyToState(new Flags(Flag.SEEN))).isEqualTo(new Flags());
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(true))
+            .computeOldKeyword();
+
+        assertThat(testee.get().applyToState(new Flags(Flag.SEEN))).isEqualTo(new Flags());
     }
 
     @Test
     public void applyStateShouldReturnSeenWhenPatchSetsSeenOnSeenMessage() {
-        Optional<Boolean> isUnread = Optional.of(false);
-        Optional<Boolean> isFlagged = Optional.empty();
-        Optional<Boolean> isAnswered = Optional.empty();
-        Optional<Boolean> isDraft = Optional.empty();
-        Optional<Boolean> isForwarded = Optional.empty();
-        OldKeyword testee = new OldKeyword(isUnread, isFlagged, isAnswered, isDraft, isForwarded);
-        
-        assertThat(testee.applyToState(new Flags(Flag.SEEN))).isEqualTo(new Flags(Flag.SEEN));
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().applyToState(new Flags(Flag.SEEN))).isEqualTo(new Flags(Flag.SEEN));
+    }
+
+    @Test
+    public void applyStateShouldPreserveRecentFlag() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().applyToState(new Flags(Flag.RECENT)))
+            .isEqualTo(new FlagsBuilder().add(Flag.RECENT, Flag.SEEN).build());
+    }
+
+    @Test
+    public void applyStateShouldPreserveDeletedFlag() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(false))
+            .computeOldKeyword();
+
+        assertThat(testee.get().applyToState(new Flags(Flag.DELETED)))
+            .isEqualTo(new FlagsBuilder().add(Flag.DELETED, Flag.SEEN).build());
+    }
+
+    @Test
+    public void applyStateShouldPreserveCustomFlag() {
+        Optional<OldKeyword> testee = OldKeyword.builder()
+            .isUnread(Optional.of(false))
+            .computeOldKeyword();
+
+        String customFlag = "custom";
+        assertThat(testee.get().applyToState(new Flags(customFlag)))
+            .isEqualTo(new FlagsBuilder().add(Flag.SEEN).add(customFlag).build());
     }
 }

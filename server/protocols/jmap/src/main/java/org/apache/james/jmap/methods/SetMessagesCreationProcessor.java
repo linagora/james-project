@@ -39,7 +39,6 @@ import org.apache.james.jmap.methods.ValueWithId.MessageWithId;
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import org.apache.james.jmap.model.Envelope;
-import org.apache.james.jmap.model.Keyword;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageFactory;
 import org.apache.james.jmap.model.MessageFactory.MetaDataWithContent;
@@ -201,7 +200,7 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
     private void performCreate(CreationMessageEntry entry, Builder responseBuilder, MailboxSession session) throws MailboxException, InvalidMailboxForCreationException, MessagingException, AttachmentsNotFoundException {
         if (isAppendToMailboxWithRole(Role.OUTBOX, entry.getValue(), session)) {
             sendMailViaOutbox(entry, responseBuilder, session);
-        } else if (isDraft(entry.getValue())) {
+        } else if (entry.getValue().isDraft()) {
             assertNoOutbox(entry, session);
             saveDraft(entry, responseBuilder, session);
         } else {
@@ -234,19 +233,6 @@ public class SetMessagesCreationProcessor implements SetMessagesProcessor {
         attachmentChecker.assertAttachmentsExist(entry, session);
         MessageWithId created = handleDraftMessages(entry, session);
         responseBuilder.created(created.getCreationId(), created.getValue());
-    }
-
-
-    private Boolean isDraft(CreationMessage creationMessage) {
-        if (creationMessage.getOldKeyword().isPresent()) {
-            return creationMessage.getOldKeyword().get()
-                        .isDraft()
-                        .orElse(false);
-        }
-        return creationMessage
-            .getKeywords()
-            .map(keywords -> keywords.contains(Keyword.DRAFT))
-            .orElse(false);
     }
 
     private void validateArguments(CreationMessageEntry entry, MailboxSession session) throws MailboxInvalidMessageCreationException, AttachmentsNotFoundException, MailboxException {
