@@ -19,6 +19,8 @@
 
 package org.apache.james.imap.api;
 
+import java.util.Optional;
+
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.mailbox.MailboxSession;
 
@@ -33,13 +35,9 @@ public class ImapSessionUtils {
     }
 
     public static String getUserName(ImapSession imapSession) {
-        final String result;
-        final MailboxSession mailboxSession = getMailboxSession(imapSession);
-        if (imapSession == null) {
-            result = null;
-        } else {
-            result = mailboxSession.getUser().getUserName();
-        }
-        return result;
+        return Optional.ofNullable(imapSession)
+            .map(ImapSessionUtils::getMailboxSession)
+            .map(mailboxSession -> mailboxSession.getUser().getUserName())
+            .orElse(null);
     }
 }
