@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.Method;
+import org.apache.james.jmap.methods.ValueWithId;
 import org.apache.james.mailbox.model.MessageId;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -125,6 +126,62 @@ public class SetMessagesResponse implements Method.Response {
         public Builder notDestroyed(Map<MessageId, SetError> notDestroyed) {
             this.notDestroyed.putAll(notDestroyed);
             return this;
+        }
+
+        public SetMessagesResponse.Builder invalidEmptyMailboxes(ValueWithId.CreationMessageEntry create) {
+            return this.notCreated(create.getCreationId(),
+                SetError.builder()
+                    .type("invalidProperties")
+                    .properties(MessageProperties.MessageProperty.mailboxIds)
+                    .description("Message needs to be in at least one mailbox")
+                    .build());
+        }
+
+        public SetMessagesResponse.Builder invalidDraftFlag(ValueWithId.CreationMessageEntry entry) {
+            return this.notCreated(entry.getCreationId(),
+                SetError.builder()
+                    .type("invalidProperties")
+                    .properties(MessageProperties.MessageProperty.keywords)
+                    .description("A draft message should be flagged as Draft")
+                    .build());
+        }
+
+        public SetMessagesResponse.Builder invalidMailboxIds(ValueWithId.CreationMessageEntry entry) {
+            return this.notCreated(entry.getCreationId(),
+                SetError.builder()
+                    .type("invalidProperties")
+                    .properties(MessageProperties.MessageProperty.mailboxIds)
+                    .description("Message creation is only supported in mailboxes with role Draft and Outbox")
+                    .build());
+        }
+
+        public SetMessagesResponse.Builder invalidNotOwnedMailboxes(ValueWithId.CreationMessageEntry create) {
+            return this.notCreated(create.getCreationId(),
+                SetError.builder()
+                    .type("error")
+                    .properties(MessageProperties.MessageProperty.mailboxIds)
+                    .description("MailboxId invalid")
+                    .build());
+        }
+
+        public SetMessagesResponse.Builder invalidAttachments(ValueWithId.CreationMessageEntry entry, List<BlobId> attachmentNotFound) {
+            return this.notCreated(entry.getCreationId(),
+                SetMessagesError.builder()
+                    .type("invalidProperties")
+                    .properties(MessageProperties.MessageProperty.attachments)
+                    .attachmentsNotFound(attachmentNotFound)
+                    .description("Attachment not found")
+                    .build());
+        }
+
+        public SetMessagesResponse.Builder invalidSender(ValueWithId.CreationMessageEntry entry, String allowedSender) {
+            return this.notCreated(entry.getCreationId(),
+                SetError.builder()
+                    .type("invalidProperties")
+                    .properties(MessageProperties.MessageProperty.from)
+                    .description("Invalid 'from' field. Must be " +
+                        allowedSender)
+                    .build());
         }
 
         public Builder mergeWith(Builder otherBuilder) {

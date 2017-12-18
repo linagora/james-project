@@ -36,7 +36,6 @@ import java.util.stream.Stream;
 
 import javax.mail.Flags;
 
-import org.apache.james.jmap.exceptions.MailboxNotOwnedException;
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import org.apache.james.jmap.model.CreationMessageId;
@@ -317,18 +316,18 @@ public class SetMessagesCreationProcessorTest {
     }
 
     @Test
-    public void validateIsUserOwnerOfMailboxesShouldThrowWhenMailboxIdDoesntExist() throws Exception {
+    public void allMailboxOwnedShouldThrowWhenMailboxIdDoesntExist() throws Exception {
         InMemoryId mailboxId = InMemoryId.of(6789);
         when(mockedMailboxManager.getMailbox(mailboxId, session))
             .thenThrow(new MailboxNotFoundException(mailboxId));
         when(mockedMailboxIdFactory.fromString(mailboxId.serialize()))
             .thenReturn(mailboxId);
 
-        assertThatThrownBy(() -> sut.assertIsUserOwnerOfMailboxes(ImmutableList.of(mailboxId), session));
+        assertThatThrownBy(() -> sut.allMailboxOwned(ImmutableList.of(mailboxId), session));
     }
 
     @Test
-    public void assertIsUserOwnerOfMailboxesShouldThrowWhenRetrievingMailboxPathFails() throws Exception {
+    public void allMailboxOwnedShouldThrowWhenRetrievingMailboxPathFails() throws Exception {
         InMemoryId mailboxId = InMemoryId.of(6789);
         MessageManager mailbox = mock(MessageManager.class);
         when(mockedMailboxManager.getMailbox(mailboxId, session))
@@ -338,11 +337,11 @@ public class SetMessagesCreationProcessorTest {
         when(mailbox.getMailboxPath())
             .thenThrow(new MailboxException());
 
-        assertThatThrownBy(() -> sut.assertIsUserOwnerOfMailboxes(ImmutableList.of(mailboxId), session));
+        assertThatThrownBy(() -> sut.allMailboxOwned(ImmutableList.of(mailboxId), session));
     }
 
     @Test
-    public void assertIsUserOwnerOfMailboxesShouldThrowWhenUserIsNotTheOwnerOfTheMailbox() throws Exception {
+    public void allMailboxOwnedShouldReturnFalseWhenUserIsNotTheOwnerOfTheMailbox() throws Exception {
         InMemoryId mailboxId = InMemoryId.of(6789);
         MessageManager mailbox = mock(MessageManager.class);
         when(mockedMailboxManager.getMailbox(mailboxId, session))
@@ -352,12 +351,12 @@ public class SetMessagesCreationProcessorTest {
         when(mailbox.getMailboxPath())
             .thenReturn(MailboxPath.forUser("otheruser@example.com", mailboxId.serialize()));
 
-        assertThatThrownBy(() -> sut.assertIsUserOwnerOfMailboxes(ImmutableList.of(mailboxId), session))
-            .isInstanceOf(MailboxNotOwnedException.class);
+        assertThat(sut.allMailboxOwned(ImmutableList.of(mailboxId), session))
+            .isFalse();
     }
 
     @Test
-    public void assertIsUserOwnerOfMailboxesShouldNotThrowWhenUserIsTheOwnerOfTheMailbox() throws Exception {
+    public void allMailboxOwnedShouldReturnTrueWhenUserIsTheOwnerOfTheMailbox() throws Exception {
         InMemoryId mailboxId = InMemoryId.of(6789);
         MessageManager mailbox = mock(MessageManager.class);
         when(mockedMailboxManager.getMailbox(mailboxId, session))
@@ -367,7 +366,8 @@ public class SetMessagesCreationProcessorTest {
         when(mailbox.getMailboxPath())
             .thenReturn(MailboxPath.forUser(USER, mailboxId.serialize()));
 
-        sut.assertIsUserOwnerOfMailboxes(ImmutableList.of(mailboxId), session);
+        assertThat(sut.allMailboxOwned(ImmutableList.of(mailboxId), session))
+            .isTrue();
     }
     
     public static class TestSystemMailboxesProvider implements SystemMailboxesProvider {
