@@ -19,13 +19,14 @@
 
 package org.apache.james.modules.server;
 
+import org.apache.james.backends.cassandra.migration.CassandraMigrationService;
+import org.apache.james.backends.cassandra.migration.Migration;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager;
 import org.apache.james.mailbox.cassandra.mail.migration.AttachmentMessageIdCreation;
 import org.apache.james.mailbox.cassandra.mail.migration.AttachmentV2Migration;
-import org.apache.james.mailbox.cassandra.mail.migration.Migration;
 import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.routes.CassandraMailboxMergingRoutes;
 import org.apache.james.webadmin.routes.CassandraMigrationRoutes;
-import org.apache.james.webadmin.service.CassandraMigrationService;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
@@ -45,9 +46,10 @@ public class CassandraRoutesModule extends AbstractModule {
 
         Multibinder<Routes> routesMultibinder = Multibinder.newSetBinder(binder(), Routes.class);
         routesMultibinder.addBinding().to(CassandraMigrationRoutes.class);
+        routesMultibinder.addBinding().to(CassandraMailboxMergingRoutes.class);
 
         MapBinder<Integer, Migration> allMigrationClazzBinder = MapBinder.newMapBinder(binder(), Integer.class, Migration.class);
-        allMigrationClazzBinder.addBinding(FROM_V2_TO_V3).toInstance(() -> Migration.MigrationResult.COMPLETED);
+        allMigrationClazzBinder.addBinding(FROM_V2_TO_V3).toInstance(() -> Migration.Result.COMPLETED);
         allMigrationClazzBinder.addBinding(FROM_V3_TO_V4).to(AttachmentV2Migration.class);
         allMigrationClazzBinder.addBinding(FROM_V4_TO_V5).to(AttachmentMessageIdCreation.class);
 

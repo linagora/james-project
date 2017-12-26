@@ -19,11 +19,16 @@
 
 package org.apache.james.mailbox.cassandra.mail.migration;
 
+import java.io.Closeable;
+
 import javax.inject.Inject;
 
+import org.apache.james.backends.cassandra.migration.Migration;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentMessageIdDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO.MessageIdAttachmentIds;
+import org.apache.james.task.Task;
+import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,27 +45,32 @@ public class AttachmentMessageIdCreation implements Migration {
     }
 
     @Override
-    public MigrationResult run() {
-        try {
+    public Result run() {
+        TaskId taskId = Task.generateTaskId();
+        try (Closeable mdc = MDCBuilder.create()
+            .addContext(TASK_ID, taskId)
+            .addContext(TASK_TYPE, "attachmentId -> messageIds index creation")
+            .build()) {
             return cassandraMessageDAO.retrieveAllMessageIdAttachmentIds()
                 .join()
                 .map(this::createIndex)
-                .reduce(MigrationResult.COMPLETED, Migration::combine);
+                .reduce(Result.COMPLETED, Task::combine);
         } catch (Exception e) {
-            LOGGER.error("Error while creation attachmentId -> messageIds index", e);
-            return MigrationResult.PARTIAL;
+            LOGGER.error("Error while creating attachmentId -> messageIds index", e);
+            return Result.PARTIAL;
         }
     }
 
-    private MigrationResult createIndex(MessageIdAttachmentIds message) {
+    private Result createIndex(MessageIdAttachmentIds message) {
         try {
             message.getAttachmentId()
-                .stream()
-                .forEach(attachmentId -> attachmentMessageIdDAO.storeAttachmentForMessageId(attachmentId, message.getMessageId()).join());
-            return MigrationResult.COMPLETED;
+                .forEach(attachmentId -> attachmentMessageIdDAO
+                    .storeAttachmentForMessageId(attachmentId, message.getMessageId())
+                    .join());
+            return Result.COMPLETED;
         } catch (Exception e) {
             LOGGER.error("Error while creation attachmentId -> messageIds index", e);
-            return MigrationResult.PARTIAL;
+            return Result.PARTIAL;
         }
     }
 }

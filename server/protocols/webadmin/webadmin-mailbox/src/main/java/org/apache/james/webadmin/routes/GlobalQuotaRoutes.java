@@ -117,14 +117,6 @@ public class GlobalQuotaRoutes implements Routes {
                     .message("Malformed JSON input")
                     .cause(e)
                     .haltError();
-            } catch (IllegalArgumentException e) {
-                LOGGER.info("Quota should be positive or unlimited (-1)", e);
-                throw ErrorResponder.builder()
-                    .statusCode(HttpStatus.BAD_REQUEST_400)
-                    .type(ErrorType.INVALID_ARGUMENT)
-                    .message("Quota should be positive or unlimited (-1)")
-                    .cause(e)
-                    .haltError();
             }
             return Constants.EMPTY_BODY;
         }));

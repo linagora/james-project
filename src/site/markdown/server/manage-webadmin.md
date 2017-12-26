@@ -8,12 +8,15 @@ The web administration supports for now the CRUD operations on the domains,the u
 Please also note **webadmin** is only enabled with **Guice**. You can not use it when using James with **Spring**, as the required injections are not implemented.
 
 In case of any error, the system will return an error message which is json format like this:
+
+```
 {
     statusCode: <error_code>,
     type: <error_type>,
     message: <the_error_message>
     cause: <the_detail_message_from_throwable>
 }
+```
 
 ## Administrating domains
 
@@ -417,6 +420,8 @@ If the server restarts during the migration, the migration is silently aborted.
 
 ### Upgrading to the latest version
 
+`Only available for the Cassandra backend`
+
 ```
 curl -XPOST http://ip:port/cassandra/version/upgrade/latest
 ```
@@ -432,6 +437,29 @@ Response codes:
 Note that several calls to this endpoint will be run in a sequential pattern.
 
 If the server restarts during the migration, the migration is silently aborted.
+
+## Correcting ghost mailbox
+
+`Only available for the Cassandra backend`
+
+This is a temporary workaround for the **Ghost mailbox** bug encountered using the Cassandra backend, as described in MAILBOX-322.
+
+You can use the mailbox merging feature in order to merge the old "ghosted" mailbox with the new one.
+
+```
+curl -XPOST http://ip:port/cassandra/mailbox/merging -d `{"mergeOrigin":"id1", "mergeDestination":"id2"}`
+```
+
+Will:
+ - Delete references to `id1` mailbox
+ - Move it's messages into `id2` mailbox
+ - Union the rights of both mailboxes
+
+Response codes:
+
+ - 204: Success
+ - 400: Unable to parse the body.
+ - 500: Internal error. This can be the result of a partial operation.
 
 ## Creating address group
 

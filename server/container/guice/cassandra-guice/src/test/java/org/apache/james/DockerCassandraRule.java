@@ -18,6 +18,7 @@
  ****************************************************************/
 
 package org.apache.james;
+
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.james.backends.cassandra.init.CassandraSessionConfiguration;
@@ -31,7 +32,7 @@ import com.google.inject.Module;
 public class DockerCassandraRule implements GuiceModuleTestRule {
 
     private org.apache.james.backends.cassandra.DockerCassandraRule cassandraContainer = new org.apache.james.backends.cassandra.DockerCassandraRule();
-    
+
     public PropertiesConfiguration getCassandraConfigurationForDocker(String keyspace) {
         PropertiesConfiguration configuration = new PropertiesConfiguration();
 
@@ -56,7 +57,8 @@ public class DockerCassandraRule implements GuiceModuleTestRule {
     @Override
     public Module getModule() {
         String keyspace = new RandomStringGenerator.Builder().withinRange('a', 'z').build().generate(12);
-        return (binder) -> binder.bind(CassandraSessionConfiguration.class).toInstance(() -> getCassandraConfigurationForDocker(keyspace));
+        return (binder) -> binder.bind(CassandraSessionConfiguration.class)
+            .toInstance(() -> getCassandraConfigurationForDocker(keyspace));
     }
 
     public String getIp() {

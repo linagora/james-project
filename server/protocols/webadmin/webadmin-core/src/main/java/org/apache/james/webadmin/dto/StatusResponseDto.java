@@ -17,10 +17,22 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin.service;
+package org.apache.james.webadmin.dto;
 
-public class MigrationException extends RuntimeException {
-    public MigrationException(String message) {
-        super(message);
+import org.apache.james.task.TaskManager;
+
+public class StatusResponseDto {
+    public static StatusResponseDto from(TaskManager.Status status) {
+        return new StatusResponseDto(status.getValue());
+    }
+
+    private final String status;
+
+    public StatusResponseDto(String status) {
+        this.status = status;
+    }
+
+    public String getStatus() {
+        return status;
     }
 }
