@@ -17,49 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.transport.mailets;
+package org.apache.james.util;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
-import java.util.Collection;
+import org.apache.commons.io.IOUtils;
 
-import org.apache.james.core.MailAddress;
-import org.apache.mailet.base.test.FakeMail;
-import org.junit.Before;
-import org.junit.Test;
-
-public class RecipientToLowerCaseTest {
-
-    private RecipientToLowerCase testee;
-
-    @Before
-    public void setUp() {
-        testee = new RecipientToLowerCase();
+public class ClassLoaderUtils {
+    public static String getSystemResourceAsString(String filename) throws IOException {
+        return IOUtils.toString(ClassLoader.getSystemResourceAsStream(filename), StandardCharsets.US_ASCII);
     }
 
-    @Test
-    public void serviceShouldPutRecipientToLowerCase() throws Exception {
-        FakeMail fakeMail = FakeMail.builder()
-            .recipient("THienan1234@gmail.com")
-            .build();
-
-        testee.service(fakeMail);
-
-        Collection<MailAddress> recipients = fakeMail.getRecipients();
-
-        assertThat(recipients)
-            .extracting(MailAddress::asString)
-            .containsOnly("thienan1234@gmail.com");
-    }
-
-    @Test
-    public void serviceShouldHaveNoEffectWhenNoRecipient() throws Exception {
-        FakeMail fakeMail = FakeMail.builder()
-            .build();
-
-        testee.service(fakeMail);
-
-        assertThat(fakeMail.getRecipients())
-            .isEmpty();
+    public static byte[] getSystemResourceAsByteArray(String filename) throws IOException {
+        return IOUtils.toByteArray(ClassLoader.getSystemResourceAsStream(filename));
     }
 }

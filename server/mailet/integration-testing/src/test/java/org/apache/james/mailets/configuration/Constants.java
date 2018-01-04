@@ -17,49 +17,30 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.transport.mailets;
+package org.apache.james.mailets.configuration;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.jayway.awaitility.Duration.FIVE_HUNDRED_MILLISECONDS;
+import static com.jayway.awaitility.Duration.ONE_MINUTE;
 
-import java.util.Collection;
+import com.jayway.awaitility.Awaitility;
+import com.jayway.awaitility.Duration;
+import com.jayway.awaitility.core.ConditionFactory;
 
-import org.apache.james.core.MailAddress;
-import org.apache.mailet.base.test.FakeMail;
-import org.junit.Before;
-import org.junit.Test;
+public class Constants {
+    public static Duration slowPacedPollInterval = FIVE_HUNDRED_MILLISECONDS;
+    public static ConditionFactory calmlyAwait = Awaitility.with()
+        .pollInterval(slowPacedPollInterval)
+        .and()
+        .with()
+        .pollDelay(slowPacedPollInterval)
+        .await();
+    public static ConditionFactory awaitOneMinute = calmlyAwait.atMost(ONE_MINUTE);
 
-public class RecipientToLowerCaseTest {
-
-    private RecipientToLowerCase testee;
-
-    @Before
-    public void setUp() {
-        testee = new RecipientToLowerCase();
-    }
-
-    @Test
-    public void serviceShouldPutRecipientToLowerCase() throws Exception {
-        FakeMail fakeMail = FakeMail.builder()
-            .recipient("THienan1234@gmail.com")
-            .build();
-
-        testee.service(fakeMail);
-
-        Collection<MailAddress> recipients = fakeMail.getRecipients();
-
-        assertThat(recipients)
-            .extracting(MailAddress::asString)
-            .containsOnly("thienan1234@gmail.com");
-    }
-
-    @Test
-    public void serviceShouldHaveNoEffectWhenNoRecipient() throws Exception {
-        FakeMail fakeMail = FakeMail.builder()
-            .build();
-
-        testee.service(fakeMail);
-
-        assertThat(fakeMail.getRecipients())
-            .isEmpty();
-    }
+    public static final String DEFAULT_DOMAIN = "james.org";
+    public static final String LOCALHOST_IP = "127.0.0.1";
+    public static final int IMAP_PORT = 1143;
+    public static final int SMTP_PORT = 1025;
+    public static final String PASSWORD = "secret";
+    public static final String FROM = "user@" + DEFAULT_DOMAIN;
+    public static final String RECIPIENT = "user2@" + DEFAULT_DOMAIN;
 }
