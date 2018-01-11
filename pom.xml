@@ -1304,6 +1304,17 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-queue-memory</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-queue-memory</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
 
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -1745,6 +1756,12 @@
                 <artifactId>junit-jupiter-engine</artifactId>
                 <scope>test</scope>
                 <version>${junit.jupiter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-migration-support</artifactId>
+                <version>5.0.0-M4</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.junit.vintage</groupId>
