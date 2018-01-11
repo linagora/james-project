@@ -86,7 +86,7 @@ import org.apache.james.utils.MessageIdProbe;
 import org.apache.james.utils.SMTPMessageSender;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.test.FakeMail;
-import org.apache.mailet.base.test.MimeMessageBuilder;
+import org.apache.mailet.base.test.MimeMessageUtil;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -4529,10 +4529,10 @@ public abstract class SetMessagesMethodTest {
 
         calmlyAwait.atMost(30, TimeUnit.SECONDS).until(() -> isAnyMessageFoundInInbox(accessToken));
 
-        try (IMAPMessageReader imapMessageReader = new IMAPMessageReader()
-                .connect(LOCALHOST_IP, IMAP_PORT)
+        try (IMAPMessageReader imapMessageReader = new IMAPMessageReader()) {
+            imapMessageReader.connect(LOCALHOST_IP, IMAP_PORT)
                 .login(USERNAME, PASSWORD)
-                .select(MailboxConstants.INBOX)) {
+                .select(MailboxConstants.INBOX);
             assertThat(imapMessageReader.readFirstMessage())
                 .contains("X-MY-MULTIVALUATED-HEADER: first value")
                 .contains("X-MY-MULTIVALUATED-HEADER: second value");
@@ -4915,7 +4915,7 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void textBodyOfMessageWithTextCalendarShouldBeConvertedToAttachment() throws Exception {
-        MimeMessage calendarMessage = MimeMessageBuilder.mimeMessageFromStream(ClassLoader.getSystemResourceAsStream("eml/calendar.eml"));
+        MimeMessage calendarMessage = MimeMessageUtil.mimeMessageFromStream(ClassLoader.getSystemResourceAsStream("eml/calendar.eml"));
         String fromAddress = USERNAME;
 
         Mail mail = FakeMail.builder()

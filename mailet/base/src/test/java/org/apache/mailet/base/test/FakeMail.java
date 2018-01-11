@@ -55,6 +55,9 @@ import com.google.common.collect.Maps;
 
 public class FakeMail implements Mail {
 
+    private static final String DEFAULT_REMOTE_HOST = "111.222.333.444";
+    public static final String DEFAULT_REMOTE_ADDRESS = "127.0.0.1";
+
     public static FakeMail fromMessage(MimeMessageBuilder message) throws MessagingException {
         return FakeMail.builder()
             .mimeMessage(message)
@@ -81,7 +84,9 @@ public class FakeMail implements Mail {
             mail.getLastUpdated(),
             attributes(mail),
             mail.getMessageSize(),
-            mail.getRemoteAddr());
+            mail.getRemoteAddr(),
+            mail.getRemoteHost(),
+            mail.getPerRecipientSpecificHeaders());
     }
 
     public static FakeMail from(MimeMessage message) throws MessagingException {
@@ -107,6 +112,8 @@ public class FakeMail implements Mail {
         private Map<String, Serializable> attributes;
         private Optional<Long> size;
         private Optional<String> remoteAddr;
+        private Optional<String> remoteHost;
+        private PerRecipientHeaders perRecipientHeaders;
 
         private Builder() {
             fileName = Optional.empty();
@@ -120,6 +127,8 @@ public class FakeMail implements Mail {
             attributes = Maps.newHashMap();
             size = Optional.empty();
             remoteAddr = Optional.empty();
+            remoteHost = Optional.empty();
+            perRecipientHeaders = new PerRecipientHeaders();
         }
 
         public Builder size(long size) {
@@ -213,9 +222,19 @@ public class FakeMail implements Mail {
             return this;
         }
 
+        public Builder remoteHost(String remoteHost) {
+            this.remoteHost = Optional.of(remoteHost);
+            return this;
+        }
+
+        public Builder addHeaderForRecipient(Header header, MailAddress recipient) {
+            this.perRecipientHeaders.addHeaderForRecipient(header, recipient);
+            return this;
+        }
+
         public FakeMail build() throws MessagingException {
             return new FakeMail(getMimeMessage(), recipients, name.orElse(null), sender.orElse(null), state.orElse(null), errorMessage.orElse(null), lastUpdated.orElse(null),
-                    attributes, size.orElse(0L), remoteAddr.orElse("127.0.0.1"));
+                attributes, size.orElse(0L), remoteAddr.orElse(DEFAULT_REMOTE_ADDRESS), remoteHost.orElse(DEFAULT_REMOTE_HOST), perRecipientHeaders);
         }
 
         private MimeMessage getMimeMessage() throws MessagingException {
@@ -249,10 +268,11 @@ public class FakeMail implements Mail {
     private Map<String, Serializable> attributes;
     private long size;
     private String remoteAddr;
+    private String remoteHost;
     private PerRecipientHeaders perRecipientHeaders;
     
     public FakeMail(MimeMessage msg, List<MailAddress> recipients, String name, MailAddress sender, String state, String errorMessage, Date lastUpdated,
-            Map<String, Serializable> attributes, long size, String remoteAddr) {
+            Map<String, Serializable> attributes, long size, String remoteAddr, String remoteHost, PerRecipientHeaders perRecipientHeaders) {
         this.msg = msg;
         this.recipients = recipients;
         this.name = name;
@@ -263,7 +283,8 @@ public class FakeMail implements Mail {
         this.attributes = attributes;
         this.size = size;
         this.remoteAddr = remoteAddr;
-        this.perRecipientHeaders = new PerRecipientHeaders();
+        this.perRecipientHeaders = perRecipientHeaders;
+        this.remoteHost = remoteHost;
     }
 
     @Override
@@ -303,7 +324,7 @@ public class FakeMail implements Mail {
 
     @Override
     public String getRemoteHost() {
-        return "111.222.333.444";
+        return remoteHost;
     }
 
     @Override

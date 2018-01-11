@@ -195,6 +195,7 @@ public class NotifyMailetsMessageTest {
         assertThat(generateMessage).contains("Size: 5.9 KiB");
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void getMessageInternalSizeShouldTransformMessagingErrorIntoEmpty() throws MessagingException {
         Mail mail = mock(Mail.class);

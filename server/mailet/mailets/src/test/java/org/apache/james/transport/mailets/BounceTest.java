@@ -37,7 +37,7 @@ import org.apache.mailet.base.MailAddressFixture;
 import org.apache.mailet.base.test.FakeMail;
 import org.apache.mailet.base.test.FakeMailContext;
 import org.apache.mailet.base.test.FakeMailetConfig;
-import org.apache.mailet.base.test.MimeMessageBuilder;
+import org.apache.mailet.base.test.MimeMessageUtil;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -114,7 +114,7 @@ public class BounceTest {
                 .name(MAILET_NAME)
                 .recipient(MailAddressFixture.ANY_AT_JAMES)
                 .build();
-        MimeMessage mimeMessage = MimeMessageBuilder.defaultMimeMessage();
+        MimeMessage mimeMessage = MimeMessageUtil.defaultMimeMessage();
         mimeMessage.setText("My content");
         mail.setMessage(mimeMessage);
 

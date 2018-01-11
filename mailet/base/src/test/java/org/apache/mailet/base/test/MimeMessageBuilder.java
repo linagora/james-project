@@ -21,7 +21,6 @@ package org.apache.mailet.base.test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
@@ -185,18 +184,6 @@ public class MimeMessageBuilder {
             }
             return bodyPart;
         }
-    }
-
-    public static MimeMessage defaultMimeMessage() {
-        return new MimeMessage(Session.getDefaultInstance(new Properties()));
-    }
-
-    public static MimeMessage mimeMessageFromStream(InputStream inputStream) throws MessagingException {
-        return new MimeMessage(Session.getDefaultInstance(new Properties()), inputStream);
-    }
-
-    public static MimeMessage mimeMessageFromBytes(byte[] bytes) throws MessagingException {
-        return mimeMessageFromStream(new ByteArrayInputStream(bytes));
     }
 
     public static MimeMessageBuilder mimeMessageBuilder() {
