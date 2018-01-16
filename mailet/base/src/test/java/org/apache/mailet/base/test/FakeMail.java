@@ -54,7 +54,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class FakeMail implements Mail {
+public class FakeMail implements Mail, Serializable {
 
     private static final String DEFAULT_REMOTE_HOST = "111.222.333.444";
     public static final String DEFAULT_REMOTE_ADDRESS = "127.0.0.1";
@@ -259,7 +259,7 @@ public class FakeMail implements Mail {
         return builder.build();
     }
 
-    private MimeMessage msg;
+    private transient MimeMessage msg;
     private Collection<MailAddress> recipients;
     private String name;
     private MailAddress sender;
@@ -416,7 +416,6 @@ public class FakeMail implements Mail {
             FakeMail that = (FakeMail) o;
 
             return Objects.equal(this.size, that.size)
-                && Objects.equal(this.msg, that.msg)
                 && Objects.equal(this.recipients, that.recipients)
                 && Objects.equal(this.name, that.name)
                 && Objects.equal(this.sender, that.sender)
@@ -431,7 +430,7 @@ public class FakeMail implements Mail {
 
     @Override
     public final int hashCode() {
-        return Objects.hashCode(msg, name, sender, recipients, state, errorMessage, lastUpdated, attributes, size, recipients, remoteAddr);
+        return Objects.hashCode(name, sender, recipients, state, errorMessage, lastUpdated, attributes, size, recipients, remoteAddr);
     }
 
     @Override
