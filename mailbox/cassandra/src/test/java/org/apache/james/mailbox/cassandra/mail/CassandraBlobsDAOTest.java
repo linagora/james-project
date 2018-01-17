@@ -20,36 +20,38 @@
 package org.apache.james.mailbox.cassandra.mail;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
-import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.backends.cassandra.DockerCassandraExtension;
+import org.apache.james.backends.cassandra.DockerCassandraExtension.DockerCassandra;
 import org.apache.james.backends.cassandra.init.CassandraConfiguration;
-import org.apache.james.mailbox.cassandra.ids.BlobId;
 import org.apache.james.mailbox.cassandra.modules.CassandraBlobModule;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.apache.james.objectstore.api.BlobId;
+import org.apache.james.objectstore.api.ObjectStore;
+import org.apache.james.objectstore.api.ObjectStoreContract;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.google.common.base.Strings;
 
-public class CassandraBlobsDAOTest {
+@ExtendWith(DockerCassandraExtension.class)
+public class CassandraBlobsDAOTest implements ObjectStoreContract {
+
     private static final int CHUNK_SIZE = 1024;
     private static final int MULTIPLE_CHUNK_SIZE = 3;
 
-    @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
-    
     private CassandraCluster cassandra;
     private CassandraBlobsDAO testee;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    public void setUp(DockerCassandra dockerCassandra) {
         cassandra = CassandraCluster.create(
-                new CassandraBlobModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+                new CassandraBlobModule(), dockerCassandra.getIp(), dockerCassandra.getBindingPort());
         
         testee = new CassandraBlobsDAO(cassandra.getConf(),
             CassandraConfiguration.builder()
@@ -57,66 +59,14 @@ public class CassandraBlobsDAOTest {
                 .build());
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         cassandra.close();
     }
 
-    @Test
-    public void saveShouldReturnEmptyWhenNullData() throws Exception {
-        assertThatThrownBy(() -> testee.save(null))
-            .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    public void saveShouldSaveEmptyData() throws Exception {
-        BlobId blobId = testee.save(new byte[]{}).join();
-
-        byte[] bytes = testee.read(blobId).join();
-
-        assertThat(new String(bytes, StandardCharsets.UTF_8)).isEmpty();
-    }
-
-    @Test
-    public void saveShouldSaveBlankData() throws Exception {
-        BlobId blobId = testee.save("".getBytes(StandardCharsets.UTF_8)).join();
-
-        byte[] bytes = testee.read(blobId).join();
-
-        assertThat(new String(bytes, StandardCharsets.UTF_8)).isEmpty();
-    }
-
-    @Test
-    public void saveShouldReturnBlobId() throws Exception {
-        BlobId blobId = testee.save("toto".getBytes(StandardCharsets.UTF_8)).join();
-
-        assertThat(blobId).isEqualTo(BlobId.from("31f7a65e315586ac198bd798b6629ce4903d0899476d5741a9f32e2e521b6a66"));
-    }
-
-    @Test
-    public void readShouldBeEmptyWhenNoExisting() throws IOException {
-        byte[] bytes = testee.read(BlobId.from("unknown")).join();
-
-        assertThat(bytes).isEmpty();
-    }
-
-    @Test
-    public void readShouldReturnSavedData() throws IOException {
-        BlobId blobId = testee.save("toto".getBytes(StandardCharsets.UTF_8)).join();
-
-        byte[] bytes = testee.read(blobId).join();
-
-        assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo("toto");
-    }
-
-    @Test
-    public void readShouldReturnLongSavedData() throws IOException {
-        String longString = Strings.repeat("0123456789\n", 1000);
-        BlobId blobId = testee.save(longString.getBytes(StandardCharsets.UTF_8)).join();
-
-        byte[] bytes = testee.read(blobId).join();
-
-        assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo(longString);
+    @Override
+    public ObjectStore testee() {
+        return testee;
     }
 
     @Test

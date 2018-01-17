@@ -17,12 +17,13 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.ids;
+package org.apache.james.objectstore.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 
+import org.apache.james.objectstore.api.BlobId;
 import org.apache.james.util.ClassLoaderUtils;
 import org.junit.Rule;
 import org.junit.Test;

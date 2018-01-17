@@ -38,9 +38,9 @@ import java.util.concurrent.CompletableFuture;
 import javax.inject.Inject;
 
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
-import org.apache.james.mailbox.cassandra.ids.BlobId;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.AttachmentId;
+import org.apache.james.objectstore.api.BlobId;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;

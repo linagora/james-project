@@ -17,7 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.ids;
+package org.apache.james.objectstore.api;
 
 import org.apache.commons.codec.digest.DigestUtils;
 
@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 public class BlobId {
+
     public static BlobId forPayload(byte[] payload) {
         Preconditions.checkArgument(payload != null);
         return new BlobId(DigestUtils.sha256Hex(payload));
