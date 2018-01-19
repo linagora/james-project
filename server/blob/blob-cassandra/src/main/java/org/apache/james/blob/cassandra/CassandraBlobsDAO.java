@@ -17,7 +17,7 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.mail;
+package org.apache.james.blob.cassandra;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
@@ -35,10 +35,10 @@ import javax.inject.Inject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.backends.cassandra.init.CassandraConfiguration;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
-import org.apache.james.mailbox.cassandra.ids.BlobId;
-import org.apache.james.mailbox.cassandra.mail.utils.DataChunker;
-import org.apache.james.mailbox.cassandra.table.BlobTable;
-import org.apache.james.mailbox.cassandra.table.BlobTable.BlobParts;
+import org.apache.james.blob.api.BlobId;
+import org.apache.james.blob.api.ObjectStore;
+import org.apache.james.blob.cassandra.BlobTable.BlobParts;
+import org.apache.james.blob.cassandra.utils.DataChunker;
 import org.apache.james.util.FluentFutureStream;
 import org.apache.james.util.OptionalUtils;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 
-public class CassandraBlobsDAO {
+public class CassandraBlobsDAO implements ObjectStore {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraBlobsDAO.class);
     private final CassandraAsyncExecutor cassandraAsyncExecutor;
     private final PreparedStatement insert;
@@ -62,11 +62,13 @@ public class CassandraBlobsDAO {
     private final PreparedStatement selectPart;
     private final DataChunker dataChunker;
     private final CassandraConfiguration configuration;
+    private final CassandraBlobId.Factory blobIdFactory;
 
     @Inject
-    public CassandraBlobsDAO(Session session, CassandraConfiguration cassandraConfiguration) {
+    public CassandraBlobsDAO(Session session, CassandraConfiguration cassandraConfiguration, CassandraBlobId.Factory blobIdFactory) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
         this.configuration = cassandraConfiguration;
+        this.blobIdFactory = blobIdFactory;
         this.dataChunker = new DataChunker();
         this.insert = prepareInsert(session);
         this.select = prepareSelect(session);
@@ -77,7 +79,7 @@ public class CassandraBlobsDAO {
 
     @VisibleForTesting
     public CassandraBlobsDAO(Session session) {
-        this(session, CassandraConfiguration.DEFAULT_CONFIGURATION);
+        this(session, CassandraConfiguration.DEFAULT_CONFIGURATION, new CassandraBlobId.Factory());
     }
 
     private PreparedStatement prepareSelect(Session session) {
@@ -106,16 +108,17 @@ public class CassandraBlobsDAO {
             .value(BlobParts.DATA, bindMarker(BlobParts.DATA)));
     }
 
+    @Override
     public CompletableFuture<BlobId> save(byte[] data) {
         Preconditions.checkNotNull(data);
 
-        BlobId blobId = BlobId.forPayload(data);
+        CassandraBlobId blobId = blobIdFactory.forPayload(data);
         return saveBlobParts(data, blobId)
             .thenCompose(numberOfChunk -> saveBlobPartsReferences(blobId, numberOfChunk))
             .thenApply(any -> blobId);
     }
 
-    private CompletableFuture<Integer> saveBlobParts(byte[] data, BlobId blobId) {
+    private CompletableFuture<Integer> saveBlobParts(byte[] data, CassandraBlobId blobId) {
         return FluentFutureStream.of(
             dataChunker.chunk(data, configuration.getBlobPartSize())
                 .map(pair -> writePart(pair.getRight(), blobId, pair.getKey())
@@ -131,24 +134,25 @@ public class CassandraBlobsDAO {
         return stream.reduce((first, second) -> second);
     }
 
-    private CompletableFuture<Void> writePart(ByteBuffer data, BlobId blobId, int position) {
+    private CompletableFuture<Void> writePart(ByteBuffer data, CassandraBlobId blobId, int position) {
         return cassandraAsyncExecutor.executeVoid(
             insertPart.bind()
-                .setString(BlobTable.ID, blobId.getId())
+                .setString(BlobTable.ID, blobId.asString())
                 .setInt(BlobParts.CHUNK_NUMBER, position)
                 .setBytes(BlobParts.DATA, data));
     }
 
-    private CompletableFuture<Void> saveBlobPartsReferences(BlobId blobId, int numberOfChunk) {
+    private CompletableFuture<Void> saveBlobPartsReferences(CassandraBlobId blobId, int numberOfChunk) {
         return cassandraAsyncExecutor.executeVoid(insert.bind()
-            .setString(BlobTable.ID, blobId.getId())
+            .setString(BlobTable.ID, blobId.asString())
             .setInt(BlobTable.NUMBER_OF_CHUNK, numberOfChunk));
     }
 
+    @Override
     public CompletableFuture<byte[]> read(BlobId blobId) {
         return cassandraAsyncExecutor.executeSingleRow(
             select.bind()
-                .setString(BlobTable.ID, blobId.getId()))
+                .setString(BlobTable.ID, blobId.asString()))
             .thenCompose(row -> toDataParts(row, blobId))
             .thenApply(this::concatenateDataParts);
     }
@@ -187,7 +191,7 @@ public class CassandraBlobsDAO {
     private CompletableFuture<BlobPart> readPart(BlobId blobId, int position) {
         return cassandraAsyncExecutor.executeSingleRow(
             selectPart.bind()
-                .setString(BlobTable.ID, blobId.getId())
+                .setString(BlobTable.ID, blobId.asString())
                 .setInt(BlobParts.CHUNK_NUMBER, position))
             .thenApply(row -> new BlobPart(blobId, position, row));
     }

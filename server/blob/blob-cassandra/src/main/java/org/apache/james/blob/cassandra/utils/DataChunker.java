@@ -17,57 +17,36 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.ids;
+package org.apache.james.blob.cassandra.utils;
 
-import org.apache.commons.codec.digest.DigestUtils;
+import java.nio.ByteBuffer;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 
-public class BlobId {
-    public static BlobId forPayload(byte[] payload) {
-        Preconditions.checkArgument(payload != null);
-        return new BlobId(DigestUtils.sha256Hex(payload));
+public class DataChunker {
+
+    public Stream<Pair<Integer, ByteBuffer>> chunk(byte[] data, int chunkSize) {
+        Preconditions.checkNotNull(data);
+        Preconditions.checkArgument(chunkSize > 0, "ChunkSize can not be negative");
+
+        int size = data.length;
+        int fullChunkCount = size / chunkSize;
+
+        return Stream.concat(
+            IntStream.range(0, fullChunkCount)
+                .mapToObj(i -> Pair.of(i, ByteBuffer.wrap(data, i * chunkSize, chunkSize))),
+            lastChunk(data, chunkSize * fullChunkCount, fullChunkCount));
     }
 
-    public static BlobId from(String id) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(id));
-        return new BlobId(id);
-    }
-
-    private final String id;
-
-    @VisibleForTesting
-    BlobId(String id) {
-        this.id = id;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    @Override
-    public final boolean equals(Object obj) {
-        if (obj instanceof BlobId) {
-            BlobId other = (BlobId) obj;
-            return Objects.equal(id, other.id);
+    private Stream<Pair<Integer, ByteBuffer>> lastChunk(byte[] data, int offset, int index) {
+        if (offset == data.length && index > 0) {
+            return Stream.empty();
         }
-        return false;
+        return Stream.of(Pair.of(index, ByteBuffer.wrap(data, offset, data.length - offset)));
     }
 
-    @Override
-    public final int hashCode() {
-        return Objects.hashCode(id);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects
-            .toStringHelper(this)
-            .add("id", id)
-            .toString();
-    }
 }

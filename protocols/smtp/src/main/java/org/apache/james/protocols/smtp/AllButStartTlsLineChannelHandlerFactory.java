@@ -16,17 +16,22 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.protocols.smtp;
 
-package org.apache.james.mailbox.cassandra.table;
+import org.apache.james.protocols.netty.ChannelHandlerFactory;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
 
-public interface BlobTable {
-    String TABLE_NAME = "blobs";
-    String ID = "id";
-    String NUMBER_OF_CHUNK = "position";
+public class AllButStartTlsLineChannelHandlerFactory implements ChannelHandlerFactory {
 
-    interface BlobParts {
-        String TABLE_NAME = "blobParts";
-        String CHUNK_NUMBER = "chunkNumber";
-        String DATA = "data";
+    private int maxFrameLength;
+
+    public AllButStartTlsLineChannelHandlerFactory(int maxFrameLength) {
+        this.maxFrameLength = maxFrameLength;
+    }
+
+    @Override
+    public ChannelHandler create(ChannelPipeline pipeline) {
+        return new AllButStartTlsLineBasedChannelHandler(pipeline, maxFrameLength, false);
     }
 }
