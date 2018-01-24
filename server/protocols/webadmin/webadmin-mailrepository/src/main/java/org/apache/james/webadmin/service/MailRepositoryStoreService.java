@@ -27,11 +27,15 @@ import javax.mail.MessagingException;
 
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.james.mailrepository.api.MailRepositoryStore;
+import org.apache.james.task.Task;
 import org.apache.james.util.streams.Iterators;
 import org.apache.james.util.streams.Limit;
 import org.apache.james.util.streams.Offset;
+import org.apache.james.webadmin.dto.MailDto;
 import org.apache.james.webadmin.dto.MailKey;
 import org.apache.james.webadmin.dto.MailRepositoryResponse;
+import org.apache.james.webadmin.utils.ErrorResponder;
+import org.eclipse.jetty.http.HttpStatus;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
@@ -52,8 +56,9 @@ public class MailRepositoryStoreService {
             .collect(Guavate.toImmutableList());
     }
 
+
     public Optional<List<MailKey>> listMails(String url, Offset offset, Limit limit) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
-        Optional<MailRepository> mailRepository = Optional.ofNullable(mailRepositoryStore.select(url));
+        Optional<MailRepository> mailRepository = Optional.ofNullable(getRepository(url));
         ThrowingFunction<MailRepository, List<MailKey>> list = repository -> list(repository, offset, limit);
         return mailRepository.map(Throwing.function(list).sneakyThrow());
     }
@@ -67,7 +72,33 @@ public class MailRepositoryStoreService {
     }
 
     public Optional<Long> size(String url) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
-        Optional<MailRepository> mailRepository = Optional.ofNullable(mailRepositoryStore.select(url));
+        Optional<MailRepository> mailRepository = Optional.ofNullable(getRepository(url));
         return mailRepository.map(Throwing.function(MailRepository::size).sneakyThrow());
     }
+
+    public Optional<MailDto> retrieveMail(String url, String mailKey) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
+        MailRepository mailRepository = getRepository(url);
+
+        return Optional.ofNullable(mailRepository.retrieve(mailKey))
+            .map(Throwing.function(MailDto::fromMail).sneakyThrow());
+    }
+
+    public void deleteMail(String url, String mailKey) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
+        getRepository(url)
+            .remove(mailKey);
+    }
+
+    public Task createClearMailRepositoryTask(String url) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
+        return new ClearMailRepositoryTask(getRepository(url), url);
+    }
+
+    private MailRepository getRepository(String url) throws MailRepositoryStore.MailRepositoryStoreException {
+        return mailRepositoryStore.get(url)
+            .orElseThrow(() -> ErrorResponder.builder()
+                .statusCode(HttpStatus.NOT_FOUND_404)
+                .type(ErrorResponder.ErrorType.NOT_FOUND)
+                .message(url + "does not exist")
+                .haltError());
+    }
+
 }

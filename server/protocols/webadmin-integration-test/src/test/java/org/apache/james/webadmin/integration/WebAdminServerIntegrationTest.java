@@ -20,16 +20,15 @@
 package org.apache.james.webadmin.integration;
 
 import static com.jayway.restassured.RestAssured.given;
+import static com.jayway.restassured.RestAssured.when;
 import static com.jayway.restassured.RestAssured.with;
-import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
-import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.apache.james.webadmin.Constants.JSON_CONTENT_TYPE;
 import static org.apache.james.webadmin.Constants.SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.james.CassandraJmapTestRule;
@@ -40,7 +39,9 @@ import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.WebAdminGuiceProbe;
+import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.routes.DomainsRoutes;
+import org.apache.james.webadmin.routes.MailRepositoriesRoutes;
 import org.apache.james.webadmin.routes.UserMailboxesRoutes;
 import org.apache.james.webadmin.routes.UserRoutes;
 import org.apache.james.webadmin.swagger.routes.SwaggerRoutes;
@@ -52,8 +53,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.jayway.restassured.RestAssured;
-import com.jayway.restassured.builder.RequestSpecBuilder;
-import com.jayway.restassured.http.ContentType;
 
 public class WebAdminServerIntegrationTest {
 
@@ -86,11 +85,8 @@ public class WebAdminServerIntegrationTest {
         dataProbe = guiceJamesServer.getProbe(DataProbeImpl.class);
         webAdminGuiceProbe = guiceJamesServer.getProbe(WebAdminGuiceProbe.class);
 
-        RestAssured.requestSpecification = new RequestSpecBuilder()
-                .setContentType(ContentType.JSON)
-                .setAccept(ContentType.JSON)
-                .setConfig(newConfig().encoderConfig(encoderConfig().defaultContentCharset(StandardCharsets.UTF_8)))
-                .build();
+        RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminGuiceProbe.getWebAdminPort())
+            .build();
     }
 
     @After
@@ -100,9 +96,7 @@ public class WebAdminServerIntegrationTest {
 
     @Test
     public void postShouldAddTheGivenDomain() throws Exception {
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .put(SPECIFIC_DOMAIN)
         .then()
             .statusCode(HttpStatus.NO_CONTENT_204);
@@ -111,12 +105,39 @@ public class WebAdminServerIntegrationTest {
     }
 
     @Test
+    public void mailRepositoriesRoutesShouldBeExposed() throws Exception {
+        when()
+            .get(MailRepositoriesRoutes.MAIL_REPOSITORIES)
+        .then()
+            .statusCode(HttpStatus.OK_200)
+            .body("repository", containsInAnyOrder(
+                "file://var/mail/error/",
+                "file://var/mail/relay-denied/",
+                "file://var/mail/spam/",
+                "file://var/mail/address-error/"));
+    }
+
+    @Test
+    public void gettingANonExistingMailRepositoryShouldNotCreateIt() throws Exception {
+        given()
+            .get(MailRepositoriesRoutes.MAIL_REPOSITORIES + "file%3A%2F%2Fvar%2Fmail%2Fcustom%2F");
+
+        when()
+            .get(MailRepositoriesRoutes.MAIL_REPOSITORIES)
+        .then()
+            .statusCode(HttpStatus.OK_200)
+            .body("repository", containsInAnyOrder(
+                "file://var/mail/error/",
+                "file://var/mail/relay-denied/",
+                "file://var/mail/spam/",
+                "file://var/mail/address-error/"));
+    }
+
+    @Test
     public void deleteShouldRemoveTheGivenDomain() throws Exception {
         dataProbe.addDomain(DOMAIN);
 
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .delete(SPECIFIC_DOMAIN)
         .then()
             .statusCode(HttpStatus.NO_CONTENT_204);
@@ -129,7 +150,6 @@ public class WebAdminServerIntegrationTest {
         dataProbe.addDomain(DOMAIN);
 
         given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
             .body("{\"password\":\"password\"}")
         .when()
             .put(SPECIFIC_USER)
@@ -145,7 +165,6 @@ public class WebAdminServerIntegrationTest {
         dataProbe.addUser(USERNAME, "anyPassword");
 
         given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
             .body("{\"username\":\"" + USERNAME + "\",\"password\":\"password\"}")
         .when()
             .delete(SPECIFIC_USER)
@@ -160,9 +179,7 @@ public class WebAdminServerIntegrationTest {
         dataProbe.addDomain(DOMAIN);
         dataProbe.addUser(USERNAME, "anyPassword");
 
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .get(UserRoutes.USERS)
         .then()
             .statusCode(HttpStatus.OK_200)
@@ -175,9 +192,7 @@ public class WebAdminServerIntegrationTest {
         dataProbe.addDomain(DOMAIN);
         dataProbe.addUser(USERNAME, "anyPassword");
 
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .put(SPECIFIC_MAILBOX)
         .then()
             .statusCode(HttpStatus.NO_CONTENT_204);
@@ -191,9 +206,7 @@ public class WebAdminServerIntegrationTest {
         dataProbe.addUser(USERNAME, "anyPassword");
         guiceJamesServer.getProbe(MailboxProbeImpl.class).createMailbox("#private", USERNAME, MAILBOX);
 
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .delete(SPECIFIC_MAILBOX)
         .then()
             .statusCode(HttpStatus.NO_CONTENT_204);
@@ -203,9 +216,7 @@ public class WebAdminServerIntegrationTest {
 
     @Test
     public void getCurrentVersionShouldReturnNullForCurrentVersionAsBeginning() throws Exception {
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .get(VERSION)
         .then()
             .statusCode(HttpStatus.OK_200)
@@ -215,9 +226,7 @@ public class WebAdminServerIntegrationTest {
 
     @Test
     public void getLatestVersionShouldReturnTheConfiguredLatestVersion() throws Exception {
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .get(VERSION_LATEST)
         .then()
             .statusCode(HttpStatus.OK_200)
@@ -228,19 +237,15 @@ public class WebAdminServerIntegrationTest {
     @Test
     public void postShouldDoMigrationAndUpdateCurrentVersion() throws Exception {
         String taskId = with()
-            .port(webAdminGuiceProbe.getWebAdminPort())
             .body(String.valueOf(CassandraSchemaVersionManager.MAX_VERSION.getValue()))
         .post(UPGRADE_VERSION)
             .jsonPath()
             .get("taskId");
 
         with()
-            .port(webAdminGuiceProbe.getWebAdminPort())
             .get("/task/" + taskId + "/await");
 
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .get(VERSION)
         .then()
             .statusCode(HttpStatus.OK_200)
@@ -250,19 +255,14 @@ public class WebAdminServerIntegrationTest {
 
     @Test
     public void postShouldDoMigrationAndUpdateToTheLatestVersion() throws Exception {
-        String taskId = with()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .post(UPGRADE_TO_LATEST_VERSION)
+        String taskId = with().post(UPGRADE_TO_LATEST_VERSION)
             .jsonPath()
             .get("taskId");
 
         with()
-            .port(webAdminGuiceProbe.getWebAdminPort())
             .get("/task/" + taskId + "/await");
 
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .get(VERSION)
         .then()
             .statusCode(HttpStatus.OK_200)
@@ -275,11 +275,9 @@ public class WebAdminServerIntegrationTest {
         dataProbe.addAddressMapping("group", "domain.com", "user1@domain.com");
         dataProbe.addAddressMapping("group", "domain.com", "user2@domain.com");
 
-        List<String> members = given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-            .when()
+        List<String> members = when()
             .get("/address/groups/group@domain.com")
-            .then()
+        .then()
             .statusCode(HttpStatus.OK_200)
             .contentType(JSON_CONTENT_TYPE)
             .extract()
@@ -290,9 +288,7 @@ public class WebAdminServerIntegrationTest {
 
     @Test
     public void getSwaggerShouldReturnJsonDataForSwagger() throws Exception {
-        given()
-            .port(webAdminGuiceProbe.getWebAdminPort())
-        .when()
+        when()
             .get(SwaggerRoutes.SWAGGER_ENDPOINT)
         .then()
             .statusCode(HttpStatus.OK_200)

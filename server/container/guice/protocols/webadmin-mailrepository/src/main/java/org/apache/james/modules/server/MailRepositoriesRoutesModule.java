@@ -17,26 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james.modules.server;
 
-import javax.inject.Inject;
+import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.routes.MailRepositoriesRoutes;
 
-import org.apache.james.webadmin.PortSupplier;
-import org.apache.james.webadmin.WebAdminServer;
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
-public class WebAdminGuiceProbe implements GuiceProbe {
-    private final WebAdminServer webAdminServer;
-
-    @Inject
-    public WebAdminGuiceProbe(WebAdminServer webAdminServer) {
-        this.webAdminServer = webAdminServer;
-    }
-
-    public PortSupplier getWebAdminPort() {
-        return webAdminServer.getPort();
-    }
-
-    public void await() {
-        webAdminServer.await();
+public class MailRepositoriesRoutesModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        Multibinder<Routes> routesMultibinder = Multibinder.newSetBinder(binder(), Routes.class);
+        routesMultibinder.addBinding().to(MailRepositoriesRoutes.class);
     }
 }

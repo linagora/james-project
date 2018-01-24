@@ -26,15 +26,21 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.mail.MessagingException;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import org.apache.james.mailrepository.api.MailRepositoryStore;
+import org.apache.james.task.Task;
+import org.apache.james.task.TaskId;
+import org.apache.james.task.TaskManager;
 import org.apache.james.util.streams.Limit;
 import org.apache.james.util.streams.Offset;
+import org.apache.james.webadmin.Constants;
 import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.dto.ExtendedMailRepositoryResponse;
+import org.apache.james.webadmin.dto.TaskIdDto;
 import org.apache.james.webadmin.service.MailRepositoryStoreService;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.apache.james.webadmin.utils.ErrorResponder.ErrorType;
@@ -61,12 +67,14 @@ public class MailRepositoriesRoutes implements Routes {
 
     private final JsonTransformer jsonTransformer;
     private final MailRepositoryStoreService repositoryStoreService;
+    private final TaskManager taskManager;
     private Service service;
 
     @Inject
-    public MailRepositoriesRoutes(MailRepositoryStoreService repositoryStoreService, JsonTransformer jsonTransformer) {
+    public MailRepositoriesRoutes(MailRepositoryStoreService repositoryStoreService, JsonTransformer jsonTransformer, TaskManager taskManager) {
         this.repositoryStoreService = repositoryStoreService;
         this.jsonTransformer = jsonTransformer;
+        this.taskManager = taskManager;
     }
 
     @Override
@@ -78,6 +86,12 @@ public class MailRepositoriesRoutes implements Routes {
         defineListMails();
 
         defineGetMailRepository();
+
+        defineGetMail();
+
+        defineDeleteMail();
+
+        defineDeleteAll();
     }
 
     @GET
@@ -145,6 +159,35 @@ public class MailRepositoriesRoutes implements Routes {
             jsonTransformer);
     }
 
+    @Path("/{encodedUrl}/mails/{mailKey}")
+    @ApiOperation(value = "Retrieving a specific mail details")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpStatus.OK_200, message = "The list of all mails in a repository", response = List.class),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side."),
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Not found - Could not retrieve the given mail.")
+    })
+    public void defineGetMail() {
+        service.get(MAIL_REPOSITORIES + "/:encodedUrl/mails/:mailKey", (request, response) -> {
+            String url = URLDecoder.decode(request.params("encodedUrl"), StandardCharsets.UTF_8.displayName());
+            String mailKey = request.params("mailKey");
+            try {
+                return repositoryStoreService.retrieveMail(url, mailKey)
+                    .orElseThrow(() -> ErrorResponder.builder()
+                        .statusCode(HttpStatus.NOT_FOUND_404)
+                        .type(ErrorResponder.ErrorType.NOT_FOUND)
+                        .message("Could not retrieve " + mailKey)
+                        .haltError());
+            } catch (MailRepositoryStore.MailRepositoryStoreException | MessagingException e) {
+                throw ErrorResponder.builder()
+                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
+                    .type(ErrorResponder.ErrorType.SERVER_ERROR)
+                    .cause(e)
+                    .message("Error while retrieving mail")
+                    .haltError();
+            }
+        }, jsonTransformer);
+    }
+
     @GET
     @Path("/{encodedUrl}")
     @ApiOperation(value = "Reading the information of a repository, such as size (can take some time to compute)")
@@ -171,6 +214,58 @@ public class MailRepositoriesRoutes implements Routes {
                     .type(ErrorResponder.ErrorType.SERVER_ERROR)
                     .cause(e)
                     .message("Error while retrieving mail repository information")
+                    .haltError();
+            }
+        }, jsonTransformer);
+    }
+
+    @DELETE
+    @Path("/{encodedUrl}/mails/{mailKey}")
+    @ApiOperation(value = "Deleting a specific mail from that mailRepository")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpStatus.OK_200, message = "Mail is no more stored in the repository", response = List.class),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side."),
+    })
+    public void defineDeleteMail() {
+        service.delete(MAIL_REPOSITORIES + "/:encodedUrl/mails/:mailKey", (request, response) -> {
+            String url = URLDecoder.decode(request.params("encodedUrl"), StandardCharsets.UTF_8.displayName());
+            String mailKey = request.params("mailKey");
+            try {
+                response.status(HttpStatus.NO_CONTENT_204);
+                repositoryStoreService.deleteMail(url, mailKey);
+                return Constants.EMPTY_BODY;
+            } catch (MailRepositoryStore.MailRepositoryStoreException | MessagingException e) {
+                throw ErrorResponder.builder()
+                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
+                    .type(ErrorResponder.ErrorType.SERVER_ERROR)
+                    .cause(e)
+                    .message("Error while deleting mail")
+                    .haltError();
+            }
+        });
+    }
+
+    @DELETE
+    @Path("/{encodedUrl}/mails")
+    @ApiOperation(value = "Deleting all mails in that mailRepository")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpStatus.CREATED_201, message = "All mails are deleted", response = TaskIdDto.class),
+        @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side."),
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Bad request - unknown action")
+    })
+    public void defineDeleteAll() {
+        service.delete(MAIL_REPOSITORIES + "/:encodedUrl/mails", (request, response) -> {
+            String url = URLDecoder.decode(request.params("encodedUrl"), StandardCharsets.UTF_8.displayName());
+            try {
+                Task task = repositoryStoreService.createClearMailRepositoryTask(url);
+                TaskId taskId = taskManager.submit(task);
+                return TaskIdDto.respond(response, taskId);
+            } catch (MailRepositoryStore.MailRepositoryStoreException | MessagingException e) {
+                throw ErrorResponder.builder()
+                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
+                    .type(ErrorResponder.ErrorType.SERVER_ERROR)
+                    .cause(e)
+                    .message("Error while deleting all mails")
                     .haltError();
             }
         }, jsonTransformer);
