@@ -17,30 +17,34 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailets.configuration;
+package org.apache.james.webadmin.dto;
 
-import static com.jayway.awaitility.Duration.FIVE_HUNDRED_MILLISECONDS;
-import static com.jayway.awaitility.Duration.ONE_MINUTE;
+import static org.eclipse.jetty.http.HttpHeader.LOCATION;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-import com.jayway.awaitility.Awaitility;
-import com.jayway.awaitility.Duration;
-import com.jayway.awaitility.core.ConditionFactory;
+import java.util.UUID;
 
-public class Constants {
-    public static Duration slowPacedPollInterval = FIVE_HUNDRED_MILLISECONDS;
-    public static ConditionFactory calmlyAwait = Awaitility.with()
-        .pollInterval(slowPacedPollInterval)
-        .and()
-        .with()
-        .pollDelay(slowPacedPollInterval)
-        .await();
-    public static ConditionFactory awaitAtMostOneMinute = calmlyAwait.atMost(ONE_MINUTE);
+import org.apache.james.task.TaskId;
+import org.eclipse.jetty.http.HttpStatus;
+import org.junit.Test;
 
-    public static final String DEFAULT_DOMAIN = "james.org";
-    public static final String LOCALHOST_IP = "127.0.0.1";
-    public static final int IMAP_PORT = 1143;
-    public static final int SMTP_PORT = 1025;
-    public static final String PASSWORD = "secret";
-    public static final String FROM = "user@" + DEFAULT_DOMAIN;
-    public static final String RECIPIENT = "user2@" + DEFAULT_DOMAIN;
+import spark.Response;
+
+public class TaskIdDtoTest {
+    private static final String UID_VALUE = "ce5316cb-c924-40eb-9ca0-c5828e276297";
+
+    @Test
+    public void respondShouldReturnCreatedWithTaskIdHeader() {
+        Response response = mock(Response.class);
+        TaskId taskId = new TaskId(UUID.fromString(UID_VALUE));
+
+        TaskIdDto.respond(response, taskId);
+
+        verify(response).status(HttpStatus.CREATED_201);
+        verify(response).header(LOCATION.asString(), "/tasks/" + UID_VALUE);
+        verifyNoMoreInteractions(response);
+    }
+
 }

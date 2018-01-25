@@ -33,7 +33,7 @@ public class TaskIdDto {
 
     public static TaskIdDto respond(Response response, TaskId taskId) {
         response.status(HttpStatus.CREATED_201);
-        response.header(LOCATION.asString(), TasksRoutes.BASE + "/" + taskId.toString());
+        response.header(LOCATION.asString(), TasksRoutes.BASE + "/" + taskId.getValue());
         return TaskIdDto.from(taskId);
     }
 
