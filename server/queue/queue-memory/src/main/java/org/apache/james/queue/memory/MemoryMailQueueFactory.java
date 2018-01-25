@@ -19,7 +19,7 @@
 
 package org.apache.james.queue.memory;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
@@ -98,7 +98,7 @@ public class MemoryMailQueueFactory implements MailQueueFactory<ManageableMailQu
 
         @Override
         public void enQueue(Mail mail, long delay, TimeUnit unit) throws MailQueueException {
-            LocalDateTime nextDelivery = LocalDateTime.now().plus(delay, Temporals.chronoUnit(unit));
+            ZonedDateTime nextDelivery = ZonedDateTime.now().plus(delay, Temporals.chronoUnit(unit));
             try {
                 mailItems.put(new MemoryMailQueueItem(cloneMail(mail), this, nextDelivery));
             } catch (MessagingException e) {
@@ -194,7 +194,7 @@ public class MemoryMailQueueFactory implements MailQueueFactory<ManageableMailQu
         public MailQueueIterator browse() throws MailQueueException {
             Iterator<MailQueueItemView> underlying = ImmutableList.copyOf(mailItems)
                 .stream()
-                .map(item -> new MailQueueItemView(item.getMail(), -1))
+                .map(item -> new MailQueueItemView(item.getMail(), item.delivery))
                 .iterator();
 
             return new MailQueueIterator() {
@@ -233,9 +233,9 @@ public class MemoryMailQueueFactory implements MailQueueFactory<ManageableMailQu
     public static class MemoryMailQueueItem implements MailQueue.MailQueueItem, Delayed {
         private final Mail mail;
         private final MemoryMailQueue queue;
-        private final LocalDateTime delivery;
+        private final ZonedDateTime delivery;
 
-        public MemoryMailQueueItem(Mail mail, MemoryMailQueue queue, LocalDateTime delivery) {
+        public MemoryMailQueueItem(Mail mail, MemoryMailQueue queue, ZonedDateTime delivery) {
             this.mail = mail;
             this.queue = queue;
             this.delivery = delivery;
@@ -256,7 +256,7 @@ public class MemoryMailQueueFactory implements MailQueueFactory<ManageableMailQu
 
         @Override
         public long getDelay(TimeUnit unit) {
-            return LocalDateTime.now().until(delivery, Temporals.chronoUnit(unit));
+            return ZonedDateTime.now().until(delivery, Temporals.chronoUnit(unit));
         }
 
         @Override

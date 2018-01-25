@@ -21,6 +21,7 @@ package org.apache.james.webadmin.routes;
 
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.when;
+import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
@@ -30,12 +31,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.core.MailAddress;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.queue.api.Mails;
+import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.api.RawMailQueueItemDecoratorFactory;
 import org.apache.james.queue.memory.MemoryMailQueueFactory;
 import org.apache.james.queue.memory.MemoryMailQueueFactory.MemoryMailQueue;
@@ -46,7 +49,6 @@ import org.apache.mailet.base.test.FakeMail;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.github.steveash.guavate.Guavate;
@@ -250,7 +252,6 @@ public class MailQueueRoutesTest {
             .body(".", hasSize(1));
     }
 
-    @Ignore("MemoryMailQueueFactory doesn't support delay")
     @Test
     public void listMailsShouldReturnDelayedMailsWhenAskFor() throws Exception {
         MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
@@ -319,5 +320,171 @@ public class MailQueueRoutesTest {
             .get(FIRST_QUEUE + "/mails")
         .then()
             .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldReturnNoContent() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "true")
+            .body("{\"delayed\": \"false\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.NO_CONTENT_204);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryForUnknownQueueShouldReturnNotFound() throws Exception {
+        given()
+            .queryParam("delayed", "true")
+            .body("{\"delayed\": \"false\"}")
+        .when()
+            .patch("unknown queue" + "/mails")
+        .then()
+            .statusCode(HttpStatus.NOT_FOUND_404);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryRequiresDelayedParameter() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .body("{\"delayed\": \"false\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectFalseDelayedParam() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "false")
+            .body("{\"delayed\": \"false\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectNonBooleanDelayedParam() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "wrong")
+            .body("{\"delayed\": \"false\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectRequestWithoutBody() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "true")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectRequestWithoutDelayedParameter() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "true")
+            .body("{\"xx\": \"false\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldAcceptRequestWithUnknownFields() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "true")
+            .body("{" +
+                "\"xx\": \"false\"," +
+                "\"delayed\": \"false\"" +
+                "}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectMalformedJsonPayload() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "true")
+            .body("{\"xx\":")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectTrueDelayedAttribute() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "false")
+            .body("{\"delayed\": \"true\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldRejectStringDelayedAttribute() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+
+        given()
+            .queryParam("delayed", "false")
+            .body("{\"delayed\": \"string\"}")
+        .when()
+            .patch(FIRST_QUEUE + "/mails")
+        .then()
+            .statusCode(HttpStatus.BAD_REQUEST_400);
+    }
+
+    @Test
+    public void forcingDelayedMailsDeliveryShouldActuallyChangePropertyOnMails() throws Exception {
+        MemoryMailQueue queue = mailQueueFactory.createQueue(FIRST_QUEUE);
+        FakeMail mail = Mails.defaultMail().build();
+        queue.enQueue(mail, 10L, TimeUnit.MINUTES);
+        queue.enQueue(mail, 10L, TimeUnit.MINUTES);
+        queue.enQueue(mail);
+
+        with()
+            .queryParam("delayed", "true")
+            .body("{\"delayed\": \"false\"}")
+        .then()
+            .patch(FIRST_QUEUE + "/mails");
+
+        assertThat(queue.browse())
+            .extracting(ManageableMailQueue.MailQueueItemView::getNextDelivery)
+            .hasSize(3)
+            .allSatisfy((delivery) -> {
+                assertThat(delivery).isNotEmpty();
+                assertThat(delivery.get()).isBefore(ZonedDateTime.now());
+            });
     }
 }

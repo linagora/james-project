@@ -17,30 +17,23 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin.utils;
+package org.apache.james.webadmin.dto;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.util.Optional;
 
-import spark.ResponseTransformer;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class JsonTransformer implements ResponseTransformer {
+public class ForceDelivery {
 
-    private final ObjectMapper objectMapper;
+    private final Optional<Boolean> delayed;
 
-    public JsonTransformer() {
-        objectMapper = new ObjectMapper()
-            .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .registerModule(new Jdk8Module())
-            .registerModule(new JavaTimeModule());
+    @JsonCreator
+    public ForceDelivery(@JsonProperty("delayed") Optional<Boolean> delayed) {
+        this.delayed = delayed;
     }
 
-    @Override
-    public String render(Object o) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(o);
+    public Optional<Boolean> getDelayed() {
+        return delayed;
     }
 }
