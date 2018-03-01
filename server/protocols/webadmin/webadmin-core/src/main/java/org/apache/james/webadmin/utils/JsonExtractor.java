@@ -21,6 +21,7 @@ package org.apache.james.webadmin.utils;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
@@ -29,9 +30,10 @@ public class JsonExtractor<RequestT> {
     private final ObjectMapper objectMapper;
     private final Class<RequestT> type;
 
-    public JsonExtractor(Class<RequestT> type) {
+    public JsonExtractor(Class<RequestT> type, Module... modules) {
         this.objectMapper = new ObjectMapper()
-            .registerModule(new Jdk8Module());
+            .registerModule(new Jdk8Module())
+            .registerModules(modules);
         this.type = type;
     }
 

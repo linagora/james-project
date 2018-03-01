@@ -30,49 +30,49 @@ public class QuotaValueTest {
 
     @Test
     public void quotaCountShouldThrowWhenNotANumber() {
-        assertThatThrownBy(() -> QuotaValue.quotaCount("invalid"))
+        assertThatThrownBy(() -> Quotas.quotaCount("invalid"))
             .isInstanceOf(HaltException.class);
     }
 
     @Test
     public void quotaCountShouldParseZero() {
-        assertThat(QuotaValue.quotaCount("0").asLong())
+        assertThat(Quotas.quotaCount("0").asLong())
             .isEqualTo(0);
     }
 
     @Test
     public void quotaCountShouldParsePositiveValue() {
-        assertThat(QuotaValue.quotaCount("42").asLong())
+        assertThat(Quotas.quotaCount("42").asLong())
             .isEqualTo(42);
     }
 
     @Test
     public void quotaCountShouldThrowOnNegativeNumber() {
-        assertThatThrownBy(() -> QuotaValue.quotaCount("-1"))
+        assertThatThrownBy(() -> Quotas.quotaCount("-1"))
             .isInstanceOf(HaltException.class);
     }
 
     @Test
     public void quotaSizeShouldThrowWhenNotANumber() {
-        assertThatThrownBy(() -> QuotaValue.quotaSize("invalid"))
+        assertThatThrownBy(() -> Quotas.quotaSize("invalid"))
             .isInstanceOf(HaltException.class);
     }
 
     @Test
     public void quotaSizeShouldParseZero() {
-        assertThat(QuotaValue.quotaSize("0").asLong())
+        assertThat(Quotas.quotaSize("0").asLong())
             .isEqualTo(0);
     }
 
     @Test
     public void quotaSizeShouldParsePositiveValue() {
-        assertThat(QuotaValue.quotaSize("42").asLong())
+        assertThat(Quotas.quotaSize("42").asLong())
             .isEqualTo(42);
     }
 
     @Test
     public void quotaSizeShouldThrowOnNegativeNumber() {
-        assertThatThrownBy(() -> QuotaValue.quotaSize("-1"))
+        assertThatThrownBy(() -> Quotas.quotaSize("-1"))
             .isInstanceOf(HaltException.class);
     }
 
