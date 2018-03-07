@@ -41,6 +41,8 @@ import org.apache.james.mailbox.jcr.JCRSubscriptionManager;
 import org.apache.james.mailbox.jcr.JCRUtils;
 import org.apache.james.mailbox.jcr.mail.JCRModSeqProvider;
 import org.apache.james.mailbox.jcr.mail.JCRUidProvider;
+import org.apache.james.mailbox.quota.QuotaCount;
+import org.apache.james.mailbox.quota.QuotaSize;
 import org.apache.james.mailbox.store.JVMMailboxPathLocker;
 import org.apache.james.mailbox.store.StoreMailboxAnnotationManager;
 import org.apache.james.mailbox.store.StoreRightManager;
@@ -48,7 +50,7 @@ import org.apache.james.mailbox.store.event.DefaultDelegatingMailboxListener;
 import org.apache.james.mailbox.store.event.MailboxEventDispatcher;
 import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
-import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
+import org.apache.james.mailbox.store.quota.DefaultUserQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.mpt.api.ImapFeatures;
@@ -108,7 +110,7 @@ public class JCRHostSystem extends JamesImapHostSystem {
                     DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, 
                             new JCRSubscriptionManager(mf), 
                             new NoQuotaManager(), 
-                            new DefaultQuotaRootResolver(mf),
+                            new DefaultUserQuotaRootResolver(mf),
                             new DefaultMetricFactory());
             resetUserMetaData();
             MailboxSession session = mailboxManager.createSystemSession("test");
@@ -178,7 +180,7 @@ public class JCRHostSystem extends JamesImapHostSystem {
     }
 
     @Override
-    public void setQuotaLimits(long maxMessageQuota, long maxStorageQuota) throws Exception {
+    public void setQuotaLimits(QuotaCount maxMessageQuota, QuotaSize maxStorageQuota) throws Exception {
         throw new NotImplementedException();
     }
 

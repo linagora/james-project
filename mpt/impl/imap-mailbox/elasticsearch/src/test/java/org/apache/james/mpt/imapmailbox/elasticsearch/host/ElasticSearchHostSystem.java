@@ -52,10 +52,12 @@ import org.apache.james.mailbox.inmemory.InMemoryMailboxSessionMapperFactory;
 import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.quota.QuotaCount;
+import org.apache.james.mailbox.quota.QuotaSize;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
-import org.apache.james.mailbox.store.quota.DefaultQuotaRootResolver;
+import org.apache.james.mailbox.store.quota.DefaultUserQuotaRootResolver;
 import org.apache.james.mailbox.store.quota.NoQuotaManager;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.mpt.api.ImapFeatures;
@@ -123,7 +125,7 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
             DefaultImapProcessorFactory.createDefaultProcessor(this.mailboxManager,
                 new StoreSubscriptionManager(factory),
                 new NoQuotaManager(),
-                new DefaultQuotaRootResolver(factory),
+                new DefaultUserQuotaRootResolver(factory),
                 new DefaultMetricFactory());
         configure(new DefaultImapDecoderFactory().buildImapDecoder(),
             new DefaultImapEncoderFactory().buildImapEncoder(),
@@ -143,7 +145,7 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
     }
 
     @Override
-    public void setQuotaLimits(long maxMessageQuota, long maxStorageQuota) throws Exception {
+    public void setQuotaLimits(QuotaCount maxMessageQuota, QuotaSize maxStorageQuota) throws Exception {
         throw new NotImplementedException();
     }
 }

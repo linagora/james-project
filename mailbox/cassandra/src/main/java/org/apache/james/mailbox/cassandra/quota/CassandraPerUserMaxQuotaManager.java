@@ -19,116 +19,87 @@
 
 package org.apache.james.mailbox.cassandra.quota;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
+import java.util.Optional;
 
 import javax.inject.Inject;
 
-import org.apache.james.mailbox.cassandra.table.CassandraDefaultMaxQuota;
-import org.apache.james.mailbox.cassandra.table.CassandraMaxQuota;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.Quota;
 import org.apache.james.mailbox.model.QuotaRoot;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
+import org.apache.james.mailbox.quota.QuotaCount;
+import org.apache.james.mailbox.quota.QuotaSize;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
+import com.github.fge.lambdas.Throwing;
 
 public class CassandraPerUserMaxQuotaManager implements MaxQuotaManager {
 
-    private final Session session;
-    private final PreparedStatement setMaxStorageStatement;
-    private final PreparedStatement setMaxMessageStatement;
-    private final PreparedStatement getMaxStorageStatement;
-    private final PreparedStatement getMaxMessageStatement;
-    private final PreparedStatement setDefaultMaxStorageStatement;
-    private final PreparedStatement setDefaultMaxMessageStatement;
-    private final PreparedStatement getDefaultMaxStatement;
+    private final CassandraPerUserMaxQuotaDao dao;
 
     @Inject
-    public CassandraPerUserMaxQuotaManager(Session session) {
-        this.session = session;
-        this.setMaxStorageStatement = session.prepare(insertInto(CassandraMaxQuota.TABLE_NAME)
-            .value(CassandraMaxQuota.QUOTA_ROOT, bindMarker())
-            .value(CassandraMaxQuota.STORAGE, bindMarker()));
-        this.setMaxMessageStatement = session.prepare(insertInto(CassandraMaxQuota.TABLE_NAME)
-            .value(CassandraMaxQuota.QUOTA_ROOT, bindMarker())
-            .value(CassandraMaxQuota.MESSAGE_COUNT, bindMarker()));
-        this.getMaxStorageStatement = session.prepare(select(CassandraMaxQuota.STORAGE)
-            .from(CassandraMaxQuota.TABLE_NAME)
-            .where(eq(CassandraMaxQuota.QUOTA_ROOT, bindMarker())));
-        this.getMaxMessageStatement = session.prepare(select(CassandraMaxQuota.MESSAGE_COUNT)
-            .from(CassandraMaxQuota.TABLE_NAME)
-            .where(eq(CassandraMaxQuota.QUOTA_ROOT, bindMarker())));
-        this.getDefaultMaxStatement = session.prepare(select(CassandraDefaultMaxQuota.VALUE)
-            .from(CassandraDefaultMaxQuota.TABLE_NAME)
-            .where(eq(CassandraDefaultMaxQuota.TYPE, bindMarker(CassandraDefaultMaxQuota.TYPE))));
-        this.setDefaultMaxMessageStatement = session.prepare(insertInto(CassandraDefaultMaxQuota.TABLE_NAME)
-            .value(CassandraDefaultMaxQuota.TYPE, CassandraDefaultMaxQuota.MESSAGE)
-            .value(CassandraDefaultMaxQuota.VALUE, bindMarker()));
-        this.setDefaultMaxStorageStatement = session.prepare(insertInto(CassandraDefaultMaxQuota.TABLE_NAME)
-            .value(CassandraDefaultMaxQuota.TYPE, CassandraDefaultMaxQuota.STORAGE)
-            .value(CassandraDefaultMaxQuota.VALUE, bindMarker()));
+    public CassandraPerUserMaxQuotaManager(CassandraPerUserMaxQuotaDao dao) {
+        this.dao = dao;
     }
 
     @Override
-    public void setMaxStorage(QuotaRoot quotaRoot, long maxStorageQuota) throws MailboxException {
-        session.execute(setMaxStorageStatement.bind(quotaRoot.getValue(), maxStorageQuota));
+    public void setMaxStorage(QuotaRoot quotaRoot, QuotaSize maxStorageQuota) {
+        dao.setMaxStorage(quotaRoot, maxStorageQuota);
     }
 
     @Override
-    public void setMaxMessage(QuotaRoot quotaRoot, long maxMessageCount) throws MailboxException {
-        session.execute(setMaxMessageStatement.bind(quotaRoot.getValue(), maxMessageCount));
+    public void setMaxMessage(QuotaRoot quotaRoot, QuotaCount maxMessageCount) {
+        dao.setMaxMessage(quotaRoot, maxMessageCount);
     }
 
     @Override
-    public void setDefaultMaxStorage(long defaultMaxStorage) throws MailboxException {
-        session.execute(setDefaultMaxStorageStatement.bind(defaultMaxStorage));
+    public void removeMaxMessage(QuotaRoot quotaRoot) {
+        dao.removeMaxMessage(quotaRoot);
     }
 
     @Override
-    public void setDefaultMaxMessage(long defaultMaxMessageCount) throws MailboxException {
-        session.execute(setDefaultMaxMessageStatement.bind(defaultMaxMessageCount));
+    public void removeMaxStorage(QuotaRoot quotaRoot) {
+        dao.removeMaxStorage(quotaRoot);
     }
 
     @Override
-    public long getDefaultMaxStorage() throws MailboxException {
-        ResultSet resultSet = session.execute(getDefaultMaxStatement.bind()
-            .setString(CassandraDefaultMaxQuota.TYPE, CassandraDefaultMaxQuota.STORAGE));
-        if (resultSet.isExhausted()) {
-            return Quota.UNLIMITED;
-        }
-        return resultSet.one().getLong(CassandraDefaultMaxQuota.VALUE);
+    public void setDefaultMaxStorage(QuotaSize defaultMaxStorage) {
+        dao.setDefaultMaxStorage(defaultMaxStorage);
     }
 
     @Override
-    public long getDefaultMaxMessage() throws MailboxException {
-        ResultSet resultSet = session.execute(getDefaultMaxStatement.bind()
-            .setString(CassandraDefaultMaxQuota.TYPE, CassandraDefaultMaxQuota.MESSAGE));
-        if (resultSet.isExhausted()) {
-            return Quota.UNLIMITED;
-        }
-        return resultSet.one().getLong(CassandraDefaultMaxQuota.VALUE);
+    public void removeDefaultMaxStorage() {
+        dao.removeDefaultMaxStorage();
     }
 
     @Override
-    public long getMaxStorage(QuotaRoot quotaRoot) throws MailboxException {
-        ResultSet resultSet = session.execute(getMaxStorageStatement.bind(quotaRoot.getValue()));
-        if (resultSet.isExhausted()) {
-            return getDefaultMaxStorage();
-        }
-        return resultSet.one().getLong(CassandraMaxQuota.STORAGE);
+    public void setDefaultMaxMessage(QuotaCount defaultMaxMessageCount) {
+        dao.setDefaultMaxMessage(defaultMaxMessageCount);
     }
 
     @Override
-    public long getMaxMessage(QuotaRoot quotaRoot) throws MailboxException {
-        ResultSet resultSet = session.execute(getMaxMessageStatement.bind(quotaRoot.getValue()));
-        if (resultSet.isExhausted()) {
-            return getDefaultMaxMessage();
-        }
-        return resultSet.one().getLong(CassandraMaxQuota.MESSAGE_COUNT);
+    public void removeDefaultMaxMessage() {
+        dao.removeDefaultMaxMessage();
+    }
+
+    @Override
+    public Optional<QuotaSize> getDefaultMaxStorage() {
+        return dao.getDefaultMaxStorage();
+    }
+
+    @Override
+    public Optional<QuotaCount> getDefaultMaxMessage() {
+        return dao.getDefaultMaxMessage();
+    }
+
+    @Override
+    public Optional<QuotaSize> getMaxStorage(QuotaRoot quotaRoot) {
+        return dao.getMaxStorage(quotaRoot)
+            .map(Optional::of)
+            .orElseGet(Throwing.supplier(this::getDefaultMaxStorage).sneakyThrow());
+    }
+
+    @Override
+    public Optional<QuotaCount> getMaxMessage(QuotaRoot quotaRoot) {
+        return dao.getMaxMessage(quotaRoot)
+            .map(Optional::of)
+            .orElseGet(Throwing.supplier(this::getDefaultMaxMessage).sneakyThrow());
     }
 }
