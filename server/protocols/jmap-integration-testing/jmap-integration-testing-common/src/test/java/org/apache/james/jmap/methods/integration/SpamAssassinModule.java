@@ -16,34 +16,45 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.jmap.methods.integration;
 
-package org.apache.james.modules.mailbox;
-
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Optional;
 
+import javax.inject.Singleton;
+
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.james.mailbox.spamassassin.SpamAssassinConfiguration;
+import org.apache.james.mailetcontainer.api.MailetLoader;
 import org.apache.james.util.Host;
+import org.apache.james.util.scanner.SpamAssassinExtension;
+import org.apache.james.util.scanner.SpamAssassinExtension.SpamAssassin;
+import org.apache.james.utils.PropertiesProvider;
 
-public class SpamAssassinConfigurationLoader {
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Scopes;
 
-    private static final String SPAMASSASSIN_HOST = "spamassassin.host";
-    private static final String SPAMASSASSIN_PORT = "spamassassin.port";
-    public static final String DEFAULT_HOST = "127.0.0.1";
-    public static final int DEFAULT_PORT = 783;
+public class SpamAssassinModule extends AbstractModule {
 
-    public static SpamAssassinConfiguration disable() {
-        return new SpamAssassinConfiguration(Optional.empty());
+    private final SpamAssassinExtension spamAssassinExtension;
+
+    public SpamAssassinModule(SpamAssassinExtension spamAssassinExtension) {
+        this.spamAssassinExtension = spamAssassinExtension;
     }
 
-    public static SpamAssassinConfiguration fromProperties(PropertiesConfiguration configuration) throws ConfigurationException {
-        Host host = getHost(configuration);
-        return new SpamAssassinConfiguration(Optional.of(host));
+    @Override
+    protected void configure() {
+        bind(SpamAssassinGuiceMailetLoader.class).in(Scopes.SINGLETON);
+        bind(MailetLoader.class).to(SpamAssassinGuiceMailetLoader.class);
     }
 
-    private static Host getHost(PropertiesConfiguration propertiesReader) throws ConfigurationException {
-        return Host.from(propertiesReader.getString(SPAMASSASSIN_HOST, DEFAULT_HOST), 
-                propertiesReader.getInteger(SPAMASSASSIN_PORT, DEFAULT_PORT));
+    @Provides
+    @Singleton
+    private SpamAssassinConfiguration getSpamAssassinConfiguration(PropertiesProvider propertiesProvider) throws ConfigurationException, IOException, URISyntaxException {
+        SpamAssassin spamAssassin = spamAssassinExtension.getSpamAssassin();
+        return new SpamAssassinConfiguration(Optional.of(Host.from(spamAssassin.getIp(), spamAssassin.getBindingPort())));
     }
+
 }

@@ -26,6 +26,8 @@ import org.apache.james.mailbox.Role;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.event.SpamEventListener;
 import org.apache.james.mailbox.store.mail.model.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.steveash.guavate.Guavate;
@@ -33,6 +35,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 public class SpamAssassinListener implements SpamEventListener {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SpamAssassinListener.class);
 
     private final SpamAssassin spamAssassin;
 
@@ -53,15 +57,17 @@ public class SpamAssassinListener implements SpamEventListener {
 
     @Override
     public void event(Event event) {
+        LOGGER.debug("Event {} received in listener.", event);
         if (event instanceof EventFactory.AddedImpl) {
             EventFactory.AddedImpl addedToMailboxEvent = (EventFactory.AddedImpl) event;
             if (isEventOnSpamMailbox(addedToMailboxEvent)) {
+                LOGGER.debug("Spam event detected");
                 ImmutableList<InputStream> messages = addedToMailboxEvent.getAvailableMessages()
                     .values()
                     .stream()
                     .map(Throwing.function(Message::getFullContent))
                     .collect(Guavate.toImmutableList());
-                spamAssassin.learnSpam(messages);
+                spamAssassin.learnSpam(messages, event.getMailboxPath().getUser());
             }
         }
     }
