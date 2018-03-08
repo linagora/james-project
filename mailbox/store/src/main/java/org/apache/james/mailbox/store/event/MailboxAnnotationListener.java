@@ -20,6 +20,7 @@ package org.apache.james.mailbox.store.event;
 
 import java.util.List;
 
+import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxAnnotation;

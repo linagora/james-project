@@ -22,6 +22,7 @@ package org.apache.james.mailbox.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 
 public class EventCollector implements MailboxListener {

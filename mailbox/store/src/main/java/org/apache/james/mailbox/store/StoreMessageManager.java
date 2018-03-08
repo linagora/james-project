@@ -55,6 +55,7 @@ import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
 import org.apache.james.mailbox.model.MessageMetaData;
+import org.apache.james.mailbox.model.MessageMoves;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult.FetchGroup;
 import org.apache.james.mailbox.model.MessageResultIterator;
@@ -747,6 +748,12 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
             messagesMap.put(message.getUid(), immutableMailboxMessageFactory.from(to.getMailboxEntity().getMailboxId(), message));
         }
         dispatcher.added(session, copiedUids, to.getMailboxEntity(), messagesMap.build());
+        dispatcher.moved(session,
+            MessageMoves.builder()
+                .previousMailboxIds(getMailboxEntity().getMailboxId())
+                .targetMailboxIds(to.getMailboxEntity().getMailboxId(), getMailboxEntity().getMailboxId())
+                .build(),
+            messagesMap.build());
 
         return copiedUids;
     }
@@ -763,6 +770,12 @@ public class StoreMessageManager implements org.apache.james.mailbox.MessageMana
         }
         dispatcher.added(session, moveUids, to.getMailboxEntity(), messagesMap.build());
         dispatcher.expunged(session, collectMetadata(moveResult.getOriginalMessages()), getMailboxEntity());
+        dispatcher.moved(session,
+                MessageMoves.builder()
+                    .previousMailboxIds(getMailboxEntity().getMailboxId())
+                    .targetMailboxIds(to.getMailboxEntity().getMailboxId())
+                    .build(),
+                messagesMap.build());
         return moveUids;
     }
 

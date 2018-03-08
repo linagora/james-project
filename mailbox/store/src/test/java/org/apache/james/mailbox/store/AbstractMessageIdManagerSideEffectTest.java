@@ -140,6 +140,7 @@ public abstract class AbstractMessageIdManagerSideEffectTest {
         messageIdManager.setInMailboxes(messageId, ImmutableList.of(mailbox1.getMailboxId(), mailbox2.getMailboxId()), session);
 
         verify(dispatcher).added(eq(session), eq(mailbox1), any(MailboxMessage.class));
+        verify(dispatcher).moved(eq(session), any(), any());
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -155,6 +156,7 @@ public abstract class AbstractMessageIdManagerSideEffectTest {
 
         verify(dispatcher).added(eq(session), eq(mailbox1), any(MailboxMessage.class));
         verify(dispatcher).added(eq(session), eq(mailbox3), any(MailboxMessage.class));
+        verify(dispatcher).moved(eq(session), any(), any());
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -184,6 +186,7 @@ public abstract class AbstractMessageIdManagerSideEffectTest {
 
         verify(dispatcher).expunged(eq(session), any(SimpleMessageMetaData.class), eq(mailbox2));
         verify(dispatcher).added(eq(session), eq(mailbox3), any(MailboxMessage.class));
+        verify(dispatcher).moved(eq(session), any(), any());
         verifyNoMoreInteractions(dispatcher);
     }
 

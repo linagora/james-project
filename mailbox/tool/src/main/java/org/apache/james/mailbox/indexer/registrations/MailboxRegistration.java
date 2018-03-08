@@ -21,6 +21,7 @@ package org.apache.james.mailbox.indexer.registrations;
 
 import java.util.List;
 
+import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.indexer.events.FlagsMessageEvent;

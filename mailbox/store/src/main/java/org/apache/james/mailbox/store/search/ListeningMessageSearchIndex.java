@@ -21,6 +21,7 @@ package org.apache.james.mailbox.store.search;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
@@ -67,7 +68,7 @@ public abstract class ListeningMessageSearchIndex implements MessageSearchIndex,
     
     
     /**
-     * Process the {@link org.apache.james.mailbox.MailboxListener.Event} and update the index if
+     * Process the {@link org.apache.james.mailbox.Event} and update the index if
      * something relevant is received
      */
     @Override

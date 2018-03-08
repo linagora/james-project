@@ -21,6 +21,7 @@ package org.apache.james.mailbox.store.event.distributed;
 
 import java.util.Collection;
 
+import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -99,6 +100,13 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
     @Override
     public void event(Event event) {
         deliverEventToGlobalListeners(event, ListenerType.ONCE);
+        if (event instanceof MailboxEvent) {
+            MailboxEvent mailboxEvent = (MailboxEvent) event;
+            publishMailboxEvent(mailboxEvent);
+        }
+    }
+
+    private void publishMailboxEvent(MailboxEvent event) {
         try {
             publisher.publish(globalTopic, eventSerializer.serializeEvent(event));
         } catch (Throwable t) {
@@ -108,7 +116,7 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
 
     public void receiveSerializedEvent(byte[] serializedEvent) {
         try {
-            Event event = eventSerializer.deSerializeEvent(serializedEvent);
+            MailboxEvent event = eventSerializer.deSerializeEvent(serializedEvent);
             deliverToMailboxPathRegisteredListeners(event);
             deliverEventToGlobalListeners(event, ListenerType.EACH_NODE);
         } catch (Exception e) {
@@ -116,7 +124,7 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
         }
     }
 
-    private void deliverToMailboxPathRegisteredListeners(Event event) {
+    private void deliverToMailboxPathRegisteredListeners(MailboxEvent event) {
         Collection<MailboxListener> listenerSnapshot = mailboxListenerRegistry.getLocalMailboxListeners(event.getMailboxPath());
         if (event instanceof MailboxDeletion) {
             mailboxListenerRegistry.deleteRegistryFor(event.getMailboxPath());
