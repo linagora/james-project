@@ -40,6 +40,7 @@ import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.dto.QuotaDTO;
+import org.apache.james.webadmin.dto.QuotaDetailsDTO;
 import org.apache.james.webadmin.service.UserQuotaService;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.apache.james.webadmin.utils.ErrorResponder.ErrorType;
@@ -107,6 +108,7 @@ public class UserQuotaRoutes implements Routes {
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "OK. The value has been updated."),
             @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "The body is not a positive integer or not unlimited value (-1)."),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.CONFLICT_409, message = "The requested restriction can't be enforced right now."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
@@ -126,7 +128,8 @@ public class UserQuotaRoutes implements Routes {
         notes = "If there is no limitation for count and/or size, the returned value will be -1"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = QuotaDTO.class),
+            @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = QuotaDetailsDTO.class),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
     public void defineGetQuota() {
@@ -141,6 +144,7 @@ public class UserQuotaRoutes implements Routes {
     @ApiOperation(value = "Removing per user mail size limitation by updating to unlimited value")
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "The value is updated to unlimited value."),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
     public void defineDeleteQuotaSize() {
@@ -160,7 +164,8 @@ public class UserQuotaRoutes implements Routes {
     })
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "OK. The value has been updated."),
-            @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "The body is not a positive integer."),
+            @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "The body is not a positive integer or -1."),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.CONFLICT_409, message = "The requested restriction can't be enforced right now."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
@@ -180,6 +185,7 @@ public class UserQuotaRoutes implements Routes {
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = Long.class),
             @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "No value defined"),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
     public void defineGetQuotaSize() {
@@ -199,6 +205,7 @@ public class UserQuotaRoutes implements Routes {
     @ApiOperation(value = "Removing per user mail count limitation by updating to unlimited value")
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "The value is updated to unlimited value."),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
     public void defineDeleteQuotaCount() {
@@ -218,7 +225,8 @@ public class UserQuotaRoutes implements Routes {
     })
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "OK. The value has been updated."),
-            @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "The body is not a positive integer."),
+            @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "The body is not a positive integer or -1."),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.CONFLICT_409, message = "The requested restriction can't be enforced right now."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
@@ -237,6 +245,8 @@ public class UserQuotaRoutes implements Routes {
     @ApiOperation(value = "Reading per user mail count limitation")
     @ApiResponses(value = {
             @ApiResponse(code = HttpStatus.OK_200, message = "OK", response = Long.class),
+            @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "No value defined"),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
     public void defineGetQuotaCount() {
