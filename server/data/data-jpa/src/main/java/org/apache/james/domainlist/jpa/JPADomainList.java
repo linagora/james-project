@@ -18,7 +18,6 @@
  ****************************************************************/
 package org.apache.james.domainlist.jpa;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -75,15 +74,15 @@ public class JPADomainList extends AbstractDomainList {
         createEntityManager().close();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected List<String> getDomainListInternal() throws DomainListException {
-        List<String> domains = new ArrayList<>();
+        List<String> domains;
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-        final EntityTransaction transaction = entityManager.getTransaction();
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
-            domains = entityManager.createNamedQuery("listDomainNames").getResultList();
+            domains = entityManager.createNamedQuery("listDomainNames", String.class)
+                .getResultList();
             transaction.commit();
         } catch (PersistenceException e) {
             LOGGER.error("Failed to list domains", e);
@@ -99,7 +98,7 @@ public class JPADomainList extends AbstractDomainList {
     protected boolean containsDomainInternal(String domain) throws DomainListException {
         String lowerCasedDomain = domain.toLowerCase(Locale.US);
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-        final EntityTransaction transaction = entityManager.getTransaction();
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
             boolean result = containsDomainInternal(lowerCasedDomain, entityManager);
@@ -118,7 +117,7 @@ public class JPADomainList extends AbstractDomainList {
     public void addDomain(String domain) throws DomainListException {
         String lowerCasedDomain = domain.toLowerCase(Locale.US);
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-        final EntityTransaction transaction = entityManager.getTransaction();
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
             if (containsDomainInternal(lowerCasedDomain, entityManager)) {
@@ -141,7 +140,7 @@ public class JPADomainList extends AbstractDomainList {
     public void removeDomain(String domain) throws DomainListException {
         String lowerCasedDomain = domain.toLowerCase(Locale.US);
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-        final EntityTransaction transaction = entityManager.getTransaction();
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
             if (!containsDomainInternal(lowerCasedDomain, entityManager)) {

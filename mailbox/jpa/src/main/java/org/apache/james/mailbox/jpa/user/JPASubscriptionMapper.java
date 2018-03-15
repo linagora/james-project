@@ -44,8 +44,11 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
      */
     public Subscription findMailboxSubscriptionForUser(String user, String mailbox) throws SubscriptionException {
         try {
-            return (Subscription) getEntityManager().createNamedQuery("findFindMailboxSubscriptionForUser")
-            .setParameter("userParam", user).setParameter("mailboxParam", mailbox).getSingleResult();
+            return getEntityManager()
+                .createNamedQuery("findFindMailboxSubscriptionForUser", Subscription.class)
+                .setParameter("userParam", user)
+                .setParameter("mailboxParam", mailbox)
+                .getSingleResult();
         } catch (NoResultException e) {
             return null;
         } catch (PersistenceException e) {
@@ -54,7 +57,7 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
     }
 
     /**
-     * @throws SubscriptionException 
+     * @throws SubscriptionException
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#save(Subscription)
      */
     public void save(Subscription subscription) throws SubscriptionException {
@@ -66,20 +69,22 @@ public class JPASubscriptionMapper extends JPATransactionalMapper implements Sub
     }
 
     /**
-     * @throws SubscriptionException 
+     * @throws SubscriptionException
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#findSubscriptionsForUser(java.lang.String)
      */
-    @SuppressWarnings("unchecked")
     public List<Subscription> findSubscriptionsForUser(String user) throws SubscriptionException {
         try {
-            return (List<Subscription>) getEntityManager().createNamedQuery("findSubscriptionsForUser").setParameter("userParam", user).getResultList();
+            return getEntityManager()
+                .createNamedQuery("findSubscriptionsForUser", Subscription.class)
+                .setParameter("userParam", user)
+                .getResultList();
         } catch (PersistenceException e) {
             throw new SubscriptionException(e);
         }
     }
 
     /**
-     * @throws SubscriptionException 
+     * @throws SubscriptionException
      * @see org.apache.james.mailbox.store.user.SubscriptionMapper#delete(Subscription)
      */
     public void delete(Subscription subscription) throws SubscriptionException {

@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
@@ -44,7 +45,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 
 public class JPAAnnotationMapper extends JPATransactionalMapper implements AnnotationMapper {
 
@@ -71,14 +71,15 @@ public class JPAAnnotationMapper extends JPATransactionalMapper implements Annot
     @Override
     public List<MailboxAnnotation> getAnnotationsByKeys(MailboxId mailboxId, Set<MailboxAnnotationKey> keys) {
         try {
-            final JPAId jpaId = (JPAId) mailboxId;
-            return ImmutableList.copyOf(Iterables.transform(keys,
-                input -> READ_ROW.apply(
-                    getEntityManager()
+            JPAId jpaId = (JPAId) mailboxId;
+            return keys.stream()
+                .map(input -> READ_ROW
+                    .apply(getEntityManager()
                         .createNamedQuery("retrieveByKey", JPAMailboxAnnotation.class)
                         .setParameter("idParam", jpaId.getRawId())
                         .setParameter("keyParam", input.asString())
-                        .getSingleResult())));
+                        .getSingleResult()))
+                .collect(Guavate.toImmutableList());
         } catch (NoResultException e) {
             return ImmutableList.of();
         }

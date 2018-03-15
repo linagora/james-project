@@ -83,7 +83,9 @@ public class JPAUsersRepository extends AbstractUsersRepository {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
 
         try {
-            return (JPAUser) entityManager.createNamedQuery("findUserByName").setParameter("name", name).getSingleResult();
+            return entityManager.createNamedQuery("findUserByName", JPAUser.class)
+                .setParameter("name", name)
+                .getSingleResult();
         } catch (NoResultException e) {
             return null;
         } catch (PersistenceException e) {
@@ -120,7 +122,7 @@ public class JPAUsersRepository extends AbstractUsersRepository {
     public void updateUser(User user) throws UsersRepositoryException {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
 
-        final EntityTransaction transaction = entityManager.getTransaction();
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
             if (contains(user.getUserName())) {
                 transaction.begin();
@@ -151,7 +153,7 @@ public class JPAUsersRepository extends AbstractUsersRepository {
     public void removeUser(String name) throws UsersRepositoryException {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
 
-        final EntityTransaction transaction = entityManager.getTransaction();
+        EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
             if (entityManager.createNamedQuery("deleteUserByName").setParameter("name", name).executeUpdate() < 1) {
@@ -208,10 +210,8 @@ public class JPAUsersRepository extends AbstractUsersRepository {
      * @since James 1.2.2
      */
     public boolean test(String name, String password) throws UsersRepositoryException {
-        final User user = getUserByName(name);
-        final boolean result;
-        result = user != null && user.verifyPassword(password);
-        return result;
+        User user = getUserByName(name);
+        return user != null && user.verifyPassword(password);
     }
 
     /**
@@ -240,13 +240,14 @@ public class JPAUsersRepository extends AbstractUsersRepository {
      *         repository.
      * @throws UsersRepositoryException
      */
-    @SuppressWarnings("unchecked")
     public Iterator<String> list() throws UsersRepositoryException {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
 
         try {
-            return ImmutableList.copyOf(entityManager.createNamedQuery("listUserNames").getResultList()).iterator();
-
+            return ImmutableList.copyOf(
+                entityManager.createNamedQuery("listUserNames", String.class)
+                    .getResultList())
+                .iterator();
         } catch (PersistenceException e) {
             LOGGER.debug("Failed to find user", e);
             throw new UsersRepositoryException("Failed to list users", e);
