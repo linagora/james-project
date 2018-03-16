@@ -171,10 +171,8 @@ public class SieveFileRepository implements SieveRepository {
     /**
      * The default quota, if any, is stored in file '.quota' in the sieve root directory. Quotas for
      * specific users are stored in file '.quota' in the user's directory.
-     * <p/>
-     * <p>The '.quota' file contains a single positive integer value representing the quota in octets.
      *
-     * @see SieveRepository#haveSpace(java.lang.String, java.lang.String, long)
+     * The '.quota' file contains a single positive integer value representing the quota in octets.
      */
     @Override
     public void haveSpace(String user, String name, long size) throws QuotaExceededException, StorageException {
@@ -207,6 +205,7 @@ public class SieveFileRepository implements SieveRepository {
         }
     }
 
+    @Override
     public List<ScriptSummary> listScripts(String user) throws StorageException {
         File[] files = getUserDirectory(user).listFiles();
         List<ScriptSummary> summaries = new ArrayList<>(files.length);
@@ -275,6 +274,7 @@ public class SieveFileRepository implements SieveRepository {
         return new DateTime(getActiveFile(user).lastModified());
     }
 
+    @Override
     public void setActive(String user, String name) throws ScriptNotFoundException, StorageException {
         synchronized (lock) {
             // Turn off currently active script, if any

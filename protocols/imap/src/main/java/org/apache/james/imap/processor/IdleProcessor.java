@@ -82,6 +82,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
         }
     }
 
+    @Override
     protected void doProcess(IdleRequest message, final ImapSession session, final String tag, final ImapCommand command, final Responder responder) {
 
         try {
@@ -100,12 +101,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
             final AtomicBoolean idleActive = new AtomicBoolean(true);
             
             session.pushLineHandler(new ImapLineHandler() {
-
-                /**
-                 * @see
-                 * org.apache.james.imap.api.process.ImapLineHandler
-                 * #onLine(org.apache.james.imap.api.process.ImapSession, byte[])
-                 */
+                @Override
                 public void onLine(ImapSession session, byte[] data) {
                     String line;
                     if (data.length > 2) {
@@ -137,6 +133,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
             if (enableIdle) {
                 heartbeatExecutor.schedule(new Runnable() {
 
+                    @Override
                     public void run() {
                         // check if we need to cancel the Runnable
                         // See IMAP-275
@@ -171,10 +168,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
         }
     }
 
-    /**
-    * @see org.apache.james.imap.processor.CapabilityImplementingProcessor
-    * #getImplementedCapabilities(org.apache.james.imap.api.process.ImapSession)
-    */
+    @Override
     public List<String> getImplementedCapabilities(ImapSession session) {
         return CAPS;
     }
@@ -189,6 +183,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
             this.responder = responder;
         }
 
+        @Override
         public void event(Event event) {
             if (event instanceof Added || event instanceof Expunged || event instanceof FlagsUpdated) {
                 unsolicitedResponses(session, responder, false);

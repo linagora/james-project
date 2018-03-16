@@ -147,8 +147,7 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
 
     }
 
-    /**
-     */
+    @Override
     public HookResult doRcpt(SMTPSession session, MailAddress sender, MailAddress rcpt) {
         if (!session.isRelayingAllowed()) {
             // Check if session is blocklisted
@@ -161,8 +160,7 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
         return new HookResult(HookReturnCode.DECLINED);
     }
 
-    /**
-     */
+    @Override
     public HookResult doMail(SMTPSession session, MailAddress sender) {
         doSPFCheck(session, sender);
         return new HookResult(HookReturnCode.DECLINED);
@@ -183,123 +181,88 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
             this.serviceLog = FALLBACK_LOG;
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#debug(String)
-         */
+        @Override
         public void debug(String message) {
             serviceLog.debug(message);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#debug(String, Throwable)
-         */
+        @Override
         public void debug(String message, Throwable t) {
             serviceLog.debug(message, t);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#error(String)
-         */
+        @Override
         public void error(String message) {
             serviceLog.error(message);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#error(String, Throwable)
-         */
+        @Override
         public void error(String message, Throwable t) {
             serviceLog.error(message, t);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#fatalError(String)
-         */
+        @Override
         public void fatalError(String message) {
             serviceLog.error(message);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#fatalError(String, Throwable)
-         */
+        @Override
         public void fatalError(String message, Throwable t) {
             serviceLog.error(message, t);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#info(String)
-         */
+        @Override
         public void info(String message) {
             serviceLog.info(message);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#info(String, Throwable)
-         */
+        @Override
         public void info(String message, Throwable t) {
             serviceLog.info(message, t);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#isDebugEnabled()
-         */
+        @Override
         public boolean isDebugEnabled() {
             return serviceLog.isDebugEnabled();
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#isErrorEnabled()
-         */
+        @Override
         public boolean isErrorEnabled() {
             return serviceLog.isErrorEnabled();
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#isFatalErrorEnabled()
-         */
+        @Override
         public boolean isFatalErrorEnabled() {
             return serviceLog.isErrorEnabled();
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#isInfoEnabled()
-         */
+        @Override
         public boolean isInfoEnabled() {
             return serviceLog.isInfoEnabled();
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#isWarnEnabled()
-         */
+        @Override
         public boolean isWarnEnabled() {
             return serviceLog.isWarnEnabled();
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#warn(String)
-         */
+        @Override
         public void warn(String message) {
             serviceLog.warn(message);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#warn(String, Throwable)
-         */
+        @Override
         public void warn(String message, Throwable t) {
             serviceLog.warn(message, t);
         }
 
-        /**
-         * @see org.apache.james.jspf.core.Logger#getChildLogger(String)
-         */
+        @Override
         public org.apache.james.jspf.core.Logger getChildLogger(String name) {
             return this;
         }
     }
 
-    /**
-     * @see org.apache.james.smtpserver.JamesMessageHook#onMessage(org.apache.james.protocols.smtp.SMTPSession,
-     *      org.apache.mailet.Mail)
-     */
+    @Override
     public HookResult onMessage(SMTPSession session, Mail mail) {
         // Store the spf header as attribute for later using
         mail.setAttribute(SPF_HEADER_MAIL_ATTRIBUTE_NAME, (String) session.getAttachment(SPF_HEADER, State.Transaction));

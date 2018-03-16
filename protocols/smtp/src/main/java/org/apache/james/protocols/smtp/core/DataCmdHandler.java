@@ -65,6 +65,7 @@ public class DataCmdHandler implements CommandHandler<SMTPSession>, ExtensibleHa
 
     public static final class DataConsumerLineHandler implements LineHandler<SMTPSession> {
 
+        @Override
         public SMTPResponse onLine(SMTPSession session, ByteBuffer line) {
             // Discard everything until the end of DATA session
             if (line.remaining() == 3 && line.get() == 46) {
@@ -93,12 +94,8 @@ public class DataCmdHandler implements CommandHandler<SMTPSession>, ExtensibleHa
             this.filter = filter;
             this.next = next;
         }
-        
 
-        /*
-         * (non-Javadoc)
-         * @see org.apache.james.protocols.api.handler.LineHandler#onLine(org.apache.james.protocols.api.ProtocolSession, java.nio.ByteBuffer)
-         */
+        @Override
         public Response onLine(SMTPSession session, ByteBuffer line) {
             line.rewind();
             return filter.onLine(session, line, next);
@@ -140,6 +137,7 @@ public class DataCmdHandler implements CommandHandler<SMTPSession>, ExtensibleHa
      * process DATA command
      *
      */
+    @Override
     public Response onCommand(SMTPSession session, Request request) {
         TimeMetric timeMetric = metricFactory.timer("SMTP-" + request.getCommand());
         session.stopDetectingCommandInjection();
@@ -188,18 +186,12 @@ public class DataCmdHandler implements CommandHandler<SMTPSession>, ExtensibleHa
         return env;
     }
     
-    
-    /**
-     * @see org.apache.james.protocols.api.handler.CommandHandler#getImplCommands()
-     */
+    @Override
     public Collection<String> getImplCommands() {
         return COMMANDS;
     }
 
-
-    /**
-     * @see org.apache.james.protocols.api.handler.ExtensibleHandler#getMarkerInterfaces()
-     */
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public List getMarkerInterfaces() {
         List classes = new LinkedList();
@@ -208,9 +200,7 @@ public class DataCmdHandler implements CommandHandler<SMTPSession>, ExtensibleHa
     }
 
 
-    /**
-     * @see org.apache.james.protocols.api.handler.ExtensibleHandler#wireExtensions(java.lang.Class, java.util.List)
-     */
+    @Override
     @SuppressWarnings("rawtypes")
     public void wireExtensions(Class interfaceName, List extension) throws WiringException {
         if (DataLineFilter.class.equals(interfaceName)) {

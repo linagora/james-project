@@ -65,10 +65,8 @@ public class SetMimeHeaderHandler implements JamesMessageHook, ProtocolHandler {
 
     /**
      * Adds header to the message
-     * 
-     * @see org.apache.james.smtpserver.JamesMessageHook#onMessage(org.apache.james.protocols.smtp.SMTPSession,
-     *      org.apache.mailet.Mail)
      */
+    @Override
     public HookResult onMessage(SMTPSession session, Mail mail) {
         try {
             MimeMessage message = mail.getMessage();

@@ -61,12 +61,7 @@ public abstract class AbstractHookableCmdHandler<HookT extends org.apache.james.
         this.metricFactory = metricFactory;
     }
 
-    /**
-     * Handle command processing
-     * 
-     * @see org.apache.james.protocols.api.handler.CommandHandler
-     * #onCommand(org.apache.james.protocols.api.ProtocolSession, Request)
-     */
+    @Override
     public Response onCommand(SMTPSession session, Request request) {
         TimeMetric timeMetric = metricFactory.timer("SMTP-" + request.getCommand().toLowerCase(Locale.US));
         String command = request.getCommand();
@@ -134,26 +129,17 @@ public abstract class AbstractHookableCmdHandler<HookT extends org.apache.james.
                     if ((hRes.getResult() & HookReturnCode.DISCONNECT) == HookReturnCode.DISCONNECT) {
                         return new Response() {
 
-                            /*
-                             * (non-Javadoc)
-                             * @see org.apache.james.protocols.api.Response#isEndSession()
-                             */
+                            @Override
                             public boolean isEndSession() {
                                 return true;
                             }
 
-                            /*
-                             * (non-Javadoc)
-                             * @see org.apache.james.protocols.api.Response#getRetCode()
-                             */
+                            @Override
                             public String getRetCode() {
                                 return response.getRetCode();
                             }
 
-                            /*
-                             * (non-Javadoc)
-                             * @see org.apache.james.protocols.api.Response#getLines()
-                             */
+                            @Override
                             public List<CharSequence> getLines() {
                                 return response.getLines();
                             }
@@ -277,9 +263,7 @@ public abstract class AbstractHookableCmdHandler<HookT extends org.apache.james.
             String command, String parameters);
     
 
-    /**
-     * @see org.apache.james.protocols.api.handler.ExtensibleHandler#getMarkerInterfaces()
-     */
+    @Override
     public List<Class<?>> getMarkerInterfaces() {
         List<Class<?>> classes = new ArrayList<>(2);
         classes.add(getHookInterface());
@@ -294,10 +278,7 @@ public abstract class AbstractHookableCmdHandler<HookT extends org.apache.james.
      */
     protected abstract Class<HookT> getHookInterface();
 
-    /**
-     * @see org.apache.james.protocols.api.handler.ExtensibleHandler#wireExtensions(java.lang.Class,
-     *      java.util.List)
-     */
+    @Override
     @SuppressWarnings("unchecked")
     public void wireExtensions(Class<?> interfaceName, List<?> extension) {
         if (getHookInterface().equals(interfaceName)) {

@@ -161,6 +161,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         this.fileSystem = fileSystem;
     }
 
+    @Override
     protected void doConfigure(HierarchicalConfiguration configuration) throws ConfigurationException {
         super.doConfigure(configuration);
         LOGGER.debug("{}.configure()", getClass().getName());
@@ -372,9 +373,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         }
     }
 
-    /**
-     * @see org.apache.james.mailrepository.lib.AbstractMailRepository#internalStore(Mail)
-     */
+    @Override
     protected void internalStore(Mail mc) throws IOException, MessagingException {
         Connection conn = null;
         try {
@@ -591,9 +590,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         }
     }
 
-    /**
-     * @see org.apache.james.mailrepository.api.MailRepository#retrieve(String)
-     */
+    @Override
     @SuppressWarnings("unchecked")
     public Mail retrieve(String key) throws MessagingException {
         if (DEEP_DEBUG) {
@@ -701,9 +698,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         }
     }
 
-    /**
-     * @see org.apache.james.mailrepository.lib.AbstractMailRepository#internalRemove(String)
-     */
+    @Override
     protected void internalRemove(String key) throws MessagingException {
         Connection conn = null;
         PreparedStatement removeMessage = null;
@@ -725,9 +720,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         }
     }
 
-    /**
-     * @see org.apache.james.mailrepository.api.MailRepository#list()
-     */
+    @Override
     public Iterator<String> list() throws MessagingException {
         // System.err.println("listing messages");
         Connection conn = null;
@@ -764,9 +757,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         return datasource.getConnection();
     }
 
-    /**
-     * @see java.lang.Object#equals(Object)
-     */
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof JDBCMailRepository)) {
             return false;
@@ -777,11 +768,7 @@ public class JDBCMailRepository extends AbstractMailRepository {
         return ((repository.tableName.equals(tableName)) || ((repository.tableName != null) && repository.tableName.equals(tableName))) && ((repository.repositoryName.equals(repositoryName)) || ((repository.repositoryName != null) && repository.repositoryName.equals(repositoryName)));
     }
 
-    /**
-     * Provide a hash code that is consistent with equals for this class
-     * 
-     * @return the hash code
-     */
+    @Override
     public int hashCode() {
         int result = 17;
         if (tableName != null) {
