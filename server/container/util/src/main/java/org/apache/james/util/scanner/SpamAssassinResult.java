@@ -20,6 +20,8 @@ package org.apache.james.util.scanner;
 
 import java.util.Map;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
@@ -104,6 +106,31 @@ public class SpamAssassinResult {
 
     public Map<String, String> getHeadersAsAttribute() {
         return headersAsAttribute;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(hits, requiredHits, headersAsAttribute);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object instanceof SpamAssassinResult) {
+            SpamAssassinResult that = (SpamAssassinResult) object;
+            return Objects.equal(this.hits, that.hits)
+                && Objects.equal(this.requiredHits, that.requiredHits)
+                && Objects.equal(this.headersAsAttribute, that.headersAsAttribute);
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(SpamAssassinResult.class)
+                .add("hits", hits)
+                .add("requiredHits", requiredHits)
+                .add("headersAsAttribute", headersAsAttribute)
+                .toString();
     }
 
 }

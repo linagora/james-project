@@ -63,9 +63,8 @@
                 <spamdHost>localhost</spamdHost>
                 <spamdPort>783</spamdPort>
             </mailet>
-            <mailet match="IsMarkedAsSpam" class="ToRecipientFolder">
+            <mailet match="RecipientIsLocal" class="ToSpamOrInboxFolder">
                 <folder>Spam</folder>
-                <consume>true</consume>
             </mailet>
             <mailet match="RecipientIsLocal" class="LocalDelivery"/>
             <mailet match="HostIsLocal" class="ToProcessor">
