@@ -17,46 +17,23 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.jpa.mail.model;
+package org.apache.james.mailbox.store.mail.model;
 
-import java.io.Serializable;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.ComposedMessageId;
+import org.apache.james.mailbox.model.TestId;
+import org.junit.Test;
 
-import javax.persistence.Embeddable;
+public class DefaultMessageIdTest {
 
-import com.google.common.base.Objects;
+    @Test
+    public void composedMessageIdToStringCallShouldNotThrowWhenUsingDefaultMessageId() {
+        ComposedMessageId composedMessageId = new ComposedMessageId(
+            TestId.of(52),
+            new DefaultMessageId(),
+            MessageUid.of(23));
 
-@Embeddable
-public final class JPAMailboxAnnotationId implements Serializable {
-    private long mailboxId;
-    private String key;
-
-    public JPAMailboxAnnotationId(long mailboxId, String key) {
-        this.mailboxId = mailboxId;
-        this.key = key;
+        composedMessageId.toString();
     }
 
-    public JPAMailboxAnnotationId() {
-    }
-
-    public long getMailboxId() {
-        return mailboxId;
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof JPAMailboxAnnotationId) {
-            JPAMailboxAnnotationId that = (JPAMailboxAnnotationId) o;
-            return Objects.equal(this.mailboxId, that.mailboxId) && Objects.equal(this.key, that.key);
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(mailboxId, key);
-    }
 }

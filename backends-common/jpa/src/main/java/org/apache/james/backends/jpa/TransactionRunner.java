@@ -17,46 +17,43 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.jpa.mail.model;
+package org.apache.james.backends.jpa;
 
-import java.io.Serializable;
+import java.util.function.Consumer;
 
-import javax.persistence.Embeddable;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceException;
 
-import com.google.common.base.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Embeddable
-public final class JPAMailboxAnnotationId implements Serializable {
-    private long mailboxId;
-    private String key;
+public class TransactionRunner {
 
-    public JPAMailboxAnnotationId(long mailboxId, String key) {
-        this.mailboxId = mailboxId;
-        this.key = key;
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransactionRunner.class);
+
+    private final EntityManagerFactory entityManagerFactory;
+
+    public TransactionRunner(EntityManagerFactory entityManagerFactory) {
+        this.entityManagerFactory = entityManagerFactory;
     }
 
-    public JPAMailboxAnnotationId() {
-    }
-
-    public long getMailboxId() {
-        return mailboxId;
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof JPAMailboxAnnotationId) {
-            JPAMailboxAnnotationId that = (JPAMailboxAnnotationId) o;
-            return Objects.equal(this.mailboxId, that.mailboxId) && Objects.equal(this.key, that.key);
+    public void run(Consumer<EntityManager> runnable) {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = entityManager.getTransaction();
+        try {
+            transaction.begin();
+            runnable.accept(entityManager);
+            transaction.commit();
+        } catch (PersistenceException e) {
+            LOGGER.warn("Could not execute transaction", e);
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+        } finally {
+            entityManager.close();
         }
-        return false;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(mailboxId, key);
-    }
 }
