@@ -20,13 +20,103 @@
 
 package org.apache.james.rrt.lib;
 
+import java.util.Optional;
+
+import javax.mail.internet.AddressException;
+
 import org.apache.james.core.Domain;
+import org.apache.james.core.MailAddress;
+
+import com.google.common.base.Preconditions;
 
 public interface Mapping {
 
-    String getAddress();
+    interface ValidationMode {
+        ValidationMode STRICT = new StrictMode();
+        ValidationMode LENIENT = new LenientMode();
 
-    enum Type { Regex, Domain, Error, Address }
+        Optional<MailAddress> asMailAddress(Mapping mapping);
+    }
+
+    class LenientMode implements ValidationMode {
+        @Override
+        public Optional<MailAddress> asMailAddress(Mapping mapping) {
+            if (mapping.getType() != Type.Address && mapping.getType() != Type.Forward) {
+                return Optional.empty();
+            }
+            try {
+                return Optional.of(new MailAddress(mapping.getType().withoutPrefix(mapping.asString())));
+            } catch (AddressException e) {
+                return Optional.empty();
+            }
+        }
+    }
+
+    class StrictMode extends LenientMode {
+        @Override
+        public Optional<MailAddress> asMailAddress(Mapping mapping) {
+            Preconditions.checkState(mapping.getType() == Type.Address || mapping.getType() == Type.Forward);
+            return super.asMailAddress(mapping);
+        }
+    }
+
+    static Type detectType(String input) {
+        if (input.startsWith(Type.Regex.asPrefix())) {
+            return Type.Regex;
+        }
+        if (input.startsWith(Type.Domain.asPrefix())) {
+            return Type.Domain;
+        }
+        if (input.startsWith(Type.Error.asPrefix())) {
+            return Type.Error;
+        }
+        if (input.startsWith(Type.Forward.asPrefix())) {
+            return Type.Forward;
+        }
+        return Type.Address;
+    }
+
+    Optional<MailAddress> asMailAddress(ValidationMode validationMode);
+
+    default Optional<MailAddress> asMailAddress() {
+        return asMailAddress(ValidationMode.STRICT);
+    }
+
+    enum Type {
+        Regex("regex:", 3),
+        Domain("domain:", 1),
+        Error("error:", 3),
+        Forward("forward:", 2),
+        Address("", 3);
+
+        private final String asPrefix;
+        private final int order;
+
+        Type(String asPrefix, Integer order) {
+            this.asPrefix = asPrefix;
+            this.order = order;
+        }
+
+        public String asPrefix() {
+            return asPrefix;
+        }
+
+        public String withoutPrefix(String input) {
+            Preconditions.checkArgument(input.startsWith(asPrefix));
+            return input.substring(asPrefix.length());
+        }
+
+        public static boolean hasPrefix(String mapping) {
+            return mapping.startsWith(Regex.asPrefix())
+                || mapping.startsWith(Domain.asPrefix())
+                || mapping.startsWith(Error.asPrefix())
+                || mapping.startsWith(Forward.asPrefix());
+        }
+
+        public int getOrder() {
+            return order;
+        }
+    }
 
     Type getType();
     

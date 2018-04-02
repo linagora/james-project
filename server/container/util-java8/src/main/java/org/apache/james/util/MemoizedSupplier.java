@@ -17,32 +17,36 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.rrt.memory;
+package org.apache.james.util;
 
-import org.apache.commons.configuration.DefaultConfigurationBuilder;
-import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
-import org.apache.james.rrt.lib.AbstractRecipientRewriteTableTest;
-import org.junit.After;
-import org.junit.Before;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
-public class MemoryRecipientRewriteTableTest extends AbstractRecipientRewriteTableTest {
+public class MemoizedSupplier<T> implements Supplier<T> {
 
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    public static <T> MemoizedSupplier<T> of(Supplier<T> supplier) {
+        return new MemoizedSupplier<>(supplier);
+    }
+
+    private final Supplier<T> originalSupplier;
+    private Optional<AtomicReference<T>> cachedValue;
+
+    public MemoizedSupplier(Supplier<T> originalSupplier) {
+        this.originalSupplier = originalSupplier;
+        this.cachedValue = Optional.empty();
     }
 
     @Override
-    @After
-    public void tearDown() throws Exception {
-        super.tearDown();
-    }
-
-    @Override
-    protected AbstractRecipientRewriteTable getRecipientRewriteTable() throws Exception {
-        AbstractRecipientRewriteTable rrt = new MemoryRecipientRewriteTable();
-        rrt.configure(new DefaultConfigurationBuilder());
-        return rrt;
+    public T get() {
+        return cachedValue
+            .orElseGet(
+            () -> {
+                T value = originalSupplier.get();
+                AtomicReference<T> atomicReference = new AtomicReference<>(value);
+                cachedValue = Optional.of(atomicReference);
+                return atomicReference;
+            })
+            .get();
     }
 }

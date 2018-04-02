@@ -45,21 +45,6 @@ public interface RecipientRewriteTable {
     }
 
     /**
-     * The prefix which is used for error mappings
-     */
-    String ERROR_PREFIX = "error:";
-
-    /**
-     * The prefix which is used for regex mappings
-     */
-    String REGEX_PREFIX = "regex:";
-
-    /**
-     * The prefix which is used for alias domain mappings
-     */
-    String ALIASDOMAIN_PREFIX = "domain:";
-
-    /**
      * The wildcard used for alias domain mappings
      */
     String WILDCARD = "*";
@@ -221,6 +206,10 @@ public interface RecipientRewriteTable {
      * @throws RecipientRewriteTableException
      */
     void removeAliasDomainMapping(Domain aliasDomain, Domain realDomain) throws RecipientRewriteTableException;
+
+    void addForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException;
+
+    void removeForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException;
 
     class ErrorMappingException extends Exception {
 

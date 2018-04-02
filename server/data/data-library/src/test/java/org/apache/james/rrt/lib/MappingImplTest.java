@@ -24,48 +24,66 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.apache.james.core.Domain;
+import org.apache.james.core.MailAddress;
 import org.junit.Test;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
 
 public class MappingImplTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
+    public void beanShouldRespectBeanContract() {
+        EqualsVerifier.forClass(MappingImpl.class)
+            .verify();
+    }
+
+    @Test
     public void addressFactoryMethodShouldThrowOnNull() {
-        assertThat(MappingImpl.address(null));
-    }
-    
-    @Test(expected = NullPointerException.class)
-    public void regexFactoryMethodShouldThrowOnNull() {
-        assertThat(MappingImpl.regex(null));
-    }
-    
-    @Test(expected = NullPointerException.class)
-    public void domainFactoryMethodShouldThrowOnNull() {
-        assertThat(MappingImpl.domain(null));
-    }
-    
-    
-    @Test(expected = NullPointerException.class)
-    public void errorFactoryMethodShouldThrowOnNull() {
-        assertThat(MappingImpl.error(null));
+        assertThatThrownBy(() -> MappingImpl.address(null))
+            .isInstanceOf(NullPointerException.class);
     }
     
     @Test
-    public void hasDomainshouldReturnTrueWhenMappingContainAtMark() {
+    public void regexFactoryMethodShouldThrowOnNull() {
+        assertThatThrownBy(() -> MappingImpl.regex(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+    
+    @Test
+    public void domainFactoryMethodShouldThrowOnNull() {
+        assertThatThrownBy(() -> MappingImpl.domain(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void errorFactoryMethodShouldThrowOnNull() {
+        assertThatThrownBy(() -> MappingImpl.error(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+    
+    @Test
+    public void forwardFactoryMethodShouldThrowOnNull() {
+        assertThatThrownBy(() -> MappingImpl.forward(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+    
+    @Test
+    public void hasDomainShouldReturnTrueWhenMappingContainAtMark() {
         assertThat(MappingImpl.address("a@b").hasDomain()).isTrue();
     }
     
     @Test
-    public void hasDomainshouldReturnFalseWhenMappingIsEmpty() {
+    public void hasDomainShouldReturnFalseWhenMappingIsEmpty() {
         assertThat(MappingImpl.address("").hasDomain()).isFalse();
     }
 
     @Test
-    public void hasDomainshouldReturnFalseWhenMappingIsBlank() {
+    public void hasDomainShouldReturnFalseWhenMappingIsBlank() {
         assertThat(MappingImpl.address(" ").hasDomain()).isFalse();
     }
 
     @Test
-    public void hasDomainshouldReturnFalseWhenMappingDoesntContainAtMark() {
+    public void hasDomainShouldReturnFalseWhenMappingDoesntContainAtMark() {
         assertThat(MappingImpl.address("abc").hasDomain()).isFalse();
     }
     
@@ -108,6 +126,11 @@ public class MappingImplTest {
     public void getTypeShouldReturnDomainWhenDomainPrefix() {
         assertThat(MappingImpl.domain(Domain.of("abc")).getType()).isEqualTo(Mapping.Type.Domain);
     }
+
+    @Test
+    public void getTypeShouldReturnForwardWhenDomainPrefix() {
+        assertThat(MappingImpl.forward("abc").getType()).isEqualTo(Mapping.Type.Forward);
+    }
     
     @Test(expected = IllegalStateException.class)
     public void getErrorMessageShouldThrowWhenMappingIsNotAnError() {
@@ -126,27 +149,35 @@ public class MappingImplTest {
     }
 
     @Test
-    public void toStringShouldReturnValuePrefixedAsByMoreObject() {
-        assertThat(MappingImpl.of("value").toString()).isEqualTo("MappingImpl{mapping=value}");
+    public void getAddressShouldReturnMappingValueForAddress() throws Exception {
+        assertThat(MappingImpl.address("value@domain").asMailAddress())
+            .contains(new MailAddress("value@domain"));
     }
 
     @Test
-    public void getAddressShouldReturnMappingValueForAddress() {
-        assertThat(MappingImpl.address("value").getAddress()).isEqualTo("value");
+    public void getAddressShouldReturnEmptyOnInvalidAddress() throws Exception {
+        assertThat(MappingImpl.address("value").asMailAddress())
+            .isEmpty();
     }
 
     @Test
     public void getAddressShouldThrowForError() {
-        assertThatThrownBy(() -> MappingImpl.error("value").getAddress()).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> MappingImpl.error("value").asMailAddress()).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     public void getAddressShouldThrowForRegex() {
-        assertThatThrownBy(() -> MappingImpl.regex("value").getAddress()).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> MappingImpl.regex("value").asMailAddress()).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     public void getAddressShouldThrowForDomain() {
-        assertThatThrownBy(() -> MappingImpl.domain(Domain.of("value")).getAddress()).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> MappingImpl.domain(Domain.of("value")).asMailAddress()).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void getAddressShouldReturnMappingValueForForward() throws Exception {
+        assertThat(MappingImpl.forward("value@domain").asMailAddress())
+            .contains(new MailAddress("value@domain"));
     }
 }

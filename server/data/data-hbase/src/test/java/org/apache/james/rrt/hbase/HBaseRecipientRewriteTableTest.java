@@ -19,12 +19,13 @@
 package org.apache.james.rrt.hbase;
 
 import org.apache.commons.configuration.DefaultConfigurationBuilder;
-import org.apache.james.core.Domain;
+import org.apache.james.domainlist.hbase.def.HDomainList;
 import org.apache.james.mailbox.hbase.HBaseClusterSingleton;
-import org.apache.james.rrt.api.RecipientRewriteTableException;
+import org.apache.james.rrt.hbase.def.HRecipientRewriteTable;
 import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
 import org.apache.james.rrt.lib.AbstractRecipientRewriteTableTest;
 import org.apache.james.system.hbase.TablePool;
+import org.apache.james.user.hbase.def.HUsersRepository;
 import org.junit.After;
 import org.junit.Before;
 
@@ -47,6 +48,9 @@ public class HBaseRecipientRewriteTableTest extends AbstractRecipientRewriteTabl
     @Override
     @After
     public void tearDown() throws Exception {
+        cluster.clearTable(new String(HDomainList.TABLE_NAME));
+        cluster.clearTable(new String(HRecipientRewriteTable.TABLE_NAME));
+        cluster.clearTable(new String(HUsersRepository.TABLE_NAME));
         super.tearDown();
     }
     
@@ -55,45 +59,5 @@ public class HBaseRecipientRewriteTableTest extends AbstractRecipientRewriteTabl
         HBaseRecipientRewriteTable rrt = new HBaseRecipientRewriteTable();
         rrt.configure(new DefaultConfigurationBuilder());
         return rrt;
-    }
-
-    @Override
-    protected void addMapping(String user, Domain domain, String mapping, int type) throws RecipientRewriteTableException {
-        switch (type) {
-        case ERROR_TYPE:
-            virtualUserTable.addErrorMapping(user, domain, mapping);
-            break;
-        case REGEX_TYPE:
-            virtualUserTable.addRegexMapping(user, domain, mapping);
-            break;
-        case ADDRESS_TYPE:
-            virtualUserTable.addAddressMapping(user, domain, mapping);
-            break;
-        case ALIASDOMAIN_TYPE:
-            virtualUserTable.addAliasDomainMapping(domain, Domain.of(mapping));
-            break;
-        default:
-            throw new RuntimeException("Invalid mapping type: " + type);
-        }
-    }
-
-    @Override
-    protected void removeMapping(String user, Domain domain, String mapping, int type) throws RecipientRewriteTableException {
-        switch (type) {
-        case ERROR_TYPE:
-            virtualUserTable.removeErrorMapping(user, domain, mapping);
-            break;
-        case REGEX_TYPE:
-            virtualUserTable.removeRegexMapping(user, domain, mapping);
-            break;
-        case ADDRESS_TYPE:
-            virtualUserTable.removeAddressMapping(user, domain, mapping);
-            break;
-        case ALIASDOMAIN_TYPE:
-            virtualUserTable.removeAliasDomainMapping(domain, Domain.of(mapping));
-            break;
-        default:
-            throw new RuntimeException("Invalid mapping type: " + type);
-        }
     }
 }

@@ -21,6 +21,7 @@
 package org.apache.james.rrt.lib;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Optional;
 
@@ -44,82 +45,82 @@ public class MappingsImplTest {
     @Test
     public void fromRawStringShouldReturnSingletonCollectionWhenSingleElementString() {
         MappingsImpl actual = MappingsImpl.fromRawString("value");
-        assertThat(actual).containsExactly(MappingImpl.address("value"));
+        assertThat(actual).containsOnly(MappingImpl.address("value"));
     }
 
     @Test
     public void fromRawStringShouldReturnCollectionWhenSeveralElementsString() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1;value2");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"), MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"), MappingImpl.address("value2"));
     }
     
     @Test
     public void fromRawStringShouldReturnSingleElementCollectionWhenTrailingDelimiterString() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1;");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"));
     }
 
     @Test
     public void fromRawStringShouldReturnSingleElementCollectionWhenHeadingDelimiterString() {
         MappingsImpl actual = MappingsImpl.fromRawString(";value1");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"));
     }
     
 
     @Test
     public void fromRawStringShouldTrimValues() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1 ; value2  ");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"), MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"), MappingImpl.address("value2"));
     }
     
     @Test
     public void fromRawStringShouldNotSkipEmptyValue() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1; ;value2");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"), MappingImpl.address(""), MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"), MappingImpl.address(""), MappingImpl.address("value2"));
     }
     
     @Test
     public void fromRawStringShouldReturnCollectionWhenValueContainsCommaSeperatedValues() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1,value2");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"),MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"),MappingImpl.address("value2"));
     }
 
     @Test
     public void fromRawStringShouldReturnCollectionWhenValueContainsColonSeperatedValues() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1:value2");
-        assertThat(actual).containsExactly(MappingImpl.address("value1"),MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1"),MappingImpl.address("value2"));
     }
 
     @Test
     public void fromRawStringShouldUseCommaDelimiterBeforeSemicolonWhenValueContainsBoth() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1;value1,value2");
-        assertThat(actual).containsExactly(MappingImpl.address("value1;value1"),MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1;value1"),MappingImpl.address("value2"));
     }
 
     @Test
     public void fromRawStringShouldUseSemicolonDelimiterBeforeColonWhenValueContainsBoth() {
         MappingsImpl actual = MappingsImpl.fromRawString("value1:value1;value2");
-        assertThat(actual).containsExactly(MappingImpl.address("value1:value1"),MappingImpl.address("value2"));
+        assertThat(actual).containsOnly(MappingImpl.address("value1:value1"),MappingImpl.address("value2"));
     }
     
     @Test
     public void fromRawStringShouldNotUseColonDelimiterWhenValueStartsWithError() {
         MappingsImpl actual = MappingsImpl.fromRawString("error:test");
-        assertThat(actual).containsExactly(MappingImpl.error("test"));
+        assertThat(actual).containsOnly(MappingImpl.error("test"));
     }
     
 
     @Test
     public void fromRawStringShouldNotUseColonDelimiterWhenValueStartsWithDomain() {
         MappingsImpl actual = MappingsImpl.fromRawString("domain:test");
-        assertThat(actual).containsExactly(MappingImpl.domain(Domain.of("test")));
+        assertThat(actual).containsOnly(MappingImpl.domain(Domain.of("test")));
     }
     
 
     @Test
     public void fromRawStringShouldNotUseColonDelimiterWhenValueStartsWithRegex() {
         MappingsImpl actual = MappingsImpl.fromRawString("regex:test");
-        assertThat(actual).containsExactly(MappingImpl.regex("test"));
+        assertThat(actual).containsOnly(MappingImpl.regex("test"));
     }
 
     @Test
@@ -251,6 +252,91 @@ public class MappingsImplTest {
     @Test
     public void unionShouldReturnMergedWhenBothContainsData() {
         Mappings mappings = MappingsImpl.fromRawString("toto").union(MappingsImpl.fromRawString("tata"));
-        assertThat(mappings).containsExactly(MappingImpl.address("toto"),MappingImpl.address("tata"));
+        assertThat(mappings).containsOnly(MappingImpl.address("toto"),MappingImpl.address("tata"));
+    }
+
+    @Test
+    public void mergeShouldThrowWhenLeftIsNull() {
+        MappingsImpl.Builder left = null;
+        assertThatThrownBy(() -> MappingsImpl.Builder.merge(left, MappingsImpl.builder()))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void mergeShouldThrowWhenRightIsNull() {
+        MappingsImpl.Builder right = null;
+        assertThatThrownBy(() -> MappingsImpl.Builder.merge(MappingsImpl.builder(), right))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void mergeShouldReturnEmptyWhenBothAreEmpty() {
+        MappingsImpl.Builder empty = MappingsImpl.builder();
+        MappingsImpl mappingsImpl = MappingsImpl.Builder
+                .merge(empty, empty)
+                .build();
+        assertThat(mappingsImpl.isEmpty()).isTrue();
+    }
+
+    @Test
+    public void mergeShouldReturnLeftWhenRightIsEmpty() {
+        MappingImpl expectedMapping = MappingImpl.address("toto");
+        MappingsImpl.Builder left = MappingsImpl.builder().add(expectedMapping);
+        MappingsImpl.Builder empty = MappingsImpl.builder();
+        MappingsImpl mappingsImpl = MappingsImpl.Builder
+                .merge(left, empty)
+                .build();
+        assertThat(mappingsImpl).containsOnly(expectedMapping);
+    }
+
+    @Test
+    public void mergeShouldReturnRightWhenLeftIsEmpty() {
+        MappingImpl expectedMapping = MappingImpl.address("toto");
+        MappingsImpl.Builder right = MappingsImpl.builder().add(expectedMapping);
+        MappingsImpl.Builder empty = MappingsImpl.builder();
+        MappingsImpl mappingsImpl = MappingsImpl.Builder
+                .merge(empty, right)
+                .build();
+        assertThat(mappingsImpl).containsOnly(expectedMapping);
+    }
+
+    @Test
+    public void mergeShouldReturnBothWhenBothAreNotEmpty() {
+        MappingImpl leftMapping = MappingImpl.address("toto");
+        MappingsImpl.Builder left = MappingsImpl.builder().add(leftMapping);
+        MappingImpl rightMapping = MappingImpl.address("titi");
+        MappingsImpl.Builder right = MappingsImpl.builder().add(rightMapping);
+        MappingsImpl mappingsImpl = MappingsImpl.Builder
+                .merge(left, right)
+                .build();
+        assertThat(mappingsImpl).containsOnly(leftMapping, rightMapping);
+    }
+    
+    @Test
+    public void builderShouldPutDomainAliasFirstWhenVariousMappings() {
+        MappingImpl addressMapping = MappingImpl.address("aaa");
+        MappingImpl errorMapping = MappingImpl.error("error");
+        MappingImpl domainMapping = MappingImpl.domain(Domain.of("domain"));
+        MappingImpl domain2Mapping = MappingImpl.domain(Domain.of("domain2"));
+        MappingsImpl mappingsImpl = MappingsImpl.builder()
+                .add(domainMapping)
+                .add(addressMapping)
+                .add(errorMapping)
+                .add(domain2Mapping)
+                .build();
+        assertThat(mappingsImpl).containsExactly(domainMapping, domain2Mapping, addressMapping, errorMapping);
+    }
+    
+    @Test
+    public void builderShouldPutDomainAliasFirstThenForwardWhenVariousMappings() {
+        MappingImpl regexMapping = MappingImpl.regex("regex");
+        MappingImpl forwardMapping = MappingImpl.forward("forward");
+        MappingImpl domainMapping = MappingImpl.domain(Domain.of("domain"));
+        MappingsImpl mappingsImpl = MappingsImpl.builder()
+                .add(regexMapping)
+                .add(forwardMapping)
+                .add(domainMapping)
+                .build();
+        assertThat(mappingsImpl).containsExactly(domainMapping, forwardMapping, regexMapping);
     }
 }
