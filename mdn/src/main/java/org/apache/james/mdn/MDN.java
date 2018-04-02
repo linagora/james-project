@@ -31,6 +31,7 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
+import org.apache.james.javax.MimeMultipartReport;
 import org.apache.james.mime4j.Charsets;
 import org.apache.james.mime4j.dom.Message;
 import org.apache.james.mime4j.dom.Multipart;
@@ -46,6 +47,7 @@ public class MDN {
 
     public static final String DISPOSITION_CONTENT_TYPE = "message/disposition-notification";
     public static final String REPORT_SUB_TYPE = "report";
+    public static final String DISPOSITION_NOTIFICATION_REPORT_TYPE = "disposition-notification";
 
     public static class Builder {
         private String humanReadableText;
@@ -93,8 +95,9 @@ public class MDN {
     }
 
     public MimeMultipart asMultipart() throws MessagingException {
-        MimeMultipart multipart = new MimeMultipart();
+        MimeMultipartReport multipart = new MimeMultipartReport();
         multipart.setSubType(REPORT_SUB_TYPE);
+        multipart.setReportType(DISPOSITION_NOTIFICATION_REPORT_TYPE);
         multipart.addBodyPart(computeHumanReadablePart());
         multipart.addBodyPart(computeReportPart());
         // The optional third part, the original message is omitted.
