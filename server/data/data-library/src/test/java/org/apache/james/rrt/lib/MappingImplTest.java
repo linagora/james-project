@@ -26,7 +26,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.apache.james.core.Domain;
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+
 public class MappingImplTest {
+
+    @Test
+    public void beanShouldRespectBeanContract() {
+        EqualsVerifier.forClass(MappingImpl.class)
+            .verify();
+    }
 
     @Test(expected = NullPointerException.class)
     public void addressFactoryMethodShouldThrowOnNull() {
@@ -65,23 +73,23 @@ public class MappingImplTest {
     }
 
     @Test
-    public void hasDomainshouldReturnFalseWhenMappingDoesntContainAtMark() {
+    public void hasDefaultDomainShouldReturnFalseWhenMappingDoesntContainAtMark() {
         assertThat(MappingImpl.address("abc").hasDomain()).isFalse();
     }
     
     @Test
-    public void appendDomainShouldWorkOnValidDomain() {
-        assertThat(MappingImpl.address("abc").appendDomain(Domain.of("domain"))).isEqualTo(MappingImpl.address("abc@domain"));
+    public void appendDefaultDomainShouldWorkOnValidDomain() {
+        assertThat(MappingImpl.address("abc").appendDomainIfNone(() -> Domain.of("domain"))).isEqualTo(MappingImpl.address("abc@domain"));
     }
     
     @Test
-    public void appendDomainShouldWorkWhenMappingAlreadyContainsDomains() {
-        assertThat(MappingImpl.address("abc@d").appendDomain(Domain.of("domain"))).isEqualTo(MappingImpl.address("abc@d@domain"));
+    public void appendDefaultDomainShouldNotAddDomainWhenMappingAlreadyContainsDomains() {
+        assertThat(MappingImpl.address("abc@d").appendDomainIfNone(() -> Domain.of("domain"))).isEqualTo(MappingImpl.address("abc@d"));
     }
     
     @Test(expected = NullPointerException.class)
     public void appendDomainShouldThrowWhenNullDomain() {
-        MappingImpl.address("abc@d").appendDomain(null);
+        MappingImpl.address("abc@d").appendDomainIfNone(null);
     }
     
     @Test
@@ -123,11 +131,6 @@ public class MappingImplTest {
     @Test
     public void getErrorMessageShouldReturnWhenErrorWithoutMessage() {
         assertThat(MappingImpl.error("").getErrorMessage()).isEqualTo("");
-    }
-
-    @Test
-    public void toStringShouldReturnValuePrefixedAsByMoreObject() {
-        assertThat(MappingImpl.of("value").toString()).isEqualTo("MappingImpl{mapping=value}");
     }
 
     @Test

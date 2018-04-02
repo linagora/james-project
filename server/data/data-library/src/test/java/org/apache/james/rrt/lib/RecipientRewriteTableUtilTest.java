@@ -32,4 +32,27 @@ public class RecipientRewriteTableUtilTest {
             .isEqualTo("admin@test");
     }
 
+    @Test
+    public void getSeparatorShouldReturnCommaWhenCommaIsPresent() {
+        String separator = RecipientRewriteTableUtil.getSeparator("regex:(.*)@localhost, regex:user@test");
+        assertThat(separator).isEqualTo(",");
+    }
+
+    @Test
+    public void getSeparatorShouldReturnEmptyWhenColonIsPresentInPrefix() {
+        String separator = RecipientRewriteTableUtil.getSeparator("regex:(.*)@localhost");
+        assertThat(separator).isEqualTo("");
+    }
+
+    @Test
+    public void getSeparatorShouldReturnEmptyWhenColonIsPresent() {
+        String separator = RecipientRewriteTableUtil.getSeparator("(.*)@localhost: user@test");
+        assertThat(separator).isEqualTo(":");
+    }
+
+    @Test
+    public void getSeparatorShouldReturnColonWhenNoSeparator() {
+        String separator = RecipientRewriteTableUtil.getSeparator("user@test");
+        assertThat(separator).isEqualTo(":");
+    }
 }

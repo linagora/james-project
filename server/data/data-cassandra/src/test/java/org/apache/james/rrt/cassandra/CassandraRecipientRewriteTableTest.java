@@ -22,8 +22,6 @@ import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
-import org.apache.james.core.Domain;
-import org.apache.james.rrt.api.RecipientRewriteTableException;
 import org.apache.james.rrt.lib.AbstractRecipientRewriteTable;
 import org.apache.james.rrt.lib.AbstractRecipientRewriteTableTest;
 import org.junit.After;
@@ -56,46 +54,6 @@ public class CassandraRecipientRewriteTableTest extends AbstractRecipientRewrite
         CassandraRecipientRewriteTable rrt = new CassandraRecipientRewriteTable(cassandra.getConf(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
         rrt.configure(new DefaultConfigurationBuilder());
         return rrt;
-    }
-
-    @Override
-    protected void addMapping(String user, Domain domain, String mapping, int type) throws RecipientRewriteTableException {
-        switch (type) {
-        case ERROR_TYPE:
-            virtualUserTable.addErrorMapping(user, domain, mapping);
-            break;
-        case REGEX_TYPE:
-            virtualUserTable.addRegexMapping(user, domain, mapping);
-            break;
-        case ADDRESS_TYPE:
-            virtualUserTable.addAddressMapping(user, domain, mapping);
-            break;
-        case ALIASDOMAIN_TYPE:
-            virtualUserTable.addAliasDomainMapping(domain, Domain.of(mapping));
-            break;
-        default:
-            throw new RuntimeException("Invalid mapping type: " + type);
-        }
-    }
-
-    @Override
-    protected void removeMapping(String user, Domain domain, String mapping, int type) throws RecipientRewriteTableException {
-        switch (type) {
-        case ERROR_TYPE:
-            virtualUserTable.removeErrorMapping(user, domain, mapping);
-            break;
-        case REGEX_TYPE:
-            virtualUserTable.removeRegexMapping(user, domain, mapping);
-            break;
-        case ADDRESS_TYPE:
-            virtualUserTable.removeAddressMapping(user, domain, mapping);
-            break;
-        case ALIASDOMAIN_TYPE:
-            virtualUserTable.removeAliasDomainMapping(domain, Domain.of(mapping));
-            break;
-        default:
-            throw new RuntimeException("Invalid mapping type: " + type);
-        }
     }
 
 }

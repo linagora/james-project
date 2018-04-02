@@ -20,13 +20,56 @@
 
 package org.apache.james.rrt.lib;
 
+import java.util.function.Supplier;
+
 import org.apache.james.core.Domain;
+
+import com.google.common.base.Preconditions;
 
 public interface Mapping {
 
+    static Type detectType(String input) {
+        if (input.startsWith(Type.Regex.asPrefix())) {
+            return Type.Regex;
+        }
+        if (input.startsWith(Type.Domain.asPrefix())) {
+            return Type.Domain;
+        }
+        if (input.startsWith(Type.Error.asPrefix())) {
+            return Type.Error;
+        }
+        return Type.Address;
+    }
+
     String getAddress();
 
-    enum Type { Regex, Domain, Error, Address }
+    enum Type {
+        Regex("regex:"), 
+        Domain("domain:"), 
+        Error("error:"), 
+        Address(""); 
+
+        private final String asPrefix;
+
+        Type(String asPrefix) {
+            this.asPrefix = asPrefix;
+        }
+
+        public String asPrefix() {
+            return asPrefix;
+        }
+
+        public String withoutPrefix(String input) {
+            Preconditions.checkArgument(input.startsWith(asPrefix));
+            return input.substring(asPrefix.length());
+        }
+
+        public static boolean hasPrefix(String mapping) {
+            return mapping.startsWith(Regex.asPrefix())
+                || mapping.startsWith(Domain.asPrefix())
+                || mapping.startsWith(Error.asPrefix());
+        }
+    }
 
     Type getType();
     
@@ -34,7 +77,7 @@ public interface Mapping {
 
     boolean hasDomain();
 
-    Mapping appendDomain(Domain domain);
+    Mapping appendDomainIfNone(Supplier<Domain> domainSupplier);
 
     String getErrorMessage();
 

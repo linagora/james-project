@@ -45,21 +45,6 @@ public interface RecipientRewriteTable {
     }
 
     /**
-     * The prefix which is used for error mappings
-     */
-    String ERROR_PREFIX = "error:";
-
-    /**
-     * The prefix which is used for regex mappings
-     */
-    String REGEX_PREFIX = "regex:";
-
-    /**
-     * The prefix which is used for alias domain mappings
-     */
-    String ALIASDOMAIN_PREFIX = "domain:";
-
-    /**
      * The wildcard used for alias domain mappings
      */
     String WILDCARD = "*";

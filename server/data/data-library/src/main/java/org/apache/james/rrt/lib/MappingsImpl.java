@@ -33,7 +33,6 @@ import org.apache.james.rrt.lib.Mapping.Type;
 
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -63,14 +62,13 @@ public class MappingsImpl implements Mappings, Serializable {
     }
     
     public static MappingsImpl fromCollection(Collection<String> mappings) {
-        return mappings.stream()
-            .reduce(builder(), (builder, mapping) -> builder.add(mapping), (builder1, builder2) -> builder1.addAll(builder2.build()))
-            .build();
+        return fromMappings(mappings.stream()
+            .map(MappingImpl::of));
     }
     
     public static MappingsImpl fromMappings(Stream<Mapping> mappings) {
         return mappings
-            .reduce(builder(), (builder, mapping) -> builder.add(mapping), (builder1, builder2) -> builder1.addAll(builder2.build()))
+            .reduce(builder(), Builder::add, Builder::merge)
             .build();
     }
     
@@ -85,6 +83,10 @@ public class MappingsImpl implements Mappings, Serializable {
     }
     
     public static class Builder {
+
+        public static Builder merge(Builder builder1, Builder builder2) {
+            return builder1.addAll(builder2.build());
+        }
         
         private final ImmutableList.Builder<Mapping> mappings;
         
@@ -209,6 +211,11 @@ public class MappingsImpl implements Mappings, Serializable {
     }
 
     @Override
+    public Stream<Mapping> asStream() {
+        return mappings.stream();
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hashCode(mappings);
     }
@@ -224,6 +231,8 @@ public class MappingsImpl implements Mappings, Serializable {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(getClass()).add("mappings", mappings).toString();
+        return "MappingsImpl{" +
+            "mappings=" + mappings +
+            '}';
     }
 }
