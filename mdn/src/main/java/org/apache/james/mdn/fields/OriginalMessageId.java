@@ -29,7 +29,7 @@ import com.google.common.base.Preconditions;
  * https://tools.ietf.org/html/rfc8098#section-3.2.5
  */
 public class OriginalMessageId implements Field {
-    private static final String FIELD_NAME = "Original-Message-ID";
+    public static final String FIELD_NAME = "Original-Message-ID";
     private final String originalMessageId;
 
     public OriginalMessageId(String originalMessageId) {
@@ -39,6 +39,11 @@ public class OriginalMessageId implements Field {
         Preconditions.checkArgument(!trimmedMessageId.isEmpty());
 
         this.originalMessageId = trimmedMessageId;
+    }
+
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
     }
 
     public String getOriginalMessageId() {

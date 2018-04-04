@@ -17,34 +17,51 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mdn.sending.mode;
+package org.apache.james.mdn.parsing;
 
-import java.util.Optional;
-import java.util.stream.Stream;
+import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Interface <code>DispositionSendingMode</code> marks a type encapsulating
- * disposition sending mode information as defined by RFC 8098.
- *
- * More information: https://tools.ietf.org/html/rfc8098#section-3.2.6.1
- */
-public enum DispositionSendingMode {
-    Manual("MDN-sent-manually"),
-    Automatic("MDN-sent-automatically");
+import org.apache.james.mdn.fields.ExtensionField;
+import org.junit.Before;
+import org.junit.Test;
 
-    public static Optional<DispositionSendingMode> fromString(String value) {
-        return Stream.of(values())
-            .filter(sendingMode -> sendingMode.getValue().equalsIgnoreCase(value.trim()))
-            .findFirst();
+public class ExtensionFieldParserTest {
+
+    public static final String NAME = "Name";
+    private ExtensionFieldParser parser;
+
+    @Before
+    public void setUp() {
+        parser = new ExtensionFieldParser(NAME);
     }
 
-    private final String value;
-
-    DispositionSendingMode(String value) {
-        this.value = value;
+    @Test
+    public void parseShouldAcceptEmptyValue() {
+        assertThat(parser.parse(""))
+            .contains(new ExtensionField(NAME, ""));
     }
 
-    public String getValue() {
-        return value;
+    @Test
+    public void parseShouldAcceptFoldingWhiteSpaceValue() {
+        assertThat(parser.parse("  "))
+            .contains(new ExtensionField(NAME, ""));
+    }
+
+    @Test
+    public void parseShouldAcceptSimpleValue() {
+        assertThat(parser.parse("aa"))
+            .contains(new ExtensionField(NAME, "aa"));
+    }
+
+    @Test
+    public void parseShouldTrimValue() {
+        assertThat(parser.parse("  aa  "))
+            .contains(new ExtensionField(NAME, "aa"));
+    }
+
+    @Test
+    public void parseShouldAcceptLineBreaks() {
+        assertThat(parser.parse("aa\nbb"))
+            .contains(new ExtensionField(NAME, "aa\nbb"));
     }
 }

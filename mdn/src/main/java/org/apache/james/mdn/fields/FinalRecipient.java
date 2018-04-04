@@ -46,6 +46,11 @@ public class FinalRecipient implements Field {
         this(AddressType.RFC_822, finalRecipient);
     }
 
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
+    }
+
     public Text getFinalRecipient() {
         return finalRecipient;
     }

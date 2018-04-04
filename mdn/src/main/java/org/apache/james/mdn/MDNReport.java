@@ -79,6 +79,11 @@ public class MDNReport {
             return this;
         }
 
+        public Builder reportingUserAgentField(Optional<ReportingUserAgent> reportingUserAgentField) {
+            this.reportingUserAgentField = reportingUserAgentField;
+            return this;
+        }
+
         public Builder originalRecipientField(OriginalRecipient originalRecipientField) {
             this.originalRecipientField = Optional.of(originalRecipientField);
             return this;
@@ -115,8 +120,13 @@ public class MDNReport {
             return this;
         }
 
-        public Builder addErrorFields(Error... errorField) {
-            this.errorField.add(errorField);
+        public Builder addErrorFields(Error... errorFields) {
+            this.errorField.add(errorFields);
+            return this;
+        }
+
+        public Builder addErrorFields(List<Error> errorFields) {
+            this.errorField.addAll(errorFields);
             return this;
         }
 
@@ -140,6 +150,11 @@ public class MDNReport {
             return this;
         }
 
+        public Builder originalMessageIdField(Optional<OriginalMessageId> originalMessageIdField) {
+            this.originalMessageIdField = originalMessageIdField;
+            return this;
+        }
+
         public Builder dispositionField(Disposition dispositionField) {
             this.dispositionField = Optional.of(dispositionField);
             return this;
@@ -152,6 +167,11 @@ public class MDNReport {
 
         public Builder withExtensionFields(ExtensionField... extensionField) {
             this.extensionFields.add(extensionField);
+            return this;
+        }
+
+        public Builder withExtensionFields(List<ExtensionField> extensionField) {
+            this.extensionFields.addAll(extensionField);
             return this;
         }
 

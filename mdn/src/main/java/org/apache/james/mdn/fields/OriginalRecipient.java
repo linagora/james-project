@@ -29,7 +29,8 @@ import com.google.common.base.Preconditions;
  * https://tools.ietf.org/html/rfc8098#section-3.2.3
  */
 public class OriginalRecipient implements Field {
-    private static final String FIELD_NAME = "Original-Recipient";
+
+    public static final String FIELD_NAME = "Original-Recipient";
 
     public static OriginalRecipient ofUnknown(Text address) {
         return new OriginalRecipient(AddressType.UNKNOWN, address);
@@ -44,6 +45,11 @@ public class OriginalRecipient implements Field {
 
         this.addressType = addressType;
         this.originalRecipient = originalRecipient;
+    }
+
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
     }
 
     public OriginalRecipient(Text originalRecipient) {

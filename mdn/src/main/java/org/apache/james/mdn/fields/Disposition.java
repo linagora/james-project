@@ -19,6 +19,7 @@
 
 package org.apache.james.mdn.fields;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -70,6 +71,11 @@ public class Disposition implements Field {
             return this;
         }
 
+        public Builder addModifiers(Collection<DispositionModifier> modifiers) {
+            this.modifiers.addAll(modifiers);
+            return this;
+        }
+
         public Disposition build() {
             Preconditions.checkState(actionMode.isPresent());
             Preconditions.checkState(sendingMode.isPresent());
@@ -94,6 +100,11 @@ public class Disposition implements Field {
         this.sendingMode = sendingMode;
         this.type = type;
         this.modifiers = ImmutableList.copyOf(modifiers);
+    }
+
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
     }
 
     public DispositionActionMode getActionMode() {

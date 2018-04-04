@@ -38,6 +38,11 @@ public class Error implements Field {
         this.text = text;
     }
 
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
+    }
+
     public Text getText() {
         return text;
     }

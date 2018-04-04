@@ -34,7 +34,7 @@ public enum DispositionActionMode {
 
     public static Optional<DispositionActionMode> fromString(String value) {
         return Stream.of(values())
-            .filter(actionMode -> actionMode.getValue().equalsIgnoreCase(value))
+            .filter(actionMode -> actionMode.getValue().equalsIgnoreCase(value.trim()))
             .findFirst();
     }
 

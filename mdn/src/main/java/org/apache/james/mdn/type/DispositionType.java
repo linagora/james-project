@@ -36,7 +36,7 @@ public enum DispositionType {
 
     public static Optional<DispositionType> fromString(String value) {
         return Stream.of(values())
-            .filter(sendingMode -> sendingMode.getValue().equalsIgnoreCase(value))
+            .filter(sendingMode -> sendingMode.getValue().equalsIgnoreCase(value.trim()))
             .findFirst();
     }
 

@@ -17,34 +17,46 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mdn.sending.mode;
+package org.apache.james.mdn.parsing;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 
-/**
- * Interface <code>DispositionSendingMode</code> marks a type encapsulating
- * disposition sending mode information as defined by RFC 8098.
- *
- * More information: https://tools.ietf.org/html/rfc8098#section-3.2.6.1
- */
-public enum DispositionSendingMode {
-    Manual("MDN-sent-manually"),
-    Automatic("MDN-sent-automatically");
+import org.apache.james.mdn.fields.Field;
+import org.apache.james.mdn.fields.OriginalMessageId;
 
-    public static Optional<DispositionSendingMode> fromString(String value) {
-        return Stream.of(values())
-            .filter(sendingMode -> sendingMode.getValue().equalsIgnoreCase(value.trim()))
-            .findFirst();
+import com.google.common.base.Preconditions;
+
+public class OriginalMessageIdParser implements FieldsParser.FieldParser {
+    private final boolean strict;
+
+    public OriginalMessageIdParser(boolean strict) {
+        this.strict = strict;
     }
 
-    private final String value;
+    @Override
+    public Optional<Field> parse(String value) {
+        Preconditions.checkNotNull(value);
 
-    DispositionSendingMode(String value) {
-        this.value = value;
+        if (value.contains("\n")) {
+            return handleBreakLineFailure();
+        }
+        if (value.trim().isEmpty()) {
+            return handleEmptyFailure();
+        }
+        return Optional.of(new OriginalMessageId(value.trim()));
     }
 
-    public String getValue() {
-        return value;
+    private Optional<Field> handleEmptyFailure() {
+        if (strict) {
+            throw new IllegalArgumentException(OriginalMessageId.FIELD_NAME + " value can not be empty or folding white spaces");
+        }
+        return Optional.empty();
+    }
+
+    private Optional<Field> handleBreakLineFailure() {
+        if (strict) {
+            throw new IllegalArgumentException(OriginalMessageId.FIELD_NAME + " value can not contain line breaks");
+        }
+        return Optional.empty();
     }
 }

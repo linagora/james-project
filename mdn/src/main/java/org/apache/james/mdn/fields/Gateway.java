@@ -40,6 +40,11 @@ public class Gateway implements Field {
         this.name = name;
     }
 
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
+    }
+
     public Gateway(Text name) {
         this(AddressType.DNS, name);
     }
@@ -53,7 +58,7 @@ public class Gateway implements Field {
         return nameType;
     }
 
-    public Text getName() {
+    public Text getUaName() {
         return name;
     }
 

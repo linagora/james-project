@@ -25,5 +25,6 @@ package org.apache.james.mdn.fields;
  * https://tools.ietf.org/html/rfc8098#section-3.1
  */
 public interface Field {
+    String getFieldName();
     String formattedValue();
 }

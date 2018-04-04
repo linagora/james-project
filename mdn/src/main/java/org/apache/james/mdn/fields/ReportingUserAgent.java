@@ -31,8 +31,8 @@ import com.google.common.base.Preconditions;
  * https://tools.ietf.org/html/rfc8098#section-3.2.1
  */
 public class ReportingUserAgent implements Field {
-    private static final String FIELD_NAME = "Reporting-UA";
     public static final Predicate<String> IS_EMPTY = String::isEmpty;
+    public static final String FIELD_NAME = "Reporting-UA";
     private final String userAgentName;
     private final Optional<String> userAgentProduct;
 
@@ -55,6 +55,11 @@ public class ReportingUserAgent implements Field {
         this.userAgentProduct = userAgentProduct
             .map(String::trim)
             .filter(IS_EMPTY.negate());
+    }
+
+    @Override
+    public String getFieldName() {
+        return FIELD_NAME;
     }
 
     public String getUserAgentName() {
