@@ -152,4 +152,36 @@ public class MappingImplTest {
     public void getAddressShouldThrowForDomain() {
         assertThatThrownBy(() -> MappingImpl.domain(Domain.of("value")).getAddress()).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    public void getAddressShouldReturnAddressWhenAddressType() {
+        String address = "toto@domain.tld";
+        assertThat(MappingImpl.address(address).getAddress())
+            .isEqualTo(address);
+    }
+
+    @Test
+    public void getAddressShouldReturnAddressWhenForwardType() {
+        String address = "toto@domain.tld";
+        assertThat(MappingImpl.forward(address).getAddress())
+            .isEqualTo(address);
+    }
+
+    @Test
+    public void getAddressShouldThrowWhenDomainType() {
+        assertThatThrownBy(() -> MappingImpl.domain(Domain.of("domain.tld")).getAddress())
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void getAddressShouldThrowWhenErrorType() {
+        assertThatThrownBy(() -> MappingImpl.error("mapping").getAddress())
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void getAddressShouldThrowWhenRegexType() {
+        assertThatThrownBy(() -> MappingImpl.regex("a.*@domain.tld").getAddress())
+            .isInstanceOf(IllegalStateException.class);
+    }
 }

@@ -53,6 +53,10 @@ public class MappingImpl implements Mapping, Serializable {
     public static MappingImpl domain(Domain mapping) {
         return new MappingImpl(Type.Domain, mapping.asString());
     }
+
+    public static MappingImpl forward(String mapping) {
+        return new MappingImpl(Type.Forward, mapping);
+    }
     
     private final Type type;
     private final String mapping;
@@ -96,7 +100,7 @@ public class MappingImpl implements Mapping, Serializable {
 
     @Override
     public String getAddress() {
-        Preconditions.checkState(getType() == Type.Address);
+        Preconditions.checkState(getType() == Type.Address || getType() == Type.Forward);
         return mapping;
     }
 

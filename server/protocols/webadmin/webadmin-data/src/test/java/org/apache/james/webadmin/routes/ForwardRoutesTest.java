@@ -19,21 +19,24 @@
 
 package org.apache.james.webadmin.routes;
 
-import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.when;
+import static com.jayway.restassured.RestAssured.with;
 import static org.apache.james.webadmin.Constants.SEPARATOR;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.core.Domain;
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.domainlist.api.DomainList;
@@ -43,7 +46,6 @@ import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.api.RecipientRewriteTableException;
 import org.apache.james.rrt.memory.MemoryRecipientRewriteTable;
 import org.apache.james.user.api.UsersRepository;
-import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
@@ -59,29 +61,30 @@ import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.filter.log.LogDetail;
 import com.jayway.restassured.http.ContentType;
 
-class GroupsRoutesTest {
+class ForwardRoutesTest {
 
     private static final Domain DOMAIN = Domain.of("b.com");
-    private static final String GROUP1 = "group1" + "@" + DOMAIN.name();
-    private static final String GROUP2 = "group2" + "@" + DOMAIN.name();
-    private static final String GROUP_WITH_SLASH = "group10/10" + "@" + DOMAIN.name();
-    private static final String GROUP_WITH_ENCODED_SLASH = "group10%2F10" + "@" + DOMAIN.name();
-    private static final String USER_A = "a" + "@" + DOMAIN.name();
-    private static final String USER_B = "b" + "@" + DOMAIN.name();
-    private static final String USER_WITH_SLASH = "user/@" + DOMAIN.name();
-    private static final String USER_WITH_ENCODED_SLASH = "user%2F@" + DOMAIN.name();
+    public static final String CEDRIC = "cedric@" + DOMAIN.name();
+    public static final String ALICE = "alice@" + DOMAIN.name();
+    public static final String ALICE_WITH_SLASH = "alice/@" + DOMAIN.name();
+    public static final String ALICE_WITH_ENCODED_SLASH = "alice%2F@" + DOMAIN.name();
+    public static final String BOB = "bob@" + DOMAIN.name();
+    public static final String BOB_PASSWORD = "123456";
+    public static final String ALICE_PASSWORD = "789123";
+    public static final String ALICE_SLASH_PASSWORD = "abcdef";
+    public static final String CEDRIC_PASSWORD = "456789";
 
     private WebAdminServer webAdminServer;
 
-    private void createServer(GroupsRoutes groupsRoutes) throws Exception {
+    private void createServer(ForwardRoutes forwardRoutes) throws Exception {
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
-            groupsRoutes);
+            forwardRoutes);
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
 
         RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminServer)
-            .setBasePath("address/groups")
+            .setBasePath("address/forwards")
             .log(LogDetail.METHOD)
             .build();
     }
@@ -103,14 +106,25 @@ class GroupsRoutesTest {
             memoryRecipientRewriteTable = new MemoryRecipientRewriteTable();
             DNSService dnsService = mock(DNSService.class);
             domainList = new MemoryDomainList(dnsService);
+            domainList.setAutoDetectIP(false);
+            domainList.setAutoDetect(false);
+            domainList.configure(new DefaultConfigurationBuilder());
             domainList.addDomain(DOMAIN);
+
             usersRepository = MemoryUsersRepository.withVirtualHosting();
             usersRepository.setDomainList(domainList);
-            createServer(new GroupsRoutes(memoryRecipientRewriteTable, usersRepository, domainList, new JsonTransformer()));
+            usersRepository.configure(new DefaultConfigurationBuilder());
+
+            usersRepository.addUser(BOB, BOB_PASSWORD);
+            usersRepository.addUser(ALICE, ALICE_PASSWORD);
+            usersRepository.addUser(ALICE_WITH_SLASH, ALICE_SLASH_PASSWORD);
+            usersRepository.addUser(CEDRIC, CEDRIC_PASSWORD);
+
+            createServer(new ForwardRoutes(memoryRecipientRewriteTable, usersRepository, new JsonTransformer()));
         }
 
         @Test
-        void getGroupsShouldBeEmpty() {
+        void getForwardShouldBeEmpty() {
             when()
                 .get()
             .then()
@@ -120,12 +134,12 @@ class GroupsRoutesTest {
         }
 
         @Test
-        void getGroupsShouldListExistingGroupsInAlphabeticOrder() {
-            given()
-                .put(GROUP2 + SEPARATOR + USER_A);
+        void getForwardShouldListExistingForwardsInAlphabeticOrder() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
-            given()
-                .put(GROUP1 + SEPARATOR + USER_A);
+            with()
+                .put(CEDRIC + SEPARATOR + "targets" + SEPARATOR + BOB);
 
             List<String> addresses =
                 when()
@@ -137,11 +151,11 @@ class GroupsRoutesTest {
                     .body()
                     .jsonPath()
                     .getList(".");
-            assertThat(addresses).containsExactly(GROUP1, GROUP2);
+            assertThat(addresses).containsExactly(ALICE, CEDRIC);
         }
 
         @Test
-        void getNotRegisteredGroupShouldReturnNotFound() {
+        void getNotRegisteredForwardShouldReturnNotFound() {
             Map<String, Object> errors = when()
                 .get("unknown@domain.travel")
             .then()
@@ -155,135 +169,126 @@ class GroupsRoutesTest {
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.NOT_FOUND_404)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "The group does not exist");
+                .containsEntry("message", "The forward does not exist");
         }
 
         @Test
-        void putUserInGroupShouldReturnCreated() {
+        void putUserInForwardShouldReturnCreated() {
             when()
-                .put(GROUP1 + SEPARATOR + USER_A)
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.CREATED_201);
         }
 
         @Test
-        void putUserWithSlashInGroupShouldReturnCreated() {
+        void putUserWithSlashInForwardShouldReturnCreated() {
             when()
-                .put(GROUP1 + SEPARATOR + USER_WITH_ENCODED_SLASH)
+                .put(BOB + SEPARATOR + "targets" + SEPARATOR + ALICE_WITH_ENCODED_SLASH)
             .then()
                 .statusCode(HttpStatus.CREATED_201);
         }
 
         @Test
-        void putUserWithSlashInGroupShouldCreateUser() {
-            when()
-                .put(GROUP1 + SEPARATOR + USER_WITH_ENCODED_SLASH);
+        void putUserWithSlashInForwardShouldAddItAsADestination() {
+            with()
+                .put(BOB + SEPARATOR + "targets" + SEPARATOR + ALICE_WITH_ENCODED_SLASH);
 
-            List<String> addresses =
-                when()
-                    .get(GROUP1)
-                .then()
-                    .contentType(ContentType.JSON)
-                    .statusCode(HttpStatus.OK_200)
-                    .extract()
-                    .body()
-                    .jsonPath()
-                    .getList(".");
-            assertThat(addresses).containsExactly(USER_WITH_SLASH);
+            when()
+                .get(BOB)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(ALICE_WITH_SLASH));
         }
 
         @Test
-        void putUserInGroupShouldCreateGroup() {
-            when()
-                .put(GROUP1 + SEPARATOR + USER_A);
+        void putUserInForwardShouldCreateForward() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
-            List<String> addresses =
-                when()
-                    .get(GROUP1)
-                .then()
-                    .contentType(ContentType.JSON)
-                    .statusCode(HttpStatus.OK_200)
-                    .extract()
-                    .body()
-                    .jsonPath()
-                    .getList(".");
-            assertThat(addresses).containsExactly(USER_A);
+            when()
+                .get(ALICE)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(BOB));
         }
 
         @Test
-        void putUserInGroupWithEncodedSlashShouldReturnCreated() {
+        void putUserInForwardWithEncodedSlashShouldReturnCreated() {
             when()
-                .put(GROUP_WITH_ENCODED_SLASH + SEPARATOR + USER_A)
+                .put(ALICE_WITH_ENCODED_SLASH + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.CREATED_201);
         }
 
         @Test
-        void putUserInGroupWithEncodedSlashShouldCreateGroup() {
-            when()
-                .put(GROUP_WITH_ENCODED_SLASH + SEPARATOR + USER_A);
-
-            List<String> addresses =
-                when()
-                    .get(GROUP_WITH_ENCODED_SLASH)
-                .then()
-                    .contentType(ContentType.JSON)
-                    .statusCode(HttpStatus.OK_200)
-                    .extract()
-                    .body()
-                    .jsonPath()
-                    .getList(".");
-            assertThat(addresses).containsExactly(USER_A);
-        }
-
-        @Test
-        void putSameUserInGroupTwiceShouldBeIdempotent() {
-            given()
-                .put(GROUP1 + SEPARATOR + USER_A);
+        void putUserInForwardWithEncodedSlashShouldCreateForward() {
+            with()
+                .put(ALICE_WITH_ENCODED_SLASH + SEPARATOR + "targets" + SEPARATOR + BOB);
 
             when()
-                .put(GROUP1 + SEPARATOR + USER_A);
-
-            List<String> addresses =
-                when()
-                    .get(GROUP1)
-                .then()
-                    .contentType(ContentType.JSON)
-                    .statusCode(HttpStatus.OK_200)
-                    .extract()
-                    .body()
-                    .jsonPath()
-                    .getList(".");
-            assertThat(addresses).containsExactly(USER_A);
+                .get(ALICE_WITH_ENCODED_SLASH)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(BOB));
         }
 
         @Test
-        void putUserInGroupShouldAllowSeveralUsers() {
-            given()
-                .put(GROUP1 + SEPARATOR + USER_A);
+        void putSameUserInForwardTwiceShouldBeIdempotent() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
-            given()
-                .put(GROUP1 + SEPARATOR + USER_B);
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
-            List<String> addresses =
-                when()
-                    .get(GROUP1)
-                .then()
-                    .contentType(ContentType.JSON)
-                    .statusCode(HttpStatus.OK_200)
-                    .extract()
-                    .body()
-                    .jsonPath()
-                    .getList(".");
-            assertThat(addresses).containsExactly(USER_A, USER_B);
+            when()
+                .get(ALICE)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(BOB));
         }
 
         @Test
-        void putUserInGroupShouldNotAllowGroupOnUnregisteredDomain() {
+        void putUserInForwardShouldAllowSeveralDestinations() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
+
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + CEDRIC);
+
+            when()
+                .get(ALICE)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(BOB, CEDRIC));
+        }
+
+        @Test
+        void forwardShouldAllowIdentity() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + ALICE);
+
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + CEDRIC);
+
+            when()
+                .get(ALICE)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(ALICE, CEDRIC));
+        }
+
+        @Test
+        void putUserInForwardShouldRequireExistingBaseUser() {
             Map<String, Object> errors = when()
-                .put("group@unregisteredDomain" + SEPARATOR + USER_A)
+                .put("notFound@" + DOMAIN.name() + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
-                .statusCode(HttpStatus.FORBIDDEN_403)
+                .statusCode(HttpStatus.NOT_FOUND_404)
                 .contentType(ContentType.JSON)
                 .extract()
                 .body()
@@ -291,69 +296,57 @@ class GroupsRoutesTest {
                 .getMap(".");
 
             assertThat(errors)
-                .containsEntry("statusCode", HttpStatus.FORBIDDEN_403)
+                .containsEntry("statusCode", HttpStatus.NOT_FOUND_404)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "Server doesn't own the domain: unregisteredDomain");
-        }
-
-
-        @Test
-        void putUserInGroupShouldNotAllowUserShadowing() throws UsersRepositoryException {
-            usersRepository.addUser(USER_A, "whatever");
-
-            Map<String, Object> errors = when()
-                .put(USER_A + SEPARATOR + USER_B)
-            .then()
-                .statusCode(HttpStatus.CONFLICT_409)
-                .contentType(ContentType.JSON)
-                .extract()
-                .body()
-                .jsonPath()
-                .getMap(".");
-
-            assertThat(errors)
-                .containsEntry("statusCode", HttpStatus.CONFLICT_409)
-                .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "Requested group address is already used for another purpose");
+                .containsEntry("message", "Requested base forward address do not correspond to a user");
         }
 
         @Test
-        void getGroupShouldReturnMembersInAlphabeticOrder() {
-            given()
-                .put(GROUP1 + SEPARATOR + USER_B);
+        void getForwardShouldReturnMembersInAlphabeticOrder() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
-            given()
-                .put(GROUP1 + SEPARATOR + USER_A);
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + CEDRIC);
 
-            List<String> addresses =
-                when()
-                    .get(GROUP1)
-                .then()
-                    .contentType(ContentType.JSON)
-                    .statusCode(HttpStatus.OK_200)
-                    .extract()
-                    .body()
-                    .jsonPath()
-                    .getList(".");
-            assertThat(addresses).containsExactly(USER_A, USER_B);
-        }
-
-
-        @Test
-        void deleteUserNotInGroupShouldReturnOK() {
             when()
-                .delete(GROUP1 + SEPARATOR + USER_A)
+                .get(ALICE)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(BOB, CEDRIC));
+        }
+
+        @Test
+        void forwardShouldAcceptExternalAddresses() {
+            String externalAddress = "external@other.com";
+
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + externalAddress);
+
+            when()
+                .get(ALICE)
+            .then()
+                .contentType(ContentType.JSON)
+                .statusCode(HttpStatus.OK_200)
+                .body("mailAddress", hasItems(externalAddress));
+        }
+
+        @Test
+        void deleteUserNotInForwardShouldReturnOK() {
+            when()
+                .delete(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.OK_200);
         }
 
         @Test
-        void deleteLastUserInGroupShouldDeleteGroup() {
-            given()
-                .put(GROUP1 + SEPARATOR + USER_A);
+        void deleteLastUserInForwardShouldDeleteForward() {
+            with()
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
-            given()
-                .delete(GROUP1 + SEPARATOR + USER_A);
+            with()
+                .delete(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB);
 
             when()
                 .get()
@@ -387,13 +380,14 @@ class GroupsRoutesTest {
         void setUp() throws Exception {
             memoryRecipientRewriteTable = mock(RecipientRewriteTable.class);
             UsersRepository userRepository = mock(UsersRepository.class);
+            Mockito.when(userRepository.contains(eq(ALICE))).thenReturn(true);
             DomainList domainList = mock(DomainList.class);
             Mockito.when(domainList.containsDomain(any())).thenReturn(true);
-            createServer(new GroupsRoutes(memoryRecipientRewriteTable, userRepository, domainList, new JsonTransformer()));
+            createServer(new ForwardRoutes(memoryRecipientRewriteTable, userRepository, new JsonTransformer()));
         }
 
         @Test
-        void getMalformedGroupShouldReturnBadRequest() {
+        void getMalformedForwardShouldReturnBadRequest() {
             Map<String, Object> errors = when()
                 .get("not-an-address")
             .then()
@@ -407,14 +401,14 @@ class GroupsRoutesTest {
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "The group is not an email address")
+                .containsEntry("message", "The forward is not an email address")
                 .containsEntry("cause", "Out of data at position 1 in 'not-an-address'");
         }
 
         @Test
-        void putMalformedGroupShouldReturnBadRequest() {
+        void putMalformedForwardShouldReturnBadRequest() {
             Map<String, Object> errors = when()
-                .put("not-an-address" + SEPARATOR + USER_A)
+                .put("not-an-address" + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.BAD_REQUEST_400)
                 .contentType(ContentType.JSON)
@@ -426,23 +420,23 @@ class GroupsRoutesTest {
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "The group is not an email address")
+                .containsEntry("message", "The forward is not an email address")
                 .containsEntry("cause", "Out of data at position 1 in 'not-an-address'");
         }
 
         @Test
-        void putUserInGroupWithSlashShouldReturnNotFound() {
+        void putUserInForwardWithSlashShouldReturnNotFound() {
             when()
-                .put(GROUP_WITH_SLASH + SEPARATOR + USER_A)
+                .put(ALICE_WITH_SLASH + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.NOT_FOUND_404)
                 .body(containsString("404 Not found"));
         }
 
         @Test
-        void putUserWithSlashInGroupShouldReturnNotFound() {
+        void putUserWithSlashInForwardShouldReturnNotFound() {
             when()
-                .put(GROUP1 + SEPARATOR + USER_WITH_SLASH)
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + ALICE_WITH_SLASH)
             .then()
                 .statusCode(HttpStatus.NOT_FOUND_404)
                 .body(containsString("404 Not found"));
@@ -451,7 +445,7 @@ class GroupsRoutesTest {
         @Test
         void putMalformedAddressShouldReturnBadRequest() {
             Map<String, Object> errors = when()
-                .put(GROUP1 + SEPARATOR + "not-an-address")
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + "not-an-address")
             .then()
                 .statusCode(HttpStatus.BAD_REQUEST_400)
                 .contentType(ContentType.JSON)
@@ -463,23 +457,23 @@ class GroupsRoutesTest {
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "The group is not an email address")
+                .containsEntry("message", "The forward is not an email address")
                 .containsEntry("cause", "Out of data at position 1 in 'not-an-address'");
         }
 
         @Test
         void putRequiresTwoPathParams() {
             when()
-                .put(GROUP1)
+                .put(ALICE)
             .then()
                 .statusCode(HttpStatus.BAD_REQUEST_400)
                 .body(is(""));
         }
 
         @Test
-        void deleteMalformedGroupShouldReturnBadRequest() {
+        void deleteMalformedForwardShouldReturnBadRequest() {
             Map<String, Object> errors = when()
-                .delete("not-an-address" + SEPARATOR + USER_A)
+                .delete("not-an-address" + SEPARATOR + "targets" + SEPARATOR + ALICE)
             .then()
                 .statusCode(HttpStatus.BAD_REQUEST_400)
                 .contentType(ContentType.JSON)
@@ -491,14 +485,14 @@ class GroupsRoutesTest {
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "The group is not an email address")
+                .containsEntry("message", "The forward is not an email address")
                 .containsEntry("cause", "Out of data at position 1 in 'not-an-address'");
         }
 
         @Test
         void deleteMalformedAddressShouldReturnBadRequest() {
             Map<String, Object> errors = when()
-                .delete(GROUP1 + SEPARATOR + "not-an-address")
+                .delete(ALICE + SEPARATOR + "targets" + SEPARATOR + "not-an-address")
             .then()
                 .statusCode(HttpStatus.BAD_REQUEST_400)
                 .contentType(ContentType.JSON)
@@ -510,14 +504,14 @@ class GroupsRoutesTest {
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.BAD_REQUEST_400)
                 .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "The group is not an email address")
+                .containsEntry("message", "The forward is not an email address")
                 .containsEntry("cause", "Out of data at position 1 in 'not-an-address'");
         }
 
         @Test
         void deleteRequiresTwoPathParams() {
             when()
-                .delete(GROUP1)
+                .delete(ALICE)
             .then()
                 .statusCode(HttpStatus.BAD_REQUEST_400)
                 .body(is(""));
@@ -527,10 +521,10 @@ class GroupsRoutesTest {
         void putShouldReturnErrorWhenRecipientRewriteTableExceptionIsThrown() throws Exception {
             doThrow(RecipientRewriteTableException.class)
                 .when(memoryRecipientRewriteTable)
-                .addAddressMapping(anyString(), any(), anyString());
+                .addForwardMapping(anyString(), any(), anyString());
 
             when()
-                .put(GROUP1 + SEPARATOR + GROUP2)
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -540,10 +534,10 @@ class GroupsRoutesTest {
         void putShouldReturnErrorWhenErrorMappingExceptionIsThrown() throws Exception {
             doThrow(RecipientRewriteTable.ErrorMappingException.class)
                 .when(memoryRecipientRewriteTable)
-                .addAddressMapping(anyString(), any(), anyString());
+                .addForwardMapping(anyString(), any(), anyString());
 
             when()
-                .put(GROUP1 + SEPARATOR + GROUP2)
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -553,10 +547,10 @@ class GroupsRoutesTest {
         void putShouldReturnErrorWhenRuntimeExceptionIsThrown() throws Exception {
             doThrow(RuntimeException.class)
                 .when(memoryRecipientRewriteTable)
-                .addAddressMapping(anyString(), any(), anyString());
+                .addForwardMapping(anyString(), any(), anyString());
 
             when()
-                .put(GROUP1 + SEPARATOR + GROUP2)
+                .put(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -605,10 +599,10 @@ class GroupsRoutesTest {
         void deleteShouldReturnErrorWhenRecipientRewriteTableExceptionIsThrown() throws Exception {
             doThrow(RecipientRewriteTableException.class)
                 .when(memoryRecipientRewriteTable)
-                .removeAddressMapping(anyString(), any(), anyString());
+                .removeForwardMapping(anyString(), any(), anyString());
 
             when()
-                .delete(GROUP1 + SEPARATOR + GROUP2)
+                .delete(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -618,10 +612,10 @@ class GroupsRoutesTest {
         void deleteShouldReturnErrorWhenErrorMappingExceptionIsThrown() throws Exception {
             doThrow(RecipientRewriteTable.ErrorMappingException.class)
                 .when(memoryRecipientRewriteTable)
-                .removeAddressMapping(anyString(), any(), anyString());
+                .removeForwardMapping(anyString(), any(), anyString());
 
             when()
-                .delete(GROUP1 + SEPARATOR + GROUP2)
+                .delete(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -631,10 +625,10 @@ class GroupsRoutesTest {
         void deleteShouldReturnErrorWhenRuntimeExceptionIsThrown() throws Exception {
             doThrow(RuntimeException.class)
                 .when(memoryRecipientRewriteTable)
-                .removeAddressMapping(anyString(), any(), anyString());
+                .removeForwardMapping(anyString(), any(), anyString());
 
             when()
-                .delete(GROUP1 + SEPARATOR + GROUP2)
+                .delete(ALICE + SEPARATOR + "targets" + SEPARATOR + BOB)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -647,7 +641,7 @@ class GroupsRoutesTest {
                 .getMappings(anyString(), any());
 
             when()
-                .get(GROUP1)
+                .get(ALICE)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -660,7 +654,7 @@ class GroupsRoutesTest {
                 .getMappings(anyString(), any());
 
             when()
-                .get(GROUP1)
+                .get(ALICE)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));
@@ -673,7 +667,7 @@ class GroupsRoutesTest {
                 .getMappings(anyString(), any());
 
             when()
-                .get(GROUP1)
+                .get(ALICE)
             .then()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500)
                 .body(containsString("500 Internal Server Error"));

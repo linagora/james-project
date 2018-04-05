@@ -45,6 +45,12 @@ public class MappingTest {
     }
 
     @Test
+    public void hasPrefixShouldReturnTrueWhenForward() {
+        boolean hasPrefix = Mapping.Type.hasPrefix(Type.Forward.asPrefix() + "myRegex");
+        assertThat(hasPrefix).isTrue();
+    }
+
+    @Test
     public void hasPrefixShouldReturnFalseWhenAddress() {
         boolean hasPrefix = Mapping.Type.hasPrefix(Type.Address.asPrefix() + "myRegex");
         assertThat(hasPrefix).isFalse();
@@ -75,6 +81,12 @@ public class MappingTest {
     }
 
     @Test
+    public void detectTypeShouldReturnForwardWhenForwardPrefix() {
+        assertThat(Mapping.detectType(Type.Forward.asPrefix() + "mapping"))
+            .isEqualTo(Type.Forward);
+    }
+
+    @Test
     public void withoutPrefixShouldRemoveAddressPrefix() {
         assertThat(Type.Address.withoutPrefix(Type.Address.asPrefix() + "mapping"))
             .isEqualTo("mapping");
@@ -101,6 +113,12 @@ public class MappingTest {
     @Test
     public void withoutPrefixShouldRemoveRegexPrefix() {
         assertThat(Type.Regex.withoutPrefix(Type.Regex.asPrefix() + "mapping"))
+            .isEqualTo("mapping");
+    }
+
+    @Test
+    public void withoutPrefixShouldRemoveForwardPrefix() {
+        assertThat(Type.Forward.withoutPrefix(Type.Forward.asPrefix() + "mapping"))
             .isEqualTo("mapping");
     }
 

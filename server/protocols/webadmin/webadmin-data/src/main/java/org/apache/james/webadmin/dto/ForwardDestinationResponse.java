@@ -17,25 +17,16 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.server;
+package org.apache.james.webadmin.dto;
 
-import org.apache.james.webadmin.Routes;
-import org.apache.james.webadmin.routes.DomainsRoutes;
-import org.apache.james.webadmin.routes.ForwardRoutes;
-import org.apache.james.webadmin.routes.GroupsRoutes;
-import org.apache.james.webadmin.routes.UserRoutes;
+public class ForwardDestinationResponse {
+    private final String mailAddress;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
+    public ForwardDestinationResponse(String mailAddress) {
+        this.mailAddress = mailAddress;
+    }
 
-public class DataRoutesModules extends AbstractModule {
-
-    @Override
-    protected void configure() {
-        Multibinder<Routes> routesMultibinder = Multibinder.newSetBinder(binder(), Routes.class);
-        routesMultibinder.addBinding().to(DomainsRoutes.class);
-        routesMultibinder.addBinding().to(ForwardRoutes.class);
-        routesMultibinder.addBinding().to(GroupsRoutes.class);
-        routesMultibinder.addBinding().to(UserRoutes.class);
+    public String getMailAddress() {
+        return mailAddress;
     }
 }
