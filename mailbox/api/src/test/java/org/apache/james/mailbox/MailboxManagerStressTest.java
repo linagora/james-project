@@ -21,9 +21,8 @@ package org.apache.james.mailbox;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
@@ -32,11 +31,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.mail.Flags;
-
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mime4j.dom.Message;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableSet;
@@ -103,7 +101,11 @@ public abstract class MailboxManagerStressTest {
 
                     mailboxManager.startProcessingRequest(mailboxSession);
                     MessageManager m = mailboxManager.getMailbox(path, mailboxSession);
-                    ComposedMessageId messageId = m.appendMessage(new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), mailboxSession, false, new Flags());
+                    ComposedMessageId messageId = m.appendMessage(
+                        MessageManager.AppendCommand
+                            .from(Message.Builder.of()
+                                .setSubject("test")
+                                .setBody("testmail", StandardCharsets.UTF_8)), mailboxSession);
 
                     System.out.println("Append message with uid=" + messageId.getUid());
                     if (uids.put(messageId.getUid(), new Object()) != null) {

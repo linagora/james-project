@@ -18,9 +18,8 @@
  ****************************************************************/
 package org.apache.james.mailbox.inmemory;
 
-import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
 import java.util.Optional;
 
 import javax.mail.Flags;
@@ -43,6 +42,8 @@ import org.apache.james.mailbox.store.MessageIdManagerTestSystem;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
+import org.apache.james.mime4j.dom.Message;
+import org.apache.james.mime4j.message.DefaultMessageWriter;
 
 import com.google.common.base.Throwables;
 
@@ -59,15 +60,23 @@ public class InMemoryMessageIdManagerTestSystem extends MessageIdManagerTestSyst
     private static final MessageId FIRST_MESSAGE_ID = InMemoryMessageId.of(1);
     private static final long ONE_HUNDRED = 100;
     private static final int UID_VALIDITY = 1024;
-    public static final byte[] CONTENT = "Subject: test\r\n\r\ntestmail".getBytes(StandardCharsets.UTF_8);
 
     private final MailboxManager mailboxManager;
     private Optional<MessageId> lastMessageIdUsed;
+    private final Message message;
 
     private InMemoryMessageIdManagerTestSystem(MessageIdManager messageIdManager, MailboxManager mailboxManager) {
         super(messageIdManager);
         this.mailboxManager = mailboxManager;
         this.lastMessageIdUsed = Optional.empty();
+        try {
+            this.message = Message.Builder.of()
+                .setSubject("test")
+                .setBody("testmail", StandardCharsets.UTF_8)
+                .build();
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
     @Override
@@ -81,11 +90,16 @@ public class InMemoryMessageIdManagerTestSystem extends MessageIdManagerTestSyst
     public MessageId persist(MailboxId mailboxId, MessageUid uid, Flags flags, MailboxSession session) {
         try {
             MessageManager messageManager = mailboxManager.getMailbox(mailboxId, session);
-            MessageId messageId = messageManager.appendMessage(new ByteArrayInputStream(CONTENT), new Date(), session, false, flags)
-                    .getMessageId();
+            MessageId messageId = messageManager.appendMessage(MessageManager.AppendCommand
+                    .builder()
+                    .notRecent()
+                    .withFlags(flags)
+                    .build(message),
+                session)
+                .getMessageId();
             lastMessageIdUsed = Optional.of(messageId);
             return messageId;
-        } catch (MailboxException e) {
+        } catch (MailboxException | IOException e) {
             throw Throwables.propagate(e);
         }
     }
@@ -119,7 +133,11 @@ public class InMemoryMessageIdManagerTestSystem extends MessageIdManagerTestSyst
 
     @Override
     public int getConstantMessageSize() {
-        return CONTENT.length;
+        try {
+            return DefaultMessageWriter.asBytes(message).length;
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
     @Override
