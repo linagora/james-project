@@ -21,9 +21,11 @@
 package org.apache.james.rrt.lib;
 
 import java.io.Serializable;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.james.core.Domain;
+import org.apache.james.core.MailAddress;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
@@ -36,6 +38,10 @@ public class MappingImpl implements Mapping, Serializable {
     public static MappingImpl of(String mapping) {
         Type type = Mapping.detectType(mapping);
         return new MappingImpl(type, type.withoutPrefix(mapping));
+    }
+
+    public static MappingImpl of(Type type, String mapping) {
+        return new MappingImpl(type, mapping);
     }
     
     public static MappingImpl address(String mapping) {
@@ -52,6 +58,10 @@ public class MappingImpl implements Mapping, Serializable {
 
     public static MappingImpl domain(Domain mapping) {
         return new MappingImpl(Type.Domain, mapping.asString());
+    }
+
+    public static MappingImpl forward(String mapping) {
+        return new MappingImpl(Type.Forward, mapping);
     }
     
     private final Type type;
@@ -95,9 +105,8 @@ public class MappingImpl implements Mapping, Serializable {
     }
 
     @Override
-    public String getAddress() {
-        Preconditions.checkState(getType() == Type.Address);
-        return mapping;
+    public Optional<MailAddress> asMailAddress(ValidationMode validationMode) {
+        return validationMode.asMailAddress(this);
     }
 
     @Override

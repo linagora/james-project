@@ -23,6 +23,7 @@ package org.apache.james.rrt.lib;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.StringTokenizer;
@@ -42,6 +43,10 @@ import com.google.common.collect.Lists;
 public class MappingsImpl implements Mappings, Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    public static final Comparator<Mapping> MAPPING_COMPARATOR = Comparator
+        .<Mapping, Integer>comparing(mapping -> mapping.getType().getOrder())
+        .thenComparing(Mapping::asString);
 
     public static MappingsImpl empty() {
         return builder().build();
@@ -102,7 +107,6 @@ public class MappingsImpl implements Mappings, Serializable {
             mappings.add(mapping);
             return this;
         }
-
         
         public Builder addAll(Mappings mappings) {
             this.mappings.addAll(mappings);
@@ -110,9 +114,12 @@ public class MappingsImpl implements Mappings, Serializable {
         }
         
         public MappingsImpl build() {
-            return new MappingsImpl(mappings.build());
+            return new MappingsImpl(mappings.build()
+                .stream()
+                .sorted(MAPPING_COMPARATOR)
+                .collect(Guavate.toImmutableList()));
         }
-        
+
     }
     
     private final ImmutableList<Mapping> mappings;

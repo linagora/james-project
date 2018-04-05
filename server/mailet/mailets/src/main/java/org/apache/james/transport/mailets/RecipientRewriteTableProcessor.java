@@ -20,12 +20,10 @@
 package org.apache.james.transport.mailets;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.mail.MessagingException;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.core.Domain;
@@ -104,15 +102,6 @@ public class RecipientRewriteTableProcessor {
     private final MailetContext mailetContext;
     private final Supplier<Domain> defaultDomainSupplier;
 
-    private static final Function<Mapping, Optional<MailAddress>> mailAddressFromMapping =
-        addressMapping -> {
-            try {
-                return Optional.of(new MailAddress(addressMapping.asString()));
-            } catch (AddressException e) {
-                return Optional.empty();
-            }
-        };
-
     public RecipientRewriteTableProcessor(RecipientRewriteTable virtualTableStore, DomainList domainList, MailetContext mailetContext) {
         this.virtualTableStore = virtualTableStore;
         this.mailetContext = mailetContext;
@@ -174,7 +163,7 @@ public class RecipientRewriteTableProcessor {
     List<MailAddress> handleMappings(Mappings mappings, MailAddress sender, MailAddress recipient, MimeMessage message) throws MessagingException {
         ImmutableList<MailAddress> mailAddresses = mappings.asStream()
             .map(mapping -> mapping.appendDomainIfNone(defaultDomainSupplier))
-            .map(mailAddressFromMapping)
+            .map(mapping -> mapping.asMailAddress(Mapping.ValidationMode.LENIENT))
             .flatMap(OptionalUtils::toStream)
             .collect(Guavate.toImmutableList());
 
