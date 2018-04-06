@@ -21,13 +21,9 @@ package org.apache.james.mailbox.elasticsearch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
-import java.util.Date;
 import java.util.concurrent.Executors;
-
-import javax.mail.Flags;
 
 import org.apache.james.backends.es.DeleteByQueryPerformer;
 import org.apache.james.backends.es.ElasticSearchIndexer;
@@ -55,6 +51,7 @@ import org.apache.james.mailbox.tika.TikaContainer;
 import org.apache.james.mailbox.tika.TikaHttpClientImpl;
 import org.apache.james.mailbox.tika.TikaTextExtractor;
 import org.apache.james.metrics.api.NoopMetricFactory;
+import org.apache.james.mime4j.dom.Message;
 import org.elasticsearch.client.Client;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -68,7 +65,6 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
     private static final int BATCH_SIZE = 1;
     private static final int SEARCH_SIZE = 1;
-    private static final boolean IS_RECENT = true;
 
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder, MailboxElasticSearchConstants.DEFAULT_MAILBOX_INDEX);
@@ -147,9 +143,11 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
         MessageManager messageManager = storeMailboxManager.getMailbox(mailboxPath, session);
 
         String recipient = "benwa@linagora.com";
-        ComposedMessageId composedMessageId = messageManager.appendMessage(new ByteArrayInputStream(("To: " + recipient + "\n" +
-            "\n" +
-            Strings.repeat("0à2345678é", 3200)).getBytes(StandardCharsets.UTF_8)), new Date(), session, IS_RECENT, new Flags());
+        ComposedMessageId composedMessageId = messageManager.appendMessage(MessageManager.AppendCommand.builder()
+            .build(Message.Builder.of()
+                .setTo(recipient)
+                .setBody(Strings.repeat("0à2345678é", 3200), StandardCharsets.UTF_8)),
+            session);
 
         embeddedElasticSearch.awaitForElasticSearch();
 
@@ -164,9 +162,11 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
         MessageManager messageManager = storeMailboxManager.getMailbox(mailboxPath, session);
 
         String recipient = "benwa@linagora.com";
-        ComposedMessageId composedMessageId = messageManager.appendMessage(new ByteArrayInputStream(("To: " + recipient + "\n" +
-            "\n" +
-            Strings.repeat("0123456789", 3300)).getBytes(StandardCharsets.UTF_8)), new Date(), session, IS_RECENT, new Flags());
+        ComposedMessageId composedMessageId = messageManager.appendMessage(MessageManager.AppendCommand.builder()
+            .build(Message.Builder.of()
+                .setTo(recipient)
+                .setBody(Strings.repeat("0123456789", 3300), StandardCharsets.UTF_8)),
+            session);
 
         embeddedElasticSearch.awaitForElasticSearch();
 
@@ -181,9 +181,11 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
         MessageManager messageManager = storeMailboxManager.getMailbox(mailboxPath, session);
 
         String recipient = "benwa@linagora.com";
-        ComposedMessageId composedMessageId = messageManager.appendMessage(new ByteArrayInputStream(("To: " + recipient + "\n" +
-            "\n" +
-            Strings.repeat("0123456789 ", 5000)).getBytes(StandardCharsets.UTF_8)), new Date(), session, IS_RECENT, new Flags());
+        ComposedMessageId composedMessageId = messageManager.appendMessage(MessageManager.AppendCommand.builder()
+            .build(Message.Builder.of()
+                .setTo(recipient)
+                .setBody(Strings.repeat("0123456789 ", 5000), StandardCharsets.UTF_8)),
+            session);
 
         embeddedElasticSearch.awaitForElasticSearch();
 
@@ -198,9 +200,11 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
         MessageManager messageManager = storeMailboxManager.getMailbox(mailboxPath, session);
 
         String recipient = "benwa@linagora.com";
-        ComposedMessageId composedMessageId = messageManager.appendMessage(new ByteArrayInputStream(("To: " + recipient + "\n" +
-            "\n" +
-            Strings.repeat("0123456789", 5000) + " matchMe").getBytes(StandardCharsets.UTF_8)), new Date(), session, IS_RECENT, new Flags());
+        ComposedMessageId composedMessageId = messageManager.appendMessage(MessageManager.AppendCommand.builder()
+            .build(Message.Builder.of()
+                .setTo(recipient)
+                .setBody(Strings.repeat("0123456789 ", 5000) + " matchMe", StandardCharsets.UTF_8)),
+            session);
 
         embeddedElasticSearch.awaitForElasticSearch();
 
@@ -216,9 +220,11 @@ public class ElasticSearchIntegrationTest extends AbstractMessageSearchIndexTest
 
         String recipient = "benwa@linagora.com";
         String reasonableLongTerm = "dichlorodiphényltrichloroéthane";
-        ComposedMessageId composedMessageId = messageManager.appendMessage(new ByteArrayInputStream(("To: " + recipient + "\n" +
-            "\n" +
-            reasonableLongTerm).getBytes(StandardCharsets.UTF_8)), new Date(), session, IS_RECENT, new Flags());
+        ComposedMessageId composedMessageId = messageManager.appendMessage(MessageManager.AppendCommand.builder()
+            .build(Message.Builder.of()
+                .setTo(recipient)
+                .setBody(reasonableLongTerm, StandardCharsets.UTF_8)),
+            session);
 
         embeddedElasticSearch.awaitForElasticSearch();
 

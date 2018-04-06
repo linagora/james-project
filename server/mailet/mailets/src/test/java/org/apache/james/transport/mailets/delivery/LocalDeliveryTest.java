@@ -100,7 +100,7 @@ public class LocalDeliveryTest {
         testee.service(mail);
 
         // Then
-        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+        verify(messageManager).appendMessage(any(MessageManager.AppendCommand.class), any(MailboxSession.class));
     }
 
     @Test
@@ -121,7 +121,7 @@ public class LocalDeliveryTest {
         testee.service(mail);
 
         // Then
-        verify(messageManager).appendMessage(any(InputStream.class), any(Date.class), any(MailboxSession.class), eq(true), any(Flags.class));
+        verify(messageManager).appendMessage(any(MessageManager.AppendCommand.class), any(MailboxSession.class));
     }
 
     private Mail createMail() throws MessagingException, IOException {
