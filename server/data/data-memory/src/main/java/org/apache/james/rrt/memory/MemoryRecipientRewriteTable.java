@@ -93,36 +93,31 @@ public class MemoryRecipientRewriteTable extends AbstractRecipientRewriteTable {
     }
 
     @Override
-    protected void addMappingInternal(String user, Domain domain, Mapping mapping) {
+    public void addMapping(String user, Domain domain, Mapping mapping) {
         mappingEntries.add(new InMemoryMappingEntry(getFixedUser(user), getFixedDomain(domain), mapping));
     }
 
     @Override
-    protected void removeMappingInternal(String user, Domain domain, Mapping mapping) {
+    public void removeMapping(String user, Domain domain, Mapping mapping) {
         mappingEntries.remove(new InMemoryMappingEntry(getFixedUser(user), getFixedDomain(domain), mapping));
     }
 
     @Override
-    protected Mappings getUserDomainMappingsInternal(String user, Domain domain) {
+    public Mappings getUserDomainMappings(String user, Domain domain) {
         return retrieveMappings(user, domain)
             .orElse(null);
     }
 
     @Override
-    protected String mapAddressInternal(String user, Domain domain) {
-        Mappings mappings = OptionalUtils.orSuppliers(
+    protected Mappings mapAddress(String user, Domain domain) {
+        return OptionalUtils.orSuppliers(
             () -> retrieveMappings(user, domain),
             () -> retrieveMappings(WILDCARD, domain))
             .orElse(MappingsImpl.empty());
-
-        return !mappings.isEmpty() ? mappings.serialize() : null;
     }
 
     @Override
     protected Map<String, Mappings> getAllMappingsInternal() {
-        if (mappingEntries.isEmpty()) {
-            return null;
-        }
         return Multimaps.index(mappingEntries, InMemoryMappingEntry::asKey)
             .asMap()
             .entrySet()

@@ -21,6 +21,7 @@ package org.apache.james.rrt.api;
 import java.util.Map;
 
 import org.apache.james.core.Domain;
+import org.apache.james.rrt.lib.Mapping;
 import org.apache.james.rrt.lib.Mappings;
 
 /**
@@ -161,7 +162,7 @@ public interface RecipientRewriteTable {
      *            the mapping
      * @throws RecipientRewriteTableException
      */
-    void addMapping(String user, Domain domain, String mapping) throws RecipientRewriteTableException;
+    void addMapping(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException;
 
     /**
      * Remove mapping
@@ -174,7 +175,7 @@ public interface RecipientRewriteTable {
      *            the mapping
      * @throws RecipientRewriteTableException
      */
-    void removeMapping(String user, Domain domain, String mapping) throws RecipientRewriteTableException;
+    void removeMapping(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException;
 
     /**
      * Return a Map which holds all mappings. The key is the user@domain and the
@@ -210,6 +211,10 @@ public interface RecipientRewriteTable {
     void addForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException;
 
     void removeForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException;
+
+    void addGroupMapping(String user, Domain domain, String address) throws RecipientRewriteTableException;
+
+    void removeGroupMapping(String user, Domain domain, String address) throws RecipientRewriteTableException;
 
     class ErrorMappingException extends Exception {
 

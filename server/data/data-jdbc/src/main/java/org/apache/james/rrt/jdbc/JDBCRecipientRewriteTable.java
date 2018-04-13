@@ -47,6 +47,8 @@ import org.apache.james.util.sql.SqlResources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
+
 /**
  * Class responsible to implement the Virtual User Table in database with JDBC
  * access.
@@ -185,7 +187,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
     }
 
     @Override
-    protected void addMappingInternal(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException {
+    public void addMapping(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException {
         String fixedUser = getFixedUser(user);
         Domain fixedDomain = getFixedDomain(domain);
         Mappings map = getUserDomainMappings(fixedUser, fixedDomain);
@@ -197,7 +199,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
     }
 
     @Override
-    protected String mapAddressInternal(String user, Domain domain) throws RecipientRewriteTableException {
+    protected Mappings mapAddress(String user, Domain domain) throws RecipientRewriteTableException {
         Connection conn = null;
         PreparedStatement mappingStmt = null;
         try {
@@ -210,7 +212,7 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
                 mappingStmt.setString(2, domain.asString());
                 mappingRS = mappingStmt.executeQuery();
                 if (mappingRS.next()) {
-                    return mappingRS.getString(1);
+                    return MappingsImpl.fromRawString(mappingRS.getString(1));
                 }
             } finally {
                 theJDBCUtil.closeJDBCResultSet(mappingRS);
@@ -223,11 +225,11 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
             theJDBCUtil.closeJDBCConnection(conn);
         }
-        return null;
+        return MappingsImpl.empty();
     }
 
     @Override
-    protected Mappings getUserDomainMappingsInternal(String user, Domain domain) throws RecipientRewriteTableException {
+    public Mappings getUserDomainMappings(String user, Domain domain) throws RecipientRewriteTableException {
         Connection conn = null;
         PreparedStatement mappingStmt = null;
         try {
@@ -285,11 +287,11 @@ public class JDBCRecipientRewriteTable extends AbstractRecipientRewriteTable {
             theJDBCUtil.closeJDBCStatement(mappingStmt);
             theJDBCUtil.closeJDBCConnection(conn);
         }
-        return null;
+        return ImmutableMap.of();
     }
 
     @Override
-    protected void removeMappingInternal(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException {
+    public void removeMapping(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException {
         String fixedUser = getFixedUser(user);
         Domain fixedDomain = getFixedDomain(domain);
         Mappings map = getUserDomainMappings(fixedUser, fixedDomain);

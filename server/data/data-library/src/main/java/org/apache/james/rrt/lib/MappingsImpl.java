@@ -40,7 +40,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class MappingsImpl implements Mappings, Serializable {
+public class
+
+
+
+
+MappingsImpl implements Mappings, Serializable {
 
     private static final long serialVersionUID = 1L;
 

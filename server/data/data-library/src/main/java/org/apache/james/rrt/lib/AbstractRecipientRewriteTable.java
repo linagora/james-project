@@ -18,9 +18,9 @@
  ****************************************************************/
 package org.apache.james.rrt.lib;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -40,9 +40,9 @@ import org.apache.james.rrt.lib.Mapping.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 
- */
+import com.github.fge.lambdas.Throwing;
+import com.google.common.base.Preconditions;
+
 public abstract class AbstractRecipientRewriteTable implements RecipientRewriteTable, Configurable {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRecipientRewriteTable.class);
 
@@ -110,7 +110,7 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
         Mappings targetMappings = mapAddress(user, domain);
 
         // Only non-null mappings are translated
-        if (targetMappings != null) {
+        if (!targetMappings.isEmpty()) {
             if (targetMappings.contains(Type.Error)) {
                 throw new ErrorMappingException(targetMappings.getError().getErrorMessage());
             } else {
@@ -144,27 +144,37 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
                         // Check if the returned mapping is the same as the
                         // input. If so return null to avoid loops
                         if (userName.equalsIgnoreCase(user) && targetDomain.equals(domain)) {
-                            return null;
+                            return MappingsImpl.empty();
                         }
 
                         Mappings childMappings = getMappings(userName, targetDomain, mappingLimit - 1);
 
-                        if (childMappings == null || childMappings.isEmpty()) {
+                        if (childMappings.isEmpty()) {
                             // add mapping
-                            mappings.add(addressWithMappingApplied);
+                            mappings.add(toMapping(addressWithMappingApplied, type));
                         } else {
                             mappings = mappings.addAll(childMappings);
                         }
 
                     } else {
-                        mappings.add(addressWithMappingApplied);
+                        mappings.add(toMapping(addressWithMappingApplied, type));
                     }
                 }
                 return mappings.build();
             }
         }
 
-        return null;
+        return MappingsImpl.empty();
+    }
+
+    private Mapping toMapping(String mappedAddress, Type type) {
+        switch (type) {
+            case Forward:
+            case Group:
+                return MappingImpl.of(type, mappedAddress);
+            default:
+                return MappingImpl.address(mappedAddress);
+        }
     }
 
     private Optional<String> applyMapping(String user, Domain domain, String target, Type type) {
@@ -179,7 +189,7 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
             case Domain:
                 return Optional.of(user + "@" + Type.Domain.withoutPrefix(target));
             default:
-                return Optional.ofNullable(target);
+                return Optional.of(type.withoutPrefix(target));
         }
     }
 
@@ -191,196 +201,133 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
             throw new RecipientRewriteTableException("Invalid regex: " + regex, e);
         }
 
-        checkMapping(user, domain, MappingImpl.regex(regex));
+        MappingImpl mapping = MappingImpl.regex(regex);
+        checkMapping(user, domain, mapping);
         LOGGER.info("Add regex mapping => {} for user: {} domain: {}", regex, user, domain.name());
-        addMappingInternal(user, domain, MappingImpl.regex(regex));
+        addMapping(user, domain, mapping);
 
     }
 
     @Override
     public void removeRegexMapping(String user, Domain domain, String regex) throws RecipientRewriteTableException {
         LOGGER.info("Remove regex mapping => {} for user: {} domain: {}", regex, user, domain.name());
-        removeMappingInternal(user, domain, MappingImpl.regex(regex));
+        removeMapping(user, domain, MappingImpl.regex(regex));
     }
 
     @Override
     public void addAddressMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
-        String addressWithDomain = addDefaultDomainIfNone(address);
-        checkAddressIsValid(addressWithDomain);
-        checkMapping(user, domain, MappingImpl.address(addressWithDomain));
-        LOGGER.info("Add address mapping => {} for user: {} domain: {}", addressWithDomain, user, domain.name());
-        addMappingInternal(user, domain, MappingImpl.address(addressWithDomain));
+        Mapping mapping = MappingImpl.address(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        checkHasValidAddress(mapping);
+        checkMapping(user, domain, mapping);
+
+        LOGGER.info("Add address mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        addMapping(user, domain, mapping);
     }
 
-    private String addDefaultDomainIfNone(String address) throws RecipientRewriteTableException {
-        if (address.indexOf('@') < 0) {
+    private Supplier<Domain> defaultDomainSupplier() throws RecipientRewriteTableException {
+        return Throwing.supplier(() -> {
             try {
-                return address + "@" + domainList.getDefaultDomain().asString();
+                return domainList.getDefaultDomain();
             } catch (DomainListException e) {
                 throw new RecipientRewriteTableException("Unable to retrieve default domain", e);
             }
-        }
-        return address;
+        }).sneakyThrow();
     }
 
-    private void checkAddressIsValid(String addressWithDomain) throws RecipientRewriteTableException {
-        try {
-            new MailAddress(addressWithDomain);
-        } catch (ParseException e) {
-            throw new RecipientRewriteTableException("Invalid emailAddress: " + addressWithDomain, e);
+    private void checkHasValidAddress(Mapping mapping) throws RecipientRewriteTableException {
+        if (!mapping.asMailAddress().isPresent()) {
+            throw new RecipientRewriteTableException("Invalid emailAddress: " + mapping);
         }
     }
 
     @Override
     public void removeAddressMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
-        String addressWithDomain = addDefaultDomainIfNone(address);
-        LOGGER.info("Remove address mapping => {} for user: {} domain: {}", addressWithDomain, user, domain.name());
-        removeMappingInternal(user, domain, MappingImpl.address(addressWithDomain));
+        Mapping mapping = MappingImpl.address(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        LOGGER.info("Remove address mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        removeMapping(user, domain, mapping);
     }
 
     @Override
     public void addErrorMapping(String user, Domain domain, String error) throws RecipientRewriteTableException {
-        checkMapping(user, domain, MappingImpl.error(error));
+        MappingImpl mapping = MappingImpl.error(error);
+
+        checkMapping(user, domain, mapping);
         LOGGER.info("Add error mapping => {} for user: {} domain: {}", error, user, domain.name());
-        addMappingInternal(user, domain, MappingImpl.error(error));
+        addMapping(user, domain, mapping);
 
     }
 
     @Override
     public void removeErrorMapping(String user, Domain domain, String error) throws RecipientRewriteTableException {
         LOGGER.info("Remove error mapping => {} for user: {} domain: {}", error, user, domain.name());
-        removeMappingInternal(user, domain, MappingImpl.error(error));
-    }
-
-    @Override
-    public void addMapping(String user, Domain domain, String mapping) throws RecipientRewriteTableException {
-        String map = mapping.toLowerCase(Locale.US);
-        Type mappingType = Mapping.detectType(map);
-        String mappingSuffix = mappingType.withoutPrefix(map);
-
-        if (mappingType.equals(Type.Error)) {
-            addErrorMapping(user, domain, mappingSuffix);
-        } else if (mappingType.equals(Type.Regex)) {
-            addRegexMapping(user, domain, mappingSuffix);
-        } else if (mappingType.equals(Type.Domain)) {
-            if (user != null) {
-                throw new RecipientRewriteTableException("User must be null for aliasDomain mappings");
-            }
-            addAliasDomainMapping(domain, Domain.of(mappingSuffix));
-        } else {
-            addAddressMapping(user, domain, mappingSuffix);
-        }
-    }
-
-    @Override
-    public void removeMapping(String user, Domain domain, String mapping) throws RecipientRewriteTableException {
-        String map = mapping.toLowerCase(Locale.US);
-        Type mappingType = Mapping.detectType(map);
-        String mappingSuffix = mappingType.withoutPrefix(map);
-
-        switch (mappingType) {
-            case Error:
-                removeErrorMapping(user, domain, mappingSuffix);
-                break;
-            case Regex:
-                removeRegexMapping(user, domain, mappingSuffix);
-                break;
-            case Domain:
-                if (user != null) {
-                    throw new RecipientRewriteTableException("User must be null for aliasDomain mappings");
-                }
-                removeAliasDomainMapping(domain, Domain.of(mappingSuffix));
-                break;
-            case Address:
-                removeAddressMapping(user, domain, map);
-                break;
-            case Forward:
-                removeForwardMapping(user, domain, map);
-                break;
-        }
+        removeMapping(user, domain, MappingImpl.error(error));
     }
 
     @Override
     public Map<String, Mappings> getAllMappings() throws RecipientRewriteTableException {
-        int count = 0;
         Map<String, Mappings> mappings = getAllMappingsInternal();
 
-        if (mappings != null) {
-            count = mappings.size();
-        }
-        LOGGER.debug("Retrieve all mappings. Mapping count: {}", count);
+        LOGGER.debug("Retrieve all mappings. Mapping count: {}", mappings.size());
         return mappings;
-    }
-
-    @Override
-    public Mappings getUserDomainMappings(String user, Domain domain) throws RecipientRewriteTableException {
-        return getUserDomainMappingsInternal(user, domain);
     }
 
     @Override
     public void addAliasDomainMapping(Domain aliasDomain, Domain realDomain) throws RecipientRewriteTableException {
         LOGGER.info("Add domain mapping: {} => {}", aliasDomain, realDomain);
-        addMappingInternal(null, aliasDomain, MappingImpl.domain(realDomain));
+        addMapping(null, aliasDomain, MappingImpl.domain(realDomain));
     }
 
     @Override
     public void removeAliasDomainMapping(Domain aliasDomain, Domain realDomain) throws RecipientRewriteTableException {
         LOGGER.info("Remove domain mapping: {} => {}", aliasDomain, realDomain);
-        removeMappingInternal(null, aliasDomain, MappingImpl.domain(realDomain));
+        removeMapping(null, aliasDomain, MappingImpl.domain(realDomain));
     }
 
     @Override
     public void addForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
-        String addressWithDomain = addDefaultDomainIfNone(address);
-        checkAddressIsValid(addressWithDomain);
-        checkMapping(user, domain, MappingImpl.forward(addressWithDomain));
-        LOGGER.info("Add forward mapping => {} for user: {} domain: {}", addressWithDomain, user, domain.name());
-        addMappingInternal(user, domain, MappingImpl.forward(addressWithDomain));
+        Mapping mapping = MappingImpl.forward(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        checkHasValidAddress(mapping);
+        checkMapping(user, domain, mapping);
+
+        LOGGER.info("Add forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        addMapping(user, domain, mapping);
     }
 
     @Override
     public void removeForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
-        String addressWithDomain = addDefaultDomainIfNone(address);
-        LOGGER.info("Remove forward mapping => {} for user: {} domain: {}", addressWithDomain, user, domain.name());
-        removeMappingInternal(user, domain, MappingImpl.forward(addressWithDomain));
+        Mapping mapping = MappingImpl.forward(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        LOGGER.info("Remove forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        removeMapping(user, domain, mapping);
     }
 
-    /**
-     * Add new mapping
-     *
-     * @param user
-     *            the user
-     * @param domain
-     *            the domain
-     * @param mapping
-     *            the mapping
-     * @throws RecipientRewriteTableException
-     */
-    protected abstract void addMappingInternal(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException;
+    @Override
+    public void addGroupMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
+        Mapping mapping = MappingImpl.group(address)
+            .appendDomainIfNone(defaultDomainSupplier());
 
-    /**
-     * Remove mapping
-     * 
-     * @param user
-     *            the user
-     * @param domain
-     *            the domain
-     * @param mapping
-     *            the mapping
-     * @throws RecipientRewriteTableException
-     */
-    protected abstract void removeMappingInternal(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException;
+        checkHasValidAddress(mapping);
+        checkMapping(user, domain, mapping);
 
-    /**
-     * Return Collection of all mappings for the given username and domain
-     * 
-     * @param user
-     *            the user
-     * @param domain
-     *            the domain
-     * @return Collection which hold the mappings
-     */
-    protected abstract Mappings getUserDomainMappingsInternal(String user, Domain domain) throws RecipientRewriteTableException;
+        LOGGER.info("Add forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        addMapping(user, domain, mapping);
+    }
+
+    @Override
+    public void removeGroupMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
+        Mapping mapping = MappingImpl.group(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        LOGGER.info("Remove forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        removeMapping(user, domain, mapping);
+    }
 
     /**
      * Return a Map which holds all Mappings
@@ -404,28 +351,7 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
      *            the mapping of virtual to real recipients, as
      *            <code>MailAddress</code>es to <code>String</code>s.
      */
-    protected abstract String mapAddressInternal(String user, Domain domain) throws RecipientRewriteTableException;
-
-    /**
-     * Get all mappings for the given user and domain. If a aliasdomain mapping
-     * was found get sure it is in the map as first mapping.
-     * 
-     * @param user
-     *            the username
-     * @param domain
-     *            the domain
-     * @return the mappings
-     */
-    private Mappings mapAddress(String user, Domain domain) throws RecipientRewriteTableException {
-
-        String mappings = mapAddressInternal(user, domain);
-
-        if (mappings != null) {
-            return MappingsImpl.fromRawString(mappings);
-        } else {
-            return null;
-        }
-    }
+    protected abstract Mappings mapAddress(String user, Domain domain) throws RecipientRewriteTableException;
 
     private void checkMapping(String user, Domain domain, Mapping mapping) throws RecipientRewriteTableException {
         Mappings mappings = getUserDomainMappings(user, domain);
@@ -442,15 +368,9 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
      * @return fixedUser the fixed user String
      */
     protected String getFixedUser(String user) {
-        if (user != null) {
-            if (user.equals(WILDCARD) || !user.contains("@")) {
-                return user;
-            } else {
-                throw new IllegalArgumentException("Invalid user: " + user);
-            }
-        } else {
-            return WILDCARD;
-        }
+        String sanitizedUser = Optional.ofNullable(user).orElse(WILDCARD);
+        Preconditions.checkArgument(sanitizedUser.equals(WILDCARD) || !sanitizedUser.contains("@"));
+        return sanitizedUser;
     }
 
     /**
