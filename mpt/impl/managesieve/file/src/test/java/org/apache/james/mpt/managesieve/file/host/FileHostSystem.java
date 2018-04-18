@@ -20,13 +20,10 @@
 package org.apache.james.mpt.managesieve.file.host;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.filesystem.api.FileSystemFixture;
 import org.apache.james.mpt.host.JamesManageSieveHostSystem;
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.file.SieveFileRepository;
@@ -39,22 +36,7 @@ public class FileHostSystem extends JamesManageSieveHostSystem {
     private static final FileSystem fileSystem = getFileSystem();
 
     private static FileSystem getFileSystem() {
-        return new FileSystem() {
-            @Override
-            public File getBasedir() throws FileNotFoundException {
-                return new File(System.getProperty("java.io.tmpdir"));
-            }
-            
-            @Override
-            public InputStream getResource(String url) throws IOException {
-                return new FileInputStream(getFile(url));
-            }
-            
-            @Override
-            public File getFile(String fileURL) throws FileNotFoundException {
-                return new File(getBasedir(), fileURL.substring(FileSystem.FILE_PROTOCOL.length()));
-            }
-        };
+        return FileSystemFixture.TEMP_FILE_SYSTEM.get();
     }
 
     @Override

@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.store.event.distributed;
 
 import java.util.Collection;
+import java.util.Set;
 
 import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
@@ -35,6 +36,8 @@ import org.apache.james.mailbox.store.publisher.Publisher;
 import org.apache.james.mailbox.store.publisher.Topic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 public class BroadcastDelegatingMailboxListener implements DistributedDelegatingMailboxListener {
 
@@ -144,6 +147,11 @@ public class BroadcastDelegatingMailboxListener implements DistributedDelegating
                 eventDelivery.deliver(mailboxListener, event);
             }
         }
+    }
+
+    @Override
+    public Set<MailboxListener> getGlobalMailboxListeners() {
+        return ImmutableSet.copyOf(mailboxListenerRegistry.getGlobalListeners());
     }
 
 }

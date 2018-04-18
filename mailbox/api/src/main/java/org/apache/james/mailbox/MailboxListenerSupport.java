@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox;
 
+import java.util.Set;
+
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
 
@@ -76,6 +78,8 @@ public interface MailboxListenerSupport {
      * @throws MailboxException
      */
     void removeGlobalListener(MailboxListener listner, MailboxSession session) throws MailboxException;
+
+    Set<MailboxListener> getGlobalMailboxListeners() throws MailboxException;
 
 
 }

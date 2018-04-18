@@ -43,6 +43,12 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>james-server-data-memory</artifactId>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-filesystem-api</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

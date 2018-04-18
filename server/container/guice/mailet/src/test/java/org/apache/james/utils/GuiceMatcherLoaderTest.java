@@ -19,9 +19,8 @@
 
 package org.apache.james.utils;
 
-import static org.apache.james.utils.FileSystemFixture.CLASSPATH_FILE_SYSTEM;
-import static org.apache.james.utils.FileSystemFixture.RECURSIVE_CLASSPATH_FILE_SYSTEM;
-import static org.apache.james.utils.FileSystemFixture.THROWING_FILE_SYSTEM;
+import static org.apache.james.filesystem.api.FileSystemFixture.FIXED_CLASSPATH_FILE_SYSTEM;
+import static org.apache.james.filesystem.api.FileSystemFixture.THROWING_FILE_SYSTEM;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
@@ -72,7 +71,7 @@ public class GuiceMatcherLoaderTest {
     @Test
     public void getMatcherShouldLoadClassWhenInExtensionsJars() throws Exception {
         GuiceMatcherLoader guiceMatcherLoader = new GuiceMatcherLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/extensions-jars")));
 
         Matcher matcher = guiceMatcherLoader.getMatcher(FakeMatcherConfig.builder()
             .matcherName("CustomMatcher")
@@ -86,7 +85,7 @@ public class GuiceMatcherLoaderTest {
     @Test
     public void getMatcherShouldBrowseRecursivelyExtensionJars() throws Exception {
         GuiceMatcherLoader guiceMatcherLoader = new GuiceMatcherLoader(injector,
-            new ExtendedClassLoader(RECURSIVE_CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/")));
 
         Matcher matcher = guiceMatcherLoader.getMatcher(FakeMatcherConfig.builder()
             .matcherName("CustomMatcher")
@@ -100,7 +99,7 @@ public class GuiceMatcherLoaderTest {
     @Test
     public void getMatcherShouldAllowCustomPackages() throws Exception {
         GuiceMatcherLoader guiceMatcherLoader = new GuiceMatcherLoader(injector,
-            new ExtendedClassLoader(RECURSIVE_CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/")));
 
         Matcher matcher = guiceMatcherLoader.getMatcher(FakeMatcherConfig.builder()
             .matcherName("com.custom.matchers.AnotherMatcher")
@@ -114,7 +113,7 @@ public class GuiceMatcherLoaderTest {
     @Test
     public void getMatcherShouldThrowOnUnknownMailet() throws Exception {
         GuiceMatcherLoader guiceMatcherLoader = new GuiceMatcherLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/extensions-jars")));
 
         expectedException.expect(MessagingException.class);
 

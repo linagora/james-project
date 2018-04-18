@@ -762,6 +762,11 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
+    public Set<MailboxListener> getGlobalMailboxListeners() throws MailboxException {
+        return delegatingListener.getGlobalMailboxListeners();
+    }
+
+    @Override
     public void addGlobalListener(MailboxListener listener, MailboxSession session) throws MailboxException {
         delegatingListener.addGlobalListener(listener, session);
     }

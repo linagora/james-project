@@ -19,9 +19,8 @@
 
 package org.apache.james.utils;
 
-import static org.apache.james.utils.FileSystemFixture.CLASSPATH_FILE_SYSTEM;
-import static org.apache.james.utils.FileSystemFixture.RECURSIVE_CLASSPATH_FILE_SYSTEM;
-import static org.apache.james.utils.FileSystemFixture.THROWING_FILE_SYSTEM;
+import static org.apache.james.filesystem.api.FileSystemFixture.FIXED_CLASSPATH_FILE_SYSTEM;
+import static org.apache.james.filesystem.api.FileSystemFixture.THROWING_FILE_SYSTEM;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.MessagingException;
@@ -72,7 +71,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldLoadClassWhenInExtensionsJars() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/extensions-jars")));
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("CustomMailet")
@@ -86,7 +85,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldBrowseRecursivelyExtensionsJars() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(RECURSIVE_CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/")));
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("CustomMailet")
@@ -100,7 +99,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailedShouldAllowCustomPackages() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/extensions-jars")));
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("com.custom.mailets.AnotherMailet")
@@ -114,7 +113,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldThrowOnUnknownMailet() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(FIXED_CLASSPATH_FILE_SYSTEM.apply("recursive/extensions-jars")));
 
         expectedException.expect(MessagingException.class);
 

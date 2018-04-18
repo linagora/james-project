@@ -37,6 +37,8 @@ import org.apache.james.mailbox.store.publisher.Topic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 public class RegisteredDelegatingMailboxListener implements DistributedDelegatingMailboxListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RegisteredDelegatingMailboxListener.class);
@@ -180,6 +182,11 @@ public class RegisteredDelegatingMailboxListener implements DistributedDelegatin
                 LOGGER.error("Unable to send serialized event to topic {}", topic);
             }
         }
+    }
+
+    @Override
+    public Set<MailboxListener> getGlobalMailboxListeners() {
+        return ImmutableSet.copyOf(mailboxListenerRegistry.getGlobalListeners());
     }
 
 }

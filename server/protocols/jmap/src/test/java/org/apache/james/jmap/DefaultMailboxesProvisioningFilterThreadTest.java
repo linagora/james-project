@@ -327,6 +327,11 @@ public class DefaultMailboxesProvisioningFilterThreadTest {
         public MailboxSession loginAsOtherUser(String adminUserId, String passwd, String realUserId) throws BadCredentialsException, MailboxException {
             return null;
         }
+
+        @Override
+        public Set<MailboxListener> getGlobalMailboxListeners() throws MailboxException {
+            return null;
+        }
     }
 }
 

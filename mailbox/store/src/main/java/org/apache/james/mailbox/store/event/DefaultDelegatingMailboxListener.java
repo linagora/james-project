@@ -20,6 +20,7 @@
 package org.apache.james.mailbox.store.event;
 
 import java.util.Collection;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -28,6 +29,8 @@ import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxPath;
+
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Receive a {@link org.apache.james.mailbox.MailboxListener.MailboxEvent} and delegate it to an other
@@ -92,6 +95,11 @@ public class DefaultDelegatingMailboxListener implements DelegatingMailboxListen
         if (event instanceof MailboxEvent) {
             mailboxEvent((MailboxEvent) event);
         }
+    }
+
+    @Override
+    public Set<MailboxListener> getGlobalMailboxListeners() {
+        return ImmutableSet.copyOf(registry.getGlobalListeners());
     }
 
     private void mailboxEvent(MailboxEvent mailboxEvent) {

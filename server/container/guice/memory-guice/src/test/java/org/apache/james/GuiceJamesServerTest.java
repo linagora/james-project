@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.modules.MailboxListenerProbe;
 import org.apache.james.utils.ConfigurationPerformer;
+import org.apache.james.utils.PropertiesProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,6 +52,23 @@ public class GuiceJamesServerTest {
     }
 
     @Test
+    public void serverShouldRegisterUserMailboxListeners() throws Exception {
+        GuiceJamesServer overriddenServer = this.guiceJamesServer
+            .overrideWith(binder -> binder.bind(PropertiesProvider.class).to(PropertiesProvider.ClassPathPropertiesProvider.class));
+
+        try {
+            overriddenServer.start();
+
+            assertThat(overriddenServer.getProbe(MailboxListenerProbe.class)
+                .getGlobalMailboxListeners())
+                .filteredOn(listner -> listner instanceof TestListener)
+                .hasSize(1);
+        } finally {
+            overriddenServer.stop();
+        }
+    }
+
+    @Test
     public void serverShouldBeStartedAfterCallingStart() throws Exception {
         guiceJamesServer.start();
 
@@ -66,7 +85,7 @@ public class GuiceJamesServerTest {
     }
 
     @Test
-    public void serverShouldNotBeStartedBeforeCallingStart() throws Exception {
+    public void serverShouldNotBeStartedBeforeCallingStart() {
         assertThat(guiceJamesServer.isStarted()).isFalse();
     }
 

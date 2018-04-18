@@ -19,13 +19,10 @@
 
 package org.apache.james.jmap.crypto;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Optional;
 
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.filesystem.api.FileSystemFixture;
 import org.apache.james.jmap.JMAPConfiguration;
 
 public class JamesSignatureHandlerProvider {
@@ -40,22 +37,7 @@ public class JamesSignatureHandlerProvider {
         "-----END PUBLIC KEY-----";
 
     public JamesSignatureHandler provide() throws Exception {
-        FileSystem fileSystem = new FileSystem() {
-            @Override
-            public InputStream getResource(String url) throws IOException {
-                return ClassLoader.getSystemResourceAsStream("keystore");
-            }
-
-            @Override
-            public File getFile(String fileURL) throws FileNotFoundException {
-                return null;
-            }
-
-            @Override
-            public File getBasedir() throws FileNotFoundException {
-                return null;
-            }
-        };
+        FileSystem fileSystem = FileSystemFixture.CLASSPATH_FILE_SYSTEM;
         JamesSignatureHandler signatureHandler = new JamesSignatureHandler(fileSystem, 
                 JMAPConfiguration.builder()
                     .enable()

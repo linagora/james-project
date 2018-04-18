@@ -33,16 +33,29 @@ import com.google.common.base.Strings;
 
 public class PropertiesProvider {
 
+    public static class ClassPathPropertiesProvider extends PropertiesProvider {
+        @Inject
+        public ClassPathPropertiesProvider(FileSystem fileSystem) {
+            super(FileSystem.CLASSPATH_PROTOCOL, fileSystem);
+        }
+    }
+
+    private final String urlPrefix;
     private final FileSystem fileSystem;
+
+    public PropertiesProvider(String urlPrefix, FileSystem fileSystem) {
+        this.urlPrefix = urlPrefix;
+        this.fileSystem = fileSystem;
+    }
 
     @Inject
     public PropertiesProvider(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
+        this(FileSystem.FILE_PROTOCOL_AND_CONF, fileSystem);
     }
 
     public PropertiesConfiguration getConfiguration(String fileName) throws FileNotFoundException, ConfigurationException {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(fileName));
-        File file = fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + fileName + ".properties");
+        File file = fileSystem.getFile(urlPrefix + fileName + ".properties");
         if (!file.exists()) {
             throw new FileNotFoundException();
         }
