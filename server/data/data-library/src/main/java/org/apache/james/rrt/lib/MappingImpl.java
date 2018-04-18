@@ -28,10 +28,10 @@ import javax.mail.internet.AddressException;
 
 import org.apache.james.core.Domain;
 import org.apache.james.core.MailAddress;
+import org.apache.james.core.User;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-
 
 public class MappingImpl implements Mapping, Serializable {
 
@@ -64,6 +64,10 @@ public class MappingImpl implements Mapping, Serializable {
 
     public static MappingImpl forward(String mapping) {
         return new MappingImpl(Type.Forward, mapping);
+    }
+
+    public static MappingImpl group(String mapping) {
+        return new MappingImpl(Type.Group, mapping);
     }
     
     private final Type type;
@@ -108,7 +112,7 @@ public class MappingImpl implements Mapping, Serializable {
 
     @Override
     public Optional<MailAddress> asMailAddress() {
-        if (type != Type.Address && type != Type.Forward) {
+        if (type != Type.Address && type != Type.Forward && type != Type.Group) {
             return Optional.empty();
         }
         try {
@@ -116,6 +120,13 @@ public class MappingImpl implements Mapping, Serializable {
         } catch (AddressException e) {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public Optional<User> rewriteUser(User user) throws AddressException {
+        return type.getUserRewriter()
+            .generateUserRewriter(mapping)
+            .rewrite(user);
     }
 
     @Override

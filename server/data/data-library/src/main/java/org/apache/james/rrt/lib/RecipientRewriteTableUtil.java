@@ -23,12 +23,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringTokenizer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 import org.apache.james.core.Domain;
-import org.apache.james.core.MailAddress;
 import org.apache.james.rrt.lib.Mapping.Type;
 import org.apache.james.util.OptionalUtils;
 
@@ -38,97 +34,6 @@ import org.apache.james.util.OptionalUtils;
 public class RecipientRewriteTableUtil {
 
     private RecipientRewriteTableUtil() {
-    }
-
-    /**
-     * Processes regex virtual user mapping
-     * 
-     * If a mapped target string begins with the prefix regex:, it must be
-     * formatted as regex:<regular-expression>:<parameterized-string>, e.g.,
-     * regex:(.*)@(.*):${1}@tld
-     * 
-     * @param address
-     *            the MailAddress to be mapped
-     * @param targetString
-     *            a String specifying the mapping
-     * @throws MalformedPatternException
-     */
-    public static String regexMap(MailAddress address, String targetString) {
-        String result = null;
-        int identifierLength = Type.Regex.asPrefix().length();
-
-        int msgPos = targetString.indexOf(':', identifierLength + 1);
-
-        // Throw exception on invalid format
-        if (msgPos < identifierLength + 1) {
-            throw new PatternSyntaxException("Regex should be formatted as regex:<regular-expression>:<parameterized-string>", targetString, 0);
-        }
-
-        Pattern pattern = Pattern.compile(targetString.substring(identifierLength, msgPos));
-        Matcher match = pattern.matcher(address.toString());
-
-        if (match.matches()) {
-            Map<String, String> parameters = new HashMap<>(match.groupCount());
-            for (int i = 1; i < match.groupCount(); i++) {
-                parameters.put(Integer.toString(i), match.group(i));
-            }
-            result = replaceParameters(targetString.substring(msgPos + 1), parameters);
-        }
-        return result;
-    }
-
-    /**
-     * Returns a named string, replacing parameters with the values set.
-     * 
-     * @param str
-     *            the name of the String resource required.
-     * @param parameters
-     *            a map of parameters (name-value string pairs) which are
-     *            replaced where found in the input strings
-     * @return the requested resource
-     */
-    public static String replaceParameters(String str, Map<String, String> parameters) {
-        if (str != null && parameters != null) {
-            // Do parameter replacements for this string resource.
-            StringBuilder replaceBuffer = new StringBuilder(64);
-            for (Map.Entry<String, String> entry : parameters.entrySet()) {
-                replaceBuffer.setLength(0);
-                replaceBuffer.append("${").append(entry.getKey()).append("}");
-                str = substituteSubString(str, replaceBuffer.toString(), entry.getValue());
-            }
-        }
-
-        return str;
-    }
-
-    /**
-     * Replace substrings of one string with another string and return altered
-     * string.
-     * 
-     * @param input
-     *            input string
-     * @param find
-     *            the string to replace
-     * @param replace
-     *            the string to replace with
-     * @return the substituted string
-     */
-    private static String substituteSubString(String input, String find, String replace) {
-        int findLength = find.length();
-        int replaceLength = replace.length();
-
-        StringBuilder output = new StringBuilder(input);
-        int index = input.indexOf(find);
-        int outputOffset = 0;
-
-        while (index > -1) {
-            output.replace(index + outputOffset, index + outputOffset + findLength, replace);
-            outputOffset = outputOffset + (replaceLength - findLength);
-
-            index = input.indexOf(find, index + findLength);
-        }
-
-        return output.toString();
     }
 
     /**

@@ -171,4 +171,21 @@ public class RecipientRewriteTableManagement extends StandardMBean implements Re
         }
     }
 
+    @Override
+    public void addGroupMapping(String toUser, String toDomain, String fromAddress) {
+        try {
+            rrt.addGroupMapping(toUser, Domain.of(toDomain), fromAddress);
+        } catch (RecipientRewriteTableException e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    @Override
+    public void removeGroupMapping(String toUser, String toDomain, String fromAddress) {
+        try {
+            rrt.removeForwardMapping(toUser, Domain.of(toDomain), fromAddress);
+        } catch (RecipientRewriteTableException e) {
+            throw Throwables.propagate(e);
+        }
+    }
 }

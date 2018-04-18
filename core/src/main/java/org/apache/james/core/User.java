@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.mail.internet.AddressException;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -47,7 +49,13 @@ public class User {
     public static User fromLocalPartWithDomain(String localPart, String domain) {
         Preconditions.checkNotNull(domain);
 
-        return from(localPart,
+        return fromLocalPartWithDomain(localPart, Domain.of(domain));
+    }
+
+    public static User fromLocalPartWithDomain(String localPart, Domain domain) {
+        Preconditions.checkNotNull(domain);
+
+        return new User(localPart,
             Optional.of(domain));
     }
 
@@ -57,19 +65,19 @@ public class User {
     }
 
     public static User from(String localPart, Optional<String> domain) {
-       return new User(localPart, domain);
+       return new User(localPart, domain.map(Domain::of));
     }
 
     private final String localPart;
     private final Optional<Domain> domainPart;
 
-    private User(String localPart, Optional<String> domainPart) {
+    private User(String localPart, Optional<Domain> domainPart) {
         Preconditions.checkNotNull(localPart);
         Preconditions.checkArgument(!localPart.isEmpty(), "username should not be empty");
         Preconditions.checkArgument(!localPart.contains("@"), "username can not contain domain delimiter");
 
         this.localPart = localPart;
-        this.domainPart = domainPart.map(Domain::of);
+        this.domainPart = domainPart;
     }
 
     public String getLocalPart() {
@@ -84,9 +92,29 @@ public class User {
         return domainPart.isPresent();
     }
 
+    public User withDefaultDomain(Domain defaultDomain) {
+        if (hasDomainPart()) {
+            return this;
+        }
+        return new User(localPart, Optional.of(defaultDomain));
+    }
+
+    public User withDefaultDomainFromUser(User other) {
+        Preconditions.checkArgument(other.hasDomainPart());
+        if (hasDomainPart()) {
+            return this;
+        }
+        return new User(localPart, Optional.of(other.domainPart.get()));
+    }
+
     public String asString() {
         return domainPart.map(domain -> localPart + "@" + domain.asString())
             .orElse(localPart);
+    }
+
+    public MailAddress asMailAddress() throws AddressException {
+        Preconditions.checkState(hasDomainPart());
+        return new MailAddress(localPart, domainPart.get());
     }
 
     @Override

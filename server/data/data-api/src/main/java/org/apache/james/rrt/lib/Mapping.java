@@ -22,9 +22,14 @@ package org.apache.james.rrt.lib;
 
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
+import javax.mail.internet.AddressException;
+
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.core.Domain;
 import org.apache.james.core.MailAddress;
+import org.apache.james.core.User;
 
 import com.google.common.base.Preconditions;
 
@@ -43,24 +48,30 @@ public interface Mapping {
         if (input.startsWith(Type.Forward.asPrefix())) {
             return Type.Forward;
         }
+        if (input.startsWith(Type.Group.asPrefix())) {
+            return Type.Group;
+        }
         return Type.Address;
     }
 
     Optional<MailAddress> asMailAddress();
 
     enum Type {
-        Regex("regex:", 3),
-        Domain("domain:", 1),
-        Error("error:", 3),
-        Forward("forward:", 2),
-        Address("", 3);
+        Regex("regex:", IdentityMappingBehaviour.Throw, new UserRewritter.RegexRewriter()),
+        Domain("domain:", IdentityMappingBehaviour.Throw, new UserRewritter.DomainRewriter()),
+        Error("error:", IdentityMappingBehaviour.Throw, new UserRewritter.NoneRewriter()),
+        Forward("forward:", IdentityMappingBehaviour.ReturnIdentity, new UserRewritter.ReplaceRewriter()),
+        Group("group:", IdentityMappingBehaviour.Throw, new UserRewritter.ReplaceRewriter()),
+        Address("", IdentityMappingBehaviour.Throw, new UserRewritter.ReplaceRewriter());
 
         private final String asPrefix;
-        private final int order;
+        private final IdentityMappingBehaviour identityMappingBehaviour;
+        private final UserRewritter.MappingUserRewriter userRewriter;
 
-        Type(String asPrefix, Integer order) {
+        Type(String asPrefix, IdentityMappingBehaviour identityMappingBehaviour, UserRewritter.MappingUserRewriter userRewriter) {
             this.asPrefix = asPrefix;
-            this.order = order;
+            this.identityMappingBehaviour = identityMappingBehaviour;
+            this.userRewriter = userRewriter;
         }
 
         public String asPrefix() {
@@ -76,11 +87,32 @@ public interface Mapping {
             return mapping.startsWith(Regex.asPrefix())
                 || mapping.startsWith(Domain.asPrefix())
                 || mapping.startsWith(Error.asPrefix())
-                || mapping.startsWith(Forward.asPrefix());
+                || mapping.startsWith(Forward.asPrefix())
+                || mapping.startsWith(Group.asPrefix());
         }
 
-        public int getOrder() {
-            return order;
+        public IdentityMappingBehaviour getIdentityMappingBehaviour() {
+            return identityMappingBehaviour;
+        }
+
+        public UserRewritter.MappingUserRewriter getUserRewriter() {
+            return userRewriter;
+        }
+    }
+
+    enum IdentityMappingBehaviour {
+        Throw,
+        ReturnIdentity;
+
+        public Stream<Mapping> handleIdentity(Stream<Mapping> mapping) {
+            switch (this) {
+                case Throw:
+                    throw new SkipMappingProcessingException();
+                case ReturnIdentity:
+                    return mapping;
+                default:
+                    throw new NotImplementedException("Unknown IdentityMappingBehaviour : " + this);
+            }
         }
     }
 
@@ -93,5 +125,7 @@ public interface Mapping {
     Mapping appendDomainIfNone(Supplier<Domain> domainSupplier);
 
     String getErrorMessage();
+
+    Optional<User> rewriteUser(User user) throws AddressException;
 
 }

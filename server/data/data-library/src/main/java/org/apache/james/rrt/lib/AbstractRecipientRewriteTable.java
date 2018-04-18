@@ -23,14 +23,15 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
-import javax.mail.internet.ParseException;
+import javax.mail.internet.AddressException;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.core.Domain;
-import org.apache.james.core.MailAddress;
+import org.apache.james.core.User;
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.domainlist.api.DomainListException;
 import org.apache.james.lifecycle.api.Configurable;
@@ -41,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
+import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.base.Preconditions;
 
 public abstract class AbstractRecipientRewriteTable implements RecipientRewriteTable, Configurable {
@@ -96,10 +98,10 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
 
     @Override
     public Mappings getMappings(String user, Domain domain) throws ErrorMappingException, RecipientRewriteTableException {
-        return getMappings(user, domain, mappingLimit);
+        return getMappings(User.fromLocalPartWithDomain(user, domain), mappingLimit);
     }
 
-    public Mappings getMappings(String user, Domain domain, int mappingLimit) throws ErrorMappingException, RecipientRewriteTableException {
+    public Mappings getMappings(User user, int mappingLimit) throws ErrorMappingException, RecipientRewriteTableException {
 
         // We have to much mappings throw ErrorMappingException to avoid
         // infinity loop
@@ -107,80 +109,71 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
             throw new ErrorMappingException("554 Too many mappings to process");
         }
 
-        Mappings targetMappings = mapAddress(user, domain);
+        Mappings targetMappings = mapAddress(user.getLocalPart(), user.getDomainPart().get());
 
-        // Only non-null mappings are translated
-        if (!targetMappings.isEmpty()) {
-            if (targetMappings.contains(Type.Error)) {
-                throw new ErrorMappingException(targetMappings.getError().getErrorMessage());
-            } else {
-                MappingsImpl.Builder mappings = MappingsImpl.builder();
-
-                for (String target : targetMappings.asStrings()) {
-                    Type type = Mapping.detectType(target);
-                    Optional<String> maybeAddressWithMappingApplied = applyMapping(user, domain, target, type);
-
-                    if (!maybeAddressWithMappingApplied.isPresent()) {
-                        continue;
-                    }
-                    String addressWithMappingApplied = maybeAddressWithMappingApplied.get();
-                    LOGGER.debug("Valid virtual user mapping {}@{} to {}", user, domain.name(), addressWithMappingApplied);
-
-                    if (recursive) {
-
-                        String userName;
-                        Domain targetDomain;
-                        String[] args = addressWithMappingApplied.split("@");
-
-                        if (args.length > 1) {
-                            userName = args[0];
-                            targetDomain = Domain.of(args[1]);
-                        } else {
-                            // TODO Is that the right todo here?
-                            userName = addressWithMappingApplied;
-                            targetDomain = domain;
-                        }
-
-                        // Check if the returned mapping is the same as the
-                        // input. If so return null to avoid loops
-                        if (userName.equalsIgnoreCase(user) && targetDomain.equals(domain)) {
-                            return MappingsImpl.empty();
-                        }
-
-                        Mappings childMappings = getMappings(userName, targetDomain, mappingLimit - 1);
-
-                        if (childMappings.isEmpty()) {
-                            // add mapping
-                            mappings.add(addressWithMappingApplied);
-                        } else {
-                            mappings = mappings.addAll(childMappings);
-                        }
-
-                    } else {
-                        mappings.add(addressWithMappingApplied);
-                    }
-                }
-                return mappings.build();
-            }
+        if (targetMappings.contains(Type.Error)) {
+            throw new ErrorMappingException(targetMappings.getError().getErrorMessage());
         }
 
-        return MappingsImpl.empty();
+        try {
+            return MappingsImpl.fromMappings(
+                targetMappings.asStream()
+                    .flatMap(Throwing.<Mapping, Stream<Mapping>>function(target -> convertAndRecurseMapping(user, target, mappingLimit)).sneakyThrow()));
+        } catch (SkipMappingProcessingException e) {
+            return MappingsImpl.empty();
+        }
     }
 
-    private Optional<String> applyMapping(String user, Domain domain, String target, Type type) {
-        switch (type) {
-            case Regex:
-                try {
-                    return Optional.ofNullable(RecipientRewriteTableUtil.regexMap(new MailAddress(user, domain.asString()), target));
-                } catch (PatternSyntaxException | ParseException e) {
-                    LOGGER.error("Exception during regexMap processing: ", e);
-                    return Optional.ofNullable(target);
-                }
-            case Domain:
-                return Optional.of(user + "@" + Type.Domain.withoutPrefix(target));
-            default:
-                return Optional.ofNullable(target);
+    private Stream<Mapping> convertAndRecurseMapping(User originalUser, Mapping associatedMapping, int remainingLoops) throws ErrorMappingException, RecipientRewriteTableException, SkipMappingProcessingException, AddressException {
+
+        ThrowingFunction<User, Stream<Mapping>> convertAndRecurseMapping =
+            (User rewrittenUser) -> convertAndRecurseMapping(associatedMapping.getType(), originalUser, rewrittenUser, remainingLoops);
+
+        return associatedMapping.rewriteUser(originalUser)
+            .map(rewrittenUser -> rewrittenUser.withDefaultDomainFromUser(originalUser))
+            .map(Throwing.function(convertAndRecurseMapping).sneakyThrow())
+            .orElse(Stream.empty());
+    }
+
+    private Stream<Mapping> convertAndRecurseMapping(Type mappingType, User originalUser, User rewrittenUser, int remainingLoops) throws ErrorMappingException, RecipientRewriteTableException {
+        LOGGER.debug("Valid virtual user mapping {} to {}", originalUser, rewrittenUser);
+
+        Stream<Mapping> possibleResult = Stream.of(toMapping(rewrittenUser, mappingType));
+        if (!recursive) {
+            return possibleResult;
         }
+
+        // Check if the returned mapping is the same as the input. If so we need to handle identity to avoid loops.
+        if (originalUser.equals(rewrittenUser)) {
+            return mappingType.getIdentityMappingBehaviour()
+                .handleIdentity(possibleResult);
+        } else {
+            return recurseMapping(possibleResult, rewrittenUser, remainingLoops);
+        }
+    }
+
+    private Stream<Mapping> recurseMapping(Stream<Mapping> possibleResult, User targetUser, int remainingLoops) throws ErrorMappingException, RecipientRewriteTableException {
+        Mappings childMappings = getMappings(targetUser, remainingLoops - 1);
+
+        if (childMappings.isEmpty()) {
+            return possibleResult;
+        } else {
+            return childMappings.asStream();
+        }
+    }
+
+    private Mapping toMapping(User rewrittenUser, Type type) {
+        switch (type) {
+            case Forward:
+            case Group:
+                return MappingImpl.of(type, rewrittenUser.asString());
+            case Regex:
+            case Domain:
+            case Error:
+            case Address:
+                return MappingImpl.address(rewrittenUser.asString());
+        }
+        throw new IllegalArgumentException("unhandled enum type");
     }
 
     @Override
@@ -292,6 +285,27 @@ public abstract class AbstractRecipientRewriteTable implements RecipientRewriteT
     @Override
     public void removeForwardMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
         Mapping mapping = MappingImpl.forward(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        LOGGER.info("Remove forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        removeMapping(user, domain, mapping);
+    }
+
+    @Override
+    public void addGroupMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
+        Mapping mapping = MappingImpl.group(address)
+            .appendDomainIfNone(defaultDomainSupplier());
+
+        checkHasValidAddress(mapping);
+        checkMapping(user, domain, mapping);
+
+        LOGGER.info("Add forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
+        addMapping(user, domain, mapping);
+    }
+
+    @Override
+    public void removeGroupMapping(String user, Domain domain, String address) throws RecipientRewriteTableException {
+        Mapping mapping = MappingImpl.group(address)
             .appendDomainIfNone(defaultDomainSupplier());
 
         LOGGER.info("Remove forward mapping => {} for user: {} domain: {}", mapping, user, domain.name());
