@@ -78,7 +78,8 @@ public class UserTest {
 
     @Test
     public void fromLocalPartWithDomainStringVersionShouldThrowOnNullDomainPart() {
-        assertThatThrownBy(() -> User.fromLocalPartWithDomain("local", null))
+        String domain = null;
+        assertThatThrownBy(() -> User.fromLocalPartWithDomain("local", domain))
             .isInstanceOf(NullPointerException.class);
     }
 
@@ -178,4 +179,52 @@ public class UserTest {
             .isTrue();
     }
 
+    @Test
+    public void withDefaultDomainShouldAppendDefaultDomainWhenNone() {
+        assertThat(User.fromUsername("user")
+            .withDefaultDomain(Domain.LOCALHOST))
+            .isEqualTo(User.fromLocalPartWithDomain("user", Domain.LOCALHOST));
+    }
+
+    @Test
+    public void withDefaultDomainShouldNotAppendDefaultDomainWhenDomainIsPresent() {
+        assertThat(User.fromUsername("user@domain")
+            .withDefaultDomain(Domain.LOCALHOST))
+            .isEqualTo(User.fromUsername("user@domain"));
+    }
+
+    @Test
+    public void withDefaultDomainShouldNotThrowUponEmptyDomain() {
+        assertThat(User.fromUsername("user")
+            .withDefaultDomain(Optional.empty()))
+            .isEqualTo(User.fromUsername("user"));
+    }
+
+    @Test
+    public void withDefaultDomainShouldNotThrowUponEmptyDomainWhenUsersHadADomain() {
+        assertThat(User.fromUsername("user@domain")
+            .withDefaultDomain(Optional.empty()))
+            .isEqualTo(User.fromUsername("user@domain"));
+    }
+
+    @Test
+    public void withDefaultDomainFromUserShouldPreserveUserWhenAlreadyHasADomain() {
+        assertThat(User.fromUsername("user@domain")
+            .withDefaultDomainFromUser(User.fromUsername("bob@tld")))
+            .isEqualTo(User.fromUsername("user@domain"));
+    }
+
+    @Test
+    public void withDefaultDomainFromUserShouldAppendOtherUserDomainWhenNone() {
+        assertThat(User.fromUsername("user")
+            .withDefaultDomainFromUser(User.fromUsername("bob@tld")))
+            .isEqualTo(User.fromUsername("user@tld"));
+    }
+
+    @Test
+    public void withDefaultDomainFromUserShouldNotThrowUponNoDomain() {
+        assertThat(User.fromUsername("user")
+            .withDefaultDomainFromUser(User.fromUsername("bob")))
+            .isEqualTo(User.fromUsername("user"));
+    }
 }

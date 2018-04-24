@@ -16,35 +16,9 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.rrt.lib;
 
-import static org.assertj.core.api.Assertions.assertThat;
+public class SkipMappingProcessingException extends RuntimeException {
 
-import org.junit.Test;
-
-public class RecipientRewriteTableUtilTest {
-
-    @Test
-    public void getSeparatorShouldReturnCommaWhenCommaIsPresent() {
-        String separator = RecipientRewriteTableUtil.getSeparator("regex:(.*)@localhost, regex:user@test");
-        assertThat(separator).isEqualTo(",");
-    }
-
-    @Test
-    public void getSeparatorShouldReturnEmptyWhenColonIsPresentInPrefix() {
-        String separator = RecipientRewriteTableUtil.getSeparator("regex:(.*)@localhost");
-        assertThat(separator).isEqualTo("");
-    }
-
-    @Test
-    public void getSeparatorShouldReturnEmptyWhenColonIsPresent() {
-        String separator = RecipientRewriteTableUtil.getSeparator("(.*)@localhost: user@test");
-        assertThat(separator).isEqualTo(":");
-    }
-
-    @Test
-    public void getSeparatorShouldReturnColonWhenNoSeparator() {
-        String separator = RecipientRewriteTableUtil.getSeparator("user@test");
-        assertThat(separator).isEqualTo(":");
-    }
 }
