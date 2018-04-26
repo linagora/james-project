@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
-import javax.mail.Flags;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.internet.MimeMessage;
@@ -39,11 +38,14 @@ import javax.mail.internet.MimeMessage;
 import org.apache.james.core.MailAddress;
 import org.apache.james.jmap.exceptions.DraftMessageMailboxUpdateException;
 import org.apache.james.jmap.exceptions.InvalidOutboxMoveException;
+import org.apache.james.jmap.model.Keyword;
+import org.apache.james.jmap.model.Keywords;
 import org.apache.james.jmap.model.MessageProperties;
 import org.apache.james.jmap.model.SetError;
 import org.apache.james.jmap.model.SetMessagesRequest;
 import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.jmap.model.UpdateMessagePatch;
+import org.apache.james.jmap.utils.KeywordsCombiner;
 import org.apache.james.jmap.utils.SystemMailboxesProvider;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
@@ -123,14 +125,14 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
     private void update(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession,
                         SetMessagesResponse.Builder builder) {
         try {
-            List<MessageResult> messages = messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, mailboxSession);
-            assertValidUpdate(messages, updateMessagePatch, mailboxSession);
+            List<MessageResult> mailboxMessages = messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, mailboxSession);
+            assertValidUpdate(mailboxMessages, updateMessagePatch, mailboxSession);
 
-            if (messages.isEmpty()) {
+            if (mailboxMessages.isEmpty()) {
                 addMessageIdNotFoundToResponse(messageId, builder);
             } else {
                 setInMailboxes(messageId, updateMessagePatch, mailboxSession);
-                Optional<MailboxException> updateError = messages.stream()
+                Optional<MailboxException> updateError = mailboxMessages.stream()
                     .flatMap(message -> updateFlags(messageId, updateMessagePatch, mailboxSession, message))
                     .findAny();
                 if (updateError.isPresent()) {
@@ -193,23 +195,34 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
         }
     }
 
-    private void assertValidUpdate(List<MessageResult> messagesToBeUpdated, UpdateMessagePatch updateMessagePatch, MailboxSession session) throws MailboxException {
+    private void assertValidUpdate(List<MessageResult> mailboxMessagesToBeUpdated, UpdateMessagePatch updateMessagePatch, MailboxSession session) throws MailboxException {
         List<MailboxId> outboxMailboxes = mailboxIdFor(Role.OUTBOX, session);
 
-        ImmutableList<MailboxId> previousMailboxes = messagesToBeUpdated.stream()
-            .map(MessageResult::getMailboxId)
-            .collect(Guavate.toImmutableList());
-        List<MailboxId> targetMailboxes = getTargetedMailboxes(previousMailboxes, updateMessagePatch);
+        ImmutableList<MailboxId> currentMailboxes = listMailboxesContainingMessage(mailboxMessagesToBeUpdated);
+        List<MailboxId> targetMailboxes = computeTargetMailboxes(currentMailboxes, updateMessagePatch);
 
-        boolean allMessagesWereDrafts = messagesToBeUpdated.stream()
-            .map(MessageResult::getFlags)
-            .allMatch(flags -> flags.contains(Flags.Flag.DRAFT));
+        boolean messageIsDraft = computeCombinedKeywords(mailboxMessagesToBeUpdated)
+            .map(keywords -> keywords.contains(Keyword.DRAFT))
+            .orElse(false);
 
         boolean targetContainsOutbox = targetMailboxes.stream().anyMatch(outboxMailboxes::contains);
-        boolean targetIsOnlyOutbox = targetMailboxes.stream().allMatch(outboxMailboxes::contains);
+        boolean targetIsOnlyOutbox = outboxMailboxes.containsAll(targetMailboxes);
 
         assertOutboxMoveTargetsOnlyOutBox(targetContainsOutbox, targetIsOnlyOutbox);
-        assertOutboxMoveOriginallyHasDraftKeywordSet(targetContainsOutbox, allMessagesWereDrafts);
+        assertOutboxMoveOriginallyHasDraftKeywordSet(targetContainsOutbox, messageIsDraft);
+    }
+
+    private ImmutableList<MailboxId> listMailboxesContainingMessage(List<MessageResult> mailboxMessagesToBeUpdated) {
+        return mailboxMessagesToBeUpdated.stream()
+            .map(MessageResult::getMailboxId)
+            .collect(Guavate.toImmutableList());
+    }
+
+    private Optional<Keywords> computeCombinedKeywords(List<MessageResult> mailboxMessagesToBeUpdated) {
+        return mailboxMessagesToBeUpdated.stream()
+            .map(MessageResult::getFlags)
+            .map(Keywords.factory().filterImapNonExposedKeywords()::fromFlags)
+            .reduce(new KeywordsCombiner());
     }
 
     private void assertOutboxMoveTargetsOnlyOutBox(boolean targetContainsOutbox, boolean targetIsOnlyOutbox) {
@@ -218,13 +231,13 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
         }
     }
 
-    private void assertOutboxMoveOriginallyHasDraftKeywordSet(boolean targetIsOutbox, boolean allMessagesWereDrafts) {
-        if (targetIsOutbox && !allMessagesWereDrafts) {
+    private void assertOutboxMoveOriginallyHasDraftKeywordSet(boolean targetIsOutbox, boolean isDraft) {
+        if (targetIsOutbox && !isDraft) {
             throw new InvalidOutboxMoveException("Only message with `$Draft` keyword can be moved to Outbox");
         }
     }
 
-    private List<MailboxId> getTargetedMailboxes(ImmutableList<MailboxId> previousMailboxes, UpdateMessagePatch updateMessagePatch) {
+    private List<MailboxId> computeTargetMailboxes(ImmutableList<MailboxId> previousMailboxes, UpdateMessagePatch updateMessagePatch) {
         return updateMessagePatch.getMailboxIds()
             .map(ids -> ids.stream().map(mailboxIdFactory::fromString).collect(Guavate.toImmutableList()))
             .orElse(previousMailboxes);
