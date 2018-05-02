@@ -19,6 +19,7 @@
 
 package org.apache.james.server.core;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -78,7 +79,9 @@ public class MimeMessageInputStreamSource extends MimeMessageSource implements D
         // Create a temp file and channel the input stream into it
         try {
             out = new DeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
-            IOUtils.copy(in, out);
+            BufferedOutputStream buffered = new BufferedOutputStream(out, THRESHOLD);
+            IOUtils.copy(in, buffered);
+            buffered.flush();
             sourceId = key;
         } catch (IOException ioe) {
             File file = out.getFile();
