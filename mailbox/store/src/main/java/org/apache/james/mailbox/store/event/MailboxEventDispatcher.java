@@ -25,6 +25,7 @@ import java.util.SortedMap;
 
 import javax.inject.Inject;
 
+import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
@@ -168,5 +169,9 @@ public class MailboxEventDispatcher {
 
     public void quota(MailboxSession session, QuotaRoot quotaRoot, Quota<QuotaCount> countQuota, Quota<QuotaSize> sizeQuota) {
         listener.event(new MailboxListener.QuotaUsageUpdatedEvent(session, quotaRoot, countQuota, sizeQuota));
+    }
+
+    public void event(Event event) {
+        listener.event(event);
     }
 }
