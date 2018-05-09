@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.quota.mailing.listeners;
 
+import javax.inject.Inject;
+
 import org.apache.james.core.User;
 import org.apache.james.eventsourcing.EventSourcingSystem;
 import org.apache.james.mailbox.Event;
@@ -32,6 +34,7 @@ public class QuotaThresholdCrossingListener implements MailboxListener {
 
     private final EventSourcingSystem eventSourcingSystem;
 
+    @Inject
     public QuotaThresholdCrossingListener(EventSourcingSystem eventSourcingSystem) {
         this.eventSourcingSystem = eventSourcingSystem;
     }

@@ -30,6 +30,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.SocketOptions;
+import com.datastax.driver.extras.codecs.jdk8.InstantCodec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
@@ -178,6 +179,8 @@ public class ClusterBuilder {
         try {
             queryLogger.map(queryLoggerConfiguration ->
                 cluster.register(queryLoggerConfiguration.getQueryLogger()));
+            cluster.getConfiguration().getCodecRegistry()
+                .register(InstantCodec.instance);
             return cluster;
         } catch (Exception e) {
             cluster.close();

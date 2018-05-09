@@ -28,13 +28,16 @@ import com.google.inject.util.Modules;
 
 public class CassandraLdapJamesServerMain {
 
-    public static final Module cassandraLdapServerModule = Modules.override(CassandraJamesServerMain.CASSANDRA_SERVER_MODULE, CassandraJamesServerMain.PROTOCOLS)
+    public static final Module CASSANDRA_LDAP_SERVER_MODULE = Modules.override(
+            CassandraJamesServerMain.CASSANDRA_SERVER_MODULE,
+            CassandraJamesServerMain.PROTOCOLS,
+            CassandraJamesServerMain.PLUGINS)
         .with(new LdapUsersRepositoryModule());
 
     public static void main(String[] args) throws Exception {
         Configuration configuration = Configuration.builder().useWorkingDirectoryEnvProperty().build();
         GuiceJamesServer server = new GuiceJamesServer(configuration)
-            .combineWith(cassandraLdapServerModule, new JMXServerModule());
+            .combineWith(CASSANDRA_LDAP_SERVER_MODULE, new JMXServerModule());
 
         server.start();
     }

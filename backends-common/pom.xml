@@ -37,6 +37,9 @@
         <module>cassandra</module>
         <module>elasticsearch</module>
         <module>jpa</module>
+        <module>eventsourcing</module>
+        <module>eventsourcing-memory</module>
+        <module>eventsourcing-cassandra</module>
     </modules>
 
 </project>

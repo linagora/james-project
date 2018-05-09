@@ -21,9 +21,11 @@ package org.apache.james;
 
 import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.modules.MailboxModule;
+import org.apache.james.modules.backends.MemoryEventSourcingModule;
 import org.apache.james.modules.data.MemoryDataJmapModule;
 import org.apache.james.modules.data.MemoryDataModule;
 import org.apache.james.modules.mailbox.MemoryMailboxModule;
+import org.apache.james.modules.mailbox.MemoryQuotaMailingModule;
 import org.apache.james.modules.protocols.IMAPServerModule;
 import org.apache.james.modules.protocols.JMAPServerModule;
 import org.apache.james.modules.protocols.LMTPServerModule;
@@ -70,8 +72,12 @@ public class MemoryJamesServerMain {
         new MemoryDataJmapModule(),
         new JMAPServerModule());
 
+    public static final Module PLUGINS = Modules.combine(
+        new MemoryQuotaMailingModule());
+
     public static final Module IN_MEMORY_SERVER_MODULE = Modules.combine(
         new MemoryDataModule(),
+        new MemoryEventSourcingModule(),
         new MemoryMailboxModule(),
         new MemoryMailQueueModule(),
         new MailboxModule());
@@ -93,6 +99,7 @@ public class MemoryJamesServerMain {
         IN_MEMORY_SERVER_MODULE,
         PROTOCOLS,
         JMAP,
+        PLUGINS,
         WEBADMIN);
 
     public static void main(String[] args) throws Exception {

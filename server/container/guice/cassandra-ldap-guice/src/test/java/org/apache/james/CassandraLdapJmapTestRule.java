@@ -65,7 +65,7 @@ public class CassandraLdapJmapTestRule implements TestRule {
             .build();
 
         return new GuiceJamesServer(configuration)
-            .combineWith(CassandraLdapJamesServerMain.cassandraLdapServerModule,
+            .combineWith(CassandraLdapJamesServerMain.CASSANDRA_LDAP_SERVER_MODULE,
                 binder -> binder.bind(String.class).annotatedWith(Names.named("ldapIp")).toInstance(ldapIp))
             .overrideWith(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES))
             .overrideWith(guiceModuleTestRule.getModule())

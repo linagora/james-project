@@ -21,6 +21,7 @@ package org.apache.james.mailbox.quota.mailing.subscribers;
 
 import java.util.Optional;
 
+import javax.inject.Inject;
 import javax.mail.MessagingException;
 
 import org.apache.james.core.MailAddress;
@@ -40,6 +41,7 @@ public class QuotaThresholdMailer implements Subscriber {
     private final MailetContext mailetContext;
     private final UsersRepository usersRepository;
 
+    @Inject
     public QuotaThresholdMailer(MailetContext mailetContext, UsersRepository usersRepository) {
         this.mailetContext = mailetContext;
         this.usersRepository = usersRepository;
