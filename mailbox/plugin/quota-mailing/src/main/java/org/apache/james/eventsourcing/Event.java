@@ -19,7 +19,17 @@
 
 package org.apache.james.eventsourcing;
 
+import java.util.List;
+
 public interface Event extends Comparable<Event> {
+
+    static boolean belongsToSameAggregate(List<? extends Event> events) {
+        return events.stream()
+            .map(Event::getAggregateId)
+            .distinct()
+            .limit(2)
+            .count() == 1;
+    }
 
     EventId eventId();
 
@@ -29,4 +39,5 @@ public interface Event extends Comparable<Event> {
     default int compareTo(Event o) {
         return eventId().compareTo(o.eventId());
     }
+
 }
