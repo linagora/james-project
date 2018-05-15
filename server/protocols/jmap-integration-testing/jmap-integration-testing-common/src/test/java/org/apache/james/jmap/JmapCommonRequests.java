@@ -44,6 +44,7 @@ public class JmapCommonRequests {
     public static String getOutboxId(AccessToken accessToken) {
         return getMailboxId(accessToken, Role.OUTBOX);
     }
+
     public static String getDraftId(AccessToken accessToken) {
         return getMailboxId(accessToken, Role.DRAFTS);
     }
@@ -97,6 +98,17 @@ public class JmapCommonRequests {
                 .extract()
                 .body()
                 .path(ARGUMENTS + ".messageIds");
+    }
+
+    public static String getLastMessageId(AccessToken accessToken) {
+        return with()
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMessageList\", {\"sort\":[\"date desc\"]}, \"#0\"]]")
+                .post("/jmap")
+            .then()
+                .extract()
+                .body()
+                .path(ARGUMENTS + ".messageIds[0]");
     }
 
     public static List<String> listMessageIdsInMailbox(AccessToken accessToken, String mailboxId) {

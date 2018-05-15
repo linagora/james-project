@@ -23,7 +23,9 @@ import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.data.MemoryDataJmapModule;
 import org.apache.james.modules.data.MemoryDataModule;
+import org.apache.james.modules.eventsourcing.MemoryEventSourcingModule;
 import org.apache.james.modules.mailbox.MemoryMailboxModule;
+import org.apache.james.modules.mailbox.QuotaMailingModule;
 import org.apache.james.modules.protocols.IMAPServerModule;
 import org.apache.james.modules.protocols.JMAPServerModule;
 import org.apache.james.modules.protocols.LMTPServerModule;
@@ -66,12 +68,16 @@ public class MemoryJamesServerMain {
         new SMTPServerModule(),
         new SpamAssassinListenerModule());
 
+    public static final Module PLUGINS = Modules.combine(
+        new QuotaMailingModule());
+
     public static final Module JMAP = Modules.combine(
         new MemoryDataJmapModule(),
         new JMAPServerModule());
 
     public static final Module IN_MEMORY_SERVER_MODULE = Modules.combine(
         new MemoryDataModule(),
+        new MemoryEventSourcingModule(),
         new MemoryMailboxModule(),
         new MemoryMailQueueModule(),
         new MailboxModule());
@@ -93,7 +99,8 @@ public class MemoryJamesServerMain {
         IN_MEMORY_SERVER_MODULE,
         PROTOCOLS,
         JMAP,
-        WEBADMIN);
+        WEBADMIN,
+        PLUGINS);
 
     public static void main(String[] args) throws Exception {
         Configuration configuration = Configuration.builder().useWorkingDirectoryEnvProperty().build();

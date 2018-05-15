@@ -37,6 +37,10 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>apache-james-eventsourcing-memory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-james-mailbox-memory</artifactId>
         </dependency>
         <dependency>
@@ -53,6 +57,10 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>james-server-data-memory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-guice-event-sourcing</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -85,6 +93,10 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>james-server-guice-lmtp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-guice-mailbox-plugin-quota-mailing</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>

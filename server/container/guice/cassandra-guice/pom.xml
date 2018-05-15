@@ -53,6 +53,10 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>apache-james-eventsourcing-cassandra</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-james-mailbox-cassandra</artifactId>
         </dependency>
         <dependency>
@@ -106,6 +110,10 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-guice-event-sourcing</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>james-server-guice-common</artifactId>
         </dependency>
         <dependency>
@@ -139,6 +147,10 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>james-server-guice-lmtp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>james-server-guice-mailbox-plugin-quota-mailing</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -215,6 +227,10 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>metrics-es-reporter</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>quota-mailing-cassandra</artifactId>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>

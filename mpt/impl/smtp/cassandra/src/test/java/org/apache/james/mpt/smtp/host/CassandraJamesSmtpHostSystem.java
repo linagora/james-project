@@ -109,7 +109,7 @@ public class CassandraJamesSmtpHostSystem extends ExternalSessionFactory impleme
             .build();
 
         return new GuiceJamesServer(configuration)
-            .combineWith(CassandraJamesServerMain.CASSANDRA_SERVER_MODULE, CassandraJamesServerMain.PROTOCOLS, new ProtocolHandlerModule())
+            .combineWith(CassandraJamesServerMain.CASSANDRA_MODULE, new ProtocolHandlerModule())
             .overrideWith(new CassandraJmapServerModule(embeddedElasticSearch, cassandraHost, cassandraPort),
                 (binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
     }

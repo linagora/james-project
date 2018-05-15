@@ -66,7 +66,7 @@ public class JamesCapabilitiesServerTest {
             .build();
 
         return new GuiceJamesServer(configuration)
-            .combineWith(CassandraJamesServerMain.CASSANDRA_SERVER_MODULE, CassandraJamesServerMain.PROTOCOLS)
+            .combineWith(CassandraJamesServerMain.CASSANDRA_MODULE)
             .overrideWith((binder) -> binder.bind(PersistenceAdapter.class).to(MemoryPersistenceAdapter.class))
             .overrideWith(new TestElasticSearchModule(embeddedElasticSearch),
                 cassandraServer.getModule(),

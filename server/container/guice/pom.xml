@@ -38,6 +38,7 @@
         <module>configuration</module>
         <module>custom-mailets</module>
         <module>es-metric-reporter</module>
+        <module>event-sourcing</module>
         <module>guice-common</module>
         <module>guice-utils</module>
         <module>jmx</module>
@@ -45,6 +46,7 @@
         <module>jpa-guice</module>
         <module>jpa-smtp</module>
         <module>mailbox</module>
+        <module>mailbox-plugin-quota-mailing</module>
         <module>mailbox-plugin-spamassassin</module>
         <module>mailet</module>
         <module>memory-guice</module>
@@ -79,6 +81,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-event-sourcing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>james-server-guice-imap</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -106,6 +113,11 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>james-server-guice-mailbox</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>james-server-guice-mailbox-plugin-quota-mailing</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

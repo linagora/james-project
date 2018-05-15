@@ -23,13 +23,13 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import org.apache.james.eventsourcing.CommandDispatcher;
+import org.apache.james.eventsourcing.CommandHandler;
 import org.apache.james.eventsourcing.Event;
 import org.apache.james.eventsourcing.EventStore;
 import org.apache.james.mailbox.quota.mailing.QuotaMailingListenerConfiguration;
 import org.apache.james.mailbox.quota.mailing.aggregates.UserQuotaThresholds;
 
-public class DetectThresholdCrossingHandler implements CommandDispatcher.CommandHandler<DetectThresholdCrossing> {
+public class DetectThresholdCrossingHandler implements CommandHandler<DetectThresholdCrossing> {
 
     private final EventStore eventStore;
     private final QuotaMailingListenerConfiguration quotaMailingListenerConfiguration;

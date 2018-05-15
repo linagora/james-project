@@ -19,7 +19,7 @@
 
 package org.apache.james.mailbox.quota.mailing.listeners;
 
-import org.apache.james.eventsourcing.EventSourcingSystem;
+import org.apache.james.eventsourcing.EventSourcingSystemImpl;
 import org.apache.james.eventsourcing.EventStore;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.mailbox.Event;
@@ -45,7 +45,7 @@ public class QuotaThresholdListenersTestSystem {
 
         FileSystem fileSystem = new FileSystemImpl(new JamesServerResourceLoader("."));
 
-        EventSourcingSystem eventSourcingSystem = new EventSourcingSystem(
+        EventSourcingSystemImpl eventSourcingSystem = new EventSourcingSystemImpl(
             ImmutableSet.of(new DetectThresholdCrossingHandler(eventStore, configuration)),
             ImmutableSet.of(new QuotaThresholdMailer(mailetContext, MemoryUsersRepository.withVirtualHosting(), fileSystem, configuration)),
             eventStore);
