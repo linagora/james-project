@@ -16,36 +16,20 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.spamassassin;
 
-import static org.assertj.core.api.Assertions.assertThat;
+package org.apache.james.modules.mailbox;
 
-import java.util.Optional;
+import org.apache.james.eventsourcing.eventstore.cassandra.dto.EventDTOModule;
+import org.apache.james.mailbox.quota.cassandra.dto.QuotaThresholdChangedEventDTOModule;
 
-import org.apache.james.util.Host;
-import org.junit.Test;
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-
-public class SpamAssassinConfigurationTest {
-
-    @Test
-    public void spamAssassinConfigurationShouldRespectBeanContract() {
-        EqualsVerifier.forClass(SpamAssassinConfiguration.class)
-            .allFieldsShouldBeUsed()
-            .verify();
-    }
-
-    @Test
-    public void isEnableShouldReturnFalseWhenEmpty() {
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.empty());
-        assertThat(configuration.isEnabled()).isFalse();
-    }
-
-    @Test
-    public void isEnableShouldReturnTrueWhenConfigured() {
-        int port = 1;
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.of(Host.from("hostname", port)));
-        assertThat(configuration.isEnabled()).isTrue();
+public class CassandraQuotaMailingModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        Multibinder.newSetBinder(binder(), EventDTOModule.class)
+            .addBinding()
+            .to(QuotaThresholdChangedEventDTOModule.class);
     }
 }

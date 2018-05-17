@@ -21,6 +21,10 @@
 <listeners>
   <listener>
     <class>org.apache.james.mailbox.spamassassin.SpamAssassinListener</class>
+    <configuration>
+      <host>127.0.0.1</host>
+      <port>783</port>
+    </configuration>
   </listener>
   <listener>
     <class>org.apache.james.mailbox.cassandra.MailboxOperationLoggingListener</class>

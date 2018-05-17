@@ -16,36 +16,19 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.spamassassin;
 
-import static org.assertj.core.api.Assertions.assertThat;
+package org.apache.james.modules.eventstore;
 
-import java.util.Optional;
+import org.apache.james.eventsourcing.eventstore.EventStore;
+import org.apache.james.eventsourcing.eventstore.memory.InMemoryEventStore;
 
-import org.apache.james.util.Host;
-import org.junit.Test;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-
-public class SpamAssassinConfigurationTest {
-
-    @Test
-    public void spamAssassinConfigurationShouldRespectBeanContract() {
-        EqualsVerifier.forClass(SpamAssassinConfiguration.class)
-            .allFieldsShouldBeUsed()
-            .verify();
-    }
-
-    @Test
-    public void isEnableShouldReturnFalseWhenEmpty() {
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.empty());
-        assertThat(configuration.isEnabled()).isFalse();
-    }
-
-    @Test
-    public void isEnableShouldReturnTrueWhenConfigured() {
-        int port = 1;
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.of(Host.from("hostname", port)));
-        assertThat(configuration.isEnabled()).isTrue();
+public class MemoryEventStoreModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        bind(InMemoryEventStore.class).in(Scopes.SINGLETON);
+        bind(EventStore.class).to(InMemoryEventStore.class);
     }
 }

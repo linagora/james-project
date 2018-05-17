@@ -22,11 +22,26 @@ package org.apache.james.mailbox.spamassassin;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.util.Host;
 
 import com.google.common.base.MoreObjects;
 
 public class SpamAssassinConfiguration {
+    public static final String DEFAULT_HOST = "127.0.0.1";
+    public static final int DEFAULT_PORT = 783;
+
+    public static SpamAssassinConfiguration from(HierarchicalConfiguration configuration) {
+        return new SpamAssassinConfiguration(
+            Optional.of(
+                Host.from(
+                    configuration.getString("host", DEFAULT_HOST),
+                    configuration.getInt("port", DEFAULT_PORT))));
+    }
+
+    public static SpamAssassinConfiguration disabled() {
+        return new SpamAssassinConfiguration(Optional.empty());
+    }
 
     private final Optional<Host> host;
 
@@ -34,7 +49,7 @@ public class SpamAssassinConfiguration {
         this.host = host;
     }
 
-    public boolean isEnable() {
+    public boolean isEnabled() {
         return host.isPresent();
     }
 

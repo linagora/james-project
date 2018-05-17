@@ -19,21 +19,28 @@
 package org.apache.james.jmap.cassandra;
 
 import java.io.IOException;
+import java.util.Iterator;
 
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.CassandraJamesServerMain;
 import org.apache.james.DockerCassandraRule;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.jmap.methods.integration.JamesWithSpamAssassin;
-import org.apache.james.jmap.methods.integration.SpamAssassinModule;
 import org.apache.james.mailbox.elasticsearch.MailboxElasticSearchConstants;
 import org.apache.james.mailbox.extractor.TextExtractor;
+import org.apache.james.mailbox.spamassassin.SpamAssassinListener;
 import org.apache.james.mailbox.store.search.PDFTextExtractor;
 import org.apache.james.modules.TestESMetricReporterModule;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.mailbox.MailboxListenersLoaderImpl;
 import org.apache.james.server.core.configuration.Configuration;
+import org.apache.james.transport.mailets.SpamAssassin;
 import org.apache.james.util.scanner.SpamAssassinExtension;
+import org.apache.james.utils.GuiceMailetLoader;
+import org.apache.mailet.MailetConfig;
+import org.apache.mailet.MailetContext;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -43,6 +50,8 @@ import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.rules.TemporaryFolder;
+
+import com.google.inject.multibindings.Multibinder;
 
 public class CassandraJmapExtension implements BeforeAllCallback, AfterAllCallback,
     BeforeEachCallback, AfterEachCallback, ParameterResolver {
@@ -75,8 +84,55 @@ public class CassandraJmapExtension implements BeforeAllCallback, AfterAllCallba
                     .overrideWith(new TestESMetricReporterModule())
                     .overrideWith(cassandra.getModule())
                     .overrideWith(new TestElasticSearchModule(elasticSearch))
-                    .overrideWith(new SpamAssassinModule(spamAssassinExtension)),
+                    .overrideWith(
+                        binder -> Multibinder.newSetBinder(binder, MailboxListenersLoaderImpl.DynamicConfiguration.class)
+                            .addBinding()
+                            .toInstance(generateListenerConfiguration(spamAssassinExtension)))
+                    .overrideWith(
+                        binder -> Multibinder.newSetBinder(binder, GuiceMailetLoader.DynamicConfiguration.class)
+                            .addBinding()
+                            .toInstance(generateMailetConfiguration(spamAssassinExtension))),
             spamAssassinExtension);
+    }
+
+    public MailboxListenersLoaderImpl.DynamicConfiguration generateListenerConfiguration(SpamAssassinExtension extension) {
+        DefaultConfigurationBuilder builder = new DefaultConfigurationBuilder();
+        builder.addProperty("host", extension.getSpamAssassin().getIp());
+        builder.addProperty("port", extension.getSpamAssassin().getBindingPort());
+
+        return new MailboxListenersLoaderImpl.DynamicConfiguration(SpamAssassinListener.class, builder);
+    }
+
+    public GuiceMailetLoader.DynamicConfiguration generateMailetConfiguration(SpamAssassinExtension extension) {
+        GuiceMailetLoader.MailetConfigWrapper wrapper = config -> new MailetConfig() {
+            @Override
+            public String getInitParameter(String name) {
+                if (name.equals(SpamAssassin.SPAMD_HOST)) {
+                    return extension.getSpamAssassin().getIp();
+                }
+                if (name.equals(SpamAssassin.SPAMD_PORT)) {
+                    return String.valueOf(extension.getSpamAssassin().getBindingPort());
+                }
+                return config.getInitParameter(name);
+            }
+
+            @Override
+            public Iterator<String> getInitParameterNames() {
+                return config.getInitParameterNames();
+            }
+
+            @Override
+            public MailetContext getMailetContext() {
+                return config.getMailetContext();
+            }
+
+            @Override
+            public String getMailetName() {
+                return config.getMailetName();
+            }
+        };
+
+        return new GuiceMailetLoader.DynamicConfiguration(SpamAssassin.class, wrapper);
     }
 
     @Override

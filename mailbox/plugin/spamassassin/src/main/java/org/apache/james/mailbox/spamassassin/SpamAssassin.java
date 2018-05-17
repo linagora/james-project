@@ -32,16 +32,20 @@ import com.github.fge.lambdas.Throwing;
 public class SpamAssassin {
 
     private final MetricFactory metricFactory;
-    private final SpamAssassinConfiguration spamAssassinConfiguration;
+    private SpamAssassinConfiguration spamAssassinConfiguration;
 
     @Inject
-    public SpamAssassin(MetricFactory metricFactory, SpamAssassinConfiguration spamAssassinConfiguration) {
+    public SpamAssassin(MetricFactory metricFactory) {
         this.metricFactory = metricFactory;
+        this.spamAssassinConfiguration = SpamAssassinConfiguration.disabled();
+    }
+
+    public void configure(SpamAssassinConfiguration spamAssassinConfiguration) {
         this.spamAssassinConfiguration = spamAssassinConfiguration;
     }
 
     public void learnSpam(List<InputStream> messages, String user) {
-        if (spamAssassinConfiguration.isEnable()) {
+        if (spamAssassinConfiguration.isEnabled()) {
             Host host = spamAssassinConfiguration.getHost().get();
             SpamAssassinInvoker invoker = new SpamAssassinInvoker(metricFactory, host.getHostName(), host.getPort());
             messages
@@ -50,7 +54,7 @@ public class SpamAssassin {
     }
 
     public void learnHam(List<InputStream> messages, String user) {
-        if (spamAssassinConfiguration.isEnable()) {
+        if (spamAssassinConfiguration.isEnabled()) {
             Host host = spamAssassinConfiguration.getHost().get();
             SpamAssassinInvoker invoker = new SpamAssassinInvoker(metricFactory, host.getHostName(), host.getPort());
             messages

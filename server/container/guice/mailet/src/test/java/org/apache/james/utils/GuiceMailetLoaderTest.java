@@ -34,10 +34,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class GuiceMailetLoaderTest {
+
+    public static final ImmutableSet<GuiceMailetLoader.DynamicConfiguration> NO_DYNAMIC_CONFIGURATION = ImmutableSet.of();
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -46,7 +49,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldLoadClass() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(THROWING_FILE_SYSTEM));
+            new ExtendedClassLoader(THROWING_FILE_SYSTEM), ImmutableSet.of());
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("AddFooter")
@@ -59,7 +62,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldThrowOnBadType() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(THROWING_FILE_SYSTEM));
+            new ExtendedClassLoader(THROWING_FILE_SYSTEM), ImmutableSet.of());
 
         expectedException.expect(MessagingException.class);
 
@@ -72,7 +75,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldLoadClassWhenInExtensionsJars() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM), ImmutableSet.of());
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("CustomMailet")
@@ -86,7 +89,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldBrowseRecursivelyExtensionsJars() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(RECURSIVE_CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(RECURSIVE_CLASSPATH_FILE_SYSTEM), ImmutableSet.of());
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("CustomMailet")
@@ -100,7 +103,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailedShouldAllowCustomPackages() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM), ImmutableSet.of());
 
         Mailet mailet = guiceMailetLoader.getMailet(FakeMailetConfig.builder()
             .mailetName("com.custom.mailets.AnotherMailet")
@@ -114,7 +117,7 @@ public class GuiceMailetLoaderTest {
     @Test
     public void getMailetShouldThrowOnUnknownMailet() throws Exception {
         GuiceMailetLoader guiceMailetLoader = new GuiceMailetLoader(injector,
-            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM));
+            new ExtendedClassLoader(CLASSPATH_FILE_SYSTEM), NO_DYNAMIC_CONFIGURATION);
 
         expectedException.expect(MessagingException.class);
 

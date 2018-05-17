@@ -16,36 +16,23 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.spamassassin;
 
-import static org.assertj.core.api.Assertions.assertThat;
+package org.apache.james.jmap.memory;
 
-import java.util.Optional;
+import java.io.IOException;
 
-import org.apache.james.util.Host;
-import org.junit.Test;
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.jmap.methods.integration.QuotaMailingTest;
+import org.junit.Rule;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class MemoryQuotaMailingTest extends QuotaMailingTest {
 
-public class SpamAssassinConfigurationTest {
+    @Rule
+    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
 
-    @Test
-    public void spamAssassinConfigurationShouldRespectBeanContract() {
-        EqualsVerifier.forClass(SpamAssassinConfiguration.class)
-            .allFieldsShouldBeUsed()
-            .verify();
-    }
-
-    @Test
-    public void isEnableShouldReturnFalseWhenEmpty() {
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.empty());
-        assertThat(configuration.isEnabled()).isFalse();
-    }
-
-    @Test
-    public void isEnableShouldReturnTrueWhenConfigured() {
-        int port = 1;
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.of(Host.from("hostname", port)));
-        assertThat(configuration.isEnabled()).isTrue();
+    @Override
+    protected GuiceJamesServer createJmapServer() throws IOException {
+        return memoryJmap.jmapServer();
     }
 }

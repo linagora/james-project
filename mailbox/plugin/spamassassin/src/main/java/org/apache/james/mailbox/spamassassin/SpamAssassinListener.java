@@ -23,6 +23,9 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.Role;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -42,7 +45,7 @@ import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-public class SpamAssassinListener implements SpamEventListener {
+public class SpamAssassinListener implements SpamEventListener, Configurable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SpamAssassinListener.class);
 
@@ -53,6 +56,11 @@ public class SpamAssassinListener implements SpamEventListener {
     public SpamAssassinListener(SpamAssassin spamAssassin, MailboxSessionMapperFactory mapperFactory) {
         this.spamAssassin = spamAssassin;
         this.mapperFactory = mapperFactory;
+    }
+
+    @Override
+    public void configure(HierarchicalConfiguration config) throws ConfigurationException {
+        spamAssassin.configure(SpamAssassinConfiguration.from(config));
     }
 
     @Override

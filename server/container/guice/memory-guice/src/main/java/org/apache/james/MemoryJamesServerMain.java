@@ -23,6 +23,7 @@ import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.data.MemoryDataJmapModule;
 import org.apache.james.modules.data.MemoryDataModule;
+import org.apache.james.modules.eventstore.MemoryEventStoreModule;
 import org.apache.james.modules.mailbox.MemoryMailboxModule;
 import org.apache.james.modules.protocols.IMAPServerModule;
 import org.apache.james.modules.protocols.JMAPServerModule;
@@ -41,7 +42,6 @@ import org.apache.james.modules.server.MemoryMailQueueModule;
 import org.apache.james.modules.server.RawPostDequeueDecoratorModule;
 import org.apache.james.modules.server.SwaggerRoutesModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 import org.apache.james.server.core.configuration.Configuration;
 
 import com.google.inject.Module;
@@ -63,8 +63,7 @@ public class MemoryJamesServerMain {
         new ManageSieveServerModule(),
         new POP3ServerModule(),
         new ProtocolHandlerModule(),
-        new SMTPServerModule(),
-        new SpamAssassinListenerModule());
+        new SMTPServerModule());
 
     public static final Module JMAP = Modules.combine(
         new MemoryDataJmapModule(),
@@ -72,6 +71,7 @@ public class MemoryJamesServerMain {
 
     public static final Module IN_MEMORY_SERVER_MODULE = Modules.combine(
         new MemoryDataModule(),
+        new MemoryEventStoreModule(),
         new MemoryMailboxModule(),
         new MemoryMailQueueModule(),
         new MailboxModule());

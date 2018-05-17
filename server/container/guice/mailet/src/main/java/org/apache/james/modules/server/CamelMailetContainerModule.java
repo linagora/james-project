@@ -80,6 +80,8 @@ public class CamelMailetContainerModule extends AbstractModule {
 
         Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(MailetModuleConfigurationPerformer.class);
 
+        Multibinder.newSetBinder(binder(), GuiceMailetLoader.DynamicConfiguration.class);
+
         Multibinder<CamelMailetContainerModule.TransportProcessorCheck> transportProcessorChecks = Multibinder.newSetBinder(binder(), CamelMailetContainerModule.TransportProcessorCheck.class);
         transportProcessorChecks.addBinding().to(BccMailetCheck.class);
     }

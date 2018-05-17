@@ -43,7 +43,6 @@ import org.apache.james.modules.server.NoJwtModule;
 import org.apache.james.modules.server.RawPostDequeueDecoratorModule;
 import org.apache.james.modules.server.SwaggerRoutesModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 import org.apache.james.server.core.configuration.Configuration;
 
 import com.google.inject.Module;
@@ -78,8 +77,7 @@ public class JPAJamesServerMain {
         new NoJwtModule(),
         new RawPostDequeueDecoratorModule(),
         new SieveFileRepositoryModule(),
-        new DefaultEventModule(),
-        new SpamAssassinListenerModule());
+        new DefaultEventModule());
 
     public static void main(String[] args) throws Exception {
         Configuration configuration = Configuration.builder().useWorkingDirectoryEnvProperty().build();

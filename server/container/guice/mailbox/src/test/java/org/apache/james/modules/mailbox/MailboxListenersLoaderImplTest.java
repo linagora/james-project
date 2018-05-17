@@ -53,12 +53,12 @@ public class MailboxListenersLoaderImplTest {
 
         registry = new MailboxListenerRegistry();
         testee = new MailboxListenersLoaderImpl(new MailboxListenerFactory(Guice.createInjector()), registry,
-            new ExtendedClassLoader(fileSystem), ImmutableSet.of());
+            new ExtendedClassLoader(fileSystem), ImmutableSet.of(), ImmutableSet.of());
     }
 
     @Test
     public void createListenerShouldThrowWhenClassCantBeLoaded() {
-        ListenerConfiguration configuration = new ListenerConfiguration("MyUnknownClass");
+        ListenerConfiguration configuration = ListenerConfiguration.forClass("MyUnknownClass");
 
         assertThatThrownBy(() -> testee.createListener(configuration))
             .isInstanceOf(RuntimeException.class);
@@ -66,7 +66,7 @@ public class MailboxListenersLoaderImplTest {
 
     @Test
     public void createListenerShouldThrowWhenClassCantBeCastToMailboxListener() {
-        ListenerConfiguration configuration = new ListenerConfiguration("java.lang.String");
+        ListenerConfiguration configuration = ListenerConfiguration.forClass("java.lang.String");
 
         assertThatThrownBy(() -> testee.createListener(configuration))
             .isInstanceOf(RuntimeException.class);
@@ -74,7 +74,7 @@ public class MailboxListenersLoaderImplTest {
 
     @Test
     public void createListenerShouldThrowWhenNotFullClassName() {
-        ListenerConfiguration configuration = new ListenerConfiguration("NoopMailboxListener");
+        ListenerConfiguration configuration = ListenerConfiguration.forClass("NoopMailboxListener");
 
         assertThatThrownBy(() -> testee.createListener(configuration))
             .isInstanceOf(RuntimeException.class);
@@ -82,7 +82,7 @@ public class MailboxListenersLoaderImplTest {
 
     @Test
     public void createListenerShouldReturnMailboxListenerWhenConfigurationIsGood() {
-        ListenerConfiguration configuration = new ListenerConfiguration("org.apache.james.modules.mailbox.NoopMailboxListener");
+        ListenerConfiguration configuration = ListenerConfiguration.forClass("org.apache.james.modules.mailbox.NoopMailboxListener");
 
         MailboxListener listener = testee.createListener(configuration);
 

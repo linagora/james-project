@@ -18,13 +18,17 @@
  ****************************************************************/
 package org.apache.james.modules.mailbox;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.event.MailboxListenerRegistry;
+import org.apache.james.util.OptionalUtils;
 import org.apache.james.utils.ExtendedClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,18 +39,54 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MailboxListenersLoaderImpl.class);
 
+    public static class DynamicConfiguration {
+        private final Class<? extends MailboxListener> listenerClass;
+        private final HierarchicalConfiguration configuration;
+
+        public DynamicConfiguration(Class<? extends MailboxListener> listenerClass, HierarchicalConfiguration configuration) {
+            this.listenerClass = listenerClass;
+            this.configuration = configuration;
+        }
+
+        public Class<? extends MailboxListener> getListenerClass() {
+            return listenerClass;
+        }
+
+        public HierarchicalConfiguration getConfiguration() {
+            return configuration;
+        }
+
+        @Override
+        public final boolean equals(Object o) {
+            if (o instanceof DynamicConfiguration) {
+                DynamicConfiguration that = (DynamicConfiguration) o;
+
+                return Objects.equals(this.listenerClass, that.listenerClass)
+                    && Objects.equals(this.configuration, that.configuration);
+            }
+            return false;
+        }
+
+        @Override
+        public final int hashCode() {
+            return Objects.hash(listenerClass, configuration);
+        }
+    }
+
     private final MailboxListenerFactory mailboxListenerFactory;
     private final MailboxListenerRegistry registry;
     private final ExtendedClassLoader classLoader;
     private final Set<MailboxListener> guiceDefinedListeners;
+    private final Set<DynamicConfiguration> dynamicConfigurations;
 
     @Inject
     public MailboxListenersLoaderImpl(MailboxListenerFactory mailboxListenerFactory, MailboxListenerRegistry registry,
-                                  ExtendedClassLoader classLoader, Set<MailboxListener> guiceDefinedListeners) {
+                                      ExtendedClassLoader classLoader, Set<MailboxListener> guiceDefinedListeners, Set<DynamicConfiguration> dynamicConfigurations) {
         this.mailboxListenerFactory = mailboxListenerFactory;
         this.registry = registry;
         this.classLoader = classLoader;
         this.guiceDefinedListeners = guiceDefinedListeners;
+        this.dynamicConfigurations = dynamicConfigurations;
     }
 
     @Override
@@ -56,6 +96,7 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
         ListenersConfiguration listenersConfiguration = ListenersConfiguration.from(configuration);
 
         guiceDefinedListeners.forEach(this::register);
+
         listenersConfiguration.getListenersConfiguration().stream()
             .map(this::createListener)
             .forEach(this::register);
@@ -78,10 +119,24 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
             LOGGER.info("Loading user registered mailbox listener {}", listenerClass);
             Class<MailboxListener> clazz = classLoader.locateClass(listenerClass);
             MailboxListener listener = mailboxListenerFactory.createInstance(clazz);
+
+            Optional<HierarchicalConfiguration> xmlConfiguration = retrieveConfiguration(configuration, clazz);
+            if (listener instanceof Configurable && xmlConfiguration.isPresent()) {
+                ((Configurable)listener).configure(xmlConfiguration.get());
+            }
             return listener;
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | ConfigurationException e) {
             LOGGER.error("Error while loading user registered global listener {}", listenerClass, e);
             throw new RuntimeException(e);
         }
+    }
+
+    public Optional<HierarchicalConfiguration> retrieveConfiguration(ListenerConfiguration configuration, Class<MailboxListener> clazz) {
+        return OptionalUtils.or(
+            dynamicConfigurations.stream()
+                .filter(entry -> entry.listenerClass.equals(clazz))
+                .map(DynamicConfiguration::getConfiguration)
+                .findFirst(),
+            configuration.getConfiguration());
     }
 }

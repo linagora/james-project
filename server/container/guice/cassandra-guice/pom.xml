@@ -78,6 +78,10 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>apache-james-mailbox-spamassassin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>apache-james-mailbox-tika</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
@@ -95,6 +99,10 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>blob-cassandra</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>event-sourcing-event-store-cassandra</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -139,10 +147,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>james-server-guice-lmtp</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>james-server-guice-mailbox-plugin-spamassassin</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -215,6 +219,10 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>metrics-es-reporter</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>quota-mailing-cassandra</artifactId>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>

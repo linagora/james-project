@@ -16,36 +16,29 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.spamassassin;
 
-import static org.assertj.core.api.Assertions.assertThat;
+package org.apache.james.modules.eventstore;
 
-import java.util.Optional;
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.eventsourcing.eventstore.EventStore;
+import org.apache.james.eventsourcing.eventstore.cassandra.CassandraEventStore;
+import org.apache.james.eventsourcing.eventstore.cassandra.dto.EventDTOModule;
 
-import org.apache.james.util.Host;
-import org.junit.Test;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+public class CassandraEventStoreModule extends AbstractModule {
 
-public class SpamAssassinConfigurationTest {
+    @Override
+    protected void configure() {
+        bind(CassandraEventStore.class).in(Scopes.SINGLETON);
+        bind(EventStore.class).to(CassandraEventStore.class);
 
-    @Test
-    public void spamAssassinConfigurationShouldRespectBeanContract() {
-        EqualsVerifier.forClass(SpamAssassinConfiguration.class)
-            .allFieldsShouldBeUsed()
-            .verify();
-    }
+        Multibinder.newSetBinder(binder(), CassandraModule.class)
+            .addBinding()
+            .to(org.apache.james.eventsourcing.eventstore.cassandra.CassandraEventStoreModule.class);
 
-    @Test
-    public void isEnableShouldReturnFalseWhenEmpty() {
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.empty());
-        assertThat(configuration.isEnabled()).isFalse();
-    }
-
-    @Test
-    public void isEnableShouldReturnTrueWhenConfigured() {
-        int port = 1;
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.of(Host.from("hostname", port)));
-        assertThat(configuration.isEnabled()).isTrue();
+        Multibinder.newSetBinder(binder(), EventDTOModule.class);
     }
 }

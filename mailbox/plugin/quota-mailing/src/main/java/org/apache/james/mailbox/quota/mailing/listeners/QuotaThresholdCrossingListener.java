@@ -19,21 +19,59 @@
 
 package org.apache.james.mailbox.quota.mailing.listeners;
 
+import javax.inject.Inject;
+
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.core.User;
+import org.apache.james.eventsourcing.CommandHandler;
 import org.apache.james.eventsourcing.EventSourcingSystem;
+import org.apache.james.eventsourcing.Subscriber;
+import org.apache.james.eventsourcing.eventstore.EventStore;
+import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
+import org.apache.james.mailbox.quota.mailing.QuotaMailingListenerConfiguration;
 import org.apache.james.mailbox.quota.mailing.commands.DetectThresholdCrossing;
+import org.apache.james.mailbox.quota.mailing.commands.DetectThresholdCrossingHandler;
+import org.apache.james.mailbox.quota.mailing.subscribers.QuotaThresholdMailer;
+import org.apache.james.user.api.UsersRepository;
+import org.apache.mailet.MailetContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class QuotaThresholdCrossingListener implements MailboxListener {
+import com.google.common.collect.ImmutableSet;
+
+public class QuotaThresholdCrossingListener implements MailboxListener, Configurable {
     private static final Logger LOGGER = LoggerFactory.getLogger(QuotaThresholdCrossingListener.class);
+    private final EventStore eventStore;
+    private final MailetContext mailetContext;
+    private final UsersRepository usersRepository;
+    private final FileSystem fileSystem;
 
-    private final EventSourcingSystem eventSourcingSystem;
+    private EventSourcingSystem eventSourcingSystem;
 
-    public QuotaThresholdCrossingListener(EventSourcingSystem eventSourcingSystem) {
-        this.eventSourcingSystem = eventSourcingSystem;
+    @Inject
+    public QuotaThresholdCrossingListener(MailetContext mailetContext,
+                                          UsersRepository usersRepository,
+                                          FileSystem fileSystem,
+                                          EventStore eventStore) {
+        this.eventStore = eventStore;
+        this.mailetContext = mailetContext;
+        this.usersRepository = usersRepository;
+        this.fileSystem = fileSystem;
+    }
+
+    @Override
+    public void configure(HierarchicalConfiguration config) {
+        QuotaMailingListenerConfiguration configuration = QuotaMailingListenerConfiguration.from(config);
+        configure(configuration);
+    }
+
+    public void configure(QuotaMailingListenerConfiguration configuration) {
+        ImmutableSet<CommandHandler<?>> handlers = ImmutableSet.of(new DetectThresholdCrossingHandler(eventStore, configuration));
+        ImmutableSet<Subscriber> subscribers = ImmutableSet.of(new QuotaThresholdMailer(mailetContext, usersRepository, fileSystem, configuration));
+        eventSourcingSystem = new EventSourcingSystem(handlers, subscribers, eventStore);
     }
 
     @Override
@@ -68,4 +106,5 @@ public class QuotaThresholdCrossingListener implements MailboxListener {
                 .getUser()
                 .getUserName());
     }
+
 }
