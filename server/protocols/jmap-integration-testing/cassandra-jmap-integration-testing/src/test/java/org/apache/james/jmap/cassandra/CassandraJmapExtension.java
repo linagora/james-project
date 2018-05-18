@@ -32,6 +32,7 @@ import org.apache.james.mailbox.store.search.PDFTextExtractor;
 import org.apache.james.modules.TestESMetricReporterModule;
 import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.mailbox.QuotaMailingModule;
 import org.apache.james.server.core.configuration.Configuration;
 import org.apache.james.util.scanner.SpamAssassinExtension;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -69,7 +70,7 @@ public class CassandraJmapExtension implements BeforeAllCallback, AfterAllCallba
             .build();
         return new JamesWithSpamAssassin(
                 new GuiceJamesServer(configuration)
-                    .combineWith(CassandraJamesServerMain.CASSANDRA_SERVER_MODULE, CassandraJamesServerMain.PROTOCOLS)
+                    .combineWith(CassandraJamesServerMain.CASSANDRA_SERVER_MODULE, CassandraJamesServerMain.PROTOCOLS, CassandraJamesServerMain.PLUGINS)
                     .overrideWith(binder -> binder.bind(TextExtractor.class).to(PDFTextExtractor.class))
                     .overrideWith(new TestJMAPServerModule(LIMIT_TO_20_MESSAGES))
                     .overrideWith(new TestESMetricReporterModule())

@@ -26,7 +26,9 @@ import org.apache.james.modules.data.CassandraMailRepositoryModule;
 import org.apache.james.modules.data.CassandraRecipientRewriteTableModule;
 import org.apache.james.modules.data.CassandraSieveRepositoryModule;
 import org.apache.james.modules.data.CassandraUsersRepositoryModule;
+import org.apache.james.modules.eventstore.CassandraEventStoreModule;
 import org.apache.james.modules.mailbox.CassandraMailboxModule;
+import org.apache.james.modules.mailbox.CassandraQuotaMailingModule;
 import org.apache.james.modules.mailbox.CassandraSessionModule;
 import org.apache.james.modules.mailbox.ElasticSearchMailboxModule;
 import org.apache.james.modules.mailbox.TikaMailboxModule;
@@ -75,9 +77,13 @@ public class CassandraJamesServerMain {
         new JMAPServerModule(),
         WEBADMIN);
 
+    public static final Module PLUGINS = Modules.combine(
+        new CassandraQuotaMailingModule());
+
     public static final Module CASSANDRA_SERVER_MODULE = Modules.combine(
         new ActiveMQQueueModule(),
         new CassandraDomainListModule(),
+        new CassandraEventStoreModule(),
         new CassandraJmapModule(),
         new CassandraMailboxModule(),
         new CassandraMailRepositoryModule(),
@@ -95,7 +101,7 @@ public class CassandraJamesServerMain {
     public static void main(String[] args) throws Exception {
         Configuration configuration = Configuration.builder().useWorkingDirectoryEnvProperty().build();
         GuiceJamesServer server = new GuiceJamesServer(configuration)
-                    .combineWith(CASSANDRA_SERVER_MODULE, PROTOCOLS, new JMXServerModule());
+                    .combineWith(CASSANDRA_SERVER_MODULE, PROTOCOLS, PLUGINS, new JMXServerModule());
         server.start();
     }
 
