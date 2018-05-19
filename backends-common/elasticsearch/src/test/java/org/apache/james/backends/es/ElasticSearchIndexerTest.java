@@ -22,13 +22,11 @@ package org.apache.james.backends.es;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
-import java.io.IOException;
 import java.util.concurrent.Executors;
 
 import org.apache.james.backends.es.utils.TestingClientProvider;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
 import org.junit.Before;
@@ -55,24 +53,14 @@ public class ElasticSearchIndexerTest {
     private ElasticSearchIndexer testee;
 
     @Before
-    public void setup() throws IOException {
+    public void setup() {
         node = embeddedElasticSearch.getNode();
         TestingClientProvider clientProvider = new TestingClientProvider(node);
         new IndexCreationFactory()
             .useIndex(INDEX_NAME)
             .addAlias(ALIAS_NAME)
             .createIndexAndAliases(clientProvider.get());
-        DeleteByQueryPerformer deleteByQueryPerformer = new DeleteByQueryPerformer(clientProvider.get(),
-            Executors.newSingleThreadExecutor(),
-            MINIMUM_BATCH_SIZE,
-            ALIAS_NAME,
-            TYPE_NAME) {
-            @Override
-            public void perform(QueryBuilder queryBuilder) {
-                doDeleteByQuery(queryBuilder);
-            }
-        };
-        testee = new ElasticSearchIndexer(clientProvider.get(), deleteByQueryPerformer, ALIAS_NAME, TYPE_NAME);
+        testee = new ElasticSearchIndexer(clientProvider.get(), Executors.newSingleThreadExecutor(), ALIAS_NAME, TYPE_NAME, MINIMUM_BATCH_SIZE);
     }
     
     @Test
@@ -105,7 +93,7 @@ public class ElasticSearchIndexerTest {
         testee.indexMessage(messageId, content);
         embeddedElasticSearch.awaitForElasticSearch();
 
-        testee.updateMessages(Lists.newArrayList(new ElasticSearchIndexer.UpdatedRepresentation(messageId, "{\"message\": \"mastering out Elasticsearch\"}")));
+        testee.updateMessages(Lists.newArrayList(new UpdatedRepresentation(messageId, "{\"message\": \"mastering out Elasticsearch\"}")));
         embeddedElasticSearch.awaitForElasticSearch();
 
         try (Client client = node.client()) {
@@ -127,22 +115,22 @@ public class ElasticSearchIndexerTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void updateMessageShouldThrowWhenJsonIsNull() throws InterruptedException {
-        testee.updateMessages(Lists.newArrayList(new ElasticSearchIndexer.UpdatedRepresentation("1", null)));
+        testee.updateMessages(Lists.newArrayList(new UpdatedRepresentation("1", null)));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateMessageShouldThrowWhenIdIsNull() throws InterruptedException {
-        testee.updateMessages(Lists.newArrayList(new ElasticSearchIndexer.UpdatedRepresentation(null, "{\"message\": \"mastering out Elasticsearch\"}")));
+        testee.updateMessages(Lists.newArrayList(new UpdatedRepresentation(null, "{\"message\": \"mastering out Elasticsearch\"}")));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateMessageShouldThrowWhenJsonIsEmpty() throws InterruptedException {
-        testee.updateMessages(Lists.newArrayList(new ElasticSearchIndexer.UpdatedRepresentation("1", "")));
+        testee.updateMessages(Lists.newArrayList(new UpdatedRepresentation("1", "")));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateMessageShouldThrowWhenIdIsEmpty() throws InterruptedException {
-        testee.updateMessages(Lists.newArrayList(new ElasticSearchIndexer.UpdatedRepresentation("", "{\"message\": \"mastering out Elasticsearch\"}")));
+        testee.updateMessages(Lists.newArrayList(new UpdatedRepresentation("", "{\"message\": \"mastering out Elasticsearch\"}")));
     }
 
     @Test

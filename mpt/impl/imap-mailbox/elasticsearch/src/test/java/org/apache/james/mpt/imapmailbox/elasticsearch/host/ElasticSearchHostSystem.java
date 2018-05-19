@@ -26,7 +26,6 @@ import java.util.concurrent.Executors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.backends.es.DeleteByQueryPerformer;
 import org.apache.james.backends.es.ElasticSearchIndexer;
 import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.backends.es.IndexCreationFactory;
@@ -106,11 +105,13 @@ public class ElasticSearchHostSystem extends JamesImapHostSystem {
         ElasticSearchListeningMessageSearchIndex searchIndex = new ElasticSearchListeningMessageSearchIndex(
             factory,
             new ElasticSearchIndexer(client,
-                new DeleteByQueryPerformer(client, Executors.newSingleThreadExecutor(), MailboxElasticSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS, MailboxElasticSearchConstants.MESSAGE_TYPE),
+                Executors.newSingleThreadExecutor(),
                 MailboxElasticSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS,
                 MailboxElasticSearchConstants.MESSAGE_TYPE),
             new ElasticSearchSearcher(client,
-                new QueryConverter(new CriterionConverter()), new InMemoryId.Factory(), messageIdFactory,
+                new QueryConverter(new CriterionConverter()),
+                ElasticSearchSearcher.DEFAULT_SEARCH_SIZE,
+                new InMemoryId.Factory(), messageIdFactory,
                 MailboxElasticSearchConstants.DEFAULT_MAILBOX_READ_ALIAS, MailboxElasticSearchConstants.MESSAGE_TYPE),
             new MessageToElasticSearchJson(new DefaultTextExtractor(), ZoneId.systemDefault(), IndexAttachments.YES));
 
