@@ -1326,7 +1326,7 @@
                 <type>test-jar</type>
             </dependency>
             <dependency>
-                <groupId>org.apache.james</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>james-server-mailrepository-cassandra</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -2083,7 +2083,7 @@
                 <version>${jackrabbit.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.james</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>james-karaf-distribution</artifactId>
                 <version>${project.version}</version>
                 <type>tar.gz</type>
@@ -2099,7 +2099,7 @@
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>org.apache.james</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>james-karaf-features</artifactId>
                 <version>${project.version}</version>
                 <type>pom</type>
