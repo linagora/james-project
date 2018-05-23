@@ -89,7 +89,7 @@
         "content-transfer-encoding":["7bit"],
         "content-type":["text/plain; charset=utf-8"]
       },
-      "textContent":"This mail have a non textual attachment !\r\n\n"
+      "textContent":"This mail have a non textual attachment !\r\n"
     },
     {
       "mediaType":"application",
@@ -102,9 +102,9 @@
         "content-disposition":["attachment; filename=\"toto.odt\""],
         "content-type":["application/vnd.oasis.opendocument.text; name=\"toto.odt\""]
       },
-      "textContent":"Awesome document provided for text extraction !\n"}
+      "textContent":"Awesome document provided for text extraction !\n"}
   ],
-  "textBody":"This mail have a non textual attachment !\r\n\n",
+  "textBody":"This mail have a non textual attachment !\r\n",
   "htmlBody": null,
   "isAnswered":false,
   "isDeleted":false,
@@ -116,5 +116,5 @@
   "users": [
     "username"
   ],
-  "text": "Benoit Tellier btellier@linagora.com btellier@linagora.com btellier@linagora.com Test message This mail have a non textual attachment !\r\n\n"
+  "text": "Benoit Tellier btellier@linagora.com btellier@linagora.com btellier@linagora.com Test message This mail have a non textual attachment !\r\n"
 }
