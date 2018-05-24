@@ -32,7 +32,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -375,7 +374,7 @@ public class MailQueueRoutesTest {
     }
 
     @Test
-    public void deleteMailsTasksShouldCompleteWhenSenderIsValid() throws Exception{
+    public void deleteMailsTasksShouldCompleteWhenSenderIsValid() throws Exception {
         mailQueueFactory.createQueue(FIRST_QUEUE);
 
         String taskId = with()
