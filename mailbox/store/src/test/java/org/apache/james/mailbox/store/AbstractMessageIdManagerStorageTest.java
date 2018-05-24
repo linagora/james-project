@@ -33,6 +33,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.fixture.MailboxFixture;
 import org.apache.james.mailbox.mock.MockMailboxSession;
@@ -101,10 +102,13 @@ public abstract class AbstractMessageIdManagerStorageTest {
     }
 
     @Test
-    public void deleteMessageShouldNotFailWhenMessageDoesNotExist() throws Exception {
+    public void deleteMessageShouldThrowWhenMessageDoesNotExist() throws MailboxException {
         MessageId messageId = testingData.createNotUsedMessageId();
 
-        messageIdManager.delete(messageId, ImmutableList.of(aliceMailbox1.getMailboxId()), aliceSession);
+        assertThat(messageIdManager.delete(messageId, bobSession))
+            .isEqualTo(MessageIdManager.DeleteResult.builder()
+                .addNotFound(messageId)
+                .build());
     }
 
     @Test
@@ -279,6 +283,15 @@ public abstract class AbstractMessageIdManagerStorageTest {
     }
 
     @Test
+    public void deleteAllMessageShouldRemoveMessageFromMailbox() throws Exception {
+        MessageId messageId = testingData.persist(aliceMailbox1.getMailboxId(), messageUid1, FLAGS, aliceSession);
+
+        messageIdManager.delete(messageId, aliceSession);
+
+        assertThat(messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, aliceSession)).isEmpty();
+    }
+
+    @Test
     public void deleteMessageShouldRemoveMessageOnlyFromMailbox() throws Exception {
         MessageId messageId = testingData.persist(aliceMailbox1.getMailboxId(), messageUid1, FLAGS, aliceSession);
         messageIdManager.setInMailboxes(messageId, ImmutableList.of(aliceMailbox1.getMailboxId(), aliceMailbox2.getMailboxId()), aliceSession);
@@ -288,6 +301,16 @@ public abstract class AbstractMessageIdManagerStorageTest {
         List<MessageResult> messageResults = messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, aliceSession);
         assertThat(messageResults).hasSize(1);
         assertThat(messageResults.get(0).getMailboxId()).isEqualTo(aliceMailbox2.getMailboxId());
+    }
+
+    @Test
+    public void deleteAllShouldRemoveMessageFromAllMailbox() throws Exception {
+        MessageId messageId = testingData.persist(aliceMailbox1.getMailboxId(), messageUid1, FLAGS, aliceSession);
+        messageIdManager.setInMailboxes(messageId, ImmutableList.of(aliceMailbox1.getMailboxId(), aliceMailbox2.getMailboxId()), aliceSession);
+
+        messageIdManager.delete(messageId, aliceSession);
+
+        assertThat(messageIdManager.getMessages(ImmutableList.of(messageId), FetchGroupImpl.MINIMAL, aliceSession)).isEmpty();
     }
 
     @Test
@@ -308,6 +331,16 @@ public abstract class AbstractMessageIdManagerStorageTest {
         MessageId messageId = testingData.persist(aliceMailbox1.getMailboxId(), messageUid1, FLAGS, aliceSession);
 
         messageIdManager.delete(messageId, ImmutableList.of(aliceMailbox1.getMailboxId()), bobSession);
+    }
+
+    @Test
+    public void deleteAllShouldThrowExceptionWhenDeletingOnOtherSession() throws Exception {
+        MessageId messageId = testingData.persist(aliceMailbox1.getMailboxId(), messageUid1, FLAGS, aliceSession);
+
+        assertThat(messageIdManager.delete(messageId, bobSession))
+            .isEqualTo(MessageIdManager.DeleteResult.builder()
+                .addNotFound(messageId)
+                .build());
     }
 
     @Test
