@@ -26,20 +26,20 @@ import java.util.Optional;
 import java.util.StringTokenizer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.james.backends.cassandra.init.CassandraConfiguration;
 import org.apache.james.mailbox.acl.ACLDiff;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
+import org.apache.james.mailbox.cassandra.mail.utils.DriverExceptionHelper;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.exception.TooLongMailboxNameException;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxACL.Right;
 import org.apache.james.mailbox.model.MailboxId;
@@ -53,61 +53,84 @@ import org.apache.james.util.OptionalUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.github.fge.lambdas.Throwing;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraMailboxMapper implements MailboxMapper {
 
     public static final String WILDCARD = "%";
-    public static final String VALUES_MAY_NOT_BE_LARGER_THAN_64_K = "Index expression values may not be larger than 64K";
-    public static final String CLUSTERING_COLUMNS_IS_TOO_LONG = "The sum of all clustering columns is too long";
     public static final Logger LOGGER = LoggerFactory.getLogger(CassandraMailboxMapper.class);
 
-    private final CassandraMailboxPathDAO mailboxPathDAO;
     private final CassandraMailboxDAO mailboxDAO;
+    private final CassandraMailboxPathDAOImpl mailboxPathDAO;
+    private final CassandraMailboxPathV2DAO mailboxPathV2DAO;
     private final CassandraACLMapper cassandraACLMapper;
     private final CassandraUserMailboxRightsDAO userMailboxRightsDAO;
 
     @Inject
-    public CassandraMailboxMapper(CassandraMailboxDAO mailboxDAO, CassandraMailboxPathDAO mailboxPathDAO, CassandraUserMailboxRightsDAO userMailboxRightsDAO, CassandraACLMapper aclMapper, CassandraConfiguration cassandraConfiguration) {
+    public CassandraMailboxMapper(CassandraMailboxDAO mailboxDAO, CassandraMailboxPathDAOImpl mailboxPathDAO, CassandraMailboxPathV2DAO mailboxPathV2DAO, CassandraUserMailboxRightsDAO userMailboxRightsDAO, CassandraACLMapper aclMapper) {
         this.mailboxDAO = mailboxDAO;
         this.mailboxPathDAO = mailboxPathDAO;
+        this.mailboxPathV2DAO = mailboxPathV2DAO;
         this.userMailboxRightsDAO = userMailboxRightsDAO;
         this.cassandraACLMapper = aclMapper;
     }
 
     @Override
-    public void delete(Mailbox mailbox) throws MailboxException {
+    public void delete(Mailbox mailbox) {
         CassandraId mailboxId = (CassandraId) mailbox.getMailboxId();
-        mailboxPathDAO.delete(mailbox.generateAssociatedPath())
-            .thenCompose(any -> mailboxDAO.delete(mailboxId))
+        FluentFutureStream.ofFutures(mailboxPathDAO.delete(mailbox.generateAssociatedPath()), mailboxPathV2DAO.delete(mailbox.generateAssociatedPath()))
+            .thenComposeOnAll(any -> mailboxDAO.delete(mailboxId))
             .join();
     }
 
     @Override
     public Mailbox findMailboxByPath(MailboxPath path) throws MailboxException {
         try {
-            return mailboxPathDAO.retrieveId(path)
+            return mailboxPathV2DAO.retrieveId(path)
                 .thenCompose(cassandraIdOptional ->
                     cassandraIdOptional
-                        .map(CassandraMailboxPathDAO.CassandraIdAndPath::getCassandraId)
+                        .map(CassandraIdAndPath::getCassandraId)
                         .map(this::retrieveMailbox)
-                        .orElse(CompletableFuture.completedFuture(Optional.empty())))
+                        .orElseGet(Throwing.supplier(() -> fromPreviousTable(path))))
                 .join()
                 .orElseThrow(() -> new MailboxNotFoundException(path));
         } catch (CompletionException e) {
-            if (e.getCause() instanceof InvalidQueryException) {
-                String errorMessage = e.getCause().getMessage();
-                if (StringUtils.containsIgnoreCase(errorMessage, VALUES_MAY_NOT_BE_LARGER_THAN_64_K) 
-                        || StringUtils.containsIgnoreCase(errorMessage, CLUSTERING_COLUMNS_IS_TOO_LONG)) {
-                    throw new TooLongMailboxNameException("too long mailbox name");
-                }
-                throw new MailboxException("It has error with cassandra storage", e.getCause());
-            }
-            throw e;
+            throw DriverExceptionHelper.handleStorageException(e);
         }
+    }
+
+    private CompletableFuture<Optional<SimpleMailbox>> fromPreviousTable(MailboxPath path) throws MailboxException {
+        try {
+            return mailboxPathDAO.retrieveId(path)
+                .thenCompose(cassandraIdOptional ->
+                    cassandraIdOptional
+                        .map(CassandraIdAndPath::getCassandraId)
+                        .map(this::retrieveMailbox)
+                        .orElse(CompletableFuture.completedFuture(Optional.empty())))
+                .thenCompose(maybeMailbox -> maybeMailbox.map(this::migrate)
+                    .orElse(CompletableFuture.completedFuture(maybeMailbox)));
+        } catch (CompletionException e) {
+            throw DriverExceptionHelper.handleStorageException(e);
+        }
+    }
+
+    private CompletableFuture<Optional<SimpleMailbox>> migrate(SimpleMailbox mailbox) {
+        CassandraId mailboxId = (CassandraId) mailbox.getMailboxId();
+        return mailboxPathV2DAO.save(mailbox.generateAssociatedPath(), mailboxId)
+            .thenCompose(success -> deleteIfSuccess(mailbox, success))
+            .thenApply(any -> Optional.of(mailbox));
+    }
+
+    private CompletionStage<Void> deleteIfSuccess(SimpleMailbox mailbox, boolean success) {
+        if (success) {
+            return mailboxPathDAO.delete(mailbox.generateAssociatedPath());
+        }
+        LOGGER.info("Concurrent execution lead to data race while migrating {} to 'mailboxPathV2DAO'.",
+            mailbox.generateAssociatedPath());
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
@@ -135,17 +158,25 @@ public class CassandraMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public List<Mailbox> findMailboxWithPathLike(MailboxPath path) throws MailboxException {
-        Pattern regex = Pattern.compile(constructEscapedRegexForMailboxNameMatching(path));
-
-        return FluentFutureStream.of(mailboxPathDAO.listUserMailboxes(path.getNamespace(), path.getUser()))
-            .filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches())
-            .thenFlatComposeOnOptional(this::retrieveMailbox)
-            .join()
-            .collect(Guavate.toImmutableList());
+    public List<Mailbox> findMailboxWithPathLike(MailboxPath path) {
+        List<Mailbox> mailboxes = toMailboxes(path, mailboxPathV2DAO.listUserMailboxes(path.getNamespace(), path.getUser()));
+        if (mailboxes.isEmpty()) {
+            return toMailboxes(path, mailboxPathDAO.listUserMailboxes(path.getNamespace(), path.getUser()));
+        }
+        return mailboxes;
     }
 
-    private CompletableFuture<Optional<SimpleMailbox>> retrieveMailbox(CassandraMailboxPathDAO.CassandraIdAndPath idAndPath) {
+    private List<Mailbox> toMailboxes(MailboxPath path, CompletableFuture<Stream<CassandraIdAndPath>> listUserMailboxes) {
+        Pattern regex = Pattern.compile(constructEscapedRegexForMailboxNameMatching(path));
+        
+        return FluentFutureStream.of(listUserMailboxes)
+                .filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches())
+                .thenFlatComposeOnOptional(this::retrieveMailbox)
+                .join()
+                .collect(Guavate.toImmutableList());
+    }
+
+    private CompletableFuture<Optional<SimpleMailbox>> retrieveMailbox(CassandraIdAndPath idAndPath) {
         return retrieveMailbox(idAndPath.getCassandraId())
             .thenApply(optional -> OptionalUtils.executeIfEmpty(optional,
                 () -> LOGGER.warn("Could not retrieve mailbox {} with path {} in mailbox table.", idAndPath.getCassandraId(), idAndPath.getMailboxPath())));
@@ -164,32 +195,20 @@ public class CassandraMailboxMapper implements MailboxMapper {
                 throw new MailboxExistsException(mailbox.generateAssociatedPath().asString());
             }
         } catch (CompletionException e) {
-            manageException(e);
+            throw DriverExceptionHelper.handleStorageException(e);
         }
         return cassandraId;
     }
 
     private CompletableFuture<Boolean> trySave(SimpleMailbox cassandraMailbox, CassandraId cassandraId) {
-        return mailboxPathDAO.save(cassandraMailbox.generateAssociatedPath(), cassandraId)
+        return mailboxPathV2DAO.save(cassandraMailbox.generateAssociatedPath(), cassandraId)
             .thenCompose(CompletableFutureUtil.composeIfTrue(
                 () -> retrieveMailbox(cassandraId)
                     .thenCompose(optional -> CompletableFuture
                         .allOf(optional
-                                .map(storedMailbox -> mailboxPathDAO.delete(storedMailbox.generateAssociatedPath()))
+                                .map(storedMailbox -> mailboxPathV2DAO.delete(storedMailbox.generateAssociatedPath()))
                                 .orElse(CompletableFuture.completedFuture(null)),
                             mailboxDAO.save(cassandraMailbox)))));
-    }
-
-    private void manageException(CompletionException e) throws MailboxException {
-        if (e.getCause() instanceof InvalidQueryException) {
-            String errorMessage = e.getCause().getMessage();
-            if (StringUtils.containsIgnoreCase(errorMessage, VALUES_MAY_NOT_BE_LARGER_THAN_64_K) ||
-                    StringUtils.containsIgnoreCase(errorMessage, CLUSTERING_COLUMNS_IS_TOO_LONG)) {
-                throw new TooLongMailboxNameException("too long mailbox name");
-            }
-            throw new MailboxException("It has error with cassandra storage", e.getCause());
-        }
-        throw e;
     }
 
     private CassandraId retrieveId(SimpleMailbox cassandraMailbox) {
@@ -202,14 +221,15 @@ public class CassandraMailboxMapper implements MailboxMapper {
 
     @Override
     public boolean hasChildren(Mailbox mailbox, char delimiter) {
-        return mailboxPathDAO.listUserMailboxes(mailbox.getNamespace(), mailbox.getUser())
-            .thenApply(stream -> stream
-                .anyMatch(idAndPath -> idAndPath.getMailboxPath().getName().startsWith(mailbox.getName() + String.valueOf(delimiter))))
-            .join();
+        return ImmutableList.of(mailboxPathDAO.listUserMailboxes(mailbox.getNamespace(), mailbox.getUser()), mailboxPathV2DAO.listUserMailboxes(mailbox.getNamespace(), mailbox.getUser()))
+            .stream()
+            .map(CompletableFuture::join)
+            .flatMap(Function.identity())
+            .anyMatch(idAndPath -> idAndPath.getMailboxPath().getName().startsWith(mailbox.getName() + String.valueOf(delimiter)));
     }
 
     @Override
-    public List<Mailbox> list() throws MailboxException {
+    public List<Mailbox> list() {
         return mailboxDAO.retrieveAllMailboxes()
             .thenComposeOnAll(this::toMailboxWithAclFuture)
             .join()
@@ -264,7 +284,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
     }
 
     @Override
-    public List<Mailbox> findNonPersonalMailboxes(String userName, Right right) throws MailboxException {
+    public List<Mailbox> findNonPersonalMailboxes(String userName, Right right) {
         return FluentFutureStream.of(userMailboxRightsDAO.listRightsForUser(userName)
             .thenApply(map -> toAuthorizedMailboxIds(map, right)))
             .thenFlatComposeOnOptional(this::retrieveMailbox)

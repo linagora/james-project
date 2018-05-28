@@ -17,25 +17,20 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.cassandra.mail;
+package org.apache.james.mailbox.cassandra.table;
 
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
+public interface CassandraMailboxPathV2Table {
 
-import org.apache.james.mailbox.cassandra.ids.CassandraId;
-import org.apache.james.mailbox.model.MailboxPath;
+    String TABLE_NAME = "mailboxPathV2";
 
-public interface CassandraMailboxPathDAO {
+    String NAMESPACE = "namespace";
 
-    CompletableFuture<Optional<CassandraIdAndPath>> retrieveId(MailboxPath mailboxPath);
+    String USER = "user";
 
-    CompletableFuture<Stream<CassandraIdAndPath>> listUserMailboxes(String namespace, String user);
+    String MAILBOX_NAME = "mailboxName";
 
-    Optional<CassandraIdAndPath> logGhostMailbox(MailboxPath mailboxPath, Optional<CassandraIdAndPath> value);
+    String MAILBOX_ID = "mailboxId";
 
-    CompletableFuture<Boolean> save(MailboxPath mailboxPath, CassandraId mailboxId);
-
-    CompletableFuture<Void> delete(MailboxPath mailboxPath);
+    String[] FIELDS = { NAMESPACE, USER, MAILBOX_NAME, MAILBOX_ID};
 
 }

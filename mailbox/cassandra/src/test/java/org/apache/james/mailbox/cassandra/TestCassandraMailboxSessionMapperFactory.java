@@ -35,7 +35,8 @@ import org.apache.james.mailbox.cassandra.mail.CassandraDeletedMessageDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraFirstUnseenDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxCounterDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxDAO;
-import org.apache.james.mailbox.cassandra.mail.CassandraMailboxPathDAO;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxPathDAOImpl;
+import org.apache.james.mailbox.cassandra.mail.CassandraMailboxPathV2DAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMailboxRecentsDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraMessageIdDAO;
@@ -70,7 +71,8 @@ public class TestCassandraMailboxSessionMapperFactory {
             new CassandraMailboxCounterDAO(session),
             new CassandraMailboxRecentsDAO(session),
             new CassandraMailboxDAO(session, typesProvider),
-            new CassandraMailboxPathDAO(session, typesProvider),
+            new CassandraMailboxPathDAOImpl(session, typesProvider),
+            new CassandraMailboxPathV2DAO(session, CassandraUtils.WITH_DEFAULT_CONFIGURATION),
             new CassandraFirstUnseenDAO(session),
             new CassandraApplicableFlagDAO(session),
             new CassandraAttachmentDAO(session, utils, cassandraConfiguration),
