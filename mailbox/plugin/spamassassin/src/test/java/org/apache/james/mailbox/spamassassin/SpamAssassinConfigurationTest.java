@@ -20,14 +20,14 @@ package org.apache.james.mailbox.spamassassin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Optional;
-
 import org.apache.james.util.Host;
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 
 public class SpamAssassinConfigurationTest {
+
+    private static final int PORT = 1;
 
     @Test
     public void spamAssassinConfigurationShouldRespectBeanContract() {
@@ -38,14 +38,17 @@ public class SpamAssassinConfigurationTest {
 
     @Test
     public void isEnableShouldReturnFalseWhenEmpty() {
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.empty());
+        SpamAssassinConfiguration configuration = SpamAssassinConfiguration.builder().build();
+
         assertThat(configuration.isEnable()).isFalse();
     }
 
     @Test
     public void isEnableShouldReturnTrueWhenConfigured() {
-        int port = 1;
-        SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.of(Host.from("hostname", port)));
+        SpamAssassinConfiguration configuration = SpamAssassinConfiguration.builder()
+            .host(Host.from("hostname", PORT))
+            .build();
+
         assertThat(configuration.isEnable()).isTrue();
     }
 }

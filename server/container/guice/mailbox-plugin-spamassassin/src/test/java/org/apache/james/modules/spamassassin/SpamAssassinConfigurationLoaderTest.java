@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.james.mailbox.spamassassin.SpamAssassinConfiguration;
-import org.apache.james.modules.spamassassin.SpamAssassinConfigurationLoader;
 import org.apache.james.util.Host;
 import org.junit.Test;
 
@@ -30,31 +29,46 @@ public class SpamAssassinConfigurationLoaderTest {
 
     @Test
     public void isEnableShouldReturnFalseWhenDisable() {
-        SpamAssassinConfiguration configuration = SpamAssassinConfigurationLoader.disable();
+        SpamAssassinConfiguration configuration = SpamAssassinConfiguration.disabled();
         assertThat(configuration.isEnable()).isFalse();
     }
 
     @Test
-    public void isEnableShouldReturnTrueWhenEnable() throws Exception {
+    public void isEnableShouldReturnTrueWhenEnable() {
         SpamAssassinConfiguration configuration = SpamAssassinConfigurationLoader.fromProperties(new PropertiesConfiguration());
         assertThat(configuration.isEnable()).isTrue();
     }
 
     @Test
-    public void hostShouldReturnDefaultWhenConfigurationIsEmpty() throws Exception {
+    public void hostShouldReturnDefaultWhenConfigurationIsEmpty() {
         SpamAssassinConfiguration configuration = SpamAssassinConfigurationLoader.fromProperties(new PropertiesConfiguration());
-        assertThat(configuration.getHost().get()).isEqualTo(Host.from(SpamAssassinConfigurationLoader.DEFAULT_HOST, SpamAssassinConfigurationLoader.DEFAULT_PORT));
+
+        assertThat(configuration)
+            .isEqualTo(SpamAssassinConfiguration.builder()
+                .host(Host.from(SpamAssassinConfigurationLoader.DEFAULT_HOST, SpamAssassinConfigurationLoader.DEFAULT_PORT))
+                .isAsynchronous(SpamAssassinConfiguration.Builder.DEFAULT_ASYNCHRONOUS)
+                .threadCount(SpamAssassinConfiguration.Builder.DEFAULT_THREAD_COUNT)
+                .build());
     }
 
     @Test
-    public void hostShouldReturnCustomWhenConfigurationIsProvided() throws Exception {
+    public void hostShouldReturnCustomWhenConfigurationIsProvided() {
         PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration();
         String host = "10.69.1.123";
-        propertiesConfiguration.addProperty("spamassassin.host", host);
         int port = 1783;
-        propertiesConfiguration.addProperty("spamassassin.port", port);
+        boolean asyncDisabled = false;
+        int threadCount = 4;
 
-        SpamAssassinConfiguration configuration = SpamAssassinConfigurationLoader.fromProperties(propertiesConfiguration);
-        assertThat(configuration.getHost().get()).isEqualTo(Host.from(host, port));
+        propertiesConfiguration.addProperty("spamassassin.host", host);
+        propertiesConfiguration.addProperty("spamassassin.port", port);
+        propertiesConfiguration.addProperty("spamassassin.asynchronous", asyncDisabled);
+        propertiesConfiguration.addProperty("spamassassin.client.thread.count", threadCount);
+
+        assertThat(SpamAssassinConfigurationLoader.fromProperties(propertiesConfiguration))
+            .isEqualTo(SpamAssassinConfiguration.builder()
+                .host(Host.from(host, port))
+                .isAsynchronous(asyncDisabled)
+                .threadCount(threadCount)
+                .build());
     }
 }

@@ -21,7 +21,6 @@ package org.apache.james.modules.spamassassin;
 
 import java.util.Optional;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.james.mailbox.spamassassin.SpamAssassinConfiguration;
 import org.apache.james.util.Host;
@@ -30,20 +29,29 @@ public class SpamAssassinConfigurationLoader {
 
     private static final String SPAMASSASSIN_HOST = "spamassassin.host";
     private static final String SPAMASSASSIN_PORT = "spamassassin.port";
+    private static final String SPAMASSASSIN_ASYNCHRONOUS = "spamassassin.asynchronous";
+    private static final String SPAMASSASSIN_THREAD_COUNT = "spamassassin.client.thread.count";
     public static final String DEFAULT_HOST = "127.0.0.1";
     public static final int DEFAULT_PORT = 783;
 
-    public static SpamAssassinConfiguration disable() {
-        return new SpamAssassinConfiguration(Optional.empty());
+    public static SpamAssassinConfiguration fromProperties(PropertiesConfiguration configuration) {
+        return SpamAssassinConfiguration.builder()
+            .host(getHost(configuration))
+            .isAsynchronous(isAsynchronous(configuration))
+            .threadCount(getThreadCount(configuration))
+            .build();
     }
 
-    public static SpamAssassinConfiguration fromProperties(PropertiesConfiguration configuration) throws ConfigurationException {
-        Host host = getHost(configuration);
-        return new SpamAssassinConfiguration(Optional.of(host));
-    }
-
-    private static Host getHost(PropertiesConfiguration propertiesReader) throws ConfigurationException {
+    private static Host getHost(PropertiesConfiguration propertiesReader) {
         return Host.from(propertiesReader.getString(SPAMASSASSIN_HOST, DEFAULT_HOST), 
                 propertiesReader.getInteger(SPAMASSASSIN_PORT, DEFAULT_PORT));
+    }
+
+    private static Optional<Boolean> isAsynchronous(PropertiesConfiguration propertiesReader) {
+        return Optional.ofNullable(propertiesReader.getBoolean(SPAMASSASSIN_ASYNCHRONOUS, null));
+    }
+
+    private static Optional<Integer> getThreadCount(PropertiesConfiguration propertiesReader) {
+        return Optional.ofNullable(propertiesReader.getInteger(SPAMASSASSIN_THREAD_COUNT, null));
     }
 }

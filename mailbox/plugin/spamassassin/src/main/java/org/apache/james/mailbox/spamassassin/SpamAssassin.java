@@ -20,6 +20,8 @@ package org.apache.james.mailbox.spamassassin;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
@@ -28,19 +30,36 @@ import org.apache.james.util.Host;
 import org.apache.james.util.scanner.SpamAssassinInvoker;
 
 import com.github.fge.lambdas.Throwing;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class SpamAssassin {
+    private static ExecutorService generateExecutor(SpamAssassinConfiguration configuration) {
+        if (configuration.isAsynchronous()) {
+            return Executors.newFixedThreadPool(configuration.getThreadCount());
+        }
+        return MoreExecutors.newDirectExecutorService();
+    }
 
     private final MetricFactory metricFactory;
     private final SpamAssassinConfiguration spamAssassinConfiguration;
+    private final ExecutorService executor;
 
     @Inject
     public SpamAssassin(MetricFactory metricFactory, SpamAssassinConfiguration spamAssassinConfiguration) {
         this.metricFactory = metricFactory;
         this.spamAssassinConfiguration = spamAssassinConfiguration;
+        this.executor = generateExecutor(spamAssassinConfiguration);
     }
 
     public void learnSpam(List<InputStream> messages, String user) {
+        executor.submit(() -> doLearnSpam(messages, user));
+    }
+
+    public void learnHam(List<InputStream> messages, String user) {
+        executor.submit(() -> doLearnHam(messages, user));
+    }
+
+    private void doLearnSpam(List<InputStream> messages, String user) {
         if (spamAssassinConfiguration.isEnable()) {
             Host host = spamAssassinConfiguration.getHost().get();
             SpamAssassinInvoker invoker = new SpamAssassinInvoker(metricFactory, host.getHostName(), host.getPort());
@@ -49,7 +68,7 @@ public class SpamAssassin {
         }
     }
 
-    public void learnHam(List<InputStream> messages, String user) {
+    private void doLearnHam(List<InputStream> messages, String user) {
         if (spamAssassinConfiguration.isEnable()) {
             Host host = spamAssassinConfiguration.getHost().get();
             SpamAssassinInvoker invoker = new SpamAssassinInvoker(metricFactory, host.getHostName(), host.getPort());

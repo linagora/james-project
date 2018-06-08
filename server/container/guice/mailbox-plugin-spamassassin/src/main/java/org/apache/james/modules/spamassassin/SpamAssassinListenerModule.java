@@ -53,7 +53,7 @@ public class SpamAssassinListenerModule extends AbstractModule {
             return SpamAssassinConfigurationLoader.fromProperties(configuration);
         } catch (FileNotFoundException e) {
             LOGGER.warn("Could not find " + SPAMASSASSIN_CONFIGURATION_NAME + " configuration file. Disabling this service.");
-            return SpamAssassinConfigurationLoader.disable();
+            return SpamAssassinConfiguration.disabled();
         }
     }
 

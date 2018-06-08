@@ -27,11 +27,16 @@
 
   <section name="Antispam Configuration">
   
-    <p>Apache James Server Anti-Spam system can be configured via two main different mechanisms:</p>
+    <p>Apache James Server Anti-Spam system can be configured via three main different mechanisms:</p>
     
     <ul>
-       <li>SMTP Hooks; see <a href="https://github.com/apache/james-project/tree/master/server/app/src/main/resources/smtpserver.xml">examples</a>.</li>
-       <li>Mailets; see <a href="https://github.com/apache/james-project/tree/master/server/app/src/main/resources/mailetcontainer.xml">examples</a>.</li>
+       <li>SMTP Hooks; see <a href="https://github.com/apache/james-project/tree/master/server/app/src/main/resources/smtpserver.xml">examples</a>.
+       It enables Spam mail rejection before the mail queue is reached.</li>
+       <li>Mailets; see <a href="https://github.com/apache/james-project/tree/master/server/app/src/main/resources/mailetcontainer.xml">examples</a>.
+       It enables detecting Spam while processing the mail within the mailet container.</li>
+       <li>Mailbox listeners; see <a href="https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra/destination/conf/listeners.xml">example</a>.
+       It enables direct feedback to SpamAssassin, based on user action. Moving a mail to the <i>Spam</i> mailbox will report it as Spam, while email not in
+       the Spam mailbox will be reported as Ham.</li>
     </ul>
 
     <subsection name="AntiSpam SMTP Hooks">
@@ -53,7 +58,10 @@
       <li>SpamAssassin Mailet is designed to classify the messages as spam or not 
           with an configurable score threshold. Usually a message will only be 
           considered as spam if it matches multiple criteria; matching just a single test 
-          will not usually be enough to reach the threshold.</li>
+          will not usually be enough to reach the threshold. Note that Spam is reported on a
+          per user bases. As a result of this mailet execution, the <i>org.apache.james.spamassassin.flag</i>
+          mail header will have the values <i>Yes</i> or <i>No</i>, and the <i>org.apache.james.spamassassin.status</i>
+          will also contain the Spam level as well as the spam threshold, for instance <i>No, hits=3 required=5</i>.</li>
       <li>BayesianAnalysis in the Mailet uses Bayesian probability to classify mail as 
           spam or not spam. It relies on the training data coming from the users’ judgment. 
           Users need to manually judge as spam and send to spam@thisdomain.com, oppositely, 
@@ -67,6 +75,38 @@
     </ul>
     
     </subsection>
+
+      <subsection name="spamassassin.properties">
+        <p>This a a Guice specific configuration file used to configure the specific mailbox listener.
+        This optional configuration file is however required when the SpamAssassin mailet is configured</p>
+
+          <br/>
+
+          <dl>
+              <dt><strong>spamassassin.host</strong></dt>
+              <dd>Host SpamAssassin can be reached on.</dd>
+
+              <dt><strong>spamassassin.port</strong></dt>
+              <dd>Port used to contact SpamAssassin.</dd>
+
+              <dt><strong>spamassassin.asynchronous</strong></dt>
+              <dd>Boolean. Defaults to false.
+                  If true, a thread pool executor is used to run asynchronously SpamAssassin mailbox listener
+                  ham/spam reports. If false, the report is performed synchronously.</dd>
+
+              <dt><strong>spamassassin.client.thread.count</strong></dt>
+              <dd>Strictly positive integer.
+                  Number of threads being used for the executor's thread pool.
+                  Defaults to 8. Ignored if SpamAssassin listener runs synchronously.</dd>
+          </dl>
+
+          <br/>
+
+          <p>As part of our tests, we set up a SpamAssassin server (inside docker) on top of Postgres SQL database. This set up
+          enables per-user Spam reporting, and is the SpamAssassin set up James is tested against. Installation details can
+          <a href="https://github.com/apache/james-project/tree/master/server/container/util/src/test/resources/docker/spamassassin">be seen there</a>.</p>
+
+      </subsection>
     
   </section>
 

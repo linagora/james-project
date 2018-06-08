@@ -18,8 +18,6 @@
  ****************************************************************/
 package org.apache.james.jmap.methods.integration;
 
-import java.util.Optional;
-
 import javax.inject.Singleton;
 
 import org.apache.james.mailbox.spamassassin.SpamAssassinConfiguration;
@@ -50,7 +48,11 @@ public class SpamAssassinModule extends AbstractModule {
     @Singleton
     private SpamAssassinConfiguration getSpamAssassinConfiguration() {
         SpamAssassin spamAssassin = spamAssassinExtension.getSpamAssassin();
-        return new SpamAssassinConfiguration(Optional.of(Host.from(spamAssassin.getIp(), spamAssassin.getBindingPort())));
+
+        return SpamAssassinConfiguration.builder()
+            .host(Host.from(spamAssassin.getIp(), spamAssassin.getBindingPort()))
+            .isAsynchronous(false)
+            .build();
     }
 
 }
