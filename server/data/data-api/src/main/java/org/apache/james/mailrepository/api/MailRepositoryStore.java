@@ -31,13 +31,13 @@ public interface MailRepositoryStore {
      * @return repository
      * @throws MailRepositoryStoreException
      */
-    MailRepository select(String url) throws MailRepositoryStoreException;
+    MailRepository select(MailRepositoryUrl url) throws MailRepositoryStoreException;
 
     /**
      * Returns the {@link MailRepository} for the given url.
      * This mail repository will not be created if it does not exist.
      */
-    Optional<MailRepository> get(String url) throws MailRepositoryStoreException;
+    Optional<MailRepository> get(MailRepositoryUrl url) throws MailRepositoryStoreException;
 
     /**
      * Return a {@link List} which contains all urls of the selected
@@ -45,7 +45,7 @@ public interface MailRepositoryStore {
      * 
      * @return urls
      */
-    List<String> getUrls();
+    List<MailRepositoryUrl> getUrls();
 
     class MailRepositoryStoreException extends Exception {
         public MailRepositoryStoreException(String msg, Throwable t) {
