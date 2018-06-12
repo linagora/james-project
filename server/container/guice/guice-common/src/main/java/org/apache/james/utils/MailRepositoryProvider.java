@@ -20,10 +20,11 @@
 package org.apache.james.utils;
 
 import org.apache.james.mailrepository.api.MailRepository;
+import org.apache.james.mailrepository.api.MailRepositoryUrl;
 
 public interface MailRepositoryProvider {
 
     String canonicalName();
 
-    MailRepository provide(String url);
+    MailRepository provide(MailRepositoryUrl url);
 }

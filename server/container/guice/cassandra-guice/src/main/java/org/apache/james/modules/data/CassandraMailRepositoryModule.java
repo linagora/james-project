@@ -22,10 +22,14 @@ package org.apache.james.modules.data;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.blob.api.ObjectStore;
 import org.apache.james.mailrepository.api.MailRepository;
+import org.apache.james.mailrepository.api.MailRepositoryUrl;
+import org.apache.james.mailrepository.api.MailRepositoryUrlStore;
 import org.apache.james.mailrepository.cassandra.CassandraMailRepository;
 import org.apache.james.mailrepository.cassandra.CassandraMailRepositoryCountDAO;
 import org.apache.james.mailrepository.cassandra.CassandraMailRepositoryKeysDAO;
 import org.apache.james.mailrepository.cassandra.CassandraMailRepositoryMailDAO;
+import org.apache.james.mailrepository.cassandra.CassandraMailRepositoryUrlModule;
+import org.apache.james.mailrepository.cassandra.CassandraMailRepositoryUrlStore;
 import org.apache.james.utils.MailRepositoryProvider;
 
 import com.google.inject.AbstractModule;
@@ -36,15 +40,19 @@ import com.google.inject.multibindings.Multibinder;
 public class CassandraMailRepositoryModule extends AbstractModule {
     @Override
     protected void configure() {
+        bind(CassandraMailRepositoryUrlStore.class).in(Scopes.SINGLETON);
         bind(CassandraMailRepositoryKeysDAO.class).in(Scopes.SINGLETON);
         bind(CassandraMailRepositoryCountDAO.class).in(Scopes.SINGLETON);
         bind(CassandraMailRepositoryMailDAO.class).in(Scopes.SINGLETON);
 
+        bind(MailRepositoryUrlStore.class).to(CassandraMailRepositoryUrlStore.class);
+
         Multibinder<MailRepositoryProvider> multibinder = Multibinder.newSetBinder(binder(), MailRepositoryProvider.class);
         multibinder.addBinding().to(CassandraMailRepositoryProvider.class);
 
-        Multibinder.newSetBinder(binder(), CassandraModule.class).addBinding()
-            .to(org.apache.james.mailrepository.cassandra.CassandraMailRepositoryModule.class);
+        Multibinder<CassandraModule> cassandraModuleBinder = Multibinder.newSetBinder(binder(), CassandraModule.class);
+        cassandraModuleBinder.addBinding().to(org.apache.james.mailrepository.cassandra.CassandraMailRepositoryModule.class);
+        cassandraModuleBinder.addBinding().to(CassandraMailRepositoryUrlModule.class);
     }
 
     public static class CassandraMailRepositoryProvider implements MailRepositoryProvider {
@@ -67,7 +75,7 @@ public class CassandraMailRepositoryModule extends AbstractModule {
         }
 
         @Override
-        public MailRepository provide(String url) {
+        public MailRepository provide(MailRepositoryUrl url) {
             return new CassandraMailRepository(url, keysDAO, countDAO, mailDAO, objectStore);
         }
     }

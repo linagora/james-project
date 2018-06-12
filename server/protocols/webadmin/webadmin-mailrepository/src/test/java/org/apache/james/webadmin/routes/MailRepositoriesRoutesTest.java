@@ -38,8 +38,11 @@ import static org.mockito.Mockito.when;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepositoryStore;
+import org.apache.james.mailrepository.api.MailRepositoryUrl;
 import org.apache.james.mailrepository.memory.MemoryMailRepository;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.queue.api.MailQueueFactory;
@@ -65,6 +68,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.RequestSpecBuilder;
@@ -73,7 +77,7 @@ import com.jayway.restassured.parsing.Parser;
 
 public class MailRepositoriesRoutesTest {
 
-    public static final String URL_MY_REPO = "url://myRepo";
+    public static final MailRepositoryUrl URL_MY_REPO = MailRepositoryUrl.from("url://myRepo");
     public static final String URL_ESCAPED_MY_REPO = "url%3A%2F%2FmyRepo";
     public static final String MY_REPO_MAILS = "url%3A%2F%2FmyRepo/mails";
     public static final String CUSTOM_QUEUE = "customQueue";
@@ -120,6 +124,8 @@ public class MailRepositoriesRoutesTest {
 
     @Test
     public void getMailRepositoriesShouldReturnEmptyWhenEmpty() {
+        when(mailRepositoryStore.getUrls()).thenReturn(Stream.empty());
+
         List<Object> mailRepositories =
             when()
                 .get()
@@ -137,22 +143,22 @@ public class MailRepositoriesRoutesTest {
     @Test
     public void getMailRepositoriesShouldReturnRepositoryWhenOne() {
         when(mailRepositoryStore.getUrls())
-            .thenReturn(ImmutableList.of(URL_MY_REPO));
+            .thenReturn(Stream.of(URL_MY_REPO));
 
         when()
             .get()
         .then()
             .statusCode(HttpStatus.OK_200)
             .body("", hasSize(1))
-            .body("[0].repository", is(URL_MY_REPO))
+            .body("[0].repository", is(URL_MY_REPO.asString()))
             .body("[0].id", is(URL_ESCAPED_MY_REPO));
     }
 
     @Test
     public void getMailRepositoriesShouldReturnTwoRepositoriesWhenTwo() {
-        ImmutableList<String> myRepositories = ImmutableList.of(URL_MY_REPO, "url://mySecondRepo");
+        ImmutableList<MailRepositoryUrl> myRepositories = ImmutableList.of(URL_MY_REPO, MailRepositoryUrl.from("url://mySecondRepo"));
         when(mailRepositoryStore.getUrls())
-            .thenReturn(myRepositories);
+            .thenReturn(myRepositories.stream());
 
         List<String> mailRepositories =
             when()
@@ -165,7 +171,10 @@ public class MailRepositoriesRoutesTest {
                 .jsonPath()
                 .getList("repository");
 
-        assertThat(mailRepositories).containsOnlyElementsOf(myRepositories);
+        assertThat(mailRepositories)
+            .containsOnlyElementsOf(myRepositories.stream()
+                .map(MailRepositoryUrl::asString)
+                .collect(Guavate.toImmutableList()));
     }
 
     @Test
@@ -376,7 +385,7 @@ public class MailRepositoriesRoutesTest {
         .then()
             .statusCode(HttpStatus.OK_200)
             .contentType(ContentType.JSON)
-            .body("repository", is(URL_MY_REPO))
+            .body("repository", is(URL_MY_REPO.asString()))
             .body("id", is(URL_ESCAPED_MY_REPO));
     }
 
@@ -606,7 +615,7 @@ public class MailRepositoriesRoutesTest {
             .body("status", is("completed"))
             .body("taskId", is(notNullValue()))
             .body("type", is(ClearMailRepositoryTask.TYPE))
-            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO))
+            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO.asString()))
             .body("additionalInformation.initialCount", is(2))
             .body("additionalInformation.remainingCount", is(0))
             .body("startedDate", is(notNullValue()))
@@ -733,7 +742,7 @@ public class MailRepositoriesRoutesTest {
             .body("status", is("completed"))
             .body("taskId", is(notNullValue()))
             .body("type", is(ReprocessingAllMailsTask.TYPE))
-            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO))
+            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO.asString()))
             .body("additionalInformation.initialCount", is(2))
             .body("additionalInformation.remainingCount", is(0))
             .body("additionalInformation.targetProcessor", isEmptyOrNullString())
@@ -772,7 +781,7 @@ public class MailRepositoriesRoutesTest {
             .body("status", is("completed"))
             .body("taskId", is(notNullValue()))
             .body("type", is(ReprocessingAllMailsTask.TYPE))
-            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO))
+            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO.asString()))
             .body("additionalInformation.initialCount", is(2))
             .body("additionalInformation.remainingCount", is(0))
             .body("additionalInformation.targetProcessor", is(transport))
@@ -1005,7 +1014,7 @@ public class MailRepositoriesRoutesTest {
             .body("status", is("completed"))
             .body("taskId", is(notNullValue()))
             .body("type", is(ReprocessingOneMailTask.TYPE))
-            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO))
+            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO.asString()))
             .body("additionalInformation.mailKey", is(NAME_1))
             .body("additionalInformation.targetProcessor", isEmptyOrNullString())
             .body("additionalInformation.targetQueue", is(MailQueueFactory.SPOOL))
@@ -1043,7 +1052,7 @@ public class MailRepositoriesRoutesTest {
             .body("status", is("completed"))
             .body("taskId", is(notNullValue()))
             .body("type", is(ReprocessingOneMailTask.TYPE))
-            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO))
+            .body("additionalInformation.repositoryUrl", is(URL_MY_REPO.asString()))
             .body("additionalInformation.mailKey", is(NAME_1))
             .body("additionalInformation.targetProcessor", is(transport))
             .body("additionalInformation.targetQueue", is(CUSTOM_QUEUE))
@@ -1078,7 +1087,7 @@ public class MailRepositoriesRoutesTest {
             .get(taskId + "/await");
 
         assertThat(mailRepository.list())
-            .containsOnly(NAME_2);
+            .containsOnly(new MailKey(NAME_2));
     }
 
     @Test
