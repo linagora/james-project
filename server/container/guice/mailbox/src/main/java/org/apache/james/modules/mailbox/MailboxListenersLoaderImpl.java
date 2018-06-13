@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.modules.mailbox;
 
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
@@ -25,6 +26,7 @@ import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.event.MailboxListenerRegistry;
+import org.apache.james.util.OptionalUtils;
 import org.apache.james.utils.ExtendedClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,18 +76,44 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
 
     @Override
     public MailboxListener createListener(ListenerConfiguration configuration) {
-        String listenerClass = configuration.getClazz();
-        try {
+        return OptionalUtils
+            .orSuppliers(
+                () -> createFromClass(configuration),
+                () -> createFromFactory(configuration))
+            .orElseThrow(() -> new RuntimeException("unexpected error loading mailbox listener"));
+    }
+
+    private Optional<MailboxListener> createFromClass(ListenerConfiguration configuration) {
+        Optional<String> listenerClass = configuration.getClazz();
+        if (listenerClass.isPresent()) {
             LOGGER.info("Loading user registered mailbox listener {}", listenerClass);
-            return mailboxListenerFactory.newInstance()
-                .withConfiguration(configuration.getConfiguration())
-                .withExecutionMode(configuration.isAsync().map(this::getExecutionMode))
-                .clazz(classLoader.locateClass(listenerClass))
-                .build();
-        } catch (ClassNotFoundException e) {
-            LOGGER.error("Error while loading user registered global listener {}", listenerClass, e);
-            throw new RuntimeException(e);
+            try {
+                Class<? extends MailboxListener> clazz = classLoader.locateClass(listenerClass.get());
+                return Optional.of(mailboxListenerFactory.createMailboxListener(clazz));
+            } catch (ClassNotFoundException e) {
+                LOGGER.error("Error while loading user registered mailbox listener {}", listenerClass, e);
+                throw new RuntimeException(e);
+            }
         }
+        return Optional.empty();
+    }
+
+    private Optional<MailboxListener> createFromFactory(ListenerConfiguration configuration) {
+        Optional<String> factoryClass = configuration.getFactoryClass();
+        if (factoryClass.isPresent()) {
+            LOGGER.info("Loading user registered mailbox listener {}", factoryClass);
+            try {
+                Class<? extends ConfigurableMailboxListener.Factory> factoryClazz = classLoader.locateClass(factoryClass.get());
+                ConfigurableMailboxListener.Factory factory = mailboxListenerFactory.createFactory(factoryClazz);
+                MailboxListener.ExecutionMode executionMode = configuration.isAsync().map(this::getExecutionMode).orElse(MailboxListener.ExecutionMode.SYNCHRONOUS);
+                HierarchicalConfiguration listenerConfiguration = configuration.getConfiguration().orElseGet(HierarchicalConfiguration::new);
+                return Optional.of(factory.create(listenerConfiguration, executionMode));
+            } catch (ClassNotFoundException e) {
+                LOGGER.error("Error while loading user registered mailbox listener with factory {}", factoryClass, e);
+                throw new RuntimeException(e);
+            }
+        }
+        return Optional.empty();
     }
 
     private MailboxListener.ExecutionMode getExecutionMode(boolean isAsync) {

@@ -16,14 +16,14 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.modules.mailbox;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.mailbox.MailboxListener;
 
-public interface MailboxListenersLoader {
-
-    MailboxListener createListener(ListenerConfiguration configuration);
-
-    void register(MailboxListener listener);
+public interface ConfigurableMailboxListener {
+    interface Factory {
+        MailboxListener create(HierarchicalConfiguration configuration, MailboxListener.ExecutionMode executionMode);
+    }
 }

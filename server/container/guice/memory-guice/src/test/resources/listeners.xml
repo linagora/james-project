@@ -20,6 +20,6 @@
 
 <listeners>
   <listener>
-    <class>org.apache.james.mailbox.spamassassin.SpamAssassinListener</class>
+    <factoryclass>org.apache.james.mailbox.spamassassin.SpamAssassinListener.Factory</factoryclass>
   </listener>
 </listeners>

@@ -22,7 +22,7 @@
   <poolSize>8</poolSize>
 
   <listener>
-    <class>org.apache.james.mailbox.spamassassin.SpamAssassinListener</class>
+    <factoryclass>org.apache.james.mailbox.spamassassin.SpamAssassinListener.Factory</factoryclass>
     <async>true</async>
   </listener>
   <listener>

@@ -29,13 +29,21 @@ public class ListenerConfiguration {
 
     public static ListenerConfiguration from(HierarchicalConfiguration configuration) {
         String listenerClass = configuration.getString("class");
-        Preconditions.checkState(!Strings.isNullOrEmpty(listenerClass), "class name is mandatory");
+        String listenerFactoryClass = configuration.getString("factoryclass");
+        Preconditions.checkState(!(Strings.isNullOrEmpty(listenerClass) && Strings.isNullOrEmpty(listenerFactoryClass)),
+            "class name or factoryclass name is mandatory");
         Optional<Boolean> isAsync = Optional.ofNullable(configuration.getBoolean("async", null));
-        return new ListenerConfiguration(listenerClass, extractSubconfiguration(configuration), isAsync);
+        return new ListenerConfiguration(
+            Optional.ofNullable(listenerClass), Optional.ofNullable(listenerFactoryClass),
+            extractSubconfiguration(configuration), isAsync);
     }
 
     public static ListenerConfiguration forClass(String clazz) {
-        return new ListenerConfiguration(clazz, Optional.empty(), Optional.empty());
+        return new ListenerConfiguration(Optional.of(clazz), Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    public static ListenerConfiguration forFactory(String clazz) {
+        return new ListenerConfiguration(Optional.empty(), Optional.of(clazz), Optional.empty(), Optional.empty());
     }
 
     private static Optional<HierarchicalConfiguration> extractSubconfiguration(HierarchicalConfiguration configuration) {
@@ -44,18 +52,25 @@ public class ListenerConfiguration {
             .findFirst();
     }
 
-    private final String clazz;
+    private final Optional<String> clazz;
+    private final Optional<String> factoryClazz;
     private final Optional<HierarchicalConfiguration> configuration;
     private final Optional<Boolean> isAsync;
 
-    private ListenerConfiguration(String clazz, Optional<HierarchicalConfiguration> configuration, Optional<Boolean> isAsync) {
+    private ListenerConfiguration(Optional<String> clazz, Optional<String> factoryClazz,
+                                  Optional<HierarchicalConfiguration> configuration, Optional<Boolean> isAsync) {
         this.clazz = clazz;
+        this.factoryClazz = factoryClazz;
         this.configuration = configuration;
         this.isAsync = isAsync;
     }
 
-    public String getClazz() {
+    public Optional<String> getClazz() {
         return clazz;
+    }
+
+    public Optional<String> getFactoryClass() {
+        return factoryClazz;
     }
 
     public Optional<HierarchicalConfiguration> getConfiguration() {

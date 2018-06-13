@@ -44,14 +44,29 @@ import com.google.common.collect.ImmutableList;
 
 public class SpamAssassinListener implements SpamEventListener {
 
+    public static class Factory {
+
+        private final SpamAssassin spamAssassin;
+        private final MailboxSessionMapperFactory mapperFactory;
+
+        @Inject
+        public Factory(SpamAssassin spamAssassin, MailboxSessionMapperFactory mapperFactory) {
+            this.spamAssassin = spamAssassin;
+            this.mapperFactory = mapperFactory;
+        }
+
+        public SpamAssassinListener create(ExecutionMode executionMode) {
+            return new SpamAssassinListener(spamAssassin, mapperFactory, executionMode);
+        }
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(SpamAssassinListener.class);
 
     private final SpamAssassin spamAssassin;
     private final MailboxSessionMapperFactory mapperFactory;
     private final ExecutionMode executionMode;
 
-    @Inject
-    public SpamAssassinListener(SpamAssassin spamAssassin, MailboxSessionMapperFactory mapperFactory, ExecutionMode executionMode) {
+    private SpamAssassinListener(SpamAssassin spamAssassin, MailboxSessionMapperFactory mapperFactory, ExecutionMode executionMode) {
         this.spamAssassin = spamAssassin;
         this.mapperFactory = mapperFactory;
         this.executionMode = executionMode;

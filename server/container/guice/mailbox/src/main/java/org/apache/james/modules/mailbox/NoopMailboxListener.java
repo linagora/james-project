@@ -18,10 +18,18 @@
  ****************************************************************/
 package org.apache.james.modules.mailbox;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.MailboxListener;
 
 public class NoopMailboxListener implements MailboxListener {
+
+    public static class Factory implements ConfigurableMailboxListener.Factory {
+        @Override
+        public MailboxListener create(HierarchicalConfiguration configuration, ExecutionMode executionMode) {
+            return new NoopMailboxListener();
+        }
+    }
 
     @Override
     public ListenerType getType() {

@@ -87,7 +87,7 @@ public class SpamAssassinListenerTest {
         spamCapitalMailboxId = mailboxMapper.save(new SimpleMailbox(MailboxPath.forUser(USER, "SPAM"), UID_VALIDITY));
         trashMailboxId = mailboxMapper.save(new SimpleMailbox(MailboxPath.forUser(USER, "Trash"), UID_VALIDITY));
 
-        listener = new SpamAssassinListener(spamAssassin, mapperFactory, MailboxListener.ExecutionMode.SYNCHRONOUS);
+        listener = new SpamAssassinListener.Factory(spamAssassin, mapperFactory).create(MailboxListener.ExecutionMode.SYNCHRONOUS);
     }
 
     @After

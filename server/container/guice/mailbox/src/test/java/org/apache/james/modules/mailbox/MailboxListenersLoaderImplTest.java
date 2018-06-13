@@ -96,7 +96,7 @@ public class MailboxListenersLoaderImplTest {
                         "<class>org.apache.james.modules.mailbox.NoopMailboxListener</class>" +
                     "</listener>" +
                     "<listener>" +
-                        "<class>org.apache.james.modules.mailbox.NoopMailboxListener</class>" +
+                        "<factoryclass>org.apache.james.modules.mailbox.NoopMailboxListener$Factory</factoryclass>" +
                     "</listener>" +
                 "</listeners>");
 
