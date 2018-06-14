@@ -34,7 +34,8 @@ import com.google.common.collect.ImmutableSet;
 
 public class EventBus {
 
-    public static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
+
     private final EventStore eventStore;
     private final Set<Subscriber> subscribers;
 
@@ -51,7 +52,7 @@ public class EventBus {
             .forEach(this::handle);
     }
 
-    public void handle(Pair<Event, Subscriber> pair) {
+    private void handle(Pair<Event, Subscriber> pair) {
         Subscriber subscriber = pair.getRight();
         Event event = pair.getLeft();
         try {

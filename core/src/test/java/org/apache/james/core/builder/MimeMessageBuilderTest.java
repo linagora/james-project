@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.mail.internet.MimeMessage;
 
+import org.apache.james.util.MimeMessageUtil;
 import org.junit.Test;
 
 public class MimeMessageBuilderTest {
@@ -59,6 +60,24 @@ public class MimeMessageBuilderTest {
 
         assertThat(mimeMessage.getHeader("Date"))
             .containsExactly(value);
+    }
+
+    @Test
+    public void embeddedMessagesShouldBeSupported() throws Exception {
+        MimeMessage embeddedMimeMessage = MimeMessageBuilder.mimeMessageBuilder()
+            .setSubject("A unicorn eat popcorn")
+            .setText("As studies demonstrated unicorns eats cereals.")
+            .build();
+        MimeMessage mimeMessage = MimeMessageBuilder.mimeMessageBuilder()
+            .setSubject("Internet is a strange place")
+            .setContent(MimeMessageBuilder.multipartBuilder()
+                .addBody(MimeMessageBuilder.bodyPartBuilder()
+                    .data("The following embedded message is sooo funny!"))
+                .addBody(embeddedMimeMessage))
+            .build();
+
+        assertThat(MimeMessageUtil.asString(mimeMessage))
+            .contains(MimeMessageUtil.asString(embeddedMimeMessage));
     }
 
 }
