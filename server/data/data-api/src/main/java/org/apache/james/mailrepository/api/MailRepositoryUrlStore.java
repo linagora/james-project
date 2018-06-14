@@ -17,38 +17,15 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailrepository.mock;
+package org.apache.james.mailrepository.api;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.apache.james.mailrepository.api.MailRepository;
-import org.apache.james.mailrepository.api.MailRepositoryStore;
-import org.apache.james.mailrepository.api.MailRepositoryUrl;
+public interface MailRepositoryUrlStore {
 
-public class MockMailRepositoryStore implements MailRepositoryStore {
+    void add(MailRepositoryUrl url);
 
-    private final Map<MailRepositoryUrl, MailRepository> storedObjectMap = new HashMap<>();
+    Stream<MailRepositoryUrl> listDistinct();
 
-    public void add(MailRepositoryUrl url, MailRepository obj) {
-        storedObjectMap.put(url, obj);
-    }
-
-    @Override
-    public MailRepository select(MailRepositoryUrl url) {
-        return storedObjectMap.get(url);
-    }
-
-    @Override
-    public Optional<MailRepository> get(MailRepositoryUrl url) {
-        return Optional.ofNullable(storedObjectMap.get(url));
-    }
-
-    @Override
-    public Stream<MailRepositoryUrl> getUrls() {
-        return storedObjectMap.keySet().stream();
-    }
-
+    boolean contains(MailRepositoryUrl url);
 }

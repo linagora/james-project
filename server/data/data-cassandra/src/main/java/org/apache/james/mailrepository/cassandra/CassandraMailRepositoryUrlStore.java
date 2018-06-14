@@ -17,48 +17,39 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james.mailrepository.cassandra;
 
-import java.util.List;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
-import org.apache.james.mailrepository.api.MailKey;
-import org.apache.james.mailrepository.api.MailRepositoryStore;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
+import org.apache.james.mailrepository.api.MailRepositoryUrlStore;
 
-import com.github.steveash.guavate.Guavate;
-import com.google.common.collect.ImmutableList;
+public class CassandraMailRepositoryUrlStore implements MailRepositoryUrlStore {
 
-public class MailRepositoryProbeImpl implements GuiceProbe {
-
-    private final MailRepositoryStore repositoryStore;
+    private final UrlsDao urlsDao;
 
     @Inject
-    public MailRepositoryProbeImpl(MailRepositoryStore repositoryStore) {
-        this.repositoryStore = repositoryStore;
+    public CassandraMailRepositoryUrlStore(UrlsDao urlsDao) {
+        this.urlsDao = urlsDao;
     }
 
-    /**
-     * Get the count of email currently stored in a given repository
-     */
-    public long getRepositoryMailCount(MailRepositoryUrl url) throws Exception {
-        return repositoryStore.select(url).size();
+    @Override
+    public void add(MailRepositoryUrl url) {
+        urlsDao.addUrl(url).join();
     }
 
-    public void createRepository(MailRepositoryUrl url) throws Exception {
-        repositoryStore.select(url);
+    @Override
+    public Stream<MailRepositoryUrl> listDistinct() {
+        return urlsDao.retrieveUsedUrls()
+            .join();
     }
 
-    public List<MailKey> listMailKeys(MailRepositoryUrl url) throws Exception {
-        return ImmutableList.copyOf(
-            repositoryStore.select(url)
-                .list());
+    @Override
+    public boolean contains(MailRepositoryUrl url) {
+        return urlsDao.retrieve(url)
+            .join()
+            .isPresent();
     }
-
-    public List<MailRepositoryUrl> listRepositoryUrls() {
-        return repositoryStore.getUrls()
-            .collect(Guavate.toImmutableList());
-    }
-
 }

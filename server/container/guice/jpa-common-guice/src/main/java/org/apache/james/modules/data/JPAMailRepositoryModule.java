@@ -17,38 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailrepository.mock;
+package org.apache.james.modules.data;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
+import org.apache.james.mailrepository.api.MailRepositoryUrlStore;
+import org.apache.james.mailrepository.jpa.JPAMailRepositoryUrlStore;
 
-import org.apache.james.mailrepository.api.MailRepository;
-import org.apache.james.mailrepository.api.MailRepositoryStore;
-import org.apache.james.mailrepository.api.MailRepositoryUrl;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
 
-public class MockMailRepositoryStore implements MailRepositoryStore {
-
-    private final Map<MailRepositoryUrl, MailRepository> storedObjectMap = new HashMap<>();
-
-    public void add(MailRepositoryUrl url, MailRepository obj) {
-        storedObjectMap.put(url, obj);
-    }
-
+public class JPAMailRepositoryModule extends AbstractModule {
     @Override
-    public MailRepository select(MailRepositoryUrl url) {
-        return storedObjectMap.get(url);
-    }
+    protected void configure() {
+        bind(JPAMailRepositoryUrlStore.class).in(Scopes.SINGLETON);
 
-    @Override
-    public Optional<MailRepository> get(MailRepositoryUrl url) {
-        return Optional.ofNullable(storedObjectMap.get(url));
+        bind(MailRepositoryUrlStore.class).to(JPAMailRepositoryUrlStore.class);
     }
-
-    @Override
-    public Stream<MailRepositoryUrl> getUrls() {
-        return storedObjectMap.keySet().stream();
-    }
-
 }

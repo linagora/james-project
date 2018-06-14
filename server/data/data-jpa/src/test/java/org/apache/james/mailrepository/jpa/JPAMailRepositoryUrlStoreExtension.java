@@ -17,38 +17,31 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailrepository.mock;
+package org.apache.james.mailrepository.jpa;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
+import org.apache.james.backends.jpa.JpaTestCluster;
+import org.apache.james.mailrepository.api.MailRepositoryUrlStore;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import org.apache.james.mailrepository.api.MailRepository;
-import org.apache.james.mailrepository.api.MailRepositoryStore;
-import org.apache.james.mailrepository.api.MailRepositoryUrl;
+public class JPAMailRepositoryUrlStoreExtension implements ParameterResolver, AfterEachCallback{
+    private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPAUrl.class);
 
-public class MockMailRepositoryStore implements MailRepositoryStore {
-
-    private final Map<MailRepositoryUrl, MailRepository> storedObjectMap = new HashMap<>();
-
-    public void add(MailRepositoryUrl url, MailRepository obj) {
-        storedObjectMap.put(url, obj);
+    @Override
+    public void afterEach(ExtensionContext context) {
+        JPA_TEST_CLUSTER.clear("JAMES_MAIL_REPOS");
     }
 
     @Override
-    public MailRepository select(MailRepositoryUrl url) {
-        return storedObjectMap.get(url);
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return (parameterContext.getParameter().getType() == MailRepositoryUrlStore.class);
     }
 
     @Override
-    public Optional<MailRepository> get(MailRepositoryUrl url) {
-        return Optional.ofNullable(storedObjectMap.get(url));
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return new JPAMailRepositoryUrlStore(JPA_TEST_CLUSTER.getEntityManagerFactory());
     }
-
-    @Override
-    public Stream<MailRepositoryUrl> getUrls() {
-        return storedObjectMap.keySet().stream();
-    }
-
 }

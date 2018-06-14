@@ -17,48 +17,49 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.utils;
+package org.apache.james.mailrepository.jpa;
 
-import java.util.List;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.Table;
 
-import javax.inject.Inject;
-
-import org.apache.james.mailrepository.api.MailKey;
-import org.apache.james.mailrepository.api.MailRepositoryStore;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
 
-import com.github.steveash.guavate.Guavate;
-import com.google.common.collect.ImmutableList;
-
-public class MailRepositoryProbeImpl implements GuiceProbe {
-
-    private final MailRepositoryStore repositoryStore;
-
-    @Inject
-    public MailRepositoryProbeImpl(MailRepositoryStore repositoryStore) {
-        this.repositoryStore = repositoryStore;
+@Entity(name = "JamesMailRepos")
+@Table(name = "JAMES_MAIL_REPOS")
+@NamedQueries({
+    @NamedQuery(name = "listUrls", query = "SELECT url FROM JamesMailRepos url"),
+    @NamedQuery(name = "getUrl", query = "SELECT url FROM JamesMailRepos url WHERE url.value=:value")})
+public class JPAUrl {
+    public static JPAUrl from(MailRepositoryUrl url) {
+        return new JPAUrl(url.asString());
     }
+
+    @Id
+    @Column(name = "MAIL_REPO_NAME", nullable = false, length = 1024)
+    private String value;
 
     /**
-     * Get the count of email currently stored in a given repository
+     * Default no-args constructor for JPA class enhancement.
+     * The constructor need to be public or protected to be used by JPA.
+     * See:  http://docs.oracle.com/javaee/6/tutorial/doc/bnbqa.html
+     * Do not us this constructor, it is for JPA only.
      */
-    public long getRepositoryMailCount(MailRepositoryUrl url) throws Exception {
-        return repositoryStore.select(url).size();
+    protected JPAUrl() {
     }
 
-    public void createRepository(MailRepositoryUrl url) throws Exception {
-        repositoryStore.select(url);
+    public JPAUrl(String value) {
+        this.value = value;
     }
 
-    public List<MailKey> listMailKeys(MailRepositoryUrl url) throws Exception {
-        return ImmutableList.copyOf(
-            repositoryStore.select(url)
-                .list());
+    public String getValue() {
+        return value;
     }
 
-    public List<MailRepositoryUrl> listRepositoryUrls() {
-        return repositoryStore.getUrls()
-            .collect(Guavate.toImmutableList());
+    public MailRepositoryUrl toMailRepositoryUrl() {
+        return MailRepositoryUrl.from(value);
     }
-
 }

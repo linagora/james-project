@@ -17,38 +17,22 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailrepository.mock;
+package org.apache.james.mailrepository.memory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
+import org.apache.james.mailrepository.api.MailRepositoryUrlStore;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import org.apache.james.mailrepository.api.MailRepository;
-import org.apache.james.mailrepository.api.MailRepositoryStore;
-import org.apache.james.mailrepository.api.MailRepositoryUrl;
-
-public class MockMailRepositoryStore implements MailRepositoryStore {
-
-    private final Map<MailRepositoryUrl, MailRepository> storedObjectMap = new HashMap<>();
-
-    public void add(MailRepositoryUrl url, MailRepository obj) {
-        storedObjectMap.put(url, obj);
+public class MemoryMailRepositoryUrlStoreExtension implements ParameterResolver {
+    @Override
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return (parameterContext.getParameter().getType() == MailRepositoryUrlStore.class);
     }
 
     @Override
-    public MailRepository select(MailRepositoryUrl url) {
-        return storedObjectMap.get(url);
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return new MemoryMailRepositoryUrlStore();
     }
-
-    @Override
-    public Optional<MailRepository> get(MailRepositoryUrl url) {
-        return Optional.ofNullable(storedObjectMap.get(url));
-    }
-
-    @Override
-    public Stream<MailRepositoryUrl> getUrls() {
-        return storedObjectMap.keySet().stream();
-    }
-
 }
