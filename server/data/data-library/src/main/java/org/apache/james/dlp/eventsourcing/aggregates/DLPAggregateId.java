@@ -17,48 +17,44 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore.cassandra;
+package org.apache.james.dlp.eventsourcing.aggregates;
 
-import java.util.List;
+import java.util.Objects;
 
-import javax.inject.Inject;
-
+import org.apache.james.core.Domain;
 import org.apache.james.eventsourcing.AggregateId;
-import org.apache.james.eventsourcing.Event;
-import org.apache.james.eventsourcing.eventstore.EventStore;
-import org.apache.james.eventsourcing.eventstore.EventStoreFailedException;
-import org.apache.james.eventsourcing.eventstore.History;
 
 import com.google.common.base.Preconditions;
 
-public class CassandraEventStore implements EventStore {
+public class DLPAggregateId implements AggregateId {
+    private static final String SEPARATOR = "/";
+    private static final String PREFIX = "DLPRule";
 
-    private final EventStoreDao eventStoreDao;
+    private final Domain domain;
 
-    @Inject
-    public CassandraEventStore(EventStoreDao eventStoreDao) {
-        this.eventStoreDao = eventStoreDao;
+    public DLPAggregateId(Domain domain) {
+        Preconditions.checkNotNull(domain);
+
+        this.domain = domain;
     }
 
     @Override
-    public void appendAll(List<Event> events) {
-        if (events.isEmpty()) {
-            return;
-        }
-        doAppendAll(events);
-    }
-
-    public void doAppendAll(List<Event> events) {
-        Preconditions.checkArgument(Event.belongsToSameAggregate(events));
-
-        boolean success = eventStoreDao.appendAll(events).join();
-        if (!success) {
-            throw new EventStoreFailedException("Concurrent update to the EventStore detected");
-        }
+    public String asAggregateKey() {
+        return PREFIX + SEPARATOR + domain.asString();
     }
 
     @Override
-    public History getEventsOfAggregate(AggregateId aggregateId) {
-        return eventStoreDao.getEventsOfAggregate(aggregateId);
+    public final boolean equals(Object o) {
+        if (o instanceof DLPAggregateId) {
+            DLPAggregateId that = (DLPAggregateId) o;
+
+            return Objects.equals(this.domain, that.domain);
+        }
+        return false;
+    }
+
+    @Override
+    public final int hashCode() {
+        return Objects.hash(domain);
     }
 }

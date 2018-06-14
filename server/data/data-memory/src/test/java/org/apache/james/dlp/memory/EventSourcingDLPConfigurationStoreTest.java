@@ -17,10 +17,12 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore;
+package org.apache.james.dlp.memory;
 
-public class EventStoreFailedException extends RuntimeException {
-    public EventStoreFailedException(String message) {
-        super(message);
-    }
+import org.apache.james.dlp.api.DLPConfigurationStoreContract;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+@ExtendWith(InMemoryEventSourcingDLPConfigurationStoreExtension.class)
+public class EventSourcingDLPConfigurationStoreTest implements DLPConfigurationStoreContract {
+
 }

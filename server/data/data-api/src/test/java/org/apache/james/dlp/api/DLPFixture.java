@@ -17,10 +17,20 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore;
+package org.apache.james.dlp.api;
 
-public class EventStoreFailedException extends RuntimeException {
-    public EventStoreFailedException(String message) {
-        super(message);
-    }
+public interface DLPFixture {
+    DLPConfigurationItem RULE = DLPConfigurationItem.builder()
+        .id(DLPConfigurationItem.Id.of("id1"))
+        .explanation("explanation")
+        .expression("regex")
+        .targetsSender()
+        .build();
+    DLPConfigurationItem RULE_2 = DLPConfigurationItem.builder()
+        .id(DLPConfigurationItem.Id.of("id2"))
+        .explanation("explanation2")
+        .expression("regex2")
+        .targetsSender()
+        .targetsRecipients()
+        .build();
 }

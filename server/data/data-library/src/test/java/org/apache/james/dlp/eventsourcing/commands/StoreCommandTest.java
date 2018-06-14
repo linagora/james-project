@@ -17,10 +17,37 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore;
+package org.apache.james.dlp.eventsourcing.commands;
 
-public class EventStoreFailedException extends RuntimeException {
-    public EventStoreFailedException(String message) {
-        super(message);
+import static org.apache.james.dlp.api.DLPFixture.RULE;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.apache.james.core.Domain;
+import org.junit.Test;
+
+import com.google.common.collect.ImmutableList;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
+
+public class StoreCommandTest {
+
+    @Test
+    public void shouldMatchBeanContract() {
+        EqualsVerifier.forClass(StoreCommand.class)
+            .allFieldsShouldBeUsed()
+            .verify();
     }
+
+    @Test
+    public void constructorShouldThrowWhenNullDomain() {
+        assertThatThrownBy(() -> new StoreCommand(null, ImmutableList.of(RULE)))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void constructorShouldThrowWhenNullRules() {
+        assertThatThrownBy(() -> new StoreCommand(Domain.LOCALHOST, null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
 }

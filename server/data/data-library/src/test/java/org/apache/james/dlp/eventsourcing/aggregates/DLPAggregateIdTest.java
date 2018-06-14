@@ -17,10 +17,35 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore;
+package org.apache.james.dlp.eventsourcing.aggregates;
 
-public class EventStoreFailedException extends RuntimeException {
-    public EventStoreFailedException(String message) {
-        super(message);
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.apache.james.core.Domain;
+import org.junit.Test;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
+
+public class DLPAggregateIdTest {
+
+    @Test
+    public void shouldMatchBeanContract() {
+        EqualsVerifier.forClass(DLPAggregateId.class)
+            .allFieldsShouldBeUsed()
+            .verify();
     }
+
+    @Test
+    public void constructorShouldThrowWhenNullDomain() {
+        assertThatThrownBy(() -> new DLPAggregateId(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    public void asAggregateKeyShouldReturnAStringContainingThePrefixAndTheDomain() {
+        assertThat(new DLPAggregateId(Domain.LOCALHOST).asAggregateKey())
+            .isEqualTo("DLPRule/localhost");
+    }
+
 }

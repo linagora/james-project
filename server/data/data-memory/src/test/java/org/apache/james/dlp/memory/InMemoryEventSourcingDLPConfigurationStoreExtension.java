@@ -17,10 +17,24 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore;
+package org.apache.james.dlp.memory;
 
-public class EventStoreFailedException extends RuntimeException {
-    public EventStoreFailedException(String message) {
-        super(message);
+import org.apache.james.dlp.api.DLPConfigurationStore;
+import org.apache.james.dlp.eventsourcing.EventSourcingDLPConfigurationStore;
+import org.apache.james.eventsourcing.eventstore.memory.InMemoryEventStore;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
+
+public class InMemoryEventSourcingDLPConfigurationStoreExtension implements ParameterResolver {
+    @Override
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return (parameterContext.getParameter().getType() == DLPConfigurationStore.class);
+    }
+
+    @Override
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        return new EventSourcingDLPConfigurationStore(new InMemoryEventStore());
     }
 }

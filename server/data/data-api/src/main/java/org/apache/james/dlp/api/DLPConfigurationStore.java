@@ -17,10 +17,25 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore;
+package org.apache.james.dlp.api;
 
-public class EventStoreFailedException extends RuntimeException {
-    public EventStoreFailedException(String message) {
-        super(message);
+import java.util.List;
+import java.util.stream.Stream;
+
+import org.apache.james.core.Domain;
+
+import com.google.common.collect.ImmutableList;
+
+public interface DLPConfigurationStore {
+
+    Stream<DLPConfigurationItem> list(Domain domain);
+
+    void store(Domain domain, List<DLPConfigurationItem> rule);
+
+    default void store(Domain domain, DLPConfigurationItem rule) {
+        store(domain, ImmutableList.of(rule));
     }
+
+    void clear(Domain domain);
+    
 }

@@ -17,48 +17,48 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore.cassandra;
+package org.apache.james.dlp.eventsourcing.commands;
 
-import java.util.List;
+import java.util.Objects;
 
-import javax.inject.Inject;
+import org.apache.james.core.Domain;
+import org.apache.james.eventsourcing.Command;
 
-import org.apache.james.eventsourcing.AggregateId;
-import org.apache.james.eventsourcing.Event;
-import org.apache.james.eventsourcing.eventstore.EventStore;
-import org.apache.james.eventsourcing.eventstore.EventStoreFailedException;
-import org.apache.james.eventsourcing.eventstore.History;
-
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
-public class CassandraEventStore implements EventStore {
+public class ClearCommand implements Command {
+    private final Domain domain;
 
-    private final EventStoreDao eventStoreDao;
+    public ClearCommand(Domain domain) {
+        Preconditions.checkNotNull(domain);
 
-    @Inject
-    public CassandraEventStore(EventStoreDao eventStoreDao) {
-        this.eventStoreDao = eventStoreDao;
+        this.domain = domain;
+    }
+
+    public Domain getDomain() {
+        return domain;
     }
 
     @Override
-    public void appendAll(List<Event> events) {
-        if (events.isEmpty()) {
-            return;
-        }
-        doAppendAll(events);
-    }
+    public final boolean equals(Object o) {
+        if (o instanceof ClearCommand) {
+            ClearCommand that = (ClearCommand) o;
 
-    public void doAppendAll(List<Event> events) {
-        Preconditions.checkArgument(Event.belongsToSameAggregate(events));
-
-        boolean success = eventStoreDao.appendAll(events).join();
-        if (!success) {
-            throw new EventStoreFailedException("Concurrent update to the EventStore detected");
+            return Objects.equals(this.domain, that.domain);
         }
+        return false;
     }
 
     @Override
-    public History getEventsOfAggregate(AggregateId aggregateId) {
-        return eventStoreDao.getEventsOfAggregate(aggregateId);
+    public final int hashCode() {
+        return Objects.hash(domain);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("domain", domain)
+            .toString();
     }
 }
