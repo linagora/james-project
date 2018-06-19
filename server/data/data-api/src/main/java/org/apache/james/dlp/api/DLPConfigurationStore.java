@@ -20,15 +20,12 @@
 package org.apache.james.dlp.api;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.apache.james.core.Domain;
 
 import com.google.common.collect.ImmutableList;
 
-public interface DLPConfigurationStore {
-
-    Stream<DLPConfigurationItem> list(Domain domain);
+public interface DLPConfigurationStore extends DLPConfigurationLoader {
 
     void store(Domain domain, List<DLPConfigurationItem> rule);
 
