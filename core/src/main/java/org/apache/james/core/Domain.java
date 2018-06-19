@@ -37,8 +37,9 @@ public class Domain implements Serializable {
     }
 
     public static Domain of(String domain) {
-        Preconditions.checkNotNull(domain);
-        Preconditions.checkArgument(!domain.isEmpty() && !domain.contains("@"));
+        Preconditions.checkNotNull(domain, "Domain can not be null");
+        Preconditions.checkArgument(!domain.isEmpty() && !domain.contains("@"),
+            "Domain can not be empty or contains `@`");
         return new Domain(domain);
     }
 

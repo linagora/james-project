@@ -17,40 +17,48 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin.utils;
+package org.apache.james.webadmin.dto;
 
-import java.io.IOException;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import org.apache.james.dlp.api.DLPConfigurationItem;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.steveash.guavate.Guavate;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
-public class JsonExtractor<RequestT> {
+public class DLPConfigurationDTO {
 
-    private final ObjectMapper objectMapper;
-    private final Class<RequestT> type;
+    public static DLPConfigurationDTO toDTO(List<DLPConfigurationItem> dlpConfigurations) {
+        Preconditions.checkNotNull(dlpConfigurations);
 
-    public JsonExtractor(Class<RequestT> type, Module... modules) {
-        this(type, ImmutableList.copyOf(modules));
+        return new DLPConfigurationDTO(
+            dlpConfigurations
+                .stream()
+                .map(DLPConfigurationItemDTO::toDTO)
+                .collect(Guavate.toImmutableList()));
     }
 
-    public JsonExtractor(Class<RequestT> type, List<Module> modules) {
-        this.objectMapper = new ObjectMapper()
-            .registerModule(new Jdk8Module())
-            .registerModule(new GuavaModule())
-            .registerModules(modules);
-        this.type = type;
+    private final ImmutableList<DLPConfigurationItemDTO> rules;
+
+    @JsonCreator
+    public DLPConfigurationDTO(
+        @JsonProperty("rules") ImmutableList<DLPConfigurationItemDTO> rules) {
+        this.rules = rules;
     }
 
-    public RequestT parse(String text) throws JsonExtractException {
-        try {
-            return objectMapper.readValue(text, type);
-        } catch (IOException | IllegalArgumentException e) {
-            throw new JsonExtractException(e);
-        }
+    public ImmutableList<DLPConfigurationItemDTO> getRules() {
+        return rules;
     }
 
+    @JsonIgnore
+    public List<DLPConfigurationItem> toDLPConfigurations() {
+        return rules
+            .stream()
+            .map(DLPConfigurationItemDTO::toDLPConfiguration)
+            .collect(Guavate.toImmutableList());
+    }
 }
