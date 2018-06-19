@@ -17,40 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.webadmin.utils;
+package org.apache.james.modules.server;
 
-import java.io.IOException;
-import java.util.List;
+import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.routes.DLPConfigurationRoutes;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.google.common.collect.ImmutableList;
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
-public class JsonExtractor<RequestT> {
-
-    private final ObjectMapper objectMapper;
-    private final Class<RequestT> type;
-
-    public JsonExtractor(Class<RequestT> type, Module... modules) {
-        this(type, ImmutableList.copyOf(modules));
+public class DLPRoutesModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        Multibinder.newSetBinder(binder(), Routes.class)
+            .addBinding()
+            .to(DLPConfigurationRoutes.class);
     }
-
-    public JsonExtractor(Class<RequestT> type, List<Module> modules) {
-        this.objectMapper = new ObjectMapper()
-            .registerModule(new Jdk8Module())
-            .registerModule(new GuavaModule())
-            .registerModules(modules);
-        this.type = type;
-    }
-
-    public RequestT parse(String text) throws JsonExtractException {
-        try {
-            return objectMapper.readValue(text, type);
-        } catch (IOException | IllegalArgumentException e) {
-            throw new JsonExtractException(e);
-        }
-    }
-
 }
