@@ -26,7 +26,6 @@ import javax.inject.Inject;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
@@ -47,6 +46,15 @@ import org.apache.james.mailbox.store.search.MessageSearchIndex;
  * Cassandra implementation of {@link StoreMailboxManager}
  */
 public class CassandraMailboxManager extends StoreMailboxManager {
+    public static final EnumSet<MailboxCapabilities> MAILBOX_CAPABILITIES = EnumSet.of(
+        MailboxCapabilities.Move,
+        MailboxCapabilities.UserFlag,
+        MailboxCapabilities.Namespace,
+        MailboxCapabilities.Annotation,
+        MailboxCapabilities.ACL,
+        MailboxCapabilities.Quota);
+    public static final EnumSet<MessageCapabilities> MESSAGE_CAPABILITIES = EnumSet.of(MessageCapabilities.UniqueID);
+
     private final MailboxPathLocker locker;
     private final CassandraMailboxSessionMapperFactory mapperFactory;
 
@@ -78,29 +86,23 @@ public class CassandraMailboxManager extends StoreMailboxManager {
 
     @Override
     public EnumSet<MailboxManager.MailboxCapabilities> getSupportedMailboxCapabilities() {
-        return EnumSet.of(
-            MailboxCapabilities.Move,
-            MailboxCapabilities.UserFlag,
-            MailboxCapabilities.Namespace,
-            MailboxCapabilities.Annotation,
-            MailboxCapabilities.ACL,
-            MailboxCapabilities.Quota);
+        return MAILBOX_CAPABILITIES;
     }
 
     @Override
     public EnumSet<MessageCapabilities> getSupportedMessageCapabilities() {
-        return EnumSet.of(MessageCapabilities.Attachment, MessageCapabilities.UniqueID);
+        return MESSAGE_CAPABILITIES;
     }
     
     @Override
-    protected Mailbox doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
+    protected Mailbox doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) {
         SimpleMailbox cassandraMailbox = new SimpleMailbox(mailboxPath, randomUidValidity());
         cassandraMailbox.setACL(MailboxACL.EMPTY);
         return cassandraMailbox;
     }
 
     @Override
-    protected StoreMessageManager createMessageManager(Mailbox mailboxRow, MailboxSession session) throws MailboxException {
+    protected StoreMessageManager createMessageManager(Mailbox mailboxRow, MailboxSession session) {
         return new CassandraMessageManager(mapperFactory,
             getMessageSearchIndex(),
             getEventDispatcher(),

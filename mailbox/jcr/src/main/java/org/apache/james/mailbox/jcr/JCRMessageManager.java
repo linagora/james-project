@@ -61,9 +61,9 @@ public class JCRMessageManager extends StoreMessageManager {
                              MessageId.Factory messageIdFactory,
                              BatchSizes batchSizes,
                              ImmutableMailboxMessage.Factory immutableMailboxMessageFactory,
-                             StoreRightManager storeRightManager)
-                    throws MailboxException {
-        super(mapperFactory, index, dispatcher, locker, mailbox, quotaManager,
+                             StoreRightManager storeRightManager) {
+
+        super(JCRMailboxManager.DEFAULT_NO_MESSAGE_CAPABILITIES, mapperFactory, index, dispatcher, locker, mailbox, quotaManager,
                 quotaRootResolver, messageParser, messageIdFactory, batchSizes, immutableMailboxMessageFactory, storeRightManager);
     }
 

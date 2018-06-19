@@ -54,8 +54,8 @@ public class CassandraMessageManager extends StoreMessageManager {
                                    MailboxEventDispatcher dispatcher, MailboxPathLocker locker, Mailbox mailbox, QuotaManager quotaManager,
                                    QuotaRootResolver quotaRootResolver, MessageParser messageParser, MessageId.Factory messageIdFactory,
                                    BatchSizes batchSizes, ImmutableMailboxMessage.Factory immutableMailboxMessageFactory,
-                                   StoreRightManager storeRightManager) throws MailboxException {
-        super(mapperFactory, index, dispatcher, locker, mailbox,
+                                   StoreRightManager storeRightManager) {
+        super(CassandraMailboxManager.MESSAGE_CAPABILITIES, mapperFactory, index, dispatcher, locker, mailbox,
             quotaManager, quotaRootResolver, messageParser, messageIdFactory, batchSizes, immutableMailboxMessageFactory, storeRightManager);
 
         this.mapperFactory = mapperFactory;
@@ -80,4 +80,5 @@ public class CassandraMessageManager extends StoreMessageManager {
                     .collect(Guavate.toImmutableList()),
                 message.getMessageId());
     }
+
 }

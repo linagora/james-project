@@ -25,7 +25,6 @@ import javax.inject.Inject;
 
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
@@ -41,6 +40,14 @@ import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
 public class InMemoryMailboxManager extends StoreMailboxManager {
+
+    public static final EnumSet<MailboxCapabilities> MAILBOX_CAPABILITIES = EnumSet.of(MailboxCapabilities.Move,
+        MailboxCapabilities.UserFlag,
+        MailboxCapabilities.Namespace,
+        MailboxCapabilities.Annotation,
+        MailboxCapabilities.ACL,
+        MailboxCapabilities.Quota);
+    public static final EnumSet<MessageCapabilities> MESSAGE_CAPABILITIES = EnumSet.of(MessageCapabilities.UniqueID);
 
     @Inject
     public InMemoryMailboxManager(MailboxSessionMapperFactory mailboxSessionMapperFactory, Authenticator authenticator, Authorizator authorizator,
@@ -61,21 +68,16 @@ public class InMemoryMailboxManager extends StoreMailboxManager {
 
     @Override
     public EnumSet<MailboxCapabilities> getSupportedMailboxCapabilities() {
-        return EnumSet.of(MailboxCapabilities.Move,
-            MailboxCapabilities.UserFlag,
-            MailboxCapabilities.Namespace,
-            MailboxCapabilities.Annotation,
-            MailboxCapabilities.ACL,
-            MailboxCapabilities.Quota);
+        return MAILBOX_CAPABILITIES;
     }
     
     @Override
     public EnumSet<MessageCapabilities> getSupportedMessageCapabilities() {
-        return EnumSet.of(MessageCapabilities.Attachment, MessageCapabilities.UniqueID);
+        return MESSAGE_CAPABILITIES;
     }
 
     @Override
-    protected StoreMessageManager createMessageManager(Mailbox mailbox, MailboxSession session) throws MailboxException {
+    protected StoreMessageManager createMessageManager(Mailbox mailbox, MailboxSession session) {
         return new InMemoryMessageManager(getMapperFactory(),
             getMessageSearchIndex(),
             getEventDispatcher(),

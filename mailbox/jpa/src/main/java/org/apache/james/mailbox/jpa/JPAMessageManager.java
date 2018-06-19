@@ -52,18 +52,18 @@ public class JPAMessageManager extends StoreMessageManager {
     
     public JPAMessageManager(MailboxSessionMapperFactory mapperFactory,
                              MessageSearchIndex index,
-                             final MailboxEventDispatcher dispatcher,
+                             MailboxEventDispatcher dispatcher,
                              MailboxPathLocker locker,
-                             final Mailbox mailbox,
+                             Mailbox mailbox,
                              QuotaManager quotaManager,
                              QuotaRootResolver quotaRootResolver,
                              MessageParser messageParser,
                              MessageId.Factory messageIdFactory,
                              BatchSizes batchSizes,
                              ImmutableMailboxMessage.Factory immutableMailboxMessageFactory,
-                             StoreRightManager storeRightManager) throws MailboxException {
+                             StoreRightManager storeRightManager) {
 
-        super(mapperFactory, index, dispatcher, locker, mailbox,
+        super(JPAMailboxManager.DEFAULT_NO_MESSAGE_CAPABILITIES, mapperFactory, index, dispatcher, locker, mailbox,
             quotaManager, quotaRootResolver, messageParser, messageIdFactory, batchSizes, immutableMailboxMessageFactory, storeRightManager);
     }
     
