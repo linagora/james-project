@@ -32,6 +32,9 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 public class Zipper implements Backup {
     public Zipper() {
         ExtraFieldUtils.register(SizeExtraField.class);
+        ExtraFieldUtils.register(UidExtraField.class);
+        ExtraFieldUtils.register(MessageIdExtraField.class);
+        ExtraFieldUtils.register(MailboxIdExtraField.class);
     }
 
     @Override
@@ -47,7 +50,12 @@ public class Zipper implements Backup {
     private void storeInArchive(MailboxMessage message, ZipArchiveOutputStream archiveOutputStream) throws IOException {
         String entryId = message.getMessageId().serialize();
         ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File(entryId), entryId);
+
         archiveEntry.addExtraField(new SizeExtraField(message.getFullContentOctets()));
+        archiveEntry.addExtraField(new UidExtraField(message.getUid().asLong()));
+        archiveEntry.addExtraField(new MessageIdExtraField(message.getMessageId().serialize()));
+        archiveEntry.addExtraField(new MailboxIdExtraField(message.getMailboxId().serialize()));
+
         archiveOutputStream.putArchiveEntry(archiveEntry);
         IOUtils.copy(message.getFullContent(), archiveOutputStream);
         archiveOutputStream.closeArchiveEntry();

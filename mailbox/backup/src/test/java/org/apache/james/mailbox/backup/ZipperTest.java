@@ -18,12 +18,14 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
+import static org.apache.james.mailbox.backup.MailboxMessageFixture.MAILBOX_ID_1;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_1;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_2;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_CONTENT_1;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_CONTENT_2;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_ID_1;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_ID_2;
+import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_UID_1_VALUE;
 import static org.apache.james.mailbox.backup.MailboxMessageFixture.SIZE_1;
 import static org.apache.james.mailbox.backup.ZipAssert.EntryChecks.hasName;
 import static org.apache.james.mailbox.backup.ZipAssert.assertThatZip;
@@ -103,14 +105,17 @@ public class ZipperTest {
     }
 
     @Test
-    void archiveShouldWriteSizeMetadata() throws Exception {
+    void archiveShouldWriteMetadata() throws Exception {
         testee.archive(ImmutableList.of(MESSAGE_1), new FileOutputStream(destination));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatZip(zipFile)
                 .containsOnlyEntriesMatching(
                     hasName(MESSAGE_ID_1.serialize())
-                        .containsExtraFields(new SizeExtraField(SIZE_1)));
+                        .containsExtraFields(new SizeExtraField(SIZE_1))
+                        .containsExtraFields(new UidExtraField(MESSAGE_UID_1_VALUE))
+                        .containsExtraFields(new MessageIdExtraField(MESSAGE_ID_1.serialize()))
+                        .containsExtraFields(new MailboxIdExtraField(MAILBOX_ID_1.serialize())));
         }
     }
 }
