@@ -18,20 +18,14 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.stream.Stream;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.junit.jupiter.api.Test;
 
-public interface Backup {
+public class DirectoryTest {
 
-    /**
-     * @param mailboxes list of mailboxes to be stored in the archive
-     * @param messages a stream of MailboxMessages that will be consumed
-     * @param destination an OutputStream in which the zip will be written
-     */
-    void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException;
+    @Test
+    void isDirectoryShouldReturnTrue() {
+        assertThat(new Directory("myPath").isDirectory()).isTrue();
+    }
 }

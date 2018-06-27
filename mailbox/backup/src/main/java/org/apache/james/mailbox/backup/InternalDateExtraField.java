@@ -16,22 +16,41 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.stream.Stream;
+import java.util.Date;
+import java.util.Optional;
 
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.commons.compress.archivers.zip.ZipShort;
 
-public interface Backup {
+public class InternalDateExtraField extends LongExtraField {
 
-    /**
-     * @param mailboxes list of mailboxes to be stored in the archive
-     * @param messages a stream of MailboxMessages that will be consumed
-     * @param destination an OutputStream in which the zip will be written
-     */
-    void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException;
+    public static final ZipShort ID = new ZipShort(0x6F61); // "ao" in little-endian
+
+    public InternalDateExtraField() {
+        super();
+    }
+
+    public InternalDateExtraField(Optional<Date> date) {
+        super(date
+            .map(Date::getTime));
+    }
+
+    public InternalDateExtraField(Date date) {
+        this(Optional.of(date));
+    }
+
+    public InternalDateExtraField(long timestamp) {
+        this(Optional.of(new Date(timestamp)));
+    }
+
+    @Override
+    public ZipShort getHeaderId() {
+        return ID;
+    }
+
+    public Optional<Date> getDateValue() {
+        return getValue().map(Date::new);
+    }
 }

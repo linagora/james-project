@@ -18,20 +18,27 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.stream.Stream;
+import java.util.Optional;
 
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.commons.compress.archivers.zip.ZipShort;
 
-public interface Backup {
+public class UidValidityExtraField extends LongExtraField {
+    public static final ZipShort ID = new ZipShort(0x6E61); // "an" in little-endian
 
-    /**
-     * @param mailboxes list of mailboxes to be stored in the archive
-     * @param messages a stream of MailboxMessages that will be consumed
-     * @param destination an OutputStream in which the zip will be written
-     */
-    void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException;
+    public UidValidityExtraField() {
+        super();
+    }
+
+    public UidValidityExtraField(long value) {
+        super(value);
+    }
+
+    public UidValidityExtraField(Optional<Long> value) {
+        super(value);
+    }
+
+    @Override
+    public ZipShort getHeaderId() {
+        return ID;
+    }
 }

@@ -21,25 +21,31 @@ package org.apache.james.mailbox.backup;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.ZonedDateTime;
 import java.util.Date;
 
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.mock.MockMailboxSession;
+import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.TestMessageId;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 
 public interface MailboxMessageFixture {
 
-    SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-
-    Date DATE_1 = parseDate("2018-02-15 15:54:02");
-    Date DATE_2 = parseDate("2018-03-15 15:54:02");
+    String DATE_STRING_1 = "2018-02-15T15:54:02Z";
+    String DATE_STRING_2 = "2018-03-15T15:54:02Z";
+    ZonedDateTime DATE_1 = ZonedDateTime.parse(DATE_STRING_1);
+    ZonedDateTime DATE_2 = ZonedDateTime.parse(DATE_STRING_2);
 
     MessageId.Factory MESSAGE_ID_FACTORY = new TestMessageId.Factory();
     Charset MESSAGE_CHARSET = StandardCharsets.UTF_8;
@@ -51,33 +57,39 @@ public interface MailboxMessageFixture {
     MessageId MESSAGE_ID_2 = MESSAGE_ID_FACTORY.generate();
     long SIZE_1 = 1000;
     long SIZE_2 = 2000;
+    long MESSAGE_UID_1_VALUE = 1111L;
+    long MESSAGE_UID_2_VALUE = 2222L;
+    MessageUid MESSAGE_UID_1 = MessageUid.of(MESSAGE_UID_1_VALUE);
+    MessageUid MESSAGE_UID_2 = MessageUid.of(MESSAGE_UID_2_VALUE);
+    MailboxId MAILBOX_ID_1 = TestId.of(1L);
+
+    MailboxSession MAILBOX_SESSION = new MockMailboxSession("user");
+    
+    Mailbox MAILBOX_1 = new SimpleMailbox(MailboxPath.forUser("user", "mailbox1"), 42, TestId.of(1L));
+    Mailbox MAILBOX_1_SUB_1 = new SimpleMailbox(MailboxPath.forUser("user", "mailbox1" + MAILBOX_SESSION.getPathDelimiter() + "sub1"), 420, TestId.of(11L));
+    Mailbox MAILBOX_2 = new SimpleMailbox(MailboxPath.forUser("user", "mailbox2"), 43, TestId.of(2L));
 
     SimpleMailboxMessage MESSAGE_1 = SimpleMailboxMessage.builder()
         .messageId(MESSAGE_ID_1)
+        .uid(MESSAGE_UID_1)
         .content(CONTENT_STREAM_1)
         .size(SIZE_1)
-        .internalDate(DATE_1)
+        .internalDate(new Date(DATE_1.toEpochSecond()))
         .bodyStartOctet(0)
         .flags(new Flags())
         .propertyBuilder(new PropertyBuilder())
-        .mailboxId(TestId.of(1L))
+        .mailboxId(MAILBOX_ID_1)
         .build();
     SimpleMailboxMessage MESSAGE_2 = SimpleMailboxMessage.builder()
         .messageId(MESSAGE_ID_2)
+        .uid(MESSAGE_UID_2)
         .content(CONTENT_STREAM_2)
         .size(SIZE_2)
-        .internalDate(DATE_2)
+        .internalDate(new Date(DATE_2.toEpochSecond()))
         .bodyStartOctet(0)
         .flags(new Flags())
         .propertyBuilder(new PropertyBuilder())
-        .mailboxId(TestId.of(1L))
+        .mailboxId(MAILBOX_ID_1)
         .build();
 
-    static Date parseDate(String input) {
-        try {
-            return SIMPLE_DATE_FORMAT.parse(input);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

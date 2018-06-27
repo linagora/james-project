@@ -16,22 +16,31 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.stream.Stream;
+import java.util.Optional;
 
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.commons.compress.archivers.zip.ZipShort;
 
-public interface Backup {
+public class UidExtraField extends LongExtraField {
 
-    /**
-     * @param mailboxes list of mailboxes to be stored in the archive
-     * @param messages a stream of MailboxMessages that will be consumed
-     * @param destination an OutputStream in which the zip will be written
-     */
-    void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException;
+    public static final ZipShort ID = new ZipShort(0x6B61); // "ak" in little-endian
+
+    public UidExtraField() {
+        super();
+    }
+
+    public UidExtraField(long value) {
+        super(value);
+    }
+
+    public UidExtraField(Optional<Long> value) {
+        super(value);
+    }
+
+    @Override
+    public ZipShort getHeaderId() {
+        return ID;
+    }
 }

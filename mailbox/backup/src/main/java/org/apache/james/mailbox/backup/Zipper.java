@@ -22,32 +22,69 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.apache.commons.compress.archivers.zip.ExtraFieldUtils;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+
+import com.github.fge.lambdas.Throwing;
 
 public class Zipper implements Backup {
     public Zipper() {
         ExtraFieldUtils.register(SizeExtraField.class);
+        ExtraFieldUtils.register(UidExtraField.class);
+        ExtraFieldUtils.register(MessageIdExtraField.class);
+        ExtraFieldUtils.register(MailboxIdExtraField.class);
+        ExtraFieldUtils.register(UidValidityExtraField.class);
+        ExtraFieldUtils.register(InternalDateExtraField.class);
     }
 
     @Override
-    public void archive(List<MailboxMessage> messages, OutputStream destination) throws IOException {
+    public void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException {
         try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-            for (MailboxMessage message: messages) {
-                storeInArchive(message, archiveOutputStream);
-            }
+            storeMailboxes(mailboxes, archiveOutputStream);
+            storeMessages(messages, archiveOutputStream);
             archiveOutputStream.finish();
         }
+    }
+
+    private void storeMailboxes(List<Mailbox> mailboxes, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+        for (Mailbox mailbox: mailboxes) {
+            storeInArchive(mailbox, archiveOutputStream);
+        }
+    }
+
+    private void storeMessages(Stream<MailboxMessage> messages, ZipArchiveOutputStream archiveOutputStream) {
+        messages.forEach(Throwing.<MailboxMessage>consumer(message -> {
+                storeInArchive(message, archiveOutputStream);
+            }).sneakyThrow());
+    }
+
+    private void storeInArchive(Mailbox mailbox, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+        String name = mailbox.getName();
+        ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new Directory(name), name);
+
+        archiveEntry.addExtraField(new MailboxIdExtraField(mailbox.getMailboxId().serialize()));
+        archiveEntry.addExtraField(new UidValidityExtraField(mailbox.getUidValidity()));
+
+        archiveOutputStream.putArchiveEntry(archiveEntry);
+        archiveOutputStream.closeArchiveEntry();
     }
 
     private void storeInArchive(MailboxMessage message, ZipArchiveOutputStream archiveOutputStream) throws IOException {
         String entryId = message.getMessageId().serialize();
         ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File(entryId), entryId);
+
         archiveEntry.addExtraField(new SizeExtraField(message.getFullContentOctets()));
+        archiveEntry.addExtraField(new UidExtraField(message.getUid().asLong()));
+        archiveEntry.addExtraField(new MessageIdExtraField(message.getMessageId().serialize()));
+        archiveEntry.addExtraField(new MailboxIdExtraField(message.getMailboxId().serialize()));
+        archiveEntry.addExtraField(new InternalDateExtraField(message.getInternalDate()));
+
         archiveOutputStream.putArchiveEntry(archiveEntry);
         IOUtils.copy(message.getFullContent(), archiveOutputStream);
         archiveOutputStream.closeArchiveEntry();
