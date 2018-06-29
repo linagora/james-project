@@ -17,33 +17,29 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.modules.protocols;
 
-import java.io.FileNotFoundException;
-
-import javax.inject.Singleton;
-
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.james.modules.data.JPAConfiguration;
+import org.apache.james.jspf.impl.DNSServiceXBillImpl;
+import org.apache.james.smtpserver.fastfail.SPFHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 
-public class TestJPAConfigurationModule extends AbstractModule {
+public class JSPFModule extends AbstractModule {
 
-    private static final String JDBC_EMBEDDED_URL = "jdbc:derby:memory:mailboxintegration;create=true";
-    private static final String JDBC_EMBEDDED_DRIVER = org.apache.derby.jdbc.EmbeddedDriver.class.getName();
+    private static final Logger LOGGER = LoggerFactory.getLogger(JSPFModule.class);
 
     @Override
     protected void configure() {
+
     }
 
-    @Provides
     @Singleton
-    JPAConfiguration provideConfiguration() throws FileNotFoundException, ConfigurationException {
-        return JPAConfiguration.builder()
-                .driverName(JDBC_EMBEDDED_DRIVER)
-                .driverURL(JDBC_EMBEDDED_URL)
-                .build();
+    @Provides
+    public DNSServiceXBillImpl provideJSPFDNSService() {
+        return new DNSServiceXBillImpl(new SPFHandler.SPFLogger(LOGGER));
     }
 }

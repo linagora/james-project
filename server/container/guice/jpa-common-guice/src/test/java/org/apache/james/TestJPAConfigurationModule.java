@@ -17,27 +17,30 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.protocols;
+package org.apache.james;
 
-import org.apache.james.jspf.impl.DNSServiceXBillImpl;
-import org.apache.james.smtpserver.fastfail.SPFHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import javax.inject.Singleton;
+
+import org.apache.james.modules.data.JPAConfiguration;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 
-public class JSPFModule extends AbstractModule {
+public class TestJPAConfigurationModule extends AbstractModule {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JSPFModule.class);
+    private static final String JDBC_EMBEDDED_URL = "jdbc:derby:memory:mailboxintegration;create=true";
+    private static final String JDBC_EMBEDDED_DRIVER = org.apache.derby.jdbc.EmbeddedDriver.class.getName();
 
     @Override
     protected void configure() {
-
     }
 
     @Provides
-    public DNSServiceXBillImpl provideJSPFDNSService() {
-        return new DNSServiceXBillImpl(new SPFHandler.SPFLogger(LOGGER));
+    @Singleton
+    JPAConfiguration provideConfiguration() {
+        return JPAConfiguration.builder()
+                .driverName(JDBC_EMBEDDED_DRIVER)
+                .driverURL(JDBC_EMBEDDED_URL)
+                .build();
     }
 }

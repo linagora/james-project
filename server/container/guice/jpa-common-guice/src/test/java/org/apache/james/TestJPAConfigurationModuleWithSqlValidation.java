@@ -19,19 +19,18 @@
 
 package org.apache.james;
 
-import java.io.FileNotFoundException;
-
 import javax.inject.Singleton;
 
-import org.apache.commons.configuration.ConfigurationException;
+import org.apache.james.modules.data.JPAConfiguration;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 
-public class TestJPAConfigurationModule extends AbstractModule {
+public class TestJPAConfigurationModuleWithSqlValidation extends AbstractModule {
 
     private static final String JDBC_EMBEDDED_URL = "jdbc:derby:memory:mailboxintegration;create=true";
     private static final String JDBC_EMBEDDED_DRIVER = org.apache.derby.jdbc.EmbeddedDriver.class.getName();
+    private static final String VALIDATION_SQL_QUERY = "VALUES 1";
 
     @Override
     protected void configure() {
@@ -39,10 +38,13 @@ public class TestJPAConfigurationModule extends AbstractModule {
 
     @Provides
     @Singleton
-    JPAConfiguration provideConfiguration() throws FileNotFoundException, ConfigurationException {
+    JPAConfiguration provideConfiguration() {
         return JPAConfiguration.builder()
                 .driverName(JDBC_EMBEDDED_DRIVER)
                 .driverURL(JDBC_EMBEDDED_URL)
+                .testOnBorrow(true)
+                .validationQueryTimeoutSec(2)
+                .validationQuery(VALIDATION_SQL_QUERY)
                 .build();
     }
 }

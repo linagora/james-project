@@ -17,37 +17,25 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
+package org.apache.james.utils;
 
-import java.io.FileNotFoundException;
+import org.apache.mailet.Mailet;
+import org.apache.mailet.MailetConfig;
 
-import javax.inject.Singleton;
+public class MailetConfigurationOverride {
+    private final Class<? extends Mailet> clazz;
+    private final MailetConfig newConfiguration;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.james.modules.data.JPAConfiguration;
-
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-
-public class TestJPAConfigurationModuleWithSqlValidation extends AbstractModule {
-
-    private static final String JDBC_EMBEDDED_URL = "jdbc:derby:memory:mailboxintegration;create=true";
-    private static final String JDBC_EMBEDDED_DRIVER = org.apache.derby.jdbc.EmbeddedDriver.class.getName();
-    private static final String VALIDATION_SQL_QUERY = "VALUES 1";
-
-    @Override
-    protected void configure() {
+    public MailetConfigurationOverride(Class<? extends Mailet> clazz, MailetConfig newConfiguration) {
+        this.clazz = clazz;
+        this.newConfiguration = newConfiguration;
     }
 
-    @Provides
-    @Singleton
-    JPAConfiguration provideConfiguration() throws FileNotFoundException, ConfigurationException {
-        return JPAConfiguration.builder()
-                .driverName(JDBC_EMBEDDED_DRIVER)
-                .driverURL(JDBC_EMBEDDED_URL)
-                .testOnBorrow(true)
-                .validationQueryTimeoutSec(2)
-                .validationQuery(VALIDATION_SQL_QUERY)
-                .build();
+    public Class<? extends Mailet> getClazz() {
+        return clazz;
+    }
+
+    public MailetConfig getNewConfiguration() {
+        return newConfiguration;
     }
 }
