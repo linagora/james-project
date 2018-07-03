@@ -47,7 +47,7 @@ public class CassandraWaitStrategy implements WaitStrategy {
 
     @Override
     public void waitUntilReady(WaitStrategyTarget waitStrategyTarget) {
-        Unreliables.retryUntilTrue(Ints.checkedCast(timeout.getSeconds()), TimeUnit.SECONDS, () -> {
+        Unreliables.retryUntilTrue(Ints.checkedCast(timeout.toMillis()), TimeUnit.MILLISECONDS, () -> {
                 try {
                     return cassandraContainer
                         .execInContainer("cqlsh", "-e", "show host")
