@@ -2,7 +2,7 @@
 #
 # VERSION	1.0
 
-FROM openjdk:8u141-jdk
+FROM openjdk:9.0.4-jdk
 
 ENV GIT_VERSION 1:2.1.4-2.1
 
