@@ -21,7 +21,6 @@ package org.apache.james.jmap.methods.integration;
 
 import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
-import static org.apache.james.jmap.HttpJmapAuthentication.authenticateJamesUser;
 import static org.apache.james.jmap.JmapCommonRequests.getInboxId;
 import static org.apache.james.jmap.JmapCommonRequests.getOutboxId;
 import static org.apache.james.jmap.JmapCommonRequests.listMessageIdsForAccount;
@@ -46,6 +45,7 @@ import java.util.Optional;
 
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.core.quota.QuotaSize;
+import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.MessageAppender;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.DefaultMailboxes;
@@ -58,12 +58,14 @@ import org.apache.james.mailbox.store.probe.QuotaProbe;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.modules.QuotaProbesImpl;
 import org.apache.james.probe.DataProbe;
+import org.apache.james.util.Runnables;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.Iterables;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.parsing.Parser;
@@ -95,11 +97,16 @@ public abstract class SendMDNMethodTest {
         RestAssured.defaultParser = Parser.JSON;
 
         dataProbe.addDomain(DOMAIN);
-        dataProbe.addUser(HOMER, PASSWORD);
-        dataProbe.addUser(BART, BOB_PASSWORD);
-        mailboxProbe.createMailbox("#private", HOMER, DefaultMailboxes.INBOX);
-        homerAccessToken = authenticateJamesUser(baseUri(jmapServer), HOMER, PASSWORD);
-        bartAccessToken = authenticateJamesUser(baseUri(jmapServer), BART, BOB_PASSWORD);
+        Runnables.runParallel(
+            Throwing.runnable(() -> dataProbe.addUser(HOMER, PASSWORD)),
+            Throwing.runnable(() -> dataProbe.addUser(BART, BOB_PASSWORD)),
+            Throwing.runnable(() -> mailboxProbe.createMailbox("#private", HOMER, DefaultMailboxes.INBOX)));
+
+        List<AccessToken> accessTokens = Runnables.runParallel(
+            () -> HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), HOMER, PASSWORD),
+            () -> HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), BART, BOB_PASSWORD));
+        homerAccessToken = accessTokens.get(0);
+        bartAccessToken = accessTokens.get(1);
     }
 
     private String bartSendMessageToHomer() {

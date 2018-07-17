@@ -69,7 +69,7 @@ public class CassandraCombinationManagerTest extends AbstractCombinationManagerT
                 new CassandraAnnotationModule(),
                 new CassandraApplicableFlagsModule(),
                 new CassandraBlobModule());
-        cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
         super.setUp();
     }
     

@@ -22,43 +22,28 @@ package org.apache.james.jmap.cassandra.access;
 import static com.datastax.driver.core.DataType.text;
 import static com.datastax.driver.core.DataType.uuid;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.jmap.cassandra.access.table.CassandraAccessTokenTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraAccessModule implements CassandraModule {
+public class CassandraAccessModule extends CassandraModuleComposite {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule ACCESS_TOKEN_TABLE = CassandraModule.forTable(
+        CassandraAccessTokenTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraAccessTokenTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraAccessTokenTable.TOKEN, uuid())
+            .addColumn(CassandraAccessTokenTable.USERNAME, text())
+            .withOptions()
+            .comment("Holds JMAP access token required to process to authentication.")
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION)));
 
     public CassandraAccessModule() {
-        tables = ImmutableList.of(
-            new CassandraTable(CassandraAccessTokenTable.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraAccessTokenTable.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraAccessTokenTable.TOKEN, uuid())
-                    .addColumn(CassandraAccessTokenTable.USERNAME, text())
-                    .withOptions()
-                    .comment("Holds JMAP access token required to process to authentication.")
-                    .caching(SchemaBuilder.KeyCaching.ALL,
-                        SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))));
-        types = ImmutableList.of();
+        super(ACCESS_TOKEN_TABLE);
     }
 
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
-    }
 }

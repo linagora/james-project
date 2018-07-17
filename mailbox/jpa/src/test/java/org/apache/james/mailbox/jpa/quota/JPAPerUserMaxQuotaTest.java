@@ -21,21 +21,28 @@ package org.apache.james.mailbox.jpa.quota;
 
 import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.mailbox.jpa.JPAMailboxFixture;
-import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.store.quota.GenericMaxQuotaManagerTest;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-public class JPAPerUserMaxQuotaTest extends GenericMaxQuotaManagerTest {
+public class JPAPerUserMaxQuotaTest implements GenericMaxQuotaManagerTest {
 
     private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPAMailboxFixture.QUOTA_PERSISTANCE_CLASSES);
 
-    @Override
-    protected MaxQuotaManager provideMaxQuotaManager() {
-        return new JPAPerUserMaxQuotaManager(new JPAPerUserMaxQuotaDAO(JPA_TEST_CLUSTER.getEntityManagerFactory()));
+    private JPAPerUserMaxQuotaManager testee;
+
+    @BeforeEach
+    void setUp() {
+        testee = new JPAPerUserMaxQuotaManager(new JPAPerUserMaxQuotaDAO(JPA_TEST_CLUSTER.getEntityManagerFactory()));
     }
 
-    @After
-    public void cleanUp() {
+    @Override
+    public JPAPerUserMaxQuotaManager testee() {
+        return testee;
+    }
+
+    @AfterEach
+    void cleanUp() {
         JPA_TEST_CLUSTER.clear(JPAMailboxFixture.QUOTA_TABLES_NAMES);
     }
 }

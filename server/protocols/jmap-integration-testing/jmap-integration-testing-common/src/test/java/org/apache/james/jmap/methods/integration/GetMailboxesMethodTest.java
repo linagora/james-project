@@ -74,6 +74,7 @@ import org.apache.james.modules.ACLProbeImpl;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.modules.QuotaProbesImpl;
 import org.apache.james.probe.DataProbe;
+import org.apache.james.util.Runnables;
 import org.apache.james.utils.AllMatching;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
@@ -81,6 +82,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jayway.restassured.RestAssured;
@@ -115,8 +117,9 @@ public abstract class GetMailboxesMethodTest {
 
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         dataProbe.addDomain(DOMAIN);
-        dataProbe.addUser(ALICE, ALICE_PASSWORD);
-        dataProbe.addUser(BOB, BOB_PASSWORD);
+        Runnables.runParallel(
+            Throwing.runnable(() -> dataProbe.addUser(BOB, BOB_PASSWORD)),
+            Throwing.runnable(() -> dataProbe.addUser(ALICE, ALICE_PASSWORD)));
         accessToken = authenticateJamesUser(baseUri(jmapServer), ALICE, ALICE_PASSWORD);
 
         message = Message.Builder.of()

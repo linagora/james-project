@@ -22,20 +22,28 @@ package org.apache.james.mailbox.jpa.quota;
 import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.mailbox.jpa.JPAMailboxFixture;
 import org.apache.james.mailbox.store.quota.StoreCurrentQuotaManager;
-import org.apache.james.mailbox.store.quota.StoreCurrentQuotaManagerTest;
-import org.junit.After;
+import org.apache.james.mailbox.store.quota.StoreCurrentQuotaManagerContract;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-public class JPACurrentQuotaManagerTest extends StoreCurrentQuotaManagerTest {
+public class JPACurrentQuotaManagerTest implements StoreCurrentQuotaManagerContract {
 
     private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPAMailboxFixture.QUOTA_PERSISTANCE_CLASSES);
 
-    @Override
-    protected StoreCurrentQuotaManager provideTestee() {
-        return new JpaCurrentQuotaManager(JPA_TEST_CLUSTER.getEntityManagerFactory());
+    private JpaCurrentQuotaManager testee;
+
+    @BeforeEach
+    void setUp() {
+        testee = new JpaCurrentQuotaManager(JPA_TEST_CLUSTER.getEntityManagerFactory());
     }
 
-    @After
-    public void tearDown() {
+    @Override
+    public StoreCurrentQuotaManager testee() {
+        return testee;
+    }
+
+    @AfterEach
+    void tearDown() {
         JPA_TEST_CLUSTER.clear(JPAMailboxFixture.QUOTA_TABLES_NAMES);
     }
 

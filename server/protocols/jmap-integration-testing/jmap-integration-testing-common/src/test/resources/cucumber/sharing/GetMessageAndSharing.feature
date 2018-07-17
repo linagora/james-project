@@ -23,8 +23,7 @@ Feature: GetMessages method on shared mailbox
   Background:
     Given a domain named "domain.tld"
     And some users "alice@domain.tld", "bob@domain.tld", "someone@domain.tld"
-    And "alice@domain.tld" has a mailbox "INBOX"
-    And "alice@domain.tld" has a mailbox "shared"
+    And "alice@domain.tld" has mailboxes "INBOX", "shared"
     And "alice@domain.tld" shares her mailbox "shared" with "bob@domain.tld" with "lr" rights
     And "alice@domain.tld" has a message "m1" in "shared" mailbox with subject "my test subject", content "testmail"
 

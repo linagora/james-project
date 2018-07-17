@@ -22,11 +22,8 @@ Feature: Share parent mailbox without sharing submailbox
 
   Background:
     Given a domain named "domain.tld"
-    And a user "alice@domain.tld"
-    And a user "bob@domain.tld"
-    And "alice@domain.tld" has a mailbox "shared"
-    And "alice@domain.tld" has a mailbox "shared.secret"
-    And "alice@domain.tld" has a mailbox "shared.notsecret"
+    And some users "alice@domain.tld", "bob@domain.tld"
+    And "alice@domain.tld" has mailboxes "shared", "shared.secret", "shared.notsecret"
     And "alice@domain.tld" shares her mailbox "shared" with "bob@domain.tld" with "aeilrwt" rights
     And "alice@domain.tld" shares her mailbox "shared.notsecret" with "bob@domain.tld" with "aeilrwt" rights
     And "alice@domain.tld" has a message "m1" in "shared" mailbox

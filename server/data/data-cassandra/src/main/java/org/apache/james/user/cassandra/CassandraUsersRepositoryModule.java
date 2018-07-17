@@ -21,42 +21,27 @@ package org.apache.james.user.cassandra;
 
 import static com.datastax.driver.core.DataType.text;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.user.cassandra.tables.CassandraUserTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraUsersRepositoryModule implements CassandraModule {
+public class CassandraUsersRepositoryModule extends CassandraModuleComposite {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule USER_TABLE = CassandraModule.forTable(
+        CassandraUserTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraUserTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraUserTable.NAME, text())
+            .addColumn(CassandraUserTable.REALNAME, text())
+            .addColumn(CassandraUserTable.PASSWORD, text())
+            .addColumn(CassandraUserTable.ALGORITHM, text())
+            .withOptions()
+            .comment("Holds users of this James server."));
 
     public CassandraUsersRepositoryModule() {
-        tables = ImmutableList.of(
-                new CassandraTable(CassandraUserTable.TABLE_NAME,
-                    SchemaBuilder.createTable(CassandraUserTable.TABLE_NAME)
-                        .ifNotExists()
-                        .addPartitionKey(CassandraUserTable.NAME, text())
-                        .addColumn(CassandraUserTable.REALNAME, text())
-                        .addColumn(CassandraUserTable.PASSWORD, text())
-                        .addColumn(CassandraUserTable.ALGORITHM, text())
-                        .withOptions()
-                        .comment("Holds users of this James server.")));
-        types = ImmutableList.of();
+        super(USER_TABLE);
     }
 
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
-    }
 }

@@ -40,7 +40,6 @@ import static org.hamcrest.Matchers.nullValue;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import org.apache.james.backends.cassandra.ContainerLifecycleConfiguration;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.MessageManager.AppendCommand;
 import org.apache.james.mailbox.cassandra.mail.task.MailboxMergingTask;
@@ -71,7 +70,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
@@ -90,13 +88,8 @@ public class FixingGhostMailboxTest {
     @ClassRule
     public static DockerCassandraRule cassandra = new DockerCassandraRule();
 
-    public static ContainerLifecycleConfiguration cassandraLifecycleConfiguration = ContainerLifecycleConfiguration.withDefaultIterationsBetweenRestart().container(cassandra.getRawContainer()).build();
-
     @Rule
     public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
-
-    @Rule
-    public TestRule cassandraLifecycleTestRule = cassandraLifecycleConfiguration.asTestRule();
 
     private AccessToken accessToken;
     private String domain;
@@ -146,8 +139,8 @@ public class FixingGhostMailboxTest {
         accessToken = authenticateJamesUser(baseUri(jmapServer), alice, alicePassword);
 
         session = Cluster.builder()
-            .addContactPoint(cassandra.getIp())
-            .withPort(cassandra.getMappedPort(9042))
+            .addContactPoint(cassandra.getHost().getHostName())
+            .withPort(cassandra.getHost().getPort())
             .build()
             .connect(jmapServer.getProbe(CassandraProbe.class).getKeyspace());
 

@@ -48,6 +48,7 @@ import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueueFactory;
+import org.apache.james.util.Runnables;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
 import org.apache.mailet.Mail;
@@ -55,6 +56,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.fge.lambdas.Throwing;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.RequestSpecBuilder;
 import com.jayway.restassured.http.ContentType;
@@ -129,9 +131,10 @@ public abstract class SetMessagesOutboxFlagUpdateTest {
         RestAssured.defaultParser = Parser.JSON;
 
         dataProbe.addDomain(DOMAIN);
-        dataProbe.addUser(USERNAME, PASSWORD);
-        dataProbe.addUser(BOB, BOB_PASSWORD);
-        mailboxProbe.createMailbox("#private", USERNAME, DefaultMailboxes.INBOX);
+        Runnables.runParallel(
+            Throwing.runnable(() -> dataProbe.addUser(USERNAME, PASSWORD)),
+            Throwing.runnable(() -> dataProbe.addUser(BOB, BOB_PASSWORD)),
+            Throwing.runnable(() -> mailboxProbe.createMailbox("#private", USERNAME, DefaultMailboxes.INBOX)));
         accessToken = HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), USERNAME, PASSWORD);
     }
 

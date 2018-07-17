@@ -19,45 +19,30 @@
 
 package org.apache.james.mailbox.cassandra.modules;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.mailbox.cassandra.table.CassandraFirstUnseenTable;
 
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraFirstUnseenModule implements CassandraModule {
+public class CassandraFirstUnseenModule extends CassandraModuleComposite {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule FIRST_UNSEEN_TABLE = CassandraModule.forTable(
+        CassandraFirstUnseenTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraFirstUnseenTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraFirstUnseenTable.MAILBOX_ID, DataType.timeuuid())
+            .addClusteringColumn(CassandraFirstUnseenTable.UID, DataType.bigint())
+            .withOptions()
+            .comment("Denormalisation table. Allow to quickly retrieve the first UNSEEN UID of a specific mailbox.")
+            .compactionOptions(SchemaBuilder.leveledStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))
+            .clusteringOrder(CassandraFirstUnseenTable.UID, SchemaBuilder.Direction.ASC));
 
     public CassandraFirstUnseenModule() {
-        tables = ImmutableList.of(new CassandraTable(CassandraFirstUnseenTable.TABLE_NAME,
-            SchemaBuilder.createTable(CassandraFirstUnseenTable.TABLE_NAME)
-                .ifNotExists()
-                .addPartitionKey(CassandraFirstUnseenTable.MAILBOX_ID, DataType.timeuuid())
-                .addClusteringColumn(CassandraFirstUnseenTable.UID, DataType.bigint())
-                .withOptions()
-                .comment("Denormalisation table. Allow to quickly retrieve the first UNSEEN UID of a specific mailbox.")
-                .compactionOptions(SchemaBuilder.leveledStrategy())
-                .caching(SchemaBuilder.KeyCaching.ALL,
-                    SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))
-                .clusteringOrder(CassandraFirstUnseenTable.UID, SchemaBuilder.Direction.ASC)));
-        types = ImmutableList.of();
-    }
-
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
+        super(FIRST_UNSEEN_TABLE);
     }
 }

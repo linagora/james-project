@@ -19,11 +19,11 @@
 
 package org.apache.james.user.memory;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
@@ -47,7 +47,7 @@ public class MemoryUsersRepository extends AbstractUsersRepository {
     private String algo;
 
     private MemoryUsersRepository(boolean supportVirtualHosting) {
-        this.userByName = new HashMap<>();
+        this.userByName = new ConcurrentHashMap<>();
         this.algo = "MD5";
         this.supportVirtualHosting = supportVirtualHosting;
     }

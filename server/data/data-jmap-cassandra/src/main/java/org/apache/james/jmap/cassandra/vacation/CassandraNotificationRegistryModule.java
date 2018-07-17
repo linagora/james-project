@@ -21,44 +21,28 @@ package org.apache.james.jmap.cassandra.vacation;
 
 import static com.datastax.driver.core.DataType.text;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.jmap.cassandra.vacation.tables.CassandraNotificationTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraNotificationRegistryModule implements CassandraModule {
+public class CassandraNotificationRegistryModule extends CassandraModuleComposite {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule NOTIFICATION_TABLE = CassandraModule.forTable(
+        CassandraNotificationTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraNotificationTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraNotificationTable.ACCOUNT_ID, text())
+            .addClusteringColumn(CassandraNotificationTable.RECIPIENT_ID, text())
+            .withOptions()
+            .comment("Stores registry of vacation notification being sent.")
+            .compactionOptions(SchemaBuilder.dateTieredStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION)));
 
     public CassandraNotificationRegistryModule() {
-        tables = ImmutableList.of(
-            new CassandraTable(CassandraNotificationTable.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraNotificationTable.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraNotificationTable.ACCOUNT_ID, text())
-                    .addClusteringColumn(CassandraNotificationTable.RECIPIENT_ID, text())
-                    .withOptions()
-                    .comment("Stores registry of vacation notification being sent.")
-                    .compactionOptions(SchemaBuilder.dateTieredStrategy())
-                    .caching(SchemaBuilder.KeyCaching.ALL,
-                        SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))));
-        types = ImmutableList.of();
-    }
-
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
+        super(NOTIFICATION_TABLE);
     }
 }

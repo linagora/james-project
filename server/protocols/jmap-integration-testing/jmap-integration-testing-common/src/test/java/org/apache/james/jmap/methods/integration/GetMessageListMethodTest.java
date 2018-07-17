@@ -20,7 +20,6 @@
 package org.apache.james.jmap.methods.integration;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.apache.james.jmap.HttpJmapAuthentication.authenticateJamesUser;
 import static org.apache.james.jmap.JmapURIBuilder.baseUri;
 import static org.apache.james.jmap.TestingConstants.ALICE;
 import static org.apache.james.jmap.TestingConstants.ALICE_PASSWORD;
@@ -45,10 +44,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 
 import org.apache.james.GuiceJamesServer;
+import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.model.Number;
 import org.apache.james.mailbox.FlagsBuilder;
@@ -69,6 +70,7 @@ import org.apache.james.modules.ACLProbeImpl;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.util.ClassLoaderUtils;
+import org.apache.james.util.Runnables;
 import org.apache.james.util.date.ImapDateTimeFormatter;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
@@ -76,6 +78,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.github.fge.lambdas.Throwing;
 import com.jayway.restassured.RestAssured;
 
 public abstract class GetMessageListMethodTest {
@@ -107,10 +110,15 @@ public abstract class GetMessageListMethodTest {
                 .build();
 
         dataProbe.addDomain(DOMAIN);
-        dataProbe.addUser(ALICE, ALICE_PASSWORD);
-        this.aliceAccessToken = authenticateJamesUser(baseUri(jmapServer), ALICE, ALICE_PASSWORD);
-        dataProbe.addUser(BOB, BOB_PASSWORD);
-        this.bobAccessToken = authenticateJamesUser(baseUri(jmapServer), BOB, BOB_PASSWORD);
+        Runnables.runParallel(
+            Throwing.runnable(() -> dataProbe.addUser(BOB, BOB_PASSWORD)),
+            Throwing.runnable(() -> dataProbe.addUser(ALICE, ALICE_PASSWORD)));
+
+        List<AccessToken> accessTokens = Runnables.runParallel(
+            () -> HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), ALICE, ALICE_PASSWORD),
+            () -> HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), BOB, BOB_PASSWORD));
+        aliceAccessToken = accessTokens.get(0);
+        bobAccessToken = accessTokens.get(1);
     }
 
     @After

@@ -66,7 +66,7 @@ public class CassandraSieveDAOTest {
 
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraSieveRepositoryModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraSieveRepositoryModule.SIEVE_TABLE, cassandraServer.getHost());
         sieveDAO = new CassandraSieveDAO(cassandra.getConf());
     }
 

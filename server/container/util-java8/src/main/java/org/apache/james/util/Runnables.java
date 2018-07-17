@@ -20,21 +20,38 @@
 package org.apache.james.util;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import com.github.steveash.guavate.Guavate;
 
 public class Runnables {
     public static void runParallel(Runnable... runnables) {
-        FluentFutureStream.of(
-            Arrays.stream(runnables)
-                .map(runnable -> CompletableFuture.supplyAsync(toVoidSupplier(runnable))))
-            .join();
+        runParallelRunnables(Arrays.stream(runnables));
     }
 
-    private static Supplier<Void> toVoidSupplier(Runnable runnable) {
+    public static void runParallelRunnables(Stream<Runnable> runnables) {
+        runParallel(runnables.map(Runnables::toSupplier));
+    }
+
+    public static <T> List<T> runParallel(Supplier<T>... suppliers) {
+        return runParallel(Arrays.stream(suppliers));
+    }
+
+    public static <T> List<T> runParallel(Stream<Supplier<T>> supplierStream) {
+        return FluentFutureStream.of(
+            supplierStream
+                .map(CompletableFuture::supplyAsync))
+            .join()
+            .collect(Guavate.toImmutableList());
+    }
+
+    private static Supplier<Object> toSupplier(Runnable runnable) {
         return () -> {
             runnable.run();
-            return null;
+            return new Object();
         };
     }
 }

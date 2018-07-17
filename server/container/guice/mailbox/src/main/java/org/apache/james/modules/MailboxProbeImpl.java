@@ -93,6 +93,18 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
         }
     }
 
+    public boolean exist(MailboxPath path) {
+        MailboxSession mailboxSession = null;
+        try {
+            mailboxSession = mailboxManager.createSystemSession(path.getUser());
+            return mailboxManager.mailboxExists(path, mailboxSession);
+        } catch (MailboxException e) {
+            throw new RuntimeException(e);
+        } finally {
+            closeSession(mailboxSession);
+        }
+    }
+
     private void closeSession(MailboxSession session) {
         if (session != null) {
             mailboxManager.endProcessingRequest(session);

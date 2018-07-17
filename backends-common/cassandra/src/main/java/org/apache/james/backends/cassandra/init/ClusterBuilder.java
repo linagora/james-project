@@ -87,18 +87,6 @@ public class ClusterBuilder {
         return this;
     }
 
-    public ClusterBuilder host(String host) {
-        this.host = Optional.of(host);
-
-        return this;
-    }
-
-    public ClusterBuilder port(int port) {
-        this.port = Optional.of(port);
-
-        return this;
-    }
-
     public ClusterBuilder poolingOptions(PoolingOptions poolingOptions) {
         this.poolingOptions = Optional.of(poolingOptions);
         return this;

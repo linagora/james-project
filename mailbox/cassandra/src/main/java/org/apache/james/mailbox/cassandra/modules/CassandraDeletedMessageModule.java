@@ -23,44 +23,28 @@ import static org.apache.james.mailbox.cassandra.table.CassandraDeletedMessageTa
 import static org.apache.james.mailbox.cassandra.table.CassandraDeletedMessageTable.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraDeletedMessageTable.UID;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraDeletedMessageModule implements CassandraModule {
+public class CassandraDeletedMessageModule extends CassandraModuleComposite {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule DELETED_MESSAGE_TABLE = CassandraModule.forTable(TABLE_NAME,
+        SchemaBuilder.createTable(TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(MAILBOX_ID, DataType.timeuuid())
+            .addClusteringColumn(UID, DataType.bigint())
+            .withOptions()
+            .comment("Denormalisation table. Allows to retrieve UID marked as DELETED in specific mailboxes.")
+            .compactionOptions(SchemaBuilder.leveledStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION)));
 
     public CassandraDeletedMessageModule() {
-        tables = ImmutableList.of(new CassandraTable(TABLE_NAME,
-            SchemaBuilder.createTable(TABLE_NAME)
-                .ifNotExists()
-                .addPartitionKey(MAILBOX_ID, DataType.timeuuid())
-                .addClusteringColumn(UID, DataType.bigint())
-                .withOptions()
-                .comment("Denormalisation table. Allows to retrieve UID marked as DELETED in specific mailboxes.")
-                .compactionOptions(SchemaBuilder.leveledStrategy())
-                .caching(SchemaBuilder.KeyCaching.ALL,
-                    SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))));
-        types = ImmutableList.of();
-    }
-
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
+        super(DELETED_MESSAGE_TABLE);
     }
 
 }

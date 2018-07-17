@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.probe.DataProbe;
+import org.apache.james.util.Runnables;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
 import org.apache.james.utils.SMTPMessageSender;
@@ -55,6 +56,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.github.fge.lambdas.Throwing;
 import com.jayway.awaitility.Duration;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.specification.RequestSpecification;
@@ -76,9 +78,11 @@ public abstract class ForwardIntegrationTest {
 
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         dataProbe.addDomain(DOMAIN);
-        dataProbe.addUser(BOB, BOB_PASSWORD);
-        dataProbe.addUser(ALICE, ALICE_PASSWORD);
-        dataProbe.addUser(CEDRIC, CEDRIC_PASSWORD);
+
+        Runnables.runParallel(
+            Throwing.runnable(() -> dataProbe.addUser(BOB, BOB_PASSWORD)),
+            Throwing.runnable(() -> dataProbe.addUser(ALICE, ALICE_PASSWORD)),
+            Throwing.runnable(() -> dataProbe.addUser(CEDRIC, CEDRIC_PASSWORD)));
 
         RestAssured.requestSpecification = jmapRequestSpecBuilder
                 .setPort(jmapServer.getProbe(JmapGuiceProbe.class).getJmapPort())

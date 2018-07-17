@@ -23,56 +23,42 @@ import static com.datastax.driver.core.DataType.bigint;
 import static com.datastax.driver.core.DataType.text;
 import static com.datastax.driver.core.DataType.timeuuid;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.mailbox.cassandra.table.CassandraACLTable;
 import org.apache.james.mailbox.cassandra.table.CassandraUserMailboxRightsTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraAclModule implements CassandraModule {
+public class CassandraAclModule extends CassandraModuleComposite {
+    public static final CassandraModule CASSANDRA_ACL_TABLE = CassandraModule.forTable(
+        CassandraACLTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraACLTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraACLTable.ID, timeuuid())
+            .addColumn(CassandraACLTable.ACL, text())
+            .addColumn(CassandraACLTable.VERSION, bigint())
+            .withOptions()
+            .comment("Holds mailbox ACLs")
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION)));
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule CASSANDRA_USER_MAILBOX_RIGHTS_TABLE = CassandraModule.forTable(
+        CassandraUserMailboxRightsTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraUserMailboxRightsTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraUserMailboxRightsTable.USER_NAME, text())
+            .addClusteringColumn(CassandraUserMailboxRightsTable.MAILBOX_ID, timeuuid())
+            .addColumn(CassandraUserMailboxRightsTable.RIGHTS, text())
+            .withOptions()
+            .compactionOptions(SchemaBuilder.leveledStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))
+            .comment("Denormalisation table. Allow to retrieve non personal mailboxIds a user has right on"));
 
     public CassandraAclModule() {
-        tables = ImmutableList.of(
-            new CassandraTable(CassandraACLTable.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraACLTable.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraACLTable.ID, timeuuid())
-                    .addColumn(CassandraACLTable.ACL, text())
-                    .addColumn(CassandraACLTable.VERSION, bigint())
-                    .withOptions()
-                    .comment("Holds mailbox ACLs")
-                    .caching(SchemaBuilder.KeyCaching.ALL,
-                        SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))),
-            new CassandraTable(CassandraUserMailboxRightsTable.TABLE_NAME,
-                    SchemaBuilder.createTable(CassandraUserMailboxRightsTable.TABLE_NAME)
-                        .ifNotExists()
-                        .addPartitionKey(CassandraUserMailboxRightsTable.USER_NAME, text())
-                        .addClusteringColumn(CassandraUserMailboxRightsTable.MAILBOX_ID, timeuuid())
-                        .addColumn(CassandraUserMailboxRightsTable.RIGHTS, text())
-                        .withOptions()
-                        .compactionOptions(SchemaBuilder.leveledStrategy())
-                        .caching(SchemaBuilder.KeyCaching.ALL,
-                            SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))
-                        .comment("Denormalisation table. Allow to retrieve non personal mailboxIds a user has right on")));
-        types = ImmutableList.of();
-    }
-
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
+        super(CASSANDRA_ACL_TABLE,
+            CASSANDRA_USER_MAILBOX_RIGHTS_TABLE);
     }
 }

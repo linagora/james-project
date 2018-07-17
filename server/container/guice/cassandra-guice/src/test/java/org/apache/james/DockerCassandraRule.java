@@ -18,18 +18,23 @@
  ****************************************************************/
 
 package org.apache.james;
-import org.apache.commons.text.RandomStringGenerator;
+
 import org.apache.james.backends.cassandra.init.configuration.ClusterConfiguration;
+import org.apache.james.server.CassandraCleanupProbe;
 import org.apache.james.util.Host;
+import org.apache.james.utils.GuiceProbe;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.testcontainers.containers.GenericContainer;
 
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.util.Modules;
 
 
 public class DockerCassandraRule implements GuiceModuleTestRule {
 
+    public static final String TESTING = "testing";
     private org.apache.james.backends.cassandra.DockerCassandraRule cassandraContainer = new org.apache.james.backends.cassandra.DockerCassandraRule();
 
     @Override
@@ -43,19 +48,17 @@ public class DockerCassandraRule implements GuiceModuleTestRule {
 
     @Override
     public Module getModule() {
-        String keyspace = new RandomStringGenerator.Builder().withinRange('a', 'z').build().generate(12);
-        return (binder) -> binder.bind(ClusterConfiguration.class)
+        return Modules.combine(binder -> binder.bind(ClusterConfiguration.class)
             .toInstance(ClusterConfiguration.builder()
                 .host(cassandraContainer.getHost())
-                .keyspace(keyspace)
+                .keyspace(TESTING)
                 .replicationFactor(1)
                 .maxRetry(20)
                 .minDelay(5000)
-                .build());
-    }
-
-    public String getIp() {
-        return cassandraContainer.getIp();
+                .build()),
+            binder -> Multibinder.newSetBinder(binder, GuiceProbe.class)
+                .addBinding()
+                .to(CassandraCleanupProbe.class));
     }
 
     public Host getHost() {
@@ -63,7 +66,7 @@ public class DockerCassandraRule implements GuiceModuleTestRule {
     }
 
     public Integer getMappedPort(int originalPort) {
-        return cassandraContainer.getBindingPort();
+        return getHost().getPort();
     }
 
     public void start() {

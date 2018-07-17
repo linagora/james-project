@@ -23,6 +23,6 @@ import org.apache.james.mailrepository.api.MailRepositoryUrlStoreContract;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(CassandraMailRepositoryUrlStoreExtension.class)
-public class CassandraMailRepositoryUrlStoreTest implements MailRepositoryUrlStoreContract {
+class CassandraMailRepositoryUrlStoreTest implements MailRepositoryUrlStoreContract {
 
 }

@@ -32,6 +32,10 @@ public class ContainerLifecycleConfiguration {
         return new Builder();
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public static class Builder {
         private static int DEFAULT_ITERATIONS_BETWEEN_RESTART = 20;
 

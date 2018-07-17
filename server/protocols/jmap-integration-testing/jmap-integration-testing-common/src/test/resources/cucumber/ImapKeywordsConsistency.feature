@@ -21,9 +21,7 @@ Feature: Impact of IMAP on JMAP keywords consistency
   Background:
     Given a domain named "domain.tld"
     And a connected user "username@domain.tld"
-    And "username@domain.tld" has a mailbox "source"
-    And "username@domain.tld" has a mailbox "mailbox"
-    And "username@domain.tld" has a mailbox "trash"
+    And "username@domain.tld" has mailboxes "source", "mailbox", "trash"
 
   Scenario Outline: GetMessages should union keywords when an inconsistency was created via IMAP
     Given the user has a message "m1" in "source" mailbox with subject "My awesome subject", content "This is the content"

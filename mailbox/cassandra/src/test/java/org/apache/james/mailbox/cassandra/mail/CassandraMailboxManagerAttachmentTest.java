@@ -85,7 +85,7 @@ public class CassandraMailboxManagerAttachmentTest extends AbstractMailboxManage
                     new CassandraUidModule(),
                     new CassandraAttachmentModule(),
                     new CassandraApplicableFlagsModule());
-        cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
         initSystemUnderTest();
         super.setUp();
     }

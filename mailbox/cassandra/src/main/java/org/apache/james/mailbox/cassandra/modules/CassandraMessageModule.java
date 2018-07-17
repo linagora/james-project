@@ -27,11 +27,8 @@ import static com.datastax.driver.core.DataType.text;
 import static com.datastax.driver.core.DataType.timestamp;
 import static com.datastax.driver.core.DataType.timeuuid;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageIdTable;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageIds;
 import org.apache.james.mailbox.cassandra.table.CassandraMessageV2Table;
@@ -39,96 +36,96 @@ import org.apache.james.mailbox.cassandra.table.Flag;
 import org.apache.james.mailbox.cassandra.table.MessageIdToImapUid;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraMessageModule implements CassandraModule {
+public class CassandraMessageModule extends CassandraModuleComposite {
 
     public static final int CACHED_MESSAGE_ID_ROWS = 1000;
     public static final int CACHED_IMAP_UID_ROWS = 100;
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+
+    public static final CassandraModule CASSANDRA_MESSAGE_ID_TABLE = CassandraModule.forTable(
+        CassandraMessageIdTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraMessageIdTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraMessageIds.MAILBOX_ID, timeuuid())
+            .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
+            .addColumn(CassandraMessageIds.MESSAGE_ID, timeuuid())
+            .addColumn(CassandraMessageIdTable.MOD_SEQ, bigint())
+            .addColumn(Flag.ANSWERED, cboolean())
+            .addColumn(Flag.DELETED, cboolean())
+            .addColumn(Flag.DRAFT, cboolean())
+            .addColumn(Flag.FLAGGED, cboolean())
+            .addColumn(Flag.RECENT, cboolean())
+            .addColumn(Flag.SEEN, cboolean())
+            .addColumn(Flag.USER, cboolean())
+            .addColumn(Flag.USER_FLAGS, set(text()))
+            .withOptions()
+            .comment("Holds mailbox and flags for each message, lookup by mailbox ID + UID")
+            .compactionOptions(SchemaBuilder.leveledStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CACHED_MESSAGE_ID_ROWS)));
+
+    public static final CassandraModule MESSAGE_ID_TO_IMAP_UID_TABLE = CassandraModule.forTable(
+        MessageIdToImapUid.TABLE_NAME,
+        SchemaBuilder.createTable(MessageIdToImapUid.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
+            .addClusteringColumn(CassandraMessageIds.MAILBOX_ID, timeuuid())
+            .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
+            .addColumn(MessageIdToImapUid.MOD_SEQ, bigint())
+            .addColumn(Flag.ANSWERED, cboolean())
+            .addColumn(Flag.DELETED, cboolean())
+            .addColumn(Flag.DRAFT, cboolean())
+            .addColumn(Flag.FLAGGED, cboolean())
+            .addColumn(Flag.RECENT, cboolean())
+            .addColumn(Flag.SEEN, cboolean())
+            .addColumn(Flag.USER, cboolean())
+            .addColumn(Flag.USER_FLAGS, set(text()))
+            .withOptions()
+            .comment("Holds mailbox and flags for each message, lookup by message ID")
+            .compactionOptions(SchemaBuilder.leveledStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CACHED_IMAP_UID_ROWS)));
+
+    public static final CassandraModule CASSANDRA_MESSAGE_V2_TABLE = CassandraModule.forTable(
+        CassandraMessageV2Table.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraMessageV2Table.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
+            .addColumn(CassandraMessageV2Table.INTERNAL_DATE, timestamp())
+            .addColumn(CassandraMessageV2Table.BODY_START_OCTET, cint())
+            .addColumn(CassandraMessageV2Table.BODY_OCTECTS, bigint())
+            .addColumn(CassandraMessageV2Table.TEXTUAL_LINE_COUNT, bigint())
+            .addColumn(CassandraMessageV2Table.FULL_CONTENT_OCTETS, bigint())
+            .addColumn(CassandraMessageV2Table.BODY_CONTENT, text())
+            .addColumn(CassandraMessageV2Table.HEADER_CONTENT, text())
+            .addUDTListColumn(CassandraMessageV2Table.ATTACHMENTS, SchemaBuilder.frozen(CassandraMessageV2Table.ATTACHMENTS))
+            .addUDTListColumn(CassandraMessageV2Table.PROPERTIES, SchemaBuilder.frozen(CassandraMessageV2Table.PROPERTIES))
+            .withOptions()
+            .comment("Holds message metadata, independently of any mailboxes. Content of messages is stored " +
+                "in `blobs` and `blobparts` tables."));
+
+    public static final CassandraModule PROPERTY_TYPE = CassandraModule.forType(
+        CassandraMessageV2Table.PROPERTIES,
+        SchemaBuilder.createType(CassandraMessageV2Table.PROPERTIES)
+            .ifNotExists()
+            .addColumn(CassandraMessageV2Table.Properties.NAMESPACE, text())
+            .addColumn(CassandraMessageV2Table.Properties.NAME, text())
+            .addColumn(CassandraMessageV2Table.Properties.VALUE, text()));
+
+    public static final CassandraModule ATTACHMENT_TYPE = CassandraModule.forType(
+        CassandraMessageV2Table.ATTACHMENTS,
+        SchemaBuilder.createType(CassandraMessageV2Table.ATTACHMENTS)
+            .ifNotExists()
+            .addColumn(CassandraMessageV2Table.Attachments.ID, text())
+            .addColumn(CassandraMessageV2Table.Attachments.NAME, text())
+            .addColumn(CassandraMessageV2Table.Attachments.CID, text())
+            .addColumn(CassandraMessageV2Table.Attachments.IS_INLINE, cboolean()));
 
     public CassandraMessageModule() {
-        tables = ImmutableList.of(
-            new CassandraTable(MessageIdToImapUid.TABLE_NAME,
-                SchemaBuilder.createTable(MessageIdToImapUid.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
-                    .addClusteringColumn(CassandraMessageIds.MAILBOX_ID, timeuuid())
-                    .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
-                    .addColumn(MessageIdToImapUid.MOD_SEQ, bigint())
-                    .addColumn(Flag.ANSWERED, cboolean())
-                    .addColumn(Flag.DELETED, cboolean())
-                    .addColumn(Flag.DRAFT, cboolean())
-                    .addColumn(Flag.FLAGGED, cboolean())
-                    .addColumn(Flag.RECENT, cboolean())
-                    .addColumn(Flag.SEEN, cboolean())
-                    .addColumn(Flag.USER, cboolean())
-                    .addColumn(Flag.USER_FLAGS, set(text()))
-                    .withOptions()
-                    .comment("Holds mailbox and flags for each message, lookup by message ID")
-                    .compactionOptions(SchemaBuilder.leveledStrategy())
-                    .caching(SchemaBuilder.KeyCaching.ALL,
-                        SchemaBuilder.rows(CACHED_IMAP_UID_ROWS))),
-            new CassandraTable(CassandraMessageIdTable.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraMessageIdTable.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraMessageIds.MAILBOX_ID, timeuuid())
-                    .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
-                    .addColumn(CassandraMessageIds.MESSAGE_ID, timeuuid())
-                    .addColumn(CassandraMessageIdTable.MOD_SEQ, bigint())
-                    .addColumn(Flag.ANSWERED, cboolean())
-                    .addColumn(Flag.DELETED, cboolean())
-                    .addColumn(Flag.DRAFT, cboolean())
-                    .addColumn(Flag.FLAGGED, cboolean())
-                    .addColumn(Flag.RECENT, cboolean())
-                    .addColumn(Flag.SEEN, cboolean())
-                    .addColumn(Flag.USER, cboolean())
-                    .addColumn(Flag.USER_FLAGS, set(text()))
-                    .withOptions()
-                    .comment("Holds mailbox and flags for each message, lookup by mailbox ID + UID")
-                    .compactionOptions(SchemaBuilder.leveledStrategy())
-                    .caching(SchemaBuilder.KeyCaching.ALL,
-                        SchemaBuilder.rows(CACHED_MESSAGE_ID_ROWS))),
-            new CassandraTable(CassandraMessageV2Table.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraMessageV2Table.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
-                    .addColumn(CassandraMessageV2Table.INTERNAL_DATE, timestamp())
-                    .addColumn(CassandraMessageV2Table.BODY_START_OCTET, cint())
-                    .addColumn(CassandraMessageV2Table.BODY_OCTECTS, bigint())
-                    .addColumn(CassandraMessageV2Table.TEXTUAL_LINE_COUNT, bigint())
-                    .addColumn(CassandraMessageV2Table.FULL_CONTENT_OCTETS, bigint())
-                    .addColumn(CassandraMessageV2Table.BODY_CONTENT, text())
-                    .addColumn(CassandraMessageV2Table.HEADER_CONTENT, text())
-                    .addUDTListColumn(CassandraMessageV2Table.ATTACHMENTS, SchemaBuilder.frozen(CassandraMessageV2Table.ATTACHMENTS))
-                    .addUDTListColumn(CassandraMessageV2Table.PROPERTIES, SchemaBuilder.frozen(CassandraMessageV2Table.PROPERTIES))
-                    .withOptions()
-                    .comment("Holds message metadata, independently of any mailboxes. Content of messages is stored " +
-                        "in `blobs` and `blobparts` tables.")));
-        types = ImmutableList.of(
-            new CassandraType(CassandraMessageV2Table.PROPERTIES,
-                SchemaBuilder.createType(CassandraMessageV2Table.PROPERTIES)
-                    .ifNotExists()
-                    .addColumn(CassandraMessageV2Table.Properties.NAMESPACE, text())
-                    .addColumn(CassandraMessageV2Table.Properties.NAME, text())
-                    .addColumn(CassandraMessageV2Table.Properties.VALUE, text())),
-            new CassandraType(CassandraMessageV2Table.ATTACHMENTS,
-                SchemaBuilder.createType(CassandraMessageV2Table.ATTACHMENTS)
-                    .ifNotExists()
-                    .addColumn(CassandraMessageV2Table.Attachments.ID, text())
-                    .addColumn(CassandraMessageV2Table.Attachments.NAME, text())
-                    .addColumn(CassandraMessageV2Table.Attachments.CID, text())
-                    .addColumn(CassandraMessageV2Table.Attachments.IS_INLINE, cboolean())));
-    }
-
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
+        super(CASSANDRA_MESSAGE_V2_TABLE,
+            MESSAGE_ID_TO_IMAP_UID_TABLE,
+            CASSANDRA_MESSAGE_ID_TABLE,
+            PROPERTY_TYPE,
+            ATTACHMENT_TYPE);
     }
 }

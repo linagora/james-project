@@ -22,12 +22,9 @@ Feature: Sharing children mailbox
 
   Background:
     Given a domain named "domain.tld"
-    And a user "alice@domain.tld"
-    And a user "bob@domain.tld"
-    And "alice@domain.tld" has a mailbox "shared"
+    And some users "alice@domain.tld", "bob@domain.tld"
+    And "alice@domain.tld" has mailboxes "shared", "mailbox1", "mailbox1.shared"
     And "alice@domain.tld" shares her mailbox "shared" with "bob@domain.tld" with "aeilrwt" rights
-    And "alice@domain.tld" has a mailbox "mailbox1"
-    And "alice@domain.tld" has a mailbox "mailbox1.shared"
 
   Scenario: User can share sub-mailbox without sharing its parent
     Given "alice@domain.tld" shares her mailbox "mailbox1.shared" with "bob@domain.tld" with "aeirwt" rights

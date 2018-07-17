@@ -39,6 +39,7 @@ import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mime4j.dom.Message;
+import org.apache.james.util.Runnables;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.Maps;
@@ -84,7 +85,25 @@ public class SetMailboxesMethodStepdefs {
 
     @Given("^\"([^\"]*)\" has a mailbox \"([^\"]*)\"$")
     public void createMailbox(String username, String mailbox) {
-        mainStepdefs.mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailbox);
+        try {
+            mainStepdefs.mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, mailbox);
+        } catch (Exception e) {
+            if (!mainStepdefs.mailboxProbe.exist(MailboxPath.forUser(username, mailbox))) {
+                throw e;
+            }
+        }
+    }
+
+    @Given("^\"([^\"]*)\" has mailboxes (.*)$")
+    public void createMailboxes(String username, List<String> mailboxes) {
+        Runnables.runParallelRunnables(
+            mailboxes.stream()
+                .map(this::unquote)
+                .map(name -> () -> createMailbox(username, name)));
+    }
+
+    private String unquote(String quotedString) {
+        return quotedString.substring(1, quotedString.length() - 1);
     }
 
     @Given("^\"([^\"]*)\" shares its mailbox \"([^\"]*)\" with rights \"([^\"]*)\" with \"([^\"]*)\"$")

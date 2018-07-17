@@ -22,45 +22,30 @@ package org.apache.james.mailbox.cassandra.modules;
 import static com.datastax.driver.core.DataType.bigint;
 import static com.datastax.driver.core.DataType.timeuuid;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraConstants;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxRecentsTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraMailboxRecentsModule implements CassandraModule {
+public class CassandraMailboxRecentsModule extends CassandraModuleComposite {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule RECENT_TABLE = CassandraModule.forTable(
+        CassandraMailboxRecentsTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraMailboxRecentsTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraMailboxRecentsTable.MAILBOX_ID, timeuuid())
+            .addClusteringColumn(CassandraMailboxRecentsTable.RECENT_MESSAGE_UID, bigint())
+            .withOptions()
+            .comment("Denormalisation table. This table holds for each mailbox the messages marked as RECENT. This" +
+                " is a SELECT optimisation.")
+            .compactionOptions(SchemaBuilder.leveledStrategy())
+            .caching(SchemaBuilder.KeyCaching.ALL,
+                SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION)));
 
     public CassandraMailboxRecentsModule() {
-        tables = ImmutableList.of(
-            new CassandraTable(CassandraMailboxRecentsTable.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraMailboxRecentsTable.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraMailboxRecentsTable.MAILBOX_ID, timeuuid())
-                    .addClusteringColumn(CassandraMailboxRecentsTable.RECENT_MESSAGE_UID, bigint())
-                    .withOptions()
-                    .comment("Denormalisation table. This table holds for each mailbox the messages marked as RECENT. This" +
-                        " is a SELECT optimisation.")
-                    .compactionOptions(SchemaBuilder.leveledStrategy())
-                    .caching(SchemaBuilder.KeyCaching.ALL,
-                        SchemaBuilder.rows(CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION))));
-        types = ImmutableList.of();
+        super(RECENT_TABLE);
     }
 
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
-    }
 }

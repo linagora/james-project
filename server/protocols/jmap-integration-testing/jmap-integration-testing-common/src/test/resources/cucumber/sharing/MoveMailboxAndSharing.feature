@@ -23,11 +23,9 @@ Feature: Moving mailbox and sharing
   Background:
     Given a domain named "domain.tld"
     And some users "alice@domain.tld", "bob@domain.tld"
-    And "alice@domain.tld" has a mailbox "shared"
+    And "alice@domain.tld" has mailboxes "shared", "shared.sharedChild", "otherShared"
     And "alice@domain.tld" shares her mailbox "shared" with "bob@domain.tld" with "aeilrwt" rights
-    And "alice@domain.tld" has a mailbox "shared.sharedChild"
     And "alice@domain.tld" shares her mailbox "shared.sharedChild" with "bob@domain.tld" with "aeilrwt" rights
-    And "alice@domain.tld" has a mailbox "otherShared"
     And "alice@domain.tld" shares her mailbox "otherShared" with "bob@domain.tld" with "aeilrwt" rights
     And "bob@domain.tld" has a mailbox "bobMailbox"
 

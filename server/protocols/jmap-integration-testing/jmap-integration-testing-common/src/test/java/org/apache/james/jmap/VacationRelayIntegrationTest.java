@@ -39,6 +39,7 @@ import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.store.probe.MailboxProbe;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
+import org.apache.james.util.Runnables;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.FakeSmtp;
 import org.apache.james.utils.JmapGuiceProbe;
@@ -47,13 +48,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-public abstract class VacationRelayIntegrationTest {
+import com.github.fge.lambdas.Throwing;
 
+public abstract class VacationRelayIntegrationTest {
     private static final String USER = "benwa";
     private static final String USER_WITH_DOMAIN = USER + '@' + DOMAIN;
     private static final String PASSWORD = "secret";
     private static final String REASON = "Message explaining my wonderful vacations";
-
 
     @Rule
     public FakeSmtp fakeSmtp = new FakeSmtp();
@@ -79,8 +80,10 @@ public abstract class VacationRelayIntegrationTest {
         dataProbe.addDomain(DOMAIN);
         dataProbe.addUser(USER_WITH_DOMAIN, PASSWORD);
         MailboxProbe mailboxProbe = guiceJamesServer.getProbe(MailboxProbeImpl.class);
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_WITH_DOMAIN, DefaultMailboxes.SENT);
-        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_WITH_DOMAIN, DefaultMailboxes.INBOX);
+
+        Runnables.runParallel(
+            Throwing.runnable(() -> mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_WITH_DOMAIN, DefaultMailboxes.SENT)),
+            Throwing.runnable(() -> mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_WITH_DOMAIN, DefaultMailboxes.INBOX)));
         await();
 
         jmapGuiceProbe = guiceJamesServer.getProbe(JmapGuiceProbe.class);

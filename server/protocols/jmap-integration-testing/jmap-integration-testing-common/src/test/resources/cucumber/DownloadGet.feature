@@ -22,8 +22,7 @@ Feature: Download GET
 
   Background:
     Given a domain named "domain.tld"
-    And a user "alice@domain.tld"
-    And a user "bob@domain.tld"
+    And some users "alice@domain.tld", "bob@domain.tld"
     And "alice@domain.tld" has a mailbox "INBOX"
 
   Scenario: Getting an attachment previously stored

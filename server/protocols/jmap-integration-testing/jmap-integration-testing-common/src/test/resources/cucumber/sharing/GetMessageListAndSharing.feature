@@ -22,11 +22,9 @@ Feature: Listing message from shared mailbox
 
   Background:
     Given a domain named "domain.tld"
-    And a user "alice@domain.tld"
-    And a user "bob@domain.tld"
-    And "alice@domain.tld" has a mailbox "shared"
+    And some users "alice@domain.tld", "bob@domain.tld"
+    And "alice@domain.tld" has mailboxes "shared", "shared2"
     And "alice@domain.tld" shares her mailbox "shared" with "bob@domain.tld" with "aeilrwt" rights
-    And "alice@domain.tld" has a mailbox "shared2"
 
   Scenario: Sharer can read the total and unread counts on a shared folder
     Given "alice@domain.tld" has a message "m1" in "shared" mailbox

@@ -61,8 +61,7 @@ public class CassandraEventSourcingDLPConfigurationStoreExtension implements Bef
     public void beforeEach(ExtensionContext context) {
         cassandra = CassandraCluster.create(
             new CassandraEventStoreModule(),
-            dockerCassandraExtension.getDockerCassandra().getIp(),
-            dockerCassandraExtension.getDockerCassandra().getBindingPort());
+            dockerCassandraExtension.getDockerCassandra().getHost());
     }
 
     @Override

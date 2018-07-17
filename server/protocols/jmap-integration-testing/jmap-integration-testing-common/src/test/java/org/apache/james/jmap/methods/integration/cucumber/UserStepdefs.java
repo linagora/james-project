@@ -23,16 +23,17 @@ import static org.apache.james.jmap.HttpJmapAuthentication.authenticateJamesUser
 import static org.apache.james.jmap.JmapURIBuilder.baseUri;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
 
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.util.Runnables;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.runnable.ThrowingRunnable;
@@ -56,8 +57,8 @@ public class UserStepdefs {
     private UserStepdefs(MainStepdefs mainStepdefs) {
         this.mainStepdefs = mainStepdefs;
         this.domains = new HashSet<>();
-        this.passwordByUser = new HashMap<>();
-        this.tokenByUser = new HashMap<>();
+        this.passwordByUser = new ConcurrentHashMap<>();
+        this.tokenByUser = new ConcurrentHashMap<>();
         this.lastConnectedUser = Optional.empty();
     }
 
@@ -91,9 +92,10 @@ public class UserStepdefs {
 
     @Given("^some users (.*)$")
     public void createUsers(List<String> users) {
-        users.stream()
-            .map(this::unquote)
-            .forEach(Throwing.consumer(this::createUser));
+        Runnables.runParallelRunnables(
+            users.stream()
+                .map(this::unquote)
+                .map(username -> Throwing.runnable(() -> createUser(username))));
     }
     
     private String unquote(String quotedString) {

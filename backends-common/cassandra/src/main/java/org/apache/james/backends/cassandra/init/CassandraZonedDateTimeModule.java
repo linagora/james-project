@@ -22,41 +22,25 @@ package org.apache.james.backends.cassandra.init;
 import static com.datastax.driver.core.DataType.text;
 import static com.datastax.driver.core.DataType.timestamp;
 
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
-public class CassandraZonedDateTimeModule implements CassandraModule {
+public class CassandraZonedDateTimeModule extends CassandraModuleComposite {
 
     public static final String ZONED_DATE_TIME = "zonedDateTime";
     public static final String DATE = "date";
     public static final String TIME_ZONE = "timeZone";
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    public static final CassandraModule ZONE_DATE_TIME_TYPE = CassandraModule.forType(
+        ZONED_DATE_TIME,
+        SchemaBuilder.createType(ZONED_DATE_TIME)
+            .ifNotExists()
+            .addColumn(DATE, timestamp())
+            .addColumn(TIME_ZONE, text()));
 
     public CassandraZonedDateTimeModule() {
-        tables = Collections.emptyList();
-        types = Collections.singletonList(
-            new CassandraType(ZONED_DATE_TIME,
-                SchemaBuilder.createType(ZONED_DATE_TIME)
-                    .ifNotExists()
-                    .addColumn(DATE, timestamp())
-                    .addColumn(TIME_ZONE, text())));
+        super(ZONE_DATE_TIME_TYPE);
     }
 
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
-    }
 }

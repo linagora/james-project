@@ -21,7 +21,41 @@ package org.apache.james.backends.cassandra.components;
 
 import java.util.List;
 
+import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.schemabuilder.CreateType;
+import com.google.common.collect.ImmutableList;
+
 public interface CassandraModule {
+
+    static CassandraModule forType(String name, CreateType statement) {
+        return new CassandraModule() {
+            @Override
+            public List<CassandraTable> moduleTables() {
+                return ImmutableList.of();
+            }
+
+            @Override
+            public List<CassandraType> moduleTypes() {
+                return ImmutableList.of(new CassandraType(name, statement));
+            }
+        };
+    }
+
+    static CassandraModule forTable(String name, Statement statement) {
+        return new CassandraModule() {
+            @Override
+            public List<CassandraTable> moduleTables() {
+                return ImmutableList.of(
+                    new CassandraTable(name, statement)
+                );
+            }
+
+            @Override
+            public List<CassandraType> moduleTypes() {
+                return ImmutableList.of();
+            }
+        };
+    }
 
     List<CassandraTable> moduleTables();
 
