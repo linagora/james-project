@@ -19,31 +19,14 @@
 
 package org.apache.james.modules;
 
-import org.apache.james.backends.es.EmbeddedElasticSearch;
-import org.apache.james.mailbox.extractor.TextExtractor;
-import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
-import org.apache.james.util.Host;
+import org.apache.james.CleanupTasksPerformer;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
-public class CassandraJmapServerModule extends AbstractModule {
-
-    private static final int LIMIT_TO_3_MESSAGES = 3;
-    private final EmbeddedElasticSearch embeddedElasticSearch;
-    private final Host cassandraHost;
-
-    public CassandraJmapServerModule(EmbeddedElasticSearch embeddedElasticSearch, Host cassandraHost) {
-        this.embeddedElasticSearch = embeddedElasticSearch;
-        this.cassandraHost = cassandraHost;
-    }
-
+public class CleanupTaskModule extends AbstractModule {
     @Override
     protected void configure() {
-        install(new CassandraTestModule(cassandraHost));
-        install(new TestElasticSearchModule(embeddedElasticSearch));
-        install(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES));
-
-        install(binder -> binder.bind(TextExtractor.class).to(DefaultTextExtractor.class));
+        Multibinder.newSetBinder(binder(), CleanupTasksPerformer.CleanupTask.class);
     }
-
 }

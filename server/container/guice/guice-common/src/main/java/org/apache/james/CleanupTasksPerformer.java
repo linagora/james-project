@@ -17,33 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.cassandra;
+package org.apache.james;
 
-import java.io.IOException;
+import java.util.Set;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
-import org.apache.james.GuiceJamesServer;
-import org.apache.james.jmap.VacationIntegrationTest;
-import org.junit.ClassRule;
-import org.junit.Rule;
+import javax.inject.Inject;
 
-public class CassandraVacationIntegrationTest extends VacationIntegrationTest {
+import org.apache.james.task.Task;
+import org.apache.james.task.TaskManager;
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
+public class CleanupTasksPerformer {
 
-    @Rule
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
-    
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return rule.jmapServer(cassandra.getModule());
+    public interface CleanupTask extends Task {
+
     }
 
-    @Override
-    protected void await() {
-        rule.await();
+    private final TaskManager taskManager;
+    private final Set<CleanupTask> cleanupTasks;
+
+    @Inject
+    public CleanupTasksPerformer(TaskManager taskManager, Set<CleanupTask> cleanupTasks) {
+        this.taskManager = taskManager;
+        this.cleanupTasks = cleanupTasks;
     }
-    
+
+    public void clean() {
+        cleanupTasks.forEach(Task::run);
+    }
+
 }

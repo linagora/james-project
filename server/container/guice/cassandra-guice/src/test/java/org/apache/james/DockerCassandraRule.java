@@ -18,15 +18,17 @@
  ****************************************************************/
 
 package org.apache.james;
-import org.apache.commons.text.RandomStringGenerator;
+
 import org.apache.james.backends.cassandra.init.configuration.ClusterConfiguration;
+import org.apache.james.server.CassandraTruncateTableTask;
 import org.apache.james.util.Host;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.testcontainers.containers.GenericContainer;
 
 import com.google.inject.Module;
-
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.util.Modules;
 
 public class DockerCassandraRule implements GuiceModuleTestRule {
 
@@ -43,15 +45,17 @@ public class DockerCassandraRule implements GuiceModuleTestRule {
 
     @Override
     public Module getModule() {
-        String keyspace = new RandomStringGenerator.Builder().withinRange('a', 'z').build().generate(12);
-        return (binder) -> binder.bind(ClusterConfiguration.class)
+        return Modules.combine((binder) -> binder.bind(ClusterConfiguration.class)
             .toInstance(ClusterConfiguration.builder()
                 .host(cassandraContainer.getHost())
-                .keyspace(keyspace)
+                .keyspace("testing")
                 .replicationFactor(1)
                 .maxRetry(20)
                 .minDelay(5000)
-                .build());
+                .build()),
+            binder -> Multibinder.newSetBinder(binder, CleanupTasksPerformer.CleanupTask.class)
+                .addBinding()
+                .to(CassandraTruncateTableTask.class));
     }
 
     public String getIp() {
