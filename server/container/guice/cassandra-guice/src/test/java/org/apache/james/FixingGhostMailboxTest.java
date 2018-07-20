@@ -146,8 +146,8 @@ public class FixingGhostMailboxTest {
         accessToken = authenticateJamesUser(baseUri(jmapServer), alice, alicePassword);
 
         session = Cluster.builder()
-            .addContactPoint(cassandra.getIp())
-            .withPort(cassandra.getMappedPort(9042))
+            .addContactPoint(cassandra.getHost().getHostName())
+            .withPort(cassandra.getHost().getPort())
             .build()
             .connect(jmapServer.getProbe(CassandraProbe.class).getKeyspace());
 

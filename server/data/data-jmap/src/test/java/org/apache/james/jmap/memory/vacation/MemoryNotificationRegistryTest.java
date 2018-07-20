@@ -19,14 +19,30 @@
 
 package org.apache.james.jmap.memory.vacation;
 
-import org.apache.james.jmap.api.vacation.AbstractNotificationRegistryTest;
-import org.apache.james.jmap.api.vacation.NotificationRegistry;
-import org.apache.james.util.date.ZonedDateTimeProvider;
+import static org.mockito.Mockito.mock;
 
-public class MemoryNotificationRegistryTest extends AbstractNotificationRegistryTest {
+import org.apache.james.jmap.api.vacation.NotificationRegistry;
+import org.apache.james.jmap.api.vacation.NotificationRegistryContract;
+import org.apache.james.util.date.ZonedDateTimeProvider;
+import org.junit.jupiter.api.BeforeEach;
+
+public class MemoryNotificationRegistryTest implements NotificationRegistryContract {
+    private NotificationRegistry testee;
+    private ZonedDateTimeProvider zonedDateTimeProvider;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        zonedDateTimeProvider = mock(ZonedDateTimeProvider.class);
+        testee = new MemoryNotificationRegistry(zonedDateTimeProvider);
+    }
 
     @Override
-    protected NotificationRegistry createNotificationRegistry(ZonedDateTimeProvider zonedDateTimeProvider) {
-        return new MemoryNotificationRegistry(zonedDateTimeProvider);
+    public ZonedDateTimeProvider zonedDateTimeProvider() {
+        return zonedDateTimeProvider;
+    }
+
+    @Override
+    public NotificationRegistry testee() {
+        return testee;
     }
 }

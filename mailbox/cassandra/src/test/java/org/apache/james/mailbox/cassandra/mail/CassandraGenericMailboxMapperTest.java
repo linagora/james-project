@@ -45,10 +45,10 @@ public class CassandraGenericMailboxMapperTest extends MailboxMapperTest {
     @Before
     public void setUp() throws Exception {
         CassandraModuleComposite modules = new CassandraModuleComposite(
-                new CassandraAclModule(),
-                new CassandraMailboxModule(),
-                new CassandraModSeqModule(),
-                new CassandraUidModule());
+            CassandraAclModule.MODULE,
+            CassandraMailboxModule.MODULE,
+            CassandraModSeqModule.MODULE,
+            CassandraUidModule.MODULE);
         this.cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
         super.setUp();
     }

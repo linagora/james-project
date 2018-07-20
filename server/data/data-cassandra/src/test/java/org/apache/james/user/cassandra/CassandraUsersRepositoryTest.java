@@ -37,7 +37,7 @@ public class CassandraUsersRepositoryTest extends AbstractUsersRepositoryTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraUsersRepositoryModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraUsersRepositoryModule.MODULE, cassandraServer.getHost());
         super.setUp();
     }
     

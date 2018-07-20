@@ -134,16 +134,8 @@ public class DockerCassandraRule implements TestRule {
 
     public Host getHost() {
         return Host.from(
-            getIp(),
-            getBindingPort());
-    }
-    
-    public String getIp() {
-        return cassandraContainer.getContainerIpAddress();
-    }
-
-    public int getBindingPort() {
-        return cassandraContainer.getMappedPort(CASSANDRA_PORT);
+            cassandraContainer.getContainerIpAddress(),
+            cassandraContainer.getMappedPort(CASSANDRA_PORT));
     }
 
     public GenericContainer<?> getRawContainer() {

@@ -37,17 +37,17 @@ public class CassandraSieveRepositoryTest extends AbstractSieveRepositoryTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraSieveRepositoryModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraSieveRepositoryModule.MODULE, cassandraServer.getHost());
         super.setUp();
     }
     
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         cassandra.close();
     }
     
     @Override
-    protected SieveRepository createSieveRepository() throws Exception {
+    protected SieveRepository createSieveRepository() {
         return new CassandraSieveRepository(
             new CassandraSieveDAO(cassandra.getConf()),
             new CassandraSieveQuotaDAO(cassandra.getConf()),

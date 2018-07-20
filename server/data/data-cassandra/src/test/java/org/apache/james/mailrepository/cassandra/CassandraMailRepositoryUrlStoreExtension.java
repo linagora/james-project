@@ -55,7 +55,7 @@ public class CassandraMailRepositoryUrlStoreExtension implements ParameterResolv
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
         CassandraCluster cassandraCluster = CassandraCluster.create(
-            new CassandraMailRepositoryUrlModule(),
+            CassandraMailRepositoryUrlModule.MODULE,
             cassandra.getHost());
 
         return new CassandraMailRepositoryUrlStore(

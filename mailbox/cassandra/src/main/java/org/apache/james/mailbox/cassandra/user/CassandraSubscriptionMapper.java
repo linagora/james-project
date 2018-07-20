@@ -30,6 +30,8 @@ import static org.apache.james.mailbox.cassandra.table.CassandraSubscriptionTabl
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.store.transaction.NonTransactionalMapper;
 import org.apache.james.mailbox.store.user.SubscriptionMapper;
@@ -44,6 +46,7 @@ public class CassandraSubscriptionMapper extends NonTransactionalMapper implemen
     private final Session session;
     private CassandraUtils cassandraUtils;
 
+    @Inject
     public CassandraSubscriptionMapper(Session session, CassandraUtils cassandraUtils) {
         this.session = session;
         this.cassandraUtils = cassandraUtils;

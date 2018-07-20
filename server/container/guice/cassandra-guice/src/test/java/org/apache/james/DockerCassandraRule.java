@@ -54,16 +54,12 @@ public class DockerCassandraRule implements GuiceModuleTestRule {
                 .build());
     }
 
-    public String getIp() {
-        return cassandraContainer.getIp();
-    }
-
     public Host getHost() {
         return cassandraContainer.getHost();
     }
 
     public Integer getMappedPort(int originalPort) {
-        return cassandraContainer.getBindingPort();
+        return getHost().getPort();
     }
 
     public void start() {

@@ -22,39 +22,19 @@ package org.apache.james.backends.cassandra.versions;
 import static com.datastax.driver.core.DataType.cint;
 import static com.datastax.driver.core.DataType.timeuuid;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
 import org.apache.james.backends.cassandra.versions.table.CassandraSchemaVersionTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraSchemaVersionModule implements CassandraModule {
+public interface CassandraSchemaVersionModule {
 
-    private final List<CassandraTable> tables;
+    CassandraModule MODULE = CassandraModule.forTable(CassandraSchemaVersionTable.TABLE_NAME,
+        SchemaBuilder.createTable(CassandraSchemaVersionTable.TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(CassandraSchemaVersionTable.KEY, timeuuid())
+            .addClusteringColumn(CassandraSchemaVersionTable.VALUE, cint())
+            .withOptions()
+            .comment("Holds the history of the versions of the schema used."));
 
-    public CassandraSchemaVersionModule() {
-        this.tables = ImmutableList.of(
-            new CassandraTable(CassandraSchemaVersionTable.TABLE_NAME,
-                SchemaBuilder.createTable(CassandraSchemaVersionTable.TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(CassandraSchemaVersionTable.KEY, timeuuid())
-                    .addClusteringColumn(CassandraSchemaVersionTable.VALUE, cint())
-                    .withOptions()
-                    .comment("Holds the history of the versions of the schema used.")));
-    }
-
-
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
-
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return ImmutableList.of();
-    }
 }

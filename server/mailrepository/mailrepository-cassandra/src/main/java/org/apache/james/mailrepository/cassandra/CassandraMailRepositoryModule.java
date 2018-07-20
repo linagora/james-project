@@ -28,67 +28,59 @@ import static com.datastax.driver.core.DataType.text;
 import static com.datastax.driver.core.DataType.timestamp;
 import static com.datastax.driver.core.schemabuilder.SchemaBuilder.frozen;
 
-import java.util.List;
-
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-import com.google.common.collect.ImmutableList;
 
-public class CassandraMailRepositoryModule implements CassandraModule {
+public interface CassandraMailRepositoryModule {
 
-    private final List<CassandraTable> tables;
-    private final List<CassandraType> types;
+    CassandraModule COUNT_TABLE = CassandraModule.forTable(
+        MailRepositoryTable.COUNT_TABLE,
+        SchemaBuilder.createTable(MailRepositoryTable.COUNT_TABLE)
+            .ifNotExists()
+            .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
+            .addColumn(MailRepositoryTable.COUNT, counter()));
 
-    public CassandraMailRepositoryModule() {
-        tables = ImmutableList.of(
-            new CassandraTable(MailRepositoryTable.COUNT_TABLE,
-                SchemaBuilder.createTable(MailRepositoryTable.COUNT_TABLE)
-                    .ifNotExists()
-                    .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
-                    .addColumn(MailRepositoryTable.COUNT, counter())),
-            new CassandraTable(MailRepositoryTable.KEYS_TABLE_NAME,
-                SchemaBuilder.createTable(MailRepositoryTable.KEYS_TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
-                    .addClusteringColumn(MailRepositoryTable.MAIL_KEY, text())),
-            new CassandraTable(MailRepositoryTable.CONTENT_TABLE_NAME,
-                SchemaBuilder.createTable(MailRepositoryTable.CONTENT_TABLE_NAME)
-                    .ifNotExists()
-                    .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
-                    .addPartitionKey(MailRepositoryTable.MAIL_KEY, text())
-                    .addColumn(MailRepositoryTable.MESSAGE_SIZE, bigint())
-                    .addColumn(MailRepositoryTable.STATE, text())
-                    .addColumn(MailRepositoryTable.HEADER_BLOB_ID, text())
-                    .addColumn(MailRepositoryTable.BODY_BLOB_ID, text())
-                    .addColumn(MailRepositoryTable.ATTRIBUTES, map(text(), blob()))
-                    .addColumn(MailRepositoryTable.ERROR_MESSAGE, text())
-                    .addColumn(MailRepositoryTable.SENDER, text())
-                    .addColumn(MailRepositoryTable.RECIPIENTS, list(text()))
-                    .addColumn(MailRepositoryTable.REMOTE_HOST, text())
-                    .addColumn(MailRepositoryTable.REMOTE_ADDR, text())
-                    .addColumn(MailRepositoryTable.LAST_UPDATED, timestamp())
-                    .addUDTMapColumn(MailRepositoryTable.PER_RECIPIENT_SPECIFIC_HEADERS, text(), frozen(MailRepositoryTable.HEADER_TYPE))
-                    .withOptions()
-                    .comment("Stores the mails for a given repository. " +
-                        "Content is stored with other blobs")));
-        types = ImmutableList.of(
-            new CassandraType(MailRepositoryTable.HEADER_TYPE,
-                SchemaBuilder.createType(MailRepositoryTable.HEADER_TYPE)
-                    .ifNotExists()
-                    .addColumn(MailRepositoryTable.HEADER_NAME, text())
-                    .addColumn(MailRepositoryTable.HEADER_VALUE, text())));
-    }
+    CassandraModule KEYS_TABLE = CassandraModule.forTable(
+        MailRepositoryTable.KEYS_TABLE_NAME,
+        SchemaBuilder.createTable(MailRepositoryTable.KEYS_TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
+            .addClusteringColumn(MailRepositoryTable.MAIL_KEY, text()));
 
-    @Override
-    public List<CassandraTable> moduleTables() {
-        return tables;
-    }
+    CassandraModule MAIL_REPOSITORY_TABLE = CassandraModule.forTable(
+        MailRepositoryTable.CONTENT_TABLE_NAME,
+        SchemaBuilder.createTable(MailRepositoryTable.CONTENT_TABLE_NAME)
+            .ifNotExists()
+            .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
+            .addPartitionKey(MailRepositoryTable.MAIL_KEY, text())
+            .addColumn(MailRepositoryTable.MESSAGE_SIZE, bigint())
+            .addColumn(MailRepositoryTable.STATE, text())
+            .addColumn(MailRepositoryTable.HEADER_BLOB_ID, text())
+            .addColumn(MailRepositoryTable.BODY_BLOB_ID, text())
+            .addColumn(MailRepositoryTable.ATTRIBUTES, map(text(), blob()))
+            .addColumn(MailRepositoryTable.ERROR_MESSAGE, text())
+            .addColumn(MailRepositoryTable.SENDER, text())
+            .addColumn(MailRepositoryTable.RECIPIENTS, list(text()))
+            .addColumn(MailRepositoryTable.REMOTE_HOST, text())
+            .addColumn(MailRepositoryTable.REMOTE_ADDR, text())
+            .addColumn(MailRepositoryTable.LAST_UPDATED, timestamp())
+            .addUDTMapColumn(MailRepositoryTable.PER_RECIPIENT_SPECIFIC_HEADERS, text(), frozen(MailRepositoryTable.HEADER_TYPE))
+            .withOptions()
+            .comment("Stores the mails for a given repository. " +
+                "Content is stored with other blobs"));
 
-    @Override
-    public List<CassandraType> moduleTypes() {
-        return types;
-    }
+    CassandraModule HEADER_TYPE = CassandraModule.forType(
+        MailRepositoryTable.HEADER_TYPE,
+        SchemaBuilder.createType(MailRepositoryTable.HEADER_TYPE)
+            .ifNotExists()
+            .addColumn(MailRepositoryTable.HEADER_NAME, text())
+            .addColumn(MailRepositoryTable.HEADER_VALUE, text()));
+
+    CassandraModule MODULE = new CassandraModuleComposite(
+        COUNT_TABLE,
+        KEYS_TABLE,
+        MAIL_REPOSITORY_TABLE,
+        HEADER_TYPE);
 }

@@ -21,20 +21,8 @@ package org.apache.james.mailbox.cassandra;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
-import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
-import org.apache.james.blob.cassandra.CassandraBlobModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraAnnotationModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraApplicableFlagsModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraAttachmentModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraDeletedMessageModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraFirstUnseenModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraMailboxCounterModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraMailboxRecentsModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraModSeqModule;
-import org.apache.james.mailbox.cassandra.modules.CassandraUidModule;
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.mailbox.cassandra.mail.MailboxAggregateModule;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.store.AbstractMessageIdManagerSideEffectTest;
 import org.apache.james.mailbox.store.MessageIdManagerTestSystem;
@@ -52,21 +40,8 @@ public class CassandraMessageIdManagerSideEffectTest extends AbstractMessageIdMa
     @Override
     @Before
     public void setUp() throws Exception {
-        CassandraModuleComposite modules = new CassandraModuleComposite(
-                new CassandraAclModule(),
-                new CassandraMailboxModule(),
-                new CassandraMessageModule(),
-                new CassandraMailboxCounterModule(),
-                new CassandraMailboxRecentsModule(),
-                new CassandraFirstUnseenModule(),
-                new CassandraDeletedMessageModule(),
-                new CassandraUidModule(),
-                new CassandraModSeqModule(),
-                new CassandraAttachmentModule(),
-                new CassandraAnnotationModule(),
-                new CassandraApplicableFlagsModule(),
-                new CassandraBlobModule());
-        cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
+        CassandraModule modules = MailboxAggregateModule.MODULE;
+        cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
         super.setUp();
     }
     
