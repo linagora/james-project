@@ -31,7 +31,7 @@ public interface CassandraSubscriptionModule {
     int PER_USER_CACHED_SUBSCRIPTIONS = 100;
 
     CassandraModule MODULE = CassandraModule.table(CassandraSubscriptionTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSubscriptionTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSubscriptionTable.USER, text())
             .addClusteringColumn(CassandraSubscriptionTable.MAILBOX, text())

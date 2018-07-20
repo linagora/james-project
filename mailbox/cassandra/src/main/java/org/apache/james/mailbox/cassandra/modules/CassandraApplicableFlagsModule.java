@@ -32,7 +32,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public interface CassandraApplicableFlagsModule {
     CassandraModule MODULE = CassandraModule.table(CassandraApplicableFlagTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraApplicableFlagTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraApplicableFlagTable.MAILBOX_ID, timeuuid())
             .addColumn(Flag.USER_FLAGS, set(text()))

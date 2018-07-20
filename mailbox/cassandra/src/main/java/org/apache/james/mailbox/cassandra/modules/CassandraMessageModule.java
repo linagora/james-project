@@ -43,7 +43,7 @@ public interface CassandraMessageModule {
     int CACHED_IMAP_UID_ROWS = 100;
 
     CassandraModule CASSANDRA_MESSAGE_ID_TABLE = CassandraModule.table(CassandraMessageIdTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraMessageIdTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraMessageIds.MAILBOX_ID, timeuuid())
             .addClusteringColumn(CassandraMessageIds.IMAP_UID, bigint())
@@ -65,7 +65,7 @@ public interface CassandraMessageModule {
         .build();
 
     CassandraModule MESSAGE_ID_TO_IMAP_UID_TABLE = CassandraModule.table(MessageIdToImapUid.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(MessageIdToImapUid.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
             .addClusteringColumn(CassandraMessageIds.MAILBOX_ID, timeuuid())
@@ -87,7 +87,7 @@ public interface CassandraMessageModule {
         .build();
 
     CassandraModule CASSANDRA_MESSAGE_V2_TABLE = CassandraModule.table(CassandraMessageV2Table.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraMessageV2Table.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraMessageIds.MESSAGE_ID, timeuuid())
             .addColumn(CassandraMessageV2Table.INTERNAL_DATE, timestamp())
@@ -105,7 +105,7 @@ public interface CassandraMessageModule {
         .build();
 
     CassandraModule PROPERTY_TYPE = CassandraModule.type(CassandraMessageV2Table.PROPERTIES)
-        .statement(SchemaBuilder.createType(CassandraMessageV2Table.PROPERTIES)
+        .statement(statement -> statement
             .ifNotExists()
             .addColumn(CassandraMessageV2Table.Properties.NAMESPACE, text())
             .addColumn(CassandraMessageV2Table.Properties.NAME, text())
@@ -113,7 +113,7 @@ public interface CassandraMessageModule {
         .build();
 
     CassandraModule ATTACHMENT_TYPE = CassandraModule.type(CassandraMessageV2Table.ATTACHMENTS)
-        .statement(SchemaBuilder.createType(CassandraMessageV2Table.ATTACHMENTS)
+        .statement(statement -> statement
             .ifNotExists()
             .addColumn(CassandraMessageV2Table.Attachments.ID, text())
             .addColumn(CassandraMessageV2Table.Attachments.NAME, text())

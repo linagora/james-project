@@ -30,7 +30,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public class CassandraAccessModule {
     public static final CassandraModule MODULE = CassandraModule.table(CassandraAccessTokenTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraAccessTokenTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraAccessTokenTable.TOKEN, uuid())
             .addColumn(CassandraAccessTokenTable.USERNAME, text())

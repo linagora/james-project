@@ -33,7 +33,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public interface CassandraAclModule{
     CassandraModule CASSANDRA_ACL_TABLE = CassandraModule.table(CassandraACLTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraACLTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraACLTable.ID, timeuuid())
             .addColumn(CassandraACLTable.ACL, text())
@@ -45,7 +45,7 @@ public interface CassandraAclModule{
         .build();
 
     CassandraModule CASSANDRA_USER_MAILBOX_RIGHTS_TABLE = CassandraModule.table(CassandraUserMailboxRightsTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraUserMailboxRightsTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraUserMailboxRightsTable.USER_NAME, text())
             .addClusteringColumn(CassandraUserMailboxRightsTable.MAILBOX_ID, timeuuid())

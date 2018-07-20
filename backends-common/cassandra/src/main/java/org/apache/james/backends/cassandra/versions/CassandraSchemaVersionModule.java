@@ -25,11 +25,9 @@ import static com.datastax.driver.core.DataType.timeuuid;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.versions.table.CassandraSchemaVersionTable;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-
 public interface CassandraSchemaVersionModule {
     CassandraModule MODULE = CassandraModule.table(CassandraSchemaVersionTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSchemaVersionTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSchemaVersionTable.KEY, timeuuid())
             .addClusteringColumn(CassandraSchemaVersionTable.VALUE, cint())

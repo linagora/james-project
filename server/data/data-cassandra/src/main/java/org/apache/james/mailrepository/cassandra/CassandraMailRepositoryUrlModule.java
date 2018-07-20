@@ -28,7 +28,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public class CassandraMailRepositoryUrlModule {
     public static final CassandraModule MODULE = CassandraModule.table(UrlsTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(UrlsTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(UrlsTable.URL, text())
             .withOptions()

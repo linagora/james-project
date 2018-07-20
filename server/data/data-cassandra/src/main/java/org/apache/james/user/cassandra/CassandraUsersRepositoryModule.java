@@ -24,12 +24,10 @@ import static com.datastax.driver.core.DataType.text;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.user.cassandra.tables.CassandraUserTable;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-
 public class CassandraUsersRepositoryModule {
 
     public static final CassandraModule MODULE = CassandraModule.table(CassandraUserTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraUserTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraUserTable.NAME, text())
             .addColumn(CassandraUserTable.REALNAME, text())

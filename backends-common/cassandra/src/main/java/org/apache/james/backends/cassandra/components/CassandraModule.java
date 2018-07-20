@@ -20,9 +20,12 @@
 package org.apache.james.backends.cassandra.components;
 
 import java.util.List;
+import java.util.function.Function;
 
 import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.schemabuilder.Create;
 import com.datastax.driver.core.schemabuilder.CreateType;
+import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.google.common.collect.ImmutableList;
 
 public interface CassandraModule {
@@ -90,9 +93,9 @@ public interface CassandraModule {
             this.tableName = tableName;
         }
 
-        public Builder statement(Statement createStatement) {
+        public Builder statement(Function<Create, Statement> createStatement) {
             return originalBuilderReference.addTable(
-                new CassandraTable(tableName, createStatement));
+                new CassandraTable(tableName, createStatement.apply(SchemaBuilder.createTable(tableName))));
         }
     }
 
@@ -105,9 +108,10 @@ public interface CassandraModule {
             this.typeName = typeName;
         }
 
-        public Builder statement(CreateType createStatement) {
+        public Builder statement(Function<CreateType, CreateType> createStatement) {
             return originalBuilderReference.addType(
-                new CassandraType(typeName, createStatement));
+                new CassandraType(typeName, createStatement.apply(
+                    SchemaBuilder.createType(typeName))));
         }
     }
 

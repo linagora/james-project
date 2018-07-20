@@ -30,7 +30,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public interface CassandraModSeqModule {
     CassandraModule MODULE = CassandraModule.table(CassandraMessageModseqTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraMessageModseqTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraMessageModseqTable.MAILBOX_ID, timeuuid())
             .addColumn(CassandraMessageModseqTable.NEXT_MODSEQ, bigint())

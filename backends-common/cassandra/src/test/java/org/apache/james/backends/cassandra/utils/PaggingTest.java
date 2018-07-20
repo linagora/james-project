@@ -37,7 +37,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.utils.UUIDs;
 
 public class PaggingTest {
@@ -55,7 +54,7 @@ public class PaggingTest {
     @Before
     public void setUp() {
         CassandraModule modules = CassandraModule.table(TABLE_NAME)
-            .statement(SchemaBuilder.createTable(TABLE_NAME)
+            .statement(statement -> statement
                 .ifNotExists()
                 .addPartitionKey(ID, DataType.timeuuid())
                 .addClusteringColumn(CLUSTERING, DataType.bigint()))

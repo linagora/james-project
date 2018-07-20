@@ -31,25 +31,23 @@ import static com.datastax.driver.core.schemabuilder.SchemaBuilder.frozen;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-
 public interface CassandraMailRepositoryModule {
     CassandraModule COUNT_TABLE = CassandraModule.table(MailRepositoryTable.COUNT_TABLE)
-        .statement(SchemaBuilder.createTable(MailRepositoryTable.COUNT_TABLE)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
             .addColumn(MailRepositoryTable.COUNT, counter()))
         .build();
 
     CassandraModule KEYS_TABLE = CassandraModule.table(MailRepositoryTable.KEYS_TABLE_NAME)
-        .statement(SchemaBuilder.createTable(MailRepositoryTable.KEYS_TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
             .addClusteringColumn(MailRepositoryTable.MAIL_KEY, text()))
         .build();
 
     CassandraModule MAIL_REPOSITORY_TABLE = CassandraModule.table(MailRepositoryTable.CONTENT_TABLE_NAME)
-        .statement(SchemaBuilder.createTable(MailRepositoryTable.CONTENT_TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(MailRepositoryTable.REPOSITORY_NAME, text())
             .addPartitionKey(MailRepositoryTable.MAIL_KEY, text())
@@ -71,7 +69,7 @@ public interface CassandraMailRepositoryModule {
         .build();
 
     CassandraModule HEADER_TYPE = CassandraModule.type(MailRepositoryTable.HEADER_TYPE)
-        .statement(SchemaBuilder.createType(MailRepositoryTable.HEADER_TYPE)
+        .statement(statement -> statement
             .ifNotExists()
             .addColumn(MailRepositoryTable.HEADER_NAME, text())
             .addColumn(MailRepositoryTable.HEADER_VALUE, text()))

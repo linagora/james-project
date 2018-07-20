@@ -36,7 +36,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 public interface CassandraQuotaModule {
 
     CassandraModule CURRENT_QUOTA_TABLE = CassandraModule.table(CassandraCurrentQuota.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraCurrentQuota.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraCurrentQuota.QUOTA_ROOT, text())
             .addColumn(CassandraCurrentQuota.MESSAGE_COUNT, counter())
@@ -48,7 +48,7 @@ public interface CassandraQuotaModule {
         .build();
 
     CassandraModule MAX_QUOTA_TABLE = CassandraModule.table(CassandraMaxQuota.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraMaxQuota.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraMaxQuota.QUOTA_ROOT, text())
             .addColumn(CassandraMaxQuota.MESSAGE_COUNT, bigint())
@@ -60,7 +60,7 @@ public interface CassandraQuotaModule {
         .build();
 
     CassandraModule DOMAIN_QUOTA_TABLE = CassandraModule.table(CassandraDomainMaxQuota.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraDomainMaxQuota.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraDomainMaxQuota.DOMAIN, text())
             .addColumn(CassandraDomainMaxQuota.MESSAGE_COUNT, bigint())
@@ -72,7 +72,7 @@ public interface CassandraQuotaModule {
         .build();
 
     CassandraModule USER_QUOTA_TABLE = CassandraModule.table(CassandraGlobalMaxQuota.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraGlobalMaxQuota.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraGlobalMaxQuota.TYPE, text())
             .addColumn(CassandraGlobalMaxQuota.VALUE, bigint())

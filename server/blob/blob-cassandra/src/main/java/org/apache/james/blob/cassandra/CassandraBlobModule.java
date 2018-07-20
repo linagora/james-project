@@ -23,12 +23,11 @@ import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 
 import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public interface CassandraBlobModule {
 
     CassandraModule BLOB_PART_TABLE = CassandraModule.table(BlobTable.BlobParts.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(BlobTable.BlobParts.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(BlobTable.ID, DataType.text())
             .addClusteringColumn(BlobTable.BlobParts.CHUNK_NUMBER, DataType.cint())
@@ -39,7 +38,7 @@ public interface CassandraBlobModule {
         .build();
 
     CassandraModule BLOB_TABLE = CassandraModule.table(BlobTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(BlobTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(BlobTable.ID, DataType.text())
             .addClusteringColumn(BlobTable.NUMBER_OF_CHUNK, DataType.cint())

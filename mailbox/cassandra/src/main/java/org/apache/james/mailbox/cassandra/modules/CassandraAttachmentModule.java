@@ -37,7 +37,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 public interface CassandraAttachmentModule {
 
     CassandraModule CASSANDRA_ATTACHMENT_TABLE = CassandraModule.table(CassandraAttachmentTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraAttachmentTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraAttachmentTable.ID, text())
             .addColumn(CassandraAttachmentTable.PAYLOAD, blob())
@@ -48,7 +48,7 @@ public interface CassandraAttachmentModule {
         .build();
 
     CassandraModule CASSANDRA_ATTACHMENT_V2_TABLE = CassandraModule.table(CassandraAttachmentV2Table.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraAttachmentV2Table.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraAttachmentV2Table.ID_AS_UUID, uuid())
             .addColumn(CassandraAttachmentV2Table.ID, text())
@@ -64,7 +64,7 @@ public interface CassandraAttachmentModule {
         .build();
 
     CassandraModule CASSANDRA_ATTACHMENT_MESSAGE_ID_TABLE = CassandraModule.table(CassandraAttachmentMessageIdTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraAttachmentMessageIdTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraAttachmentMessageIdTable.ATTACHMENT_ID_AS_UUID, uuid())
             .addColumn(CassandraAttachmentMessageIdTable.ATTACHMENT_ID, text())
@@ -77,7 +77,7 @@ public interface CassandraAttachmentModule {
         .build();
 
     CassandraModule CASSANDRA_ATTACHMENT_OWNER_TABLE = CassandraModule.table(CassandraAttachmentOwnerTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraAttachmentOwnerTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraAttachmentOwnerTable.ID, uuid())
             .addClusteringColumn(CassandraAttachmentOwnerTable.OWNER, text())

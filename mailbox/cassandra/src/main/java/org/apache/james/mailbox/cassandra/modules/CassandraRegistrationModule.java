@@ -29,7 +29,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public interface CassandraRegistrationModule {
     CassandraModule MAILBOX_PATH_TYPE = CassandraModule.type(CassandraMailboxPathRegisterTable.MAILBOX_PATH)
-        .statement(SchemaBuilder.createType(CassandraMailboxPathRegisterTable.MAILBOX_PATH)
+        .statement(statement -> statement
             .ifNotExists()
             .addColumn(CassandraMailboxPathRegisterTable.MailboxPath.NAMESPACE, text())
             .addColumn(CassandraMailboxPathRegisterTable.MailboxPath.NAME, text())
@@ -37,7 +37,7 @@ public interface CassandraRegistrationModule {
         .build();
 
     CassandraModule MAILBOX_PATH_REGISTER_TABLE = CassandraModule.table(CassandraMailboxPathRegisterTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraMailboxPathRegisterTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addUDTPartitionKey(CassandraMailboxPathRegisterTable.MAILBOX_PATH, SchemaBuilder.frozen(CassandraMailboxPathRegisterTable.MAILBOX_PATH))
             .addClusteringColumn(CassandraMailboxPathRegisterTable.TOPIC, text())

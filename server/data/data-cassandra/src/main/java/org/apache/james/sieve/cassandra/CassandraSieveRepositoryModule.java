@@ -33,12 +33,10 @@ import org.apache.james.sieve.cassandra.tables.CassandraSieveQuotaTable;
 import org.apache.james.sieve.cassandra.tables.CassandraSieveSpaceTable;
 import org.apache.james.sieve.cassandra.tables.CassandraSieveTable;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
-
 public interface CassandraSieveRepositoryModule {
 
     CassandraModule SIEVE_TABLE = CassandraModule.table(CassandraSieveTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSieveTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSieveTable.USER_NAME, text())
             .addClusteringColumn(CassandraSieveTable.SCRIPT_NAME, text())
@@ -50,7 +48,7 @@ public interface CassandraSieveRepositoryModule {
         .build();
 
     CassandraModule SIEVE_SPACE_TABLE = CassandraModule.table(CassandraSieveSpaceTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSieveSpaceTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSieveSpaceTable.USER_NAME, text())
             .addColumn(CassandraSieveSpaceTable.SPACE_USED, counter())
@@ -59,7 +57,7 @@ public interface CassandraSieveRepositoryModule {
         .build();
 
     CassandraModule SIEVE_QUOTA_TABLE = CassandraModule.table(CassandraSieveQuotaTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSieveQuotaTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSieveQuotaTable.USER_NAME, text())
             .addColumn(CassandraSieveQuotaTable.QUOTA, bigint())
@@ -68,7 +66,7 @@ public interface CassandraSieveRepositoryModule {
         .build();
 
     CassandraModule SIEVE_GLOBAL_QUOTA_TABLE = CassandraModule.table(CassandraSieveClusterQuotaTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSieveClusterQuotaTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSieveClusterQuotaTable.NAME, text())
             .addColumn(CassandraSieveClusterQuotaTable.VALUE, bigint())
@@ -77,7 +75,7 @@ public interface CassandraSieveRepositoryModule {
         .build();
 
     CassandraModule SIEVE_ACTIVE_TABLE = CassandraModule.table(CassandraSieveActiveTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraSieveActiveTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraSieveActiveTable.USER_NAME, text())
             .addColumn(CassandraSieveActiveTable.SCRIPT_NAME, text())

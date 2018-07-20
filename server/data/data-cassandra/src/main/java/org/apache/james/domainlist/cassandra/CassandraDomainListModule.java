@@ -29,7 +29,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 public class CassandraDomainListModule {
     public static final CassandraModule MODULE = CassandraModule.table(CassandraDomainsTable.TABLE_NAME)
-        .statement(SchemaBuilder.createTable(CassandraDomainsTable.TABLE_NAME)
+        .statement(statement -> statement
             .ifNotExists()
             .addPartitionKey(CassandraDomainsTable.DOMAIN, text())
             .withOptions()
