@@ -31,7 +31,7 @@ import org.apache.james.mailbox.cassandra.table.CassandraUserMailboxRightsTable;
 
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
-public interface CassandraAclModule{
+public interface CassandraAclModule {
     CassandraModule CASSANDRA_ACL_TABLE = CassandraModule.table(CassandraACLTable.TABLE_NAME)
         .statement(statement -> statement
             .ifNotExists()
