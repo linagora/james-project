@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.core.User;
 import org.apache.james.core.quota.QuotaSize;
 import org.junit.After;
@@ -42,7 +43,12 @@ public class CassandraSieveQuotaDAOTest {
 
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraSieveRepositoryModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(
+            new CassandraModuleComposite(
+                CassandraSieveRepositoryModule.SIEVE_QUOTA_TABLE,
+                CassandraSieveRepositoryModule.SIEVE_GLOBAL_QUOTA_TABLE,
+                CassandraSieveRepositoryModule.SIEVE_SPACE_TABLE),
+            cassandraServer.getHost());
         sieveQuotaDAO = new CassandraSieveQuotaDAO(cassandra.getConf());
     }
 

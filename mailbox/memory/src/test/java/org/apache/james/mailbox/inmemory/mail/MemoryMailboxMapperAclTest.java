@@ -22,27 +22,31 @@ package org.apache.james.mailbox.inmemory.mail;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.james.mailbox.inmemory.InMemoryId;
-import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.model.MailboxMapperACLTest;
-import org.junit.Before;
+import org.apache.james.mailbox.store.mail.model.MailboxMapperACLContract;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
+import org.junit.jupiter.api.BeforeEach;
 
-public class MemoryMailboxMapperAclTest extends MailboxMapperACLTest {
+public class MemoryMailboxMapperAclTest implements MailboxMapperACLContract {
     private final AtomicInteger counter = new AtomicInteger();
-    
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
+
+    private MailboxMapper testee;
+    private SimpleMailbox mailbox;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        testee = new InMemoryMailboxMapper();
+        mailbox = new SimpleMailbox(benwaInboxPath, UID_VALIDITY);
+        mailbox.setMailboxId(InMemoryId.of(counter.incrementAndGet()));
     }
 
     @Override
-    protected MailboxMapper createMailboxMapper() {
-        return new InMemoryMailboxMapper();
+    public MailboxMapper mailboxMapper() {
+        return testee;
     }
 
     @Override
-    protected MailboxId generateId() {
-        return InMemoryId.of(counter.incrementAndGet());
+    public SimpleMailbox mailbox() {
+        return mailbox;
     }
 }

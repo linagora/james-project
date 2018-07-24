@@ -19,31 +19,27 @@
 
 package org.apache.james.mailbox.inmemory.mail;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.model.AnnotationMapperTest;
-import org.junit.Before;
+import org.apache.james.mailbox.store.mail.model.AnnotationMapperContract;
+import org.junit.jupiter.api.BeforeEach;
 
-public class MemoryAnnotationMapperTest extends AnnotationMapperTest {
+public class MemoryAnnotationMapperTest implements AnnotationMapperContract {
+    private AnnotationMapper testee;
 
-    private final AtomicInteger counter = new AtomicInteger();
-
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    @BeforeEach
+    void setUp() {
+        testee = new InMemoryAnnotationMapper();
     }
 
     @Override
-    protected AnnotationMapper createAnnotationMapper() {
-        return new InMemoryAnnotationMapper();
+    public MailboxId mailboxId() {
+        return InMemoryId.of(1);
     }
 
     @Override
-    protected MailboxId generateMailboxId() {
-        return InMemoryId.of(counter.incrementAndGet());
+    public AnnotationMapper annotationMapper() {
+        return testee;
     }
 }

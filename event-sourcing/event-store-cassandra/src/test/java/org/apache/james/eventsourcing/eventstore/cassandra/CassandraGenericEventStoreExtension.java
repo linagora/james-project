@@ -62,7 +62,7 @@ public class CassandraGenericEventStoreExtension implements BeforeAllCallback, A
     @Override
     public void beforeEach(ExtensionContext context) {
         cassandra = CassandraCluster.create(
-                new CassandraEventStoreModule(), dockerCassandra.getIp(), dockerCassandra.getBindingPort());
+            CassandraEventStoreModule.MODULE, dockerCassandra.getHost());
 
         JsonEventSerializer jsonEventSerializer = new JsonEventSerializer(modules);
 

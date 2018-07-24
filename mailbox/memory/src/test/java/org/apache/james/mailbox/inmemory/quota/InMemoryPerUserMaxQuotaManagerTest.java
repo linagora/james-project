@@ -19,14 +19,19 @@
 
 package org.apache.james.mailbox.inmemory.quota;
 
-import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.mailbox.store.quota.GenericMaxQuotaManagerTest;
+import org.junit.jupiter.api.BeforeEach;
 
-public class InMemoryPerUserMaxQuotaManagerTest extends GenericMaxQuotaManagerTest {
+public class InMemoryPerUserMaxQuotaManagerTest implements GenericMaxQuotaManagerTest {
+    private InMemoryPerUserMaxQuotaManager testee;
 
-    @Override
-    protected MaxQuotaManager provideMaxQuotaManager() {
-        return new InMemoryPerUserMaxQuotaManager();
+    @BeforeEach
+    void setUp() {
+        testee = new InMemoryPerUserMaxQuotaManager();
     }
 
+    @Override
+    public InMemoryPerUserMaxQuotaManager maxQuotaManager() {
+        return testee;
+    }
 }

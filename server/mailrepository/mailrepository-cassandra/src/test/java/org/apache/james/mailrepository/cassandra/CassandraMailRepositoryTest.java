@@ -36,32 +36,40 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(DockerCassandraExtension.class)
-class CassandraMailRepositoryTest implements MailRepositoryContract {
-    static final MailRepositoryUrl URL = MailRepositoryUrl.from("proto://url");
-    static final CassandraBlobId.Factory BLOB_ID_FACTORY = new CassandraBlobId.Factory();
+class CassandraMailRepositoryTest implements MailRepositoryContract, CassandraMailRepositoryCountDAOContract,
+                                             CassandraMailRepositoryKeysDAOContract, CassandraMailRepositoryMailDAOContract {
 
-    CassandraMailRepository cassandraMailRepository;
-    CassandraCluster cassandra;
+    private MailRepositoryUrl URL = MailRepositoryUrl.from("proto://url");
+    private CassandraBlobId.Factory BLOB_ID_FACTORY = new CassandraBlobId.Factory();
+
+    private CassandraCluster cassandra;
+
+    private CassandraMailRepository cassandraMailRepository;
+    private CassandraMailRepositoryMailDAO mailDAO;
+    private CassandraMailRepositoryKeysDAO keysDAO;
+    private CassandraMailRepositoryCountDAO countDAO;
 
     @BeforeEach
-    void setup(DockerCassandraExtension.DockerCassandra dockerCassandra) {
+    void setUp(DockerCassandraExtension.DockerCassandra dockerCassandra) {
         cassandra = CassandraCluster.create(
             new CassandraModuleComposite(
-                new CassandraMailRepositoryModule(),
-                new CassandraBlobModule()),
-            dockerCassandra.getIp(), dockerCassandra.getBindingPort());
+                CassandraMailRepositoryModule.MODULE,
+                CassandraBlobModule.MODULE),
+            dockerCassandra.getHost());
 
-        CassandraMailRepositoryMailDAO mailDAO = new CassandraMailRepositoryMailDAO(cassandra.getConf(), BLOB_ID_FACTORY, cassandra.getTypesProvider());
-        CassandraMailRepositoryKeysDAO keysDAO = new CassandraMailRepositoryKeysDAO(cassandra.getConf(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
-        CassandraMailRepositoryCountDAO countDAO = new CassandraMailRepositoryCountDAO(cassandra.getConf());
+        mailDAO = new CassandraMailRepositoryMailDAO(cassandra.getConf(), CassandraMailRepositoryMailDAOContract.BLOB_ID_FACTORY, cassandra.getTypesProvider());
+
+        CassandraMailRepositoryMailDAO realMailDAO = new CassandraMailRepositoryMailDAO(cassandra.getConf(), BLOB_ID_FACTORY, cassandra.getTypesProvider());
+        keysDAO = new CassandraMailRepositoryKeysDAO(cassandra.getConf(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
+        countDAO = new CassandraMailRepositoryCountDAO(cassandra.getConf());
         CassandraBlobsDAO blobsDAO = new CassandraBlobsDAO(cassandra.getConf());
 
         cassandraMailRepository = new CassandraMailRepository(URL,
-            keysDAO, countDAO, mailDAO, blobsDAO);
+            keysDAO, countDAO, realMailDAO, blobsDAO);
     }
 
     @AfterEach
-    public void tearDown() {
+    void teardown() {
         cassandra.close();
     }
 
@@ -70,10 +78,24 @@ class CassandraMailRepositoryTest implements MailRepositoryContract {
         return cassandraMailRepository;
     }
 
+    @Override
+    public CassandraMailRepositoryCountDAO countDAO() {
+        return countDAO;
+    }
+
+    @Override
+    public CassandraMailRepositoryKeysDAO keysDAO() {
+        return keysDAO;
+    }
+
+    @Override
+    public CassandraMailRepositoryMailDAO mailDAO() {
+        return mailDAO;
+    }
+
     @Test
     @Disabled("key is unique in Cassandra")
     @Override
-    public void sizeShouldBeIncrementedByOneWhenDuplicates() throws Exception {
+    public void sizeShouldBeIncrementedByOneWhenDuplicates() {
     }
-
 }

@@ -48,7 +48,7 @@ public class CassandraMailRepositoryUrlStoreExtension implements ParameterResolv
     @Override
     public void beforeEach(ExtensionContext context) {
         cassandraCluster = CassandraCluster.create(
-            new CassandraMailRepositoryUrlModule(),
+            CassandraMailRepositoryUrlModule.MODULE,
             cassandra.getHost());
     }
 
@@ -69,8 +69,6 @@ public class CassandraMailRepositoryUrlStoreExtension implements ParameterResolv
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-
-
         return new CassandraMailRepositoryUrlStore(
             new UrlsDao(
                 cassandraCluster.getConf(),

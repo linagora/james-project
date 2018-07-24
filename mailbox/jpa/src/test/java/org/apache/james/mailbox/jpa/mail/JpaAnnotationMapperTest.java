@@ -19,41 +19,37 @@
 
 package org.apache.james.mailbox.jpa.mail;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.mailbox.jpa.JPAId;
 import org.apache.james.mailbox.jpa.JPAMailboxFixture;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
-import org.apache.james.mailbox.store.mail.model.AnnotationMapperTest;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.james.mailbox.store.mail.model.AnnotationMapperContract;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-public class JpaAnnotationMapperTest extends AnnotationMapperTest {
-
+public class JpaAnnotationMapperTest implements AnnotationMapperContract {
     public static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPAMailboxFixture.MAILBOX_PERSISTANCE_CLASSES);
 
-    private final AtomicInteger counter = new AtomicInteger();
+    private AnnotationMapper testee;
 
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
+    @BeforeEach
+    void setUp() {
+        testee = new TransactionalAnnotationMapper(new JPAAnnotationMapper(JPA_TEST_CLUSTER.getEntityManagerFactory()));
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown() {
         JPA_TEST_CLUSTER.clear(JPAMailboxFixture.MAILBOX_TABLE_NAMES);
     }
 
     @Override
-    protected AnnotationMapper createAnnotationMapper() {
-        return new TransactionalAnnotationMapper(new JPAAnnotationMapper(JPA_TEST_CLUSTER.getEntityManagerFactory()));
+    public MailboxId mailboxId() {
+        return JPAId.of(1);
     }
 
     @Override
-    protected MailboxId generateMailboxId() {
-        return JPAId.of(counter.incrementAndGet());
+    public AnnotationMapper annotationMapper() {
+        return testee;
     }
 }

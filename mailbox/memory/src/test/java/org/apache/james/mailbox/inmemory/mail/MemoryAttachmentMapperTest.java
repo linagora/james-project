@@ -19,28 +19,28 @@
 
 package org.apache.james.mailbox.inmemory.mail;
 
-import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.model.AttachmentMapperTest;
-import org.junit.Before;
+import org.apache.james.mailbox.store.mail.model.AttachmentMapperContract;
+import org.junit.jupiter.api.BeforeEach;
 
-public class MemoryAttachmentMapperTest extends AttachmentMapperTest {
-    
-    @Override
-    @Before
-    public void setUp() throws MailboxException {
-        super.setUp();
+public class MemoryAttachmentMapperTest implements AttachmentMapperContract {
+
+    private AttachmentMapper testee;
+
+    @BeforeEach
+    public void setUp() {
+        testee = new InMemoryAttachmentMapper();
     }
 
     @Override
-    protected AttachmentMapper createAttachmentMapper() {
-        return new InMemoryAttachmentMapper();
+    public AttachmentMapper attachmentMapper() {
+        return testee;
     }
 
     @Override
-    protected MessageId generateMessageId() {
+    public MessageId generateMessageId() {
         return new InMemoryMessageId.Factory().generate();
     }
 }
