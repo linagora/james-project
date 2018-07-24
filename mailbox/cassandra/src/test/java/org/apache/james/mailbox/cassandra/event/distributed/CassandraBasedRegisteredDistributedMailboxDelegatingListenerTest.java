@@ -68,7 +68,8 @@ public class CassandraBasedRegisteredDistributedMailboxDelegatingListenerTest {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
     
-    private CassandraCluster cassandra = CassandraCluster.create(new CassandraRegistrationModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+
+    private CassandraCluster cassandra = CassandraCluster.create(CassandraRegistrationModule.MODULE, cassandraServer.getHost());
     private RegisteredDelegatingMailboxListener registeredDelegatingMailboxListener1;
     private RegisteredDelegatingMailboxListener registeredDelegatingMailboxListener2;
     private RegisteredDelegatingMailboxListener registeredDelegatingMailboxListener3;

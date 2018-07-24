@@ -38,7 +38,7 @@ public class CassandraMailboxPathRegistrerMapperTest {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
     
-    private final CassandraCluster cassandra = CassandraCluster.create(new CassandraRegistrationModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+    private final CassandraCluster cassandra = CassandraCluster.create(CassandraRegistrationModule.MODULE, cassandraServer.getIp(), cassandraServer.getBindingPort());
     private static final MailboxPath MAILBOX_PATH = new MailboxPath("namespace", "user", "name");
     private static final MailboxPath MAILBOX_PATH_2 = new MailboxPath("namespace2", "user2", "name2");
     private static final Topic TOPIC = new Topic("topic");

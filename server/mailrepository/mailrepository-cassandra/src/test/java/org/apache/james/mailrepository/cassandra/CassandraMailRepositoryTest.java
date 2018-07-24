@@ -47,8 +47,8 @@ class CassandraMailRepositoryTest implements MailRepositoryContract {
     void setup(DockerCassandraExtension.DockerCassandra dockerCassandra) {
         cassandra = CassandraCluster.create(
             new CassandraModuleComposite(
-                new CassandraMailRepositoryModule(),
-                new CassandraBlobModule()),
+                CassandraMailRepositoryModule.MODULE,
+                CassandraBlobModule.MODULE),
             dockerCassandra.getIp(), dockerCassandra.getBindingPort());
 
         CassandraMailRepositoryMailDAO mailDAO = new CassandraMailRepositoryMailDAO(cassandra.getConf(), BLOB_ID_FACTORY, cassandra.getTypesProvider());

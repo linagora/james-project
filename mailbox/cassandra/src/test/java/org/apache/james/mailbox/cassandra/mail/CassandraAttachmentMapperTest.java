@@ -44,8 +44,8 @@ public class CassandraAttachmentMapperTest extends AttachmentMapperTest {
     @Before
     public void setUp() throws MailboxException {
         CassandraModuleComposite modules = new CassandraModuleComposite(
-                new CassandraAttachmentModule(),
-                new CassandraBlobModule());
+                CassandraAttachmentModule.MODULE,
+                CassandraBlobModule.MODULE);
         this.cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
         super.setUp();
     }

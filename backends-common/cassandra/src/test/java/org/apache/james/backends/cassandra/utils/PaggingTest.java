@@ -24,15 +24,12 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.components.CassandraTable;
-import org.apache.james.backends.cassandra.components.CassandraType;
 import org.apache.james.util.CompletableFutureUtil;
 import org.junit.After;
 import org.junit.Before;
@@ -40,9 +37,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.utils.UUIDs;
-import com.google.common.collect.ImmutableList;
 
 public class PaggingTest {
     
@@ -58,22 +53,13 @@ public class PaggingTest {
 
     @Before
     public void setUp() {
-        CassandraModule modules = new CassandraModule() {
-            @Override
-            public List<CassandraTable> moduleTables() {
-                return ImmutableList.of(new CassandraTable(TABLE_NAME,
-                    SchemaBuilder.createTable(TABLE_NAME)
-                        .ifNotExists()
-                        .addPartitionKey(ID, DataType.timeuuid())
-                        .addClusteringColumn(CLUSTERING, DataType.bigint())));
-            }
-
-            @Override
-            public List<CassandraType> moduleTypes() {
-                return ImmutableList.of();
-            }
-        };
-        cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
+        CassandraModule modules = CassandraModule.table(TABLE_NAME)
+            .statement(statement -> statement
+                .ifNotExists()
+                .addPartitionKey(ID, DataType.timeuuid())
+                .addClusteringColumn(CLUSTERING, DataType.bigint()))
+            .build();
+        cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
         executor = new CassandraAsyncExecutor(cassandra.getConf());
     }
 

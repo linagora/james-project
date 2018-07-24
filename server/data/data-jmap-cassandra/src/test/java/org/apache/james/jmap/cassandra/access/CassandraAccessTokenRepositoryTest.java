@@ -37,7 +37,7 @@ public class CassandraAccessTokenRepositoryTest extends AccessTokenRepositoryTes
     @Override
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraAccessModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraAccessModule.MODULE, cassandraServer.getIp(), cassandraServer.getBindingPort());
         super.setUp();
     }
     

@@ -56,7 +56,7 @@ public class CassandraACLMapperTest {
 
     @Before
     public void setUp() {
-        cassandra = CassandraCluster.create(new CassandraAclModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraAclModule.MODULE, cassandraServer.getIp(), cassandraServer.getBindingPort());
         cassandraACLMapper = GuiceUtils.testInjector(cassandra)
             .getInstance(CassandraACLMapper.class);
         executor = Executors.newFixedThreadPool(2);

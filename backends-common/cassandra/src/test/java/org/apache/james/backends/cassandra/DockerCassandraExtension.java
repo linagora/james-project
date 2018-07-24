@@ -19,6 +19,7 @@
 
 package org.apache.james.backends.cassandra;
 
+import org.apache.james.util.Host;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -83,6 +84,10 @@ public class DockerCassandraExtension implements BeforeAllCallback, AfterAllCall
     
         public int getBindingPort() {
             return bindingPort;
+        }
+
+        public Host getHost() {
+            return Host.from(ip, bindingPort);
         }
     }
 

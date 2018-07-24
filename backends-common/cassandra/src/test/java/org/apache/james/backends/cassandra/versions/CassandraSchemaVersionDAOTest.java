@@ -41,7 +41,7 @@ public class CassandraSchemaVersionDAOTest {
 
     @Before
     public void setUp() {
-        cassandra = CassandraCluster.create(new CassandraSchemaVersionModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraSchemaVersionModule.MODULE, cassandraServer.getIp(), cassandraServer.getBindingPort());
 
         testee = new CassandraSchemaVersionDAO(cassandra.getConf(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
     }

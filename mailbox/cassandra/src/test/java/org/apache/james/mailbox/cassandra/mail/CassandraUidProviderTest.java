@@ -42,7 +42,7 @@ public class CassandraUidProviderTest {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
     
-    private final CassandraCluster cassandra = CassandraCluster.create(new CassandraUidModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+    private final CassandraCluster cassandra = CassandraCluster.create(CassandraUidModule.MODULE, cassandraServer.getHost());
     
     private CassandraUidProvider uidProvider;
     private SimpleMailbox mailbox;

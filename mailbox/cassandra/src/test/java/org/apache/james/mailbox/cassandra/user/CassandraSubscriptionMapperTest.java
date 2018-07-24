@@ -31,7 +31,7 @@ public class CassandraSubscriptionMapperTest extends SubscriptionMapperTest {
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
     
-    private final CassandraCluster cassandra = CassandraCluster.create(new CassandraSubscriptionModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+    private final CassandraCluster cassandra = CassandraCluster.create(CassandraSubscriptionModule.MODULE, cassandraServer.getHost());
 
     @Override
     protected SubscriptionMapper createSubscriptionMapper() {

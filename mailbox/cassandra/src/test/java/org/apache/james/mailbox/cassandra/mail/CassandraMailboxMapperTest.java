@@ -68,7 +68,7 @@ public class CassandraMailboxMapperTest {
 
     @Before
     public void setUp() {
-        CassandraModuleComposite modules = new CassandraModuleComposite(new CassandraMailboxModule(), new CassandraAclModule());
+        CassandraModuleComposite modules = new CassandraModuleComposite(CassandraMailboxModule.MODULE, CassandraAclModule.MODULE);
         cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
         mailboxDAO = new CassandraMailboxDAO(cassandra.getConf(), cassandra.getTypesProvider());
         mailboxPathDAO = new CassandraMailboxPathDAOImpl(cassandra.getConf(), cassandra.getTypesProvider());

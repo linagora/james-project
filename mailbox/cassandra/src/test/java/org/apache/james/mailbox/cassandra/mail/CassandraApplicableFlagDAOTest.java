@@ -49,7 +49,7 @@ public class CassandraApplicableFlagDAOTest {
 
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraApplicableFlagsModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraApplicableFlagsModule.MODULE, cassandraServer.getHost());
         testee = new CassandraApplicableFlagDAO(cassandra.getConf());
     }
 

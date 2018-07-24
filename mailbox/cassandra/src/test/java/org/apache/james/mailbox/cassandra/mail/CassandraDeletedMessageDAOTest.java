@@ -55,7 +55,7 @@ public class CassandraDeletedMessageDAOTest {
     @Before
     public void setUp() {
         cassandra = CassandraCluster.create(
-            new CassandraDeletedMessageModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+            CassandraDeletedMessageModule.MODULE, cassandraServer.getHost());
         testee = new CassandraDeletedMessageDAO(cassandra.getConf());
     }
 

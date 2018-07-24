@@ -47,7 +47,7 @@ public class CassandraMailboxRecentDAOTest {
 
     @Before
     public void setUp() {
-        cassandra = CassandraCluster.create(new CassandraMailboxRecentsModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraMailboxRecentsModule.MODULE, cassandraServer.getHost());
         testee = new CassandraMailboxRecentsDAO(cassandra.getConf());
     }
 

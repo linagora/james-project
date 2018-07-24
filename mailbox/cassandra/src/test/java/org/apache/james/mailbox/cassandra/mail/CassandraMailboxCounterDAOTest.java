@@ -45,7 +45,7 @@ public class CassandraMailboxCounterDAOTest {
 
     @Before
     public void setUp() {
-        cassandra = CassandraCluster.create(new CassandraMailboxCounterModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraMailboxCounterModule.MODULE, cassandraServer.getHost());
         testee = new CassandraMailboxCounterDAO(cassandra.getConf());
 
         mailbox = new SimpleMailbox(MailboxPath.forUser("user", "name"), UID_VALIDITY, MAILBOX_ID);

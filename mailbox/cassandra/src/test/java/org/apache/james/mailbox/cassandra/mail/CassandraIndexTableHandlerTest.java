@@ -77,11 +77,12 @@ public class CassandraIndexTableHandlerTest {
     public void setUp() {
         cassandra = CassandraCluster.create(
             new CassandraModuleComposite(
-                new CassandraMailboxCounterModule(),
-                new CassandraMailboxRecentsModule(),
-                new CassandraFirstUnseenModule(),
-                new CassandraApplicableFlagsModule(),
-                new CassandraDeletedMessageModule()), cassandraServer.getIp(), cassandraServer.getBindingPort());
+                CassandraMailboxCounterModule.MODULE,
+                CassandraMailboxRecentsModule.MODULE,
+                CassandraFirstUnseenModule.MODULE,
+                CassandraApplicableFlagsModule.MODULE,
+                CassandraDeletedMessageModule.MODULE),
+            cassandraServer.getHost());
         mailboxCounterDAO = new CassandraMailboxCounterDAO(cassandra.getConf());
         mailboxRecentsDAO = new CassandraMailboxRecentsDAO(cassandra.getConf());
         firstUnseenDAO = new CassandraFirstUnseenDAO(cassandra.getConf());

@@ -21,11 +21,21 @@ package org.apache.james.mailbox.cassandra.mail;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
+import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
 import org.junit.Test;
 
 import com.github.steveash.guavate.Guavate;
 
 public class CassandraMailboxPathDAOImplTest extends CassandraMailboxPathDAOTest {
+
+    @Override
+    CassandraModule module() {
+        return new CassandraModuleComposite(
+            CassandraMailboxModule.MAILBOX_PATH_TABLE,
+            CassandraMailboxModule.MAILBOX_BASE_TYPE);
+    }
 
     @Override
     CassandraMailboxPathDAO testee() {

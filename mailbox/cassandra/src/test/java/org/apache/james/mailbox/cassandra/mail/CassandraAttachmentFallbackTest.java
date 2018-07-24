@@ -63,8 +63,8 @@ public class CassandraAttachmentFallbackTest {
     @Before
     public void setUp() throws Exception {
         CassandraModuleComposite compositeModule = new CassandraModuleComposite(
-            new CassandraAttachmentModule(),
-            new CassandraBlobModule());
+            CassandraAttachmentModule.MODULE,
+            CassandraBlobModule.MODULE);
 
         cassandra = CassandraCluster.create(
             compositeModule,

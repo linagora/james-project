@@ -21,6 +21,7 @@ package org.apache.james.mailbox.cassandra.quota;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.cassandra.mail.utils.GuiceUtils;
 import org.apache.james.mailbox.cassandra.modules.CassandraQuotaModule;
 import org.apache.james.mailbox.quota.MaxQuotaManager;
@@ -36,7 +37,13 @@ public class CassandraPerUserMaxQuotaManagerTest extends GenericMaxQuotaManagerT
 
     @Override
     protected MaxQuotaManager provideMaxQuotaManager() {
-        cassandra = CassandraCluster.create(new CassandraQuotaModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(
+            new CassandraModuleComposite(
+                CassandraQuotaModule.MAX_QUOTA_TABLE,
+                CassandraQuotaModule.DOMAIN_QUOTA_TABLE,
+                CassandraQuotaModule.USER_QUOTA_TABLE),
+            cassandraServer.getHost());
+
         return GuiceUtils.testInjector(cassandra)
             .getInstance(CassandraPerUserMaxQuotaManager.class);
     }

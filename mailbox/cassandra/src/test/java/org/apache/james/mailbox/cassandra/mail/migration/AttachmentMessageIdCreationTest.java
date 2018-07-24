@@ -79,9 +79,9 @@ public class AttachmentMessageIdCreationTest {
     public void setUp() {
         CassandraCluster cassandra = CassandraCluster.create(
             new CassandraModuleComposite(
-                new CassandraMessageModule(),
-                new CassandraAttachmentModule(),
-                new CassandraBlobModule()),
+                CassandraMessageModule.MODULE,
+                CassandraAttachmentModule.MODULE,
+                CassandraBlobModule.MODULE),
             cassandraServer.getIp(),
             cassandraServer.getBindingPort());
         CassandraMessageId.Factory messageIdFactory = new CassandraMessageId.Factory();

@@ -31,7 +31,7 @@ public class CassandraCurrentQuotaManagerTest extends StoreCurrentQuotaManagerTe
 
     @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
     
-    private final CassandraCluster cassandra = CassandraCluster.create(new CassandraQuotaModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+    private final CassandraCluster cassandra = CassandraCluster.create(CassandraQuotaModule.CURRENT_QUOTA_TABLE, cassandraServer.getHost());
 
     @Override
     protected StoreCurrentQuotaManager provideTestee() {

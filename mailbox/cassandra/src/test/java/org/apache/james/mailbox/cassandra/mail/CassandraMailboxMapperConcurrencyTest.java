@@ -53,7 +53,8 @@ public class CassandraMailboxMapperConcurrencyTest {
 
     @Before
     public void setUp() {
-        CassandraModuleComposite modules = new CassandraModuleComposite(new CassandraMailboxModule(), new CassandraAclModule());
+        CassandraModuleComposite modules = new CassandraModuleComposite(CassandraMailboxModule.MODULE,
+            CassandraAclModule.MODULE);
         cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
 
         testee = GuiceUtils.testInjector(cassandra)

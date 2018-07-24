@@ -38,7 +38,7 @@ public class CassandraVacationRepositoryTest extends AbstractVacationRepositoryT
     @Override
     @Before
     public void setUp() throws Exception {
-        CassandraModuleComposite module = new CassandraModuleComposite(new CassandraVacationModule(), new CassandraZonedDateTimeModule());
+        CassandraModuleComposite module = new CassandraModuleComposite(CassandraVacationModule.MODULE, CassandraZonedDateTimeModule.MODULE);
         cassandra = CassandraCluster.create(module, cassandraServer.getIp(), cassandraServer.getBindingPort());
         super.setUp();
     }

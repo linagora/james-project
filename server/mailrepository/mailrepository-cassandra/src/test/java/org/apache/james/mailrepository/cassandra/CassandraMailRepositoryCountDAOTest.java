@@ -40,7 +40,7 @@ public class CassandraMailRepositoryCountDAOTest {
     @BeforeEach
     public void setUp(DockerCassandraExtension.DockerCassandra dockerCassandra) {
         cassandra = CassandraCluster.create(
-            new CassandraMailRepositoryModule(), dockerCassandra.getIp(), dockerCassandra.getBindingPort());
+            CassandraMailRepositoryModule.COUNT_TABLE, dockerCassandra.getHost());
 
         testee = new CassandraMailRepositoryCountDAO(cassandra.getConf());
     }

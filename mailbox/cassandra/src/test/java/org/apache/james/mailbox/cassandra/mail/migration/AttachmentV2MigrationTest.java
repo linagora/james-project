@@ -65,8 +65,8 @@ public class AttachmentV2MigrationTest {
     public void setUp() {
         CassandraCluster cassandra = CassandraCluster.create(
             new CassandraModuleComposite(
-                new CassandraAttachmentModule(),
-                new CassandraBlobModule()),
+                CassandraAttachmentModule.MODULE,
+                CassandraBlobModule.MODULE),
             cassandraServer.getIp(),
             cassandraServer.getBindingPort());
 

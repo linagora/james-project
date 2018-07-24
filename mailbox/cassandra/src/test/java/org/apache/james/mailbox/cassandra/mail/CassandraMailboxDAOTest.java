@@ -28,7 +28,6 @@ import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
-import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
@@ -56,7 +55,9 @@ public class CassandraMailboxDAOTest {
 
     @Before
     public void setUp() {
-        CassandraModuleComposite modules = new CassandraModuleComposite(new CassandraMailboxModule(), new CassandraAclModule());
+        CassandraModuleComposite modules = new CassandraModuleComposite(
+            CassandraMailboxModule.MAILBOX_BASE_TYPE,
+            CassandraMailboxModule.MAILBOX_TABLE);
         cassandra = CassandraCluster.create(modules, cassandraServer.getIp(), cassandraServer.getBindingPort());
 
         testee = new CassandraMailboxDAO(cassandra.getConf(), cassandra.getTypesProvider());

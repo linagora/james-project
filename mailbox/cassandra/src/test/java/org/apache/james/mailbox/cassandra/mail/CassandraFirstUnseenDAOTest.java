@@ -45,7 +45,7 @@ public class CassandraFirstUnseenDAOTest {
     @Before
     public void setUp() {
         cassandra = CassandraCluster.create(
-            new CassandraFirstUnseenModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+            CassandraFirstUnseenModule.MODULE, cassandraServer.getHost());
         testee = new CassandraFirstUnseenDAO(cassandra.getConf());
     }
 

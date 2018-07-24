@@ -46,7 +46,7 @@ public class CassandraMailRepositoryKeysDAOTest {
     @BeforeEach
     public void setUp(DockerCassandraExtension.DockerCassandra dockerCassandra) {
         cassandra = CassandraCluster.create(
-            new CassandraMailRepositoryModule(), dockerCassandra.getIp(), dockerCassandra.getBindingPort());
+            CassandraMailRepositoryModule.KEYS_TABLE, dockerCassandra.getHost());
 
         testee = new CassandraMailRepositoryKeysDAO(cassandra.getConf(), CassandraUtils.WITH_DEFAULT_CONFIGURATION);
     }

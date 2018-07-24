@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
-import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.After;
 import org.junit.Before;
@@ -57,9 +57,11 @@ public abstract class CassandraMailboxPathDAOTest {
 
     abstract CassandraMailboxPathDAO testee();
 
+    abstract CassandraModule module();
+
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraMailboxModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(module(), cassandraServer.getHost());
         testee = testee();
     }
 

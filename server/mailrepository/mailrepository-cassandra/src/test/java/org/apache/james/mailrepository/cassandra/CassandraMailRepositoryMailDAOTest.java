@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraExtension;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.TestBlobId;
 import org.apache.james.mailrepository.api.MailKey;
@@ -51,7 +52,10 @@ public class CassandraMailRepositoryMailDAOTest {
     @BeforeEach
     public void setUp(DockerCassandraExtension.DockerCassandra dockerCassandra) {
         cassandra = CassandraCluster.create(
-            new CassandraMailRepositoryModule(), dockerCassandra.getIp(), dockerCassandra.getBindingPort());
+            new CassandraModuleComposite(
+                CassandraMailRepositoryModule.HEADER_TYPE,
+                CassandraMailRepositoryModule.MAIL_REPOSITORY_TABLE),
+            dockerCassandra.getHost());
 
         testee = new CassandraMailRepositoryMailDAO(cassandra.getConf(), BLOB_ID_FACTORY, cassandra.getTypesProvider());
     }

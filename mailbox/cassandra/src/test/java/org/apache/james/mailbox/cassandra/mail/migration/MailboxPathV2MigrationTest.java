@@ -70,8 +70,8 @@ public class MailboxPathV2MigrationTest {
     public void setUp() {
         cassandra = CassandraCluster.create(
             new CassandraModuleComposite(
-                new CassandraMailboxModule(),
-                new CassandraAclModule()),
+                CassandraMailboxModule.MODULE,
+                CassandraAclModule.MODULE),
             cassandraServer.getIp(),
             cassandraServer.getBindingPort());
 

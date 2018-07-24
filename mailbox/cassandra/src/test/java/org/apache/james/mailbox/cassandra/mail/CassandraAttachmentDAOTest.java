@@ -51,15 +51,15 @@ public class CassandraAttachmentDAOTest {
 
     @Before
     public void setUp() throws Exception {
-        cassandra = CassandraCluster.create(new CassandraAttachmentModule(),
-            cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraAttachmentModule.CASSANDRA_ATTACHMENT_TABLE,
+            cassandraServer.getHost());
         testee = new CassandraAttachmentDAO(cassandra.getConf(),
             CassandraUtils.WITH_DEFAULT_CONFIGURATION,
             CassandraConfiguration.DEFAULT_CONFIGURATION);
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         cassandra.close();
     }
 

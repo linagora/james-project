@@ -54,7 +54,7 @@ public class CassandraMessageIdToImapUidDAOTest {
 
     @Before
     public void setUp() {
-        cassandra = CassandraCluster.create(new CassandraMessageModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraMessageModule.MESSAGE_ID_TO_IMAP_UID_TABLE, cassandraServer.getHost());
         messageIdFactory = new CassandraMessageId.Factory();
         testee = new CassandraMessageIdToImapUidDAO(cassandra.getConf(), messageIdFactory);
     }

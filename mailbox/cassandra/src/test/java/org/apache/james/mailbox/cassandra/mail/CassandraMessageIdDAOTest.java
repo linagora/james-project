@@ -54,7 +54,7 @@ public class CassandraMessageIdDAOTest {
 
     @Before
     public void setUp() {
-        cassandra = CassandraCluster.create(new CassandraMessageModule(), cassandraServer.getIp(), cassandraServer.getBindingPort());
+        cassandra = CassandraCluster.create(CassandraMessageModule.CASSANDRA_MESSAGE_ID_TABLE, cassandraServer.getHost());
         messageIdFactory = new CassandraMessageId.Factory();
         testee = new CassandraMessageIdDAO(cassandra.getConf(), messageIdFactory);
     }

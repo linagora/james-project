@@ -19,9 +19,19 @@
 
 package org.apache.james.mailbox.cassandra.mail;
 
+import org.apache.james.backends.cassandra.components.CassandraModule;
+import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
+import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
 
 public class CassandraMailboxPathV2DAOTest extends CassandraMailboxPathDAOTest {
+
+    @Override
+    CassandraModule module() {
+        return new CassandraModuleComposite(
+            CassandraMailboxModule.MAILBOX_PATH_V2_TABLE,
+            CassandraMailboxModule.MAILBOX_BASE_TYPE);
+    }
 
     @Override
     CassandraMailboxPathDAO testee() {
