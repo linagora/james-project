@@ -19,64 +19,39 @@
 
 package org.apache.james.mailbox.cassandra.mail;
 
-import org.apache.james.backends.cassandra.CassandraCluster;
-import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.mailbox.cassandra.ids.CassandraId;
-import org.apache.james.mailbox.cassandra.mail.utils.GuiceUtils;
+import org.apache.james.blob.cassandra.CassandraBlobModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraAnnotationModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraApplicableFlagsModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraAttachmentModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraDeletedMessageModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraFirstUnseenModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraMailboxCounterModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraMailboxRecentsModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraModSeqModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraQuotaModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraSubscriptionModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraUidModule;
-import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.model.MailboxMapperTest;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
 
-public class CassandraGenericMailboxMapperTest extends MailboxMapperTest {
-    
-    @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
-    
-    private static CassandraCluster cassandra;
-
-    @BeforeClass
-    public static void setUpClass() {
-        CassandraModule modules = CassandraModule.aggregateModules(
+public interface MailboxAggregateModule {
+    CassandraModule MODULE = CassandraModule.aggregateModules(
             CassandraAclModule.MODULE,
             CassandraMailboxModule.MODULE,
+            CassandraMessageModule.MODULE,
+            CassandraBlobModule.MODULE,
+            CassandraAttachmentModule.MODULE,
+            CassandraMailboxCounterModule.MODULE,
+            CassandraMailboxRecentsModule.MODULE,
+            CassandraFirstUnseenModule.MODULE,
+            CassandraUidModule.MODULE,
             CassandraModSeqModule.MODULE,
-            CassandraUidModule.MODULE);
-        cassandra = CassandraCluster.create(modules, cassandraServer.getHost());
-    }
+            CassandraSubscriptionModule.MODULE,
+            CassandraDeletedMessageModule.MODULE,
+            CassandraAnnotationModule.MODULE,
+            CassandraApplicableFlagsModule.MODULE);
 
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
-    }
-    
-    @After
-    public void tearDown() {
-        cassandra.clearTables();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        cassandra.closeCluster();
-    }
-
-    @Override
-    protected MailboxMapper createMailboxMapper() {
-        return GuiceUtils.testInjector(cassandra)
-            .getInstance(CassandraMailboxMapper.class);
-    }
-
-    @Override
-    protected MailboxId generateId() {
-        return CassandraId.timeBased();
-    }
+    CassandraModule MODULE_WITH_QUOTA = CassandraModule.aggregateModules(CassandraQuotaModule.MODULE, MODULE);
 }

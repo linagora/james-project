@@ -26,7 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.init.CassandraZonedDateTimeModule;
 import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
@@ -73,8 +72,8 @@ public class CassandraSessionModule extends AbstractModule {
         bind(Cluster.class).toProvider(ResilientClusterProvider.class);
 
         Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
-        cassandraDataDefinitions.addBinding().to(CassandraZonedDateTimeModule.class);
-        cassandraDataDefinitions.addBinding().to(CassandraSchemaVersionModule.class);
+        cassandraDataDefinitions.addBinding().toInstance(CassandraZonedDateTimeModule.MODULE);
+        cassandraDataDefinitions.addBinding().toInstance(CassandraSchemaVersionModule.MODULE);
 
         bind(CassandraSchemaVersionManager.class).in(Scopes.SINGLETON);
         bind(CassandraSchemaVersionDAO.class).in(Scopes.SINGLETON);
@@ -87,7 +86,7 @@ public class CassandraSessionModule extends AbstractModule {
     @Provides
     @Singleton
     CassandraModule composeDataDefinitions(Set<CassandraModule> modules) {
-        return new CassandraModuleComposite(modules.toArray(new CassandraModule[0]));
+        return CassandraModule.aggregateModules(modules);
     }
 
     @Provides
