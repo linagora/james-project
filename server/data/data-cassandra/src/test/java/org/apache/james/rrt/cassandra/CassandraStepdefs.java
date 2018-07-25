@@ -39,8 +39,8 @@ public class CassandraStepdefs {
 
     @Before
     public void setup() throws Throwable {
-        cassandra = CassandraCluster.create(new CassandraRRTModule(), RewriteTablesTest.cassandraServer.getIp(), RewriteTablesTest.cassandraServer.getBindingPort());
-        mainStepdefs.rewriteTable = getRecipientRewriteTable(); 
+        cassandra = CassandraCluster.create(new CassandraRRTModule(), RewriteTablesTest.cassandraServer.getHost());
+        mainStepdefs.rewriteTable = getRecipientRewriteTable();
     }
 
     @After
