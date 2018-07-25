@@ -17,37 +17,28 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.managesieve.file;
+package org.apache.james.mpt.testsuite;
 
-import org.apache.james.mpt.host.ManageSieveHostSystem;
-import org.apache.james.mpt.testsuite.ListScriptsTest;
-import org.junit.After;
-import org.junit.Before;
+import java.util.Locale;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import org.apache.james.mpt.HostSystemProvider;
+import org.apache.james.mpt.script.SimpleScriptedTestProtocol;
+import org.junit.jupiter.api.Test;
 
-public abstract class FileListScriptsTest extends ListScriptsTest {
+public interface ListScriptsContract extends HostSystemProvider {
+    String USER = "user";
+    String PASSWORD = "password";
 
-    private ManageSieveHostSystem system;
-
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new FileModule());
-        system = injector.getInstance(ManageSieveHostSystem.class);
-        system.beforeTest();
-        super.setUp();
-    }
-    
-    @Override
-    protected ManageSieveHostSystem createManageSieveHostSystem() {
-        return system;
+    default SimpleScriptedTestProtocol listScriptsContractProtocol() throws Exception {
+        return new SimpleScriptedTestProtocol("/org/apache/james/managesieve/scripts/", hostSystem())
+                .withUser(USER, PASSWORD)
+                .withLocale(Locale.US);
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
+    @Test
+    default void listScriptsShouldWork() throws Exception {
+        listScriptsContractProtocol()
+            .withLocale(Locale.US)
+            .run("listscripts");
     }
 }

@@ -17,41 +17,28 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.managesieve.cassandra;
+package org.apache.james.mpt.testsuite;
 
-import org.apache.james.backends.cassandra.DockerCassandraRule;
-import org.apache.james.mpt.host.ManageSieveHostSystem;
-import org.apache.james.mpt.testsuite.SetActiveTest;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
+import java.util.Locale;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import org.apache.james.mpt.HostSystemProvider;
+import org.apache.james.mpt.script.SimpleScriptedTestProtocol;
+import org.junit.jupiter.api.Test;
 
-public class CassandraSetActiveTest extends SetActiveTest {
+public interface CheckScriptContract extends HostSystemProvider {
+    String USER = "user";
+    String PASSWORD = "password";
 
-    @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
-    
-    private ManageSieveHostSystem system;
-
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new CassandraModule(cassandraServer.getIp(), cassandraServer.getBindingPort()));
-        system = injector.getInstance(ManageSieveHostSystem.class);
-        system.beforeTest();
-        super.setUp();
-    }
-    
-    @Override
-    protected ManageSieveHostSystem createManageSieveHostSystem() {
-        return system;
+    default SimpleScriptedTestProtocol checkScriptContractProtocol() throws Exception {
+        return new SimpleScriptedTestProtocol("/org/apache/james/managesieve/scripts/", hostSystem())
+                .withUser(USER, PASSWORD)
+                .withLocale(Locale.US);
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
+    @Test
+    default void checkScriptShouldWork() throws Exception {
+        checkScriptContractProtocol()
+            .withLocale(Locale.US)
+            .run("checkscript");
     }
 }

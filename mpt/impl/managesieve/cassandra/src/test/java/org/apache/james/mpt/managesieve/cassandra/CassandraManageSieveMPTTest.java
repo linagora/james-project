@@ -17,37 +17,33 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.managesieve.file;
+package org.apache.james.mpt.managesieve.cassandra;
 
+import org.apache.james.backends.cassandra.DockerCassandraExtension;
+import org.apache.james.mpt.ManageSieveMPTContract;
 import org.apache.james.mpt.host.ManageSieveHostSystem;
-import org.apache.james.mpt.testsuite.GetScriptTest;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.james.mpt.managesieve.cassandra.host.CassandraHostSystem;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-
-public class FileGetScriptTest extends GetScriptTest {
-    
+@ExtendWith(DockerCassandraExtension.class)
+class CassandraManageSieveMPTTest implements ManageSieveMPTContract {
     private ManageSieveHostSystem system;
 
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new FileModule());
-        system = injector.getInstance(ManageSieveHostSystem.class);
+    @BeforeEach
+    void setUp(DockerCassandraExtension.DockerCassandra dockerCassandra) throws Exception {
+        system = new CassandraHostSystem(dockerCassandra.getHost());
         system.beforeTest();
-        super.setUp();
     }
-    
+
     @Override
-    protected ManageSieveHostSystem createManageSieveHostSystem() {
+    public ManageSieveHostSystem hostSystem() {
         return system;
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
+    @AfterEach
+    void tearDown() throws Exception {
+        hostSystem().afterTest();
     }
 }

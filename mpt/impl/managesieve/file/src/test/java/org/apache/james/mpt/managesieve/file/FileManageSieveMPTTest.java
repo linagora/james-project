@@ -17,41 +17,30 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.managesieve.cassandra;
+package org.apache.james.mpt.managesieve.file;
 
-import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.mpt.ManageSieveMPTContract;
 import org.apache.james.mpt.host.ManageSieveHostSystem;
-import org.apache.james.mpt.testsuite.LogoutTest;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
+import org.apache.james.mpt.managesieve.file.host.FileHostSystem;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-
-public class CassandraLogoutTest extends LogoutTest {
-    
-    @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
-    
+public class FileManageSieveMPTTest implements ManageSieveMPTContract {
     private ManageSieveHostSystem system;
 
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new CassandraModule(cassandraServer.getIp(), cassandraServer.getBindingPort()));
-        system = injector.getInstance(ManageSieveHostSystem.class);
+    @BeforeEach
+    void createSystem() throws Exception {
+        system = new FileHostSystem();
         system.beforeTest();
-        super.setUp();
     }
-    
+
     @Override
-    protected ManageSieveHostSystem createManageSieveHostSystem() {
+    public ManageSieveHostSystem hostSystem() {
         return system;
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
+    @AfterEach
+    void tearDown() throws Exception {
+        hostSystem().afterTest();
     }
 }

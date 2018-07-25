@@ -17,37 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.managesieve.file;
+package org.apache.james.mpt.testsuite;
 
+import java.util.Locale;
+
+import org.apache.james.mpt.HostSystemProvider;
 import org.apache.james.mpt.host.ManageSieveHostSystem;
-import org.apache.james.mpt.testsuite.NoopTest;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.james.mpt.script.SimpleScriptedTestProtocol;
+import org.junit.jupiter.api.Test;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+public interface DeleteScriptContract extends HostSystemProvider {
 
-public class FileNoopTest extends NoopTest {
-
-    private ManageSieveHostSystem system;
-
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new FileModule());
-        system = injector.getInstance(ManageSieveHostSystem.class);
-        system.beforeTest();
-        super.setUp();
-    }
+    String USER = "user";
+    String PASSWORD = "password";
     
-    @Override
-    protected ManageSieveHostSystem createManageSieveHostSystem() {
-        return system;
+    ManageSieveHostSystem hostSystem();
+
+    default SimpleScriptedTestProtocol deleteScriptContractProtocol() throws Exception {
+        return new SimpleScriptedTestProtocol("/org/apache/james/managesieve/scripts/", hostSystem())
+                .withUser(USER, PASSWORD)
+                .withLocale(Locale.US);
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
+    @Test
+    default void deleteScriptShouldWork() throws Exception {
+        deleteScriptContractProtocol()
+            .withLocale(Locale.US)
+            .run("deletescript");
     }
 }

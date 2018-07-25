@@ -32,29 +32,28 @@ import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.cassandra.CassandraUsersRepository;
 import org.apache.james.user.cassandra.CassandraUsersRepositoryModule;
+import org.apache.james.util.Host;
 
 public class CassandraHostSystem extends JamesManageSieveHostSystem {
-    
-    private final String cassandraHost;
-    private final int cassandraPort;
+
+    private final Host cassandraHost;
     private CassandraCluster cassandra;
 
-    public CassandraHostSystem(String cassandraHost, int cassandraPort) {
+    public CassandraHostSystem(Host cassandraHost) {
         this.cassandraHost = cassandraHost;
-        this.cassandraPort = cassandraPort;
     }
-    
+
     @Override
     public void beforeTest() throws Exception {
         CassandraModuleComposite modules = new CassandraModuleComposite(
                 new CassandraSieveRepositoryModule(),
                 new CassandraUsersRepositoryModule());
-        cassandra = CassandraCluster.create(modules, cassandraHost, cassandraPort);
+        cassandra = CassandraCluster.create(modules, cassandraHost);
         super.beforeTest();
     }
 
     @Override
-    protected SieveRepository createSieveRepository() throws Exception {
+    protected SieveRepository createSieveRepository() {
         return new CassandraSieveRepository(
             new CassandraSieveDAO(cassandra.getConf()),
             new CassandraSieveQuotaDAO(cassandra.getConf()),
@@ -68,4 +67,8 @@ public class CassandraHostSystem extends JamesManageSieveHostSystem {
         return cassandraUsersRepository;
     }
 
+    @Override
+    public void afterTest() {
+        cassandra.close();
+    }
 }

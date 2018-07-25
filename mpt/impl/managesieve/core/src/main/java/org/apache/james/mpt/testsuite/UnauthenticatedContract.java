@@ -17,37 +17,29 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mpt.managesieve.file;
+package org.apache.james.mpt.testsuite;
 
-import org.apache.james.mpt.host.ManageSieveHostSystem;
-import org.apache.james.mpt.testsuite.PutScriptTest;
-import org.junit.After;
-import org.junit.Before;
+import java.util.Locale;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import org.apache.james.mpt.HostSystemProvider;
+import org.apache.james.mpt.script.SimpleScriptedTestProtocol;
+import org.junit.jupiter.api.Test;
 
-public class FilePutScriptTest extends PutScriptTest {
+public interface UnauthenticatedContract extends HostSystemProvider {
+    String USER = "user";
+    String PASSWORD = "password";
 
-    private ManageSieveHostSystem system;
-
-    @Override
-    @Before
-    public void setUp() throws Exception {
-        Injector injector = Guice.createInjector(new FileModule());
-        system = injector.getInstance(ManageSieveHostSystem.class);
-        system.beforeTest();
-        super.setUp();
+    default SimpleScriptedTestProtocol unauthenticatedContractProtocol() throws Exception {
+        return new SimpleScriptedTestProtocol("/org/apache/james/managesieve/scripts/", hostSystem())
+                .withUser(USER, PASSWORD)
+                .withLocale(Locale.US);
     }
     
-    @Override
-    protected ManageSieveHostSystem createManageSieveHostSystem() {
-        return system;
+    @Test
+    default void unauthenticatedCommandShouldWork() throws Exception {
+        unauthenticatedContractProtocol()
+            .withLocale(Locale.US)
+            .run("unauthenticate");
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        system.afterTest();
-    }
 }
