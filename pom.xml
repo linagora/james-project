@@ -605,7 +605,6 @@
         <geronimo-activation-spec.version>1.1</geronimo-activation-spec.version>
         <geronimo-javamail.version>1.8.3</geronimo-javamail.version>
         <slf4j.version>1.7.25</slf4j.version>
-        <servlet-api.version>2.4</servlet-api.version>
         <commons-logging.version>1.1.1</commons-logging.version>
 
         <dnsjava.version>2.1.1</dnsjava.version>
@@ -632,7 +631,7 @@
         <karaf.tooling.exam.container.version>2.3.0</karaf.tooling.exam.container.version>
         <pax-logging-api.version>1.6.4</pax-logging-api.version>
         <jackson-data.version>2.6.3</jackson-data.version>
-        <jetty.version>9.4.7.v20170914</jetty.version>
+        <jetty.version>9.4.11.v20180605</jetty.version>
         <cassandra-unit.version>2.1.9.2</cassandra-unit.version>
         <assertj-guava.version>3.1.0</assertj-guava.version>
         <testcontainers-version>1.7.3</testcontainers-version>
@@ -646,6 +645,7 @@
         <jutf7.version>1.0.0</jutf7.version>
         <plugin.mailetdocs.version>0.1</plugin.mailetdocs.version>
         <httpclient-osgi.version>4.5.1</httpclient-osgi.version>
+        <apache.httpcomponents.version>4.5.6</apache.httpcomponents.version>
         <!-- maven-mailetdocs-plugin artifacts -->
         <maven-artifact.version>3.0-alpha-1</maven-artifact.version>
         <maven-plugin-annotations.version>3.4</maven-plugin-annotations.version>
@@ -1699,7 +1699,7 @@
             <dependency>
                 <groupId>com.sparkjava</groupId>
                 <artifactId>spark-core</artifactId>
-                <version>2.6.0</version>
+                <version>2.7.2</version>
             </dependency>
             <dependency>
                 <groupId>com.spotify</groupId>
@@ -1796,10 +1796,6 @@
                         <groupId>log4j</groupId>
                         <artifactId>log4j</artifactId>
                     </exclusion>
-                    <exclusion>
-                        <groupId>javax.servlet</groupId>
-                        <artifactId>servlet-api</artifactId>
-                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -1875,12 +1871,7 @@
             <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
-                <version>3.1.0</version>
-            </dependency>
-            <dependency>
-                <groupId>javax.servlet</groupId>
-                <artifactId>servlet-api</artifactId>
-                <version>${servlet-api.version}</version>
+                <version>4.0.1</version>
             </dependency>
             <dependency>
                 <groupId>jmock</groupId>
@@ -2038,7 +2029,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient-osgi</artifactId>
-                <version>${httpclient-osgi.version}</version>
+                <version>${apache.httpcomponents.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
