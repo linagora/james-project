@@ -18,7 +18,7 @@
  ****************************************************************/
 package org.apache.james.transport.mailets;
 
-import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
@@ -39,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ContactExtractorTest {
@@ -92,8 +93,9 @@ public class ContactExtractorTest {
                 .build();
 
         ObjectMapper objectMapper = mock(ObjectMapper.class);
+        JsonGenerator jsonGenerator = null;
         when(objectMapper.writeValueAsString(any(ContactExtractor.ExtractedContacts.class)))
-            .thenThrow(new JsonGenerationException(""));
+            .thenThrow(new JsonGenerationException("", jsonGenerator));
 
         mailet.init(mailetConfig);
         mailet.objectMapper = objectMapper;
