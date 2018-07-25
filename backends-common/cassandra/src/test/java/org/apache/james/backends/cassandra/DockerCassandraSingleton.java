@@ -19,49 +19,43 @@
 
 package org.apache.james.backends.cassandra;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.util.Host;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-import org.testcontainers.containers.GenericContainer;
 
-public class DockerCassandraRule implements TestRule {
+public class DockerCassandraSingleton {
+    public static DockerCassandra singleton = new DockerCassandra();
 
-    @Override
-    public Statement apply(Statement base, Description description) {
-        return base;
+    private static final int maxItemCount = 1000;
+    private static final AtomicInteger pastCreatedItemCount = new AtomicInteger(0);
+
+    static {
+        singleton.start();
     }
 
-    public void start() {
+    public static Host getManagedHost(CassandraModule module) {
+        int itemCount = module.moduleTables().size() + module.moduleTypes().size();
 
+        if (tooManyCassandraItemsCreated(itemCount)) {
+            reinitItemCount(itemCount);
+            restart();
+        }
+        return singleton.getHost();
     }
 
-    public void stop() {
-
+    private static void reinitItemCount(int itemCount) {
+        pastCreatedItemCount.set(itemCount);
     }
 
-    public Host getHost() {
-        return DockerCassandraSingleton.singleton.getHost();
-    }
-    
-    public String getIp() {
-        return DockerCassandraSingleton.singleton.getIp();
+    private static boolean tooManyCassandraItemsCreated(int itemCount) {
+        return pastCreatedItemCount.addAndGet(itemCount) > maxItemCount;
     }
 
-    public int getBindingPort() {
-        return DockerCassandraSingleton.singleton.getBindingPort();
+    public static void restart() {
+        singleton.stop();
+        singleton.start();
     }
 
-    public GenericContainer<?> getRawContainer() {
-        return DockerCassandraSingleton.singleton.getRawContainer();
-    }
-
-    public void pause() {
-        DockerCassandraSingleton.singleton.pause();
-    }
-
-    public void unpause() {
-        DockerCassandraSingleton.singleton.unpause();
-    }
-
+    // Cleanup will be performed by test container resource reaper
 }

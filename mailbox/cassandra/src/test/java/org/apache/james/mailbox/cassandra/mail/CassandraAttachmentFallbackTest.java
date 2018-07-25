@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.DockerCassandraRule;
+import org.apache.james.backends.cassandra.DockerCassandraSingleton;
 import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
@@ -64,6 +65,7 @@ public class CassandraAttachmentFallbackTest {
 
     @BeforeClass
     public static void setUpClass() {
+        DockerCassandraSingleton.restart();
         CassandraModuleComposite modules = new CassandraModuleComposite(
             new CassandraAttachmentModule(),
             new CassandraBlobModule());

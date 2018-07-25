@@ -38,6 +38,10 @@ public final class CassandraCluster implements AutoCloseable {
     private CassandraTypesProvider typesProvider;
     private Cluster cluster;
 
+    public static CassandraCluster createForManagedSingleton(CassandraModule module) {
+        return create(module, DockerCassandraSingleton.getManagedHost(module));
+    }
+
     public static CassandraCluster create(CassandraModule module, Host host) {
         return new CassandraCluster(module, host);
     }

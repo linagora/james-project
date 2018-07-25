@@ -110,7 +110,7 @@ public class CassandraHostSystem extends JamesImapHostSystem {
     @Override
     public void beforeTest() throws Exception {
         super.beforeTest();
-        cassandra = CassandraCluster.create(mailboxModule, cassandraHost);
+        cassandra = CassandraCluster.createForManagedSingleton(mailboxModule);
         com.datastax.driver.core.Session session = cassandra.getConf();
         CassandraMessageId.Factory messageIdFactory = new CassandraMessageId.Factory();
         CassandraMailboxSessionMapperFactory mapperFactory = TestCassandraMailboxSessionMapperFactory.forTests(
