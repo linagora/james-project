@@ -606,7 +606,7 @@
         <slf4j.version>1.7.25</slf4j.version>
         <commons-logging.version>1.1.1</commons-logging.version>
 
-        <dnsjava.version>2.1.1</dnsjava.version>
+        <dnsjava.version>2.1.8</dnsjava.version>
         <junit.version>4.12</junit.version>
         <junit.jupiter.version>5.0.2</junit.jupiter.version>
         <junit.plateform.version>1.0.2</junit.plateform.version>
@@ -634,7 +634,6 @@
         <assertj-guava.version>3.1.0</assertj-guava.version>
         <testcontainers.version>1.8.1</testcontainers.version>
         <metrics.version>3.2.6</metrics.version>
-        <joda.version>2.9.4</joda.version>
         <assertj.version>3.3.0</assertj.version>
         <es.version>2.2.1</es.version>
         <es-reporter.version>2.2.0</es-reporter.version>
@@ -650,7 +649,8 @@
         <maven-plugin-api.version>3.2.5</maven-plugin-api.version>
         <maven-reporting-impl.version>2.2</maven-reporting-impl.version>
         <maven-reporting-api.version>3.0</maven-reporting-api.version>
-        <qdox.version>1.12.1</qdox.version>
+        <qdox.version>2.0-M9</qdox.version>
+        <ical4j.version>2.0.2</ical4j.version>
         <guavate.version>1.0.0</guavate.version>
         <javax.activation.groupId>javax.activation</javax.activation.groupId>
         <javax.activation.artifactId>activation</javax.activation.artifactId>
@@ -1622,7 +1622,7 @@
             <dependency>
                 <groupId>com.github.dpaukov</groupId>
                 <artifactId>combinatoricslib3</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.fge</groupId>
@@ -1632,7 +1632,7 @@
             <dependency>
                 <groupId>com.github.kongchen</groupId>
                 <artifactId>swagger-maven-plugin</artifactId>
-                <version>3.1.5</version>
+                <version>3.1.7</version>
             </dependency>
             <dependency>
                 <groupId>com.github.spullara.mustache.java</groupId>
@@ -1660,14 +1660,6 @@
                 <version>4.0</version>
             </dependency>
             <dependency>
-                <groupId>com.jason-goodwin</groupId>
-                <artifactId>better-monads</artifactId>
-                <version>0.4.0</version>
-            </dependency>
-            <dependency>
-                <groupId>com.jayway.awaitility</groupId>
-                <artifactId>awaitility</artifactId>
-                <version>1.6.5</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
@@ -1867,11 +1859,6 @@
                 <version>1.1.0</version>
             </dependency>
             <dependency>
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-                <version>${joda.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
@@ -1889,7 +1876,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>2.4.6</version>
+                <version>2.4.8</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.activemq</groupId>
@@ -2210,6 +2197,11 @@
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-guava</artifactId>
                 <version>${assertj-guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>3.1.1</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>

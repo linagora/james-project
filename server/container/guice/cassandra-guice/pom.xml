@@ -237,8 +237,9 @@
             <artifactId>logback-elasticsearch-appender</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jayway.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.nurkiewicz.asyncretry</groupId>
@@ -258,6 +259,10 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
         </dependency>
         <dependency>
             <groupId>org.hdrhistogram</groupId>
