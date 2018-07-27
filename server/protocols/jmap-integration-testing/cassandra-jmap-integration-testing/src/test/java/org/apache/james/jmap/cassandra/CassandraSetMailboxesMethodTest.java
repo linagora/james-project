@@ -57,4 +57,12 @@ public class CassandraSetMailboxesMethodTest extends SetMailboxesMethodTest {
     public void setMailboxesShouldUpdateMailboxWhenOverLimitName() throws Exception {
     }
 
+    @Override
+    @Ignore
+    public void setMailboxesShouldNotUpdateMailboxWhenOverLimitName() {}
+
+    @Override
+    @Ignore
+    public void setMailboxesShouldNotCreateWhenOverLimitName() {}
+
 }

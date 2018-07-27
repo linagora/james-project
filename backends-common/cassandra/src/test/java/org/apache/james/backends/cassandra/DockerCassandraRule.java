@@ -70,10 +70,10 @@ public class DockerCassandraRule implements TestRule {
         deleteTmpsFsCmd = client.removeVolumeCmd(tmpFsName);
         boolean deleteOnExit = false;
         cassandraContainer = new GenericContainer<>(
-            new ImageFromDockerfile("cassandra_2_2_12", deleteOnExit)
+            new ImageFromDockerfile("cassandra_3_11_1", deleteOnExit)
                 .withDockerfileFromBuilder(builder ->
                     builder
-                        .from("cassandra:2.2.12")
+                        .from("cassandra:3.11.1")
                         .env("ENV CASSANDRA_CONFIG", "/etc/cassandra")
                         //avoiding token range computation helps starting faster
                         .run("echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.initial_token=0\\\"\" >> " + CASSANDRA_ENV)
@@ -137,7 +137,7 @@ public class DockerCassandraRule implements TestRule {
             getIp(),
             getBindingPort());
     }
-    
+
     public String getIp() {
         return cassandraContainer.getContainerIpAddress();
     }
