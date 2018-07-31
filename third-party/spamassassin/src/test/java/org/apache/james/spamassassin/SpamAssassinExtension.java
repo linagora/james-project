@@ -37,6 +37,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 
 import com.github.fge.lambdas.Throwing;
+import com.google.common.collect.ImmutableMap;
 
 public class SpamAssassinExtension implements BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
@@ -51,7 +52,9 @@ public class SpamAssassinExtension implements BeforeEachCallback, AfterEachCallb
                 .withFileFromClasspath("run.sh", "docker/spamassassin/run.sh")
                 .withFileFromClasspath("spamd.sh", "docker/spamassassin/spamd.sh")
                 .withFileFromClasspath("rule-update.sh", "docker/spamassassin/rule-update.sh")
-                .withFileFromClasspath("bayes_pg.sql", "docker/spamassassin/bayes_pg.sql"));
+                .withFileFromClasspath("bayes_pg.sql", "docker/spamassassin/bayes_pg.sql"))
+                .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig()
+                    .withTmpFs(ImmutableMap.of("/var/lib/postgresql/data", "rw,noexec,nosuid,size=100m")));
         spamAssassinContainer.waitingFor(new SpamAssassinWaitStrategy(spamAssassinContainer));
     }
 
