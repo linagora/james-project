@@ -37,8 +37,8 @@ import com.google.inject.Singleton;
 @Singleton
 public class ExternalJamesHostSystem extends ExternalHostSystem {
     
-    private static final String ENV_JAMES_ADDRESS = "JAMES_ADDRESS";
-    private static final String ENV_JAMES_IMAP_PORT = "JAMES_IMAP_PORT";
+    public static final String ENV_JAMES_ADDRESS = "JAMES_ADDRESS";
+    public static final String ENV_JAMES_IMAP_PORT = "JAMES_IMAP_PORT";
     private static final ImapFeatures SUPPORTED_FEATURES = ImapFeatures.of(Feature.NAMESPACE_SUPPORT);
     
     private static final String SHABANG = "* OK IMAP4rev1 Server ready";

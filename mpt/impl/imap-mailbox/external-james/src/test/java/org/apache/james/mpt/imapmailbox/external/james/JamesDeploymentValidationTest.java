@@ -19,16 +19,26 @@
 
 package org.apache.james.mpt.imapmailbox.external.james;
 
+import static org.apache.james.mpt.imapmailbox.external.james.host.ExternalJamesHostSystem.ENV_JAMES_ADDRESS;
+import static org.apache.james.mpt.imapmailbox.external.james.host.ExternalJamesHostSystem.ENV_JAMES_IMAP_PORT;
+
 import org.apache.james.mpt.api.ImapHostSystem;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
+import org.junit.BeforeClass;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
-public class JamesDeploymentValidation extends DeploymentValidation {
+public class JamesDeploymentValidationTest extends DeploymentValidation {
 
     private ImapHostSystem system;
+
+    @BeforeClass
+    public static void checks() {
+        Assume.assumeNotNull(System.getenv(ENV_JAMES_ADDRESS), System.getenv(ENV_JAMES_IMAP_PORT));
+    }
 
     @Override
     @Before
