@@ -16,22 +16,11 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.mailbox.store.json.event;
 
-package org.apache.james.mailbox.store.json;
+public class EventNotValidException extends Exception {
 
-import org.apache.james.mailbox.model.TestMessageId;
-import org.apache.james.mailbox.store.TestIdDeserializer;
-import org.apache.james.mailbox.store.event.EventSerializer;
-import org.apache.james.mailbox.store.json.event.EventConverter;
-import org.apache.james.mailbox.store.json.event.MailboxConverter;
-
-public class MessagePackEventSerializerTest extends EventSerializerTest {
-
-    @Override
-    EventSerializer createSerializer() {
-        return new MessagePackEventSerializer(
-            new EventConverter(
-                new MailboxConverter(new TestIdDeserializer())),
-            new TestMessageId.Factory());
+    public EventNotValidException(String message) {
+        super(message);
     }
 }
