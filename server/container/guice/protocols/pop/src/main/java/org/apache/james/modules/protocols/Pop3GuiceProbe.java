@@ -16,31 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.modules.protocols;
 
-package org.apache.james;
+import java.net.InetSocketAddress;
 
-import java.io.IOException;
+import javax.inject.Inject;
 
-import org.junit.ClassRule;
-import org.junit.Rule;
+import org.apache.james.pop3server.netty.POP3ServerFactory;
+import org.apache.james.utils.GuiceProbe;
 
-public class CassandraWithTikaTest extends AbstractJamesServerTest {
 
-    @ClassRule
-    public static final DockerCassandraRule cassandra = new DockerCassandraRule();
-    @ClassRule
-    public static final GuiceTikaRule guiceTikaRule = new GuiceTikaRule();
+public class Pop3GuiceProbe implements GuiceProbe {
 
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
+    private final POP3ServerFactory pop3ServerFactory;
 
-    @Override
-    protected GuiceJamesServer createJamesServer() throws IOException {
-        return cassandraJmap.jmapServer(guiceTikaRule.getModule(), cassandra.getModule());
+    @Inject
+    private Pop3GuiceProbe(POP3ServerFactory pop3ServerFactory) {
+        this.pop3ServerFactory = pop3ServerFactory;
     }
 
-    @Override
-    protected void clean() {
+    public int getPop3Port() {
+        return pop3ServerFactory.getServers().stream()
+                .findFirst()
+                .flatMap(server -> server.getListenAddresses().stream().findFirst())
+                .map(InetSocketAddress::getPort)
+                .orElseThrow(() -> new IllegalStateException("POP3 server not defined"));
     }
-
 }

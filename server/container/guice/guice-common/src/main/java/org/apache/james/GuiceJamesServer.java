@@ -94,4 +94,8 @@ public class GuiceJamesServer {
     public <T extends GuiceProbe> T getProbe(Class<T> probe) {
         return guiceProbeProvider.getProbe(probe);
     }
+
+    public Module getModule() {
+        return module;
+    }
 }

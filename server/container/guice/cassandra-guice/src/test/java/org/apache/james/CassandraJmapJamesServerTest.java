@@ -24,19 +24,17 @@ import java.io.IOException;
 import org.junit.ClassRule;
 import org.junit.Rule;
 
-public class CassandraWithTikaTest extends AbstractJamesServerTest {
+public class CassandraJmapJamesServerTest extends AbstractJmapJamesServerTest {
 
     @ClassRule
-    public static final DockerCassandraRule cassandra = new DockerCassandraRule();
-    @ClassRule
-    public static final GuiceTikaRule guiceTikaRule = new GuiceTikaRule();
-
+    public static DockerCassandraRule cassandra = new DockerCassandraRule();
+    
     @Rule
     public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
 
     @Override
     protected GuiceJamesServer createJamesServer() throws IOException {
-        return cassandraJmap.jmapServer(guiceTikaRule.getModule(), cassandra.getModule());
+        return cassandraJmap.jmapServer(cassandra.getModule());
     }
 
     @Override

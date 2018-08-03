@@ -16,31 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.modules.protocols;
 
-package org.apache.james;
+import java.net.InetSocketAddress;
 
-import java.io.IOException;
+import javax.inject.Inject;
 
-import org.junit.ClassRule;
-import org.junit.Rule;
+import org.apache.james.lmtpserver.netty.LMTPServerFactory;
+import org.apache.james.utils.GuiceProbe;
 
-public class CassandraWithTikaTest extends AbstractJamesServerTest {
 
-    @ClassRule
-    public static final DockerCassandraRule cassandra = new DockerCassandraRule();
-    @ClassRule
-    public static final GuiceTikaRule guiceTikaRule = new GuiceTikaRule();
+public class LmtpGuiceProbe implements GuiceProbe {
 
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
+    private final LMTPServerFactory lmtpServerFactory;
 
-    @Override
-    protected GuiceJamesServer createJamesServer() throws IOException {
-        return cassandraJmap.jmapServer(guiceTikaRule.getModule(), cassandra.getModule());
+    @Inject
+    private LmtpGuiceProbe(LMTPServerFactory lmtpServerFactory) {
+        this.lmtpServerFactory = lmtpServerFactory;
     }
 
-    @Override
-    protected void clean() {
+    public int getLmtpPort() {
+        return lmtpServerFactory.getServers().stream()
+                .findFirst()
+                .flatMap(server -> server.getListenAddresses().stream().findFirst())
+                .map(InetSocketAddress::getPort)
+                .orElseThrow(() -> new IllegalStateException("LMTP server not defined"));
     }
-
 }
