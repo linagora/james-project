@@ -112,8 +112,10 @@ public class SpamAssassinExtension implements BeforeEachCallback, AfterEachCallb
                 .withHostResource(folder.toAbsolutePath().toString())
                 .withRemotePath("/root")
                 .exec();
+
             try (Stream<Path> paths = Files.walk(folder)) {
                 paths
+                    .parallel()
                     .filter(Files::isRegularFile)
                     .map(Path::toFile)
                     .forEach(Throwing.consumer(file -> spamAssassinContainer.execInContainer("sa-learn",
