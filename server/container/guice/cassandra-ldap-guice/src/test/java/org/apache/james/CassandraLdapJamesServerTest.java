@@ -33,9 +33,9 @@ import org.apache.james.utils.SpoolerProbe;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionFactory;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
 
 public class CassandraLdapJamesServerTest extends AbstractJmapJamesServerTest {
     private static final String JAMES_USER = "james-user";
@@ -50,15 +50,16 @@ public class CassandraLdapJamesServerTest extends AbstractJmapJamesServerTest {
         .pollDelay(slowPacedPollInterval)
         .await();
 
-    private LdapGenericContainer ldapContainer = LdapGenericContainer.builder()
+    @ClassRule
+    public static LdapGenericContainer ldapContainer = LdapGenericContainer.builder()
         .domain(DOMAIN)
         .password(ADMIN_PASSWORD)
         .build();
-    private CassandraLdapJmapTestRule cassandraLdapJmap = CassandraLdapJmapTestRule.defaultTestRule();
-    private IMAPClient imapClient = new IMAPClient();
-
+    @ClassRule
+    public static DockerCassandraRule cassandraRule = new DockerCassandraRule();
     @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(ldapContainer).around(cassandraLdapJmap);
+    public CassandraLdapJmapTestRule cassandraLdapJmap = CassandraLdapJmapTestRule.defaultTestRule();
+    private IMAPClient imapClient = new IMAPClient();
 
     @Rule
     public IMAPMessageReader imapMessageReader = new IMAPMessageReader();
@@ -67,16 +68,11 @@ public class CassandraLdapJamesServerTest extends AbstractJmapJamesServerTest {
 
     @Override
     protected GuiceJamesServer createJamesServer() throws IOException {
-        ldapContainer.start();
-        return cassandraLdapJmap.jmapServer(ldapContainer.getLdapHost());
+        return cassandraLdapJmap.jmapServer(ldapContainer.getLdapHost(), cassandraRule.getModule());
     }
 
     @Override
     protected void clean() {
-        if (ldapContainer != null) {
-            ldapContainer.stop();
-        }
-
         try {
             imapClient.disconnect();
         } catch (IOException e) {

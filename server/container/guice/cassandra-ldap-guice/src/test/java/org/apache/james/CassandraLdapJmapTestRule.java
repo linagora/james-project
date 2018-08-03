@@ -37,7 +37,7 @@ public class CassandraLdapJmapTestRule implements TestRule {
 
     public static CassandraLdapJmapTestRule defaultTestRule() {
         return new CassandraLdapJmapTestRule(
-            AggregateGuiceModuleTestRule.of(new EmbeddedElasticSearchRule(), new DockerCassandraRule()));
+            AggregateGuiceModuleTestRule.of(new EmbeddedElasticSearchRule()));
     }
 
     private final TemporaryFolder temporaryFolder;

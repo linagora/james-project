@@ -21,7 +21,7 @@ package org.apache.james.backends.es;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.james.util.docker.SwarmGenericContainer;
+import org.apache.james.util.docker.TestContainerRule;
 import org.awaitility.Awaitility;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -38,13 +38,11 @@ public class ClientProviderImplConnectionTest {
     private static final int ES_APPLICATIVE_PORT = 9300;
 
     @Rule
-    public SwarmGenericContainer es1 = new SwarmGenericContainer(DOCKER_ES_IMAGE)
-        .withAffinityToContainer()
+    public TestContainerRule es1 = new TestContainerRule(DOCKER_ES_IMAGE)
         .withExposedPorts(ES_APPLICATIVE_PORT);
 
     @Rule
-    public SwarmGenericContainer es2 = new SwarmGenericContainer(DOCKER_ES_IMAGE)
-        .withAffinityToContainer()
+    public TestContainerRule es2 = new TestContainerRule(DOCKER_ES_IMAGE)
         .withExposedPorts(ES_APPLICATIVE_PORT);
 
     @Test

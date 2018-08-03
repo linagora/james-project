@@ -21,7 +21,6 @@ package org.apache.james.util.docker;
 
 import java.net.Socket;
 import java.time.Duration;
-import java.util.List;
 
 import javax.net.SocketFactory;
 
@@ -35,20 +34,15 @@ import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
 import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
-import com.github.dockerjava.api.command.InspectContainerResponse;
-import com.google.common.base.Strings;
-
-public class SwarmGenericContainer implements TestRule {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SwarmGenericContainer.class);
-    private static final String DOCKER_CONTAINER = "DOCKER_CONTAINER";
+public class TestContainerRule implements TestRule {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestContainerRule.class);
     private static final String NO_DOCKER_ENVIRONMENT = "Could not find a valid Docker environment.";
     private static final String SKIPPING_TEST_CAUTION = "Skipping all docker tests as no Docker environment was found";
 
     private GenericContainer<?> container;
 
-    public SwarmGenericContainer(String dockerImageName) {
+    public TestContainerRule(String dockerImageName) {
         try {
             this.container = new GenericContainer<>(dockerImageName);
         } catch (IllegalStateException e) {
@@ -56,12 +50,16 @@ public class SwarmGenericContainer implements TestRule {
         }
     }
 
-    public SwarmGenericContainer(ImageFromDockerfile imageFromDockerfile) {
+    public TestContainerRule(ImageFromDockerfile imageFromDockerfile) {
         try {
             this.container = new GenericContainer<>(imageFromDockerfile);
         } catch (IllegalStateException e) {
             logAndCheckSkipTest(e);
         }
+    }
+
+    public TestContainerRule(GenericContainer<?> container) {
+        this.container = container;
     }
     
     private void logAndCheckSkipTest(IllegalStateException e) {
@@ -71,44 +69,27 @@ public class SwarmGenericContainer implements TestRule {
         }
     }
 
-    public SwarmGenericContainer withAffinityToContainer() {
-        String containerEnv = System.getenv(DOCKER_CONTAINER);
-        if (Strings.isNullOrEmpty(containerEnv)) {
-            LOGGER.warn("'DOCKER_CONTAINER' environment variable not found, dockering without affinity");
-            return this;
-        }
-        List<String> envVariables = container.getEnv();
-        envVariables.add("affinity:container==" + container);
-        container.setEnv(envVariables);
-        return this;
-    }
-
-    public SwarmGenericContainer withEnv(String key, String value) {
+    public TestContainerRule withEnv(String key, String value) {
         container.addEnv(key, value);
         return this;
     }
 
-    public SwarmGenericContainer withExposedPorts(Integer... ports) {
+    public TestContainerRule withExposedPorts(Integer... ports) {
         container.withExposedPorts(ports);
         return this;
     }
 
-    public SwarmGenericContainer portBinding(int hostPort, int dockerPort) {
-        container.setPortBindings(ImmutableList.of("0.0.0.0:" + hostPort + ":" + dockerPort));
-        return this;
-    }
-
-    public SwarmGenericContainer waitingFor(WaitStrategy waitStrategy) {
+    public TestContainerRule waitingFor(WaitStrategy waitStrategy) {
         container.waitingFor(waitStrategy);
         return this;
     }
 
-    public SwarmGenericContainer withStartupTimeout(Duration startupTimeout) {
+    public TestContainerRule withStartupTimeout(Duration startupTimeout) {
         container.withStartupTimeout(startupTimeout);
         return this;
     }
 
-    public SwarmGenericContainer withCommands(String... commands) {
+    public TestContainerRule withCommands(String... commands) {
         container.withCommand(commands);
         return this;
     }
@@ -142,10 +123,6 @@ public class SwarmGenericContainer implements TestRule {
         return container.getContainerIpAddress();
     }
 
-    public InspectContainerResponse getContainerInfo() {
-        return container.getContainerInfo();
-    }
-
     public boolean tryConnect(int port) {
         try {
             Socket socket = SocketFactory.getDefault().createSocket(getContainerIp(), port);
@@ -157,8 +134,18 @@ public class SwarmGenericContainer implements TestRule {
     }
 
     @Override
-    public Statement apply(Statement statement, Description description) {
-        return container.apply(statement, description);
+    public Statement apply(Statement base, Description description) {
+        return new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                try {
+                    container.start();
+                    base.evaluate();
+                } finally {
+                    container.stop();
+                }
+            }
+        };
     }
 
 }

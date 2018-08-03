@@ -18,10 +18,11 @@
  ****************************************************************/
 package org.apache.james.user.ldap;
 
-import org.apache.james.util.docker.SwarmGenericContainer;
+import org.apache.james.util.docker.TestContainerRule;
 import org.junit.rules.ExternalResource;
+import org.testcontainers.containers.BindMode;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy;
-import org.testcontainers.images.builder.ImageFromDockerfile;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -58,23 +59,21 @@ public class LdapGenericContainer extends ExternalResource {
             return new LdapGenericContainer(createContainer());
         }
 
-        private SwarmGenericContainer createContainer() {
-            return new SwarmGenericContainer(
-                new ImageFromDockerfile()
-                    .withFileFromClasspath("populate.ldif", "ldif-files/populate.ldif")
-                    .withFileFromClasspath("Dockerfile", "ldif-files/Dockerfile"))
-                .withAffinityToContainer()
-                .withEnv("SLAPD_DOMAIN", domain)
-                .withEnv("SLAPD_PASSWORD", password)
-                .withEnv("SLAPD_CONFIG_PASSWORD", password)
-                .withExposedPorts(LdapGenericContainer.DEFAULT_LDAP_PORT)
-                .waitingFor(new HostPortWaitStrategy());
+        private TestContainerRule createContainer() {
+            return new TestContainerRule(
+                new GenericContainer<>("dinkel/openldap:latest")
+                    .withClasspathResourceMapping("ldif-files/populate.ldif", "/etc/ldap/prepopulate/prepop.ldif", BindMode.READ_ONLY)
+                    .withEnv("SLAPD_DOMAIN", domain)
+                    .withEnv("SLAPD_PASSWORD", password)
+                    .withEnv("SLAPD_CONFIG_PASSWORD", password)
+                    .withExposedPorts(DEFAULT_LDAP_PORT)
+                    .waitingFor(new HostPortWaitStrategy()));
         }
     }
 
-    private final SwarmGenericContainer container;
+    private final TestContainerRule container;
 
-    private LdapGenericContainer(SwarmGenericContainer container) {
+    private LdapGenericContainer(TestContainerRule container) {
         this.container = container;
     }
 
