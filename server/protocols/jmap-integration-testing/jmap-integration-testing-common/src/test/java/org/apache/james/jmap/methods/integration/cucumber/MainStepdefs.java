@@ -27,7 +27,7 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
-import org.apache.james.mailbox.store.probe.ACLProbe;
+import org.apache.james.mailbox.probe.ACLProbe;
 import org.apache.james.modules.ACLProbeImpl;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
@@ -68,9 +68,7 @@ public class MainStepdefs {
     }
 
     public MailboxId getMailboxId(String namespace, String username, String mailbox) {
-        return mailboxProbe
-            .getMailbox(namespace, username, mailbox)
-            .getMailboxId();
+        return mailboxProbe.getMailboxId(namespace, username, mailbox);
     }
     
     public String getMailboxIds(String username, List<String> mailboxes) {
