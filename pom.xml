@@ -594,7 +594,7 @@
         <javax.inject.version>1</javax.inject.version>
         <javax.activation.groupId>javax.activation</javax.activation.groupId>
         <javax.activation.artifactId>activation</javax.activation.artifactId>
-        <jackrabbit.version>2.17.4</jackrabbit.version>
+        <jackrabbit.version>2.17.5</jackrabbit.version>
         <jsieve.version>0.7</jsieve.version>
         <spring.version>3.2.18.RELEASE</spring.version>
         <geronimo-jms-spec.version>1.1.1</geronimo-jms-spec.version>
@@ -631,7 +631,7 @@
         <pax-logging-api.version>1.6.4</pax-logging-api.version>
         <jackson.version>2.9.6</jackson.version>
         <jetty.version>9.4.7.v20170914</jetty.version>
-        <testcontainers.version>1.8.1</testcontainers.version>
+        <testcontainers.version>1.8.3</testcontainers.version>
         <metrics.version>3.2.6</metrics.version>
         <assertj.version>3.3.0</assertj.version>
         <es.version>2.2.1</es.version>
@@ -649,7 +649,6 @@
         <maven-reporting-impl.version>2.2</maven-reporting-impl.version>
         <maven-reporting-api.version>3.0</maven-reporting-api.version>
         <qdox.version>2.0-M9</qdox.version>
-        <ical4j.version>2.0.2</ical4j.version>
         <guavate.version>1.0.0</guavate.version>
         <javax.activation.groupId>javax.activation</javax.activation.groupId>
         <javax.activation.artifactId>activation</javax.activation.artifactId>
@@ -659,7 +658,7 @@
         <xml-apis.version>1.4.01</xml-apis.version>
         <geronimo-activation-spec.version>1.1</geronimo-activation-spec.version>
         <jasypt.version>1.9.2</jasypt.version>
-        <guice.version>4.1.0</guice.version>
+        <guice.version>4.2.0</guice.version>
         <jackrabbit-core.version>2.5.2</jackrabbit-core.version>
         <jackson1.version>1.9.2</jackson1.version>
         <logback.version>1.2.3</logback.version>
@@ -1952,7 +1951,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>2.4.8</version>
+                <version>2.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.activemq</groupId>
@@ -2283,7 +2282,7 @@
             <dependency>
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
-                <version>3.1.1</version>
+                <version>3.1.2</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
@@ -2378,7 +2377,7 @@
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
-                <version>2.20.1</version>
+                <version>2.21.0</version>
             </dependency>
             <dependency>
                 <groupId>org.ops4j.pax.exam</groupId>
