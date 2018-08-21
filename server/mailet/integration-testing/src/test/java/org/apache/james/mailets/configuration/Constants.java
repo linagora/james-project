@@ -42,8 +42,6 @@ public class Constants {
 
     public static final String DEFAULT_DOMAIN = "james.org";
     public static final String LOCALHOST_IP = "127.0.0.1";
-    public static final int IMAP_PORT = 1143;
-    public static final int SMTP_PORT = 1025;
     public static final String PASSWORD = "secret";
     public static final String FROM = "user@" + DEFAULT_DOMAIN;
     public static final String RECIPIENT = "user2@" + DEFAULT_DOMAIN;

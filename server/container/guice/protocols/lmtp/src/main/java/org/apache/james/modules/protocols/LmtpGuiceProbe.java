@@ -16,39 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap;
+package org.apache.james.modules.protocols;
 
-import java.util.concurrent.ExecutionException;
+import java.net.InetSocketAddress;
 
-import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.metrics.api.NoopMetricFactory;
-import org.apache.james.user.memory.MemoryUsersRepository;
-import org.apache.james.util.concurrency.ConcurrentTestRunner;
-import org.junit.Before;
-import org.junit.Test;
+import javax.inject.Inject;
 
-public class UserProvisioningFilterThreadTest {
+import org.apache.james.lmtpserver.netty.LMTPServerFactory;
+import org.apache.james.utils.GuiceProbe;
 
-    private UserProvisioningFilter sut;
-    private MemoryUsersRepository usersRepository;
-    private MailboxSession session;
 
-    @Before
-    public void before() {
-        usersRepository = MemoryUsersRepository.withoutVirtualHosting();
-        session = new MockMailboxSession("username");
-        sut = new UserProvisioningFilter(usersRepository, new NoopMetricFactory());
+public class LmtpGuiceProbe implements GuiceProbe {
+
+    private final LMTPServerFactory lmtpServerFactory;
+
+    @Inject
+    private LmtpGuiceProbe(LMTPServerFactory lmtpServerFactory) {
+        this.lmtpServerFactory = lmtpServerFactory;
     }
 
-    @Test
-    public void testConcurrentAccessToFilterShouldNotThrow() throws ExecutionException, InterruptedException {
-        ConcurrentTestRunner
-            .builder()
-            .threadCount(2)
-            .build((threadNumber, step) -> sut.createAccountIfNeeded(session))
-            .run()
-            .assertNoException();
+    public int getLmtpPort() {
+        return lmtpServerFactory.getServers().stream()
+                .findFirst()
+                .flatMap(server -> server.getListenAddresses().stream().findFirst())
+                .map(InetSocketAddress::getPort)
+                .orElseThrow(() -> new IllegalStateException("LMTP server not defined"));
     }
 }
-

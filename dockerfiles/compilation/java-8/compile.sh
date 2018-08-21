@@ -50,9 +50,9 @@ git checkout $SHA1
 # Compilation
 
 if [ "$SKIPTESTS" = "skipTests" ]; then
-   mvn package -DskipTests ${MVN_ADDITIONAL_ARG_LINE}
+   mvn package -DskipTests -T1C ${MVN_ADDITIONAL_ARG_LINE}
 else
-   mvn package ${MVN_ADDITIONAL_ARG_LINE}
+   mvn package -T1C ${MVN_ADDITIONAL_ARG_LINE}
 fi
 
 # Retrieve result
