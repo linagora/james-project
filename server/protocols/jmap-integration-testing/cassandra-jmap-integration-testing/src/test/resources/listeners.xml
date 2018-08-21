@@ -50,4 +50,7 @@
       <name>second</name>
     </configuration>
   </listener>
+  <listener>
+    <class>org.apache.james.quota.search.elasticsearch.events.ElasticSearchQuotaMailboxListener</class>
+  </listener>
 </listeners>

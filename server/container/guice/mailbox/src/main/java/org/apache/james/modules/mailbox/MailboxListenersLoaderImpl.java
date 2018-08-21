@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.modules.mailbox;
 
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
@@ -25,6 +26,7 @@ import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.event.MailboxListenerRegistry;
+import org.apache.james.util.OptionalUtils;
 import org.apache.james.utils.ExtendedClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +41,17 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
     private final MailboxListenerRegistry registry;
     private final ExtendedClassLoader classLoader;
     private final Set<MailboxListener> guiceDefinedListeners;
+    private final Set<MailboxListenerConfigurationOverride> configurationOverrides;
 
     @Inject
     public MailboxListenersLoaderImpl(MailboxListenerFactory mailboxListenerFactory, MailboxListenerRegistry registry,
-                                  ExtendedClassLoader classLoader, Set<MailboxListener> guiceDefinedListeners) {
+                                      ExtendedClassLoader classLoader, Set<MailboxListener> guiceDefinedListeners,
+                                      Set<MailboxListenerConfigurationOverride> configurationOverrides) {
         this.mailboxListenerFactory = mailboxListenerFactory;
         this.registry = registry;
         this.classLoader = classLoader;
         this.guiceDefinedListeners = guiceDefinedListeners;
+        this.configurationOverrides = configurationOverrides;
     }
 
     @Override
@@ -78,7 +83,7 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
         try {
             LOGGER.info("Loading user registered mailbox listener {}", listenerClass);
             return mailboxListenerFactory.newInstance()
-                .withConfiguration(configuration.getConfiguration())
+                .withConfiguration(getConfiguration(configuration))
                 .withExecutionMode(configuration.isAsync().map(this::getExecutionMode))
                 .clazz(classLoader.locateClass(listenerClass))
                 .build();
@@ -86,6 +91,15 @@ public class MailboxListenersLoaderImpl implements Configurable, MailboxListener
             LOGGER.error("Error while loading user registered global listener {}", listenerClass, e);
             throw new RuntimeException(e);
         }
+    }
+
+    public Optional<HierarchicalConfiguration> getConfiguration(ListenerConfiguration configuration) {
+        return OptionalUtils.or(
+            configurationOverrides.stream()
+                .filter(override -> override.getClazz().getName().equals(configuration.getClazz()))
+                .findAny()
+                .map(MailboxListenerConfigurationOverride::getNewConfiguration),
+            configuration.getConfiguration());
     }
 
     private MailboxListener.ExecutionMode getExecutionMode(boolean isAsync) {

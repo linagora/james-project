@@ -28,4 +28,7 @@
   <listener>
     <class>org.apache.james.mailbox.cassandra.MailboxOperationLoggingListener</class>
   </listener>
+  <listener>
+    <class>org.apache.james.quota.search.elasticsearch.events.ElasticSearchQuotaMailboxListener</class>
+  </listener>
 </listeners>

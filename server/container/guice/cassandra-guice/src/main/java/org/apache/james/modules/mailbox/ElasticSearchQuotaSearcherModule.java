@@ -24,25 +24,19 @@ import java.util.concurrent.ExecutorService;
 import javax.inject.Named;
 
 import org.apache.james.backends.es.ElasticSearchIndexer;
-import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.quota.search.QuotaSearcher;
 import org.apache.james.quota.search.elasticsearch.ElasticSearchQuotaSearcher;
 import org.apache.james.quota.search.elasticsearch.QuotaRatioElasticSearchConstants;
-import org.apache.james.quota.search.elasticsearch.events.ElasticSearchQuotaMailboxListener;
-import org.apache.james.quota.search.elasticsearch.json.QuotaRatioToElasticSearchJson;
 import org.elasticsearch.client.Client;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.multibindings.Multibinder;
 
 public class ElasticSearchQuotaSearcherModule extends AbstractModule {
     @Override
     protected void configure() {
-        Multibinder.newSetBinder(binder(), MailboxListener.class)
-            .addBinding()
-            .to(ElasticSearchQuotaMailboxListener.class);
+
     }
 
     @Provides
@@ -54,14 +48,13 @@ public class ElasticSearchQuotaSearcherModule extends AbstractModule {
 
     @Provides
     @Singleton
-    public ElasticSearchQuotaMailboxListener provideListener(Client client,
-                                                             @Named("AsyncExecutor") ExecutorService executor,
-                                                             ElasticSearchConfiguration configuration) {
-        return new ElasticSearchQuotaMailboxListener(
-            new ElasticSearchIndexer(client,
-                executor,
-                configuration.getWriteAliasMailboxName(),
-                QuotaRatioElasticSearchConstants.QUOTA_RATIO_TYPE),
-                new QuotaRatioToElasticSearchJson());
+    @Named(QuotaRatioElasticSearchConstants.InjectionNames.QUOTA_RATIO)
+    public ElasticSearchIndexer provideIndexer(Client client,
+                                               @Named("AsyncExecutor") ExecutorService executor,
+                                               ElasticSearchConfiguration configuration) {
+        return new ElasticSearchIndexer(client,
+            executor,
+            configuration.getWriteAliasMailboxName(),
+            QuotaRatioElasticSearchConstants.QUOTA_RATIO_TYPE);
     }
 }

@@ -18,20 +18,16 @@
  ****************************************************************/
 package org.apache.james.jmap.methods.integration;
 
-import java.util.Optional;
-
-import javax.inject.Singleton;
-
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.james.mailbox.spamassassin.SpamAssassinConfiguration;
+import org.apache.james.mailbox.spamassassin.SpamAssassinListener;
 import org.apache.james.mailetcontainer.impl.MailetConfigImpl;
+import org.apache.james.modules.mailbox.MailboxListenerConfigurationOverride;
 import org.apache.james.spamassassin.SpamAssassinExtension;
-import org.apache.james.spamassassin.SpamAssassinExtension.SpamAssassin;
 import org.apache.james.util.Host;
 import org.apache.james.utils.MailetConfigurationOverride;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
 
 public class SpamAssassinModule extends AbstractModule {
@@ -50,18 +46,16 @@ public class SpamAssassinModule extends AbstractModule {
                 new MailetConfigurationOverride(
                     org.apache.james.transport.mailets.SpamAssassin.class,
                     spamAssassinMailetConfig()));
-    }
-
-    @Provides
-    @Singleton
-    private SpamAssassinConfiguration getSpamAssassinConfiguration() {
-        SpamAssassin spamAssassin = spamAssassinExtension.getSpamAssassin();
-        return new SpamAssassinConfiguration(Optional.of(Host.from(spamAssassin.getIp(), spamAssassin.getBindingPort())));
+        Multibinder.newSetBinder(binder(), MailboxListenerConfigurationOverride.class)
+            .addBinding()
+            .toInstance(new MailboxListenerConfigurationOverride(
+                SpamAssassinListener.class,
+                SpamAssassinConfiguration.generateXMLForHost(spamAssassinExtension.getSpamAssassin().getHost())));
     }
 
     private MailetConfigImpl spamAssassinMailetConfig() {
         BaseConfiguration baseConfiguration = new BaseConfiguration();
-        Host host = Host.from(spamAssassinExtension.getSpamAssassin().getIp(), spamAssassinExtension.getSpamAssassin().getBindingPort());
+        Host host = spamAssassinExtension.getSpamAssassin().getHost();
         baseConfiguration.addProperty(org.apache.james.transport.mailets.SpamAssassin.SPAMD_HOST, host.getHostName());
         baseConfiguration.addProperty(org.apache.james.transport.mailets.SpamAssassin.SPAMD_PORT, host.getPort());
 

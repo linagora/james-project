@@ -38,13 +38,21 @@ public class ElasticSearchQuotaMailboxListener implements MailboxListener {
 
     private final ElasticSearchIndexer indexer;
     private final QuotaRatioToElasticSearchJson quotaRatioToElasticSearchJson;
+    private final ExecutionMode executionMode;
 
     @Inject
     public ElasticSearchQuotaMailboxListener(
             @Named(QuotaRatioElasticSearchConstants.InjectionNames.QUOTA_RATIO) ElasticSearchIndexer indexer,
-            QuotaRatioToElasticSearchJson quotaRatioToElasticSearchJson) {
+            QuotaRatioToElasticSearchJson quotaRatioToElasticSearchJson,
+            ExecutionMode executionMode) {
         this.indexer = indexer;
         this.quotaRatioToElasticSearchJson = quotaRatioToElasticSearchJson;
+        this.executionMode = executionMode;
+    }
+
+    @Override
+    public ExecutionMode getExecutionMode() {
+        return executionMode;
     }
 
     @Override

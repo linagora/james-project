@@ -73,12 +73,16 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
+            <artifactId>apache-james-mailbox-quota-search-elasticsearch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
             <artifactId>apache-james-mailbox-scanning-search</artifactId>
             <type>test-jar</type>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>apache-james-mailbox-quota-search-elasticsearch</artifactId>
+            <artifactId>apache-james-mailbox-spamassassin</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -147,10 +151,6 @@
         <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>james-server-guice-lmtp</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-guice-mailbox-plugin-spamassassin</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>

@@ -22,11 +22,35 @@ package org.apache.james.mailbox.spamassassin;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.util.Host;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
 public class SpamAssassinConfiguration {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SpamAssassinConfiguration.class);
+    public static final String HOST_KEY = "host";
+
+    public static SpamAssassinConfiguration fromXML(HierarchicalConfiguration configuration) {
+        Optional<Host> host = Optional.ofNullable(configuration.getString(HOST_KEY, null))
+            .map(Host::parseConfString);
+
+        if (!host.isPresent()) {
+            LOGGER.warn("Could not find 'host' property. Disabling this service.");
+        }
+
+        return new SpamAssassinConfiguration(
+            host);
+    }
+
+    public static HierarchicalConfiguration generateXMLForHost(Host host) {
+        DefaultConfigurationBuilder configurationBuilder = new DefaultConfigurationBuilder();
+        configurationBuilder.addProperty(HOST_KEY, host.asString());
+        return configurationBuilder;
+    }
 
     private final Optional<Host> host;
 

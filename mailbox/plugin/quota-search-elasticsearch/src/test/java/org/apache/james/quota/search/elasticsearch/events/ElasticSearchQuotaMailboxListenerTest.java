@@ -31,6 +31,7 @@ import org.apache.james.backends.es.ElasticSearchIndexer;
 import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.backends.es.utils.TestingClientProvider;
 import org.apache.james.mailbox.Event;
+import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxListener.QuotaUsageUpdatedEvent;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.quota.QuotaFixture.Counts;
@@ -71,7 +72,8 @@ public class ElasticSearchQuotaMailboxListenerTest {
                 QuotaRatioElasticSearchConstants.DEFAULT_QUOTA_RATIO_WRITE_ALIAS,
                 QuotaRatioElasticSearchConstants.QUOTA_RATIO_TYPE,
                 BATCH_SIZE),
-            new QuotaRatioToElasticSearchJson());
+            new QuotaRatioToElasticSearchJson(),
+            MailboxListener.ExecutionMode.SYNCHRONOUS);
     }
 
     @Test

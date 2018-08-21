@@ -54,7 +54,6 @@ import org.apache.james.modules.server.MailboxRoutesModule;
 import org.apache.james.modules.server.SieveQuotaRoutesModule;
 import org.apache.james.modules.server.SwaggerRoutesModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 import org.apache.james.server.core.configuration.Configuration;
 
 import com.google.inject.Module;
@@ -105,8 +104,7 @@ public class CassandraJamesServerMain {
         new ElasticSearchMailboxModule(),
         new ElasticSearchMetricReporterModule(),
         new MailboxModule(),
-        new TikaMailboxModule(),
-        new SpamAssassinListenerModule());
+        new TikaMailboxModule());
 
     public static Module ALL_BUT_JMX_CASSANDRA_MODULE = Modules.combine(
         CASSANDRA_SERVER_CORE_MODULE,

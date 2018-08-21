@@ -44,7 +44,6 @@ import org.apache.james.modules.server.RawPostDequeueDecoratorModule;
 import org.apache.james.modules.server.SieveQuotaRoutesModule;
 import org.apache.james.modules.server.SwaggerRoutesModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 import org.apache.james.server.core.configuration.Configuration;
 
 import com.google.inject.Module;
@@ -68,8 +67,7 @@ public class MemoryJamesServerMain {
         new ManageSieveServerModule(),
         new POP3ServerModule(),
         new ProtocolHandlerModule(),
-        new SMTPServerModule(),
-        new SpamAssassinListenerModule());
+        new SMTPServerModule());
 
     public static final Module JMAP = Modules.combine(
         new MemoryDataJmapModule(),

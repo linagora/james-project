@@ -23,6 +23,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.Role;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -34,6 +35,7 @@ import org.apache.james.mailbox.store.event.MessageMoveEvent;
 import org.apache.james.mailbox.store.event.SpamEventListener;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Message;
+import org.apache.james.metrics.api.MetricFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +53,13 @@ public class SpamAssassinListener implements SpamEventListener {
     private final ExecutionMode executionMode;
 
     @Inject
-    public SpamAssassinListener(SpamAssassin spamAssassin, MailboxSessionMapperFactory mapperFactory, ExecutionMode executionMode) {
+    public SpamAssassinListener(MailboxSessionMapperFactory mapperFactory, ExecutionMode executionMode,
+                                MetricFactory metricFactory, HierarchicalConfiguration configuration) {
+        this(new SpamAssassin(metricFactory, SpamAssassinConfiguration.fromXML(configuration)), mapperFactory, executionMode);
+    }
+
+    @VisibleForTesting
+    SpamAssassinListener(SpamAssassin spamAssassin, MailboxSessionMapperFactory mapperFactory, ExecutionMode executionMode) {
         this.spamAssassin = spamAssassin;
         this.mapperFactory = mapperFactory;
         this.executionMode = executionMode;

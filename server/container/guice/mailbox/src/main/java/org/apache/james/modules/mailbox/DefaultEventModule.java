@@ -66,6 +66,7 @@ public class DefaultEventModule extends AbstractModule {
         bind(MailboxListenerRegistry.class).in(Scopes.SINGLETON);
         bind(MailboxListenersLoader.class).to(MailboxListenersLoaderImpl.class);
         Multibinder.newSetBinder(binder(), MailboxListener.class);
+        Multibinder.newSetBinder(binder(), MailboxListenerConfigurationOverride.class);
     }
 
     @Provides

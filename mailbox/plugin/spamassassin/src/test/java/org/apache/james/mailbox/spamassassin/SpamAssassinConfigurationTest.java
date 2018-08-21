@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.util.Host;
 import org.junit.Test;
 
@@ -46,5 +48,23 @@ public class SpamAssassinConfigurationTest {
         int port = 1;
         SpamAssassinConfiguration configuration = new SpamAssassinConfiguration(Optional.of(Host.from("hostname", port)));
         assertThat(configuration.isEnable()).isTrue();
+    }
+
+    @Test
+    public void isEnableShouldReturnFalseWhenNoConfiguration() {
+        SpamAssassinConfiguration configuration = SpamAssassinConfiguration.fromXML(new DefaultConfigurationBuilder());
+
+        assertThat(configuration.isEnable()).isFalse();
+    }
+
+    @Test
+    public void hostShouldReturnCustomWhenConfigurationIsProvided() {
+        String ip = "10.69.1.123";
+        int port = 1783;
+        Host host = Host.from(ip, port);
+        HierarchicalConfiguration xmlCongiguration = SpamAssassinConfiguration.generateXMLForHost(host);
+
+        SpamAssassinConfiguration configuration = SpamAssassinConfiguration.fromXML(xmlCongiguration);
+        assertThat(configuration.getHost().get()).isEqualTo(host);
     }
 }

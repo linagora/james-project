@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.stream.Stream;
 
+import org.apache.james.util.Host;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -100,6 +101,10 @@ public class SpamAssassinExtension implements BeforeEachCallback, AfterEachCallb
     
         public int getBindingPort() {
             return bindingPort;
+        }
+
+        public Host getHost() {
+            return Host.from(ip, bindingPort);
         }
 
         public void train(String user) throws IOException, URISyntaxException {

@@ -53,7 +53,7 @@ public class MailboxListenersLoaderImplTest {
 
         registry = new MailboxListenerRegistry();
         testee = new MailboxListenersLoaderImpl(new MailboxListenerFactory(Guice.createInjector()), registry,
-            new ExtendedClassLoader(fileSystem), ImmutableSet.of());
+            new ExtendedClassLoader(fileSystem), ImmutableSet.of(), ImmutableSet.of());
     }
 
     @Test

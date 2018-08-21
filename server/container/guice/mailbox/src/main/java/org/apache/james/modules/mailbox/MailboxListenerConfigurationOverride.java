@@ -17,32 +17,25 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.spamassassin;
+package org.apache.james.modules.mailbox;
 
-import java.util.Optional;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.james.mailbox.MailboxListener;
 
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.james.mailbox.spamassassin.SpamAssassinConfiguration;
-import org.apache.james.util.Host;
+public class MailboxListenerConfigurationOverride {
+    private final Class<? extends MailboxListener> clazz;
+    private final HierarchicalConfiguration newConfiguration;
 
-public class SpamAssassinConfigurationLoader {
-
-    private static final String SPAMASSASSIN_HOST = "spamassassin.host";
-    private static final String SPAMASSASSIN_PORT = "spamassassin.port";
-    public static final String DEFAULT_HOST = "127.0.0.1";
-    public static final int DEFAULT_PORT = 783;
-
-    public static SpamAssassinConfiguration disable() {
-        return new SpamAssassinConfiguration(Optional.empty());
+    public MailboxListenerConfigurationOverride(Class<? extends MailboxListener> clazz, HierarchicalConfiguration newConfiguration) {
+        this.clazz = clazz;
+        this.newConfiguration = newConfiguration;
     }
 
-    public static SpamAssassinConfiguration fromProperties(PropertiesConfiguration configuration) {
-        Host host = getHost(configuration);
-        return new SpamAssassinConfiguration(Optional.of(host));
+    public Class<? extends MailboxListener> getClazz() {
+        return clazz;
     }
 
-    private static Host getHost(PropertiesConfiguration propertiesReader) {
-        return Host.from(propertiesReader.getString(SPAMASSASSIN_HOST, DEFAULT_HOST), 
-                propertiesReader.getInteger(SPAMASSASSIN_PORT, DEFAULT_PORT));
+    public HierarchicalConfiguration getNewConfiguration() {
+        return newConfiguration;
     }
 }

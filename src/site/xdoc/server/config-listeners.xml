@@ -53,13 +53,17 @@
 
                  <li><code>org.apache.james.mailbox.spamassassin.SpamAssassinListener</code>:
                      Provides per user real-time HAM/SPAM feedback to a SpamAssassin server depending on user actions.
-                     Please note that a <code>spamassassin.properties</code> file is needed.<br/>
+                     You need to specify the host as part of the mailbox listener configuration.<br/>
                      This mailet is asynchronous by default, but this behaviour can be overridden by the <b>async</b>
                      configuration property.</li>
                  <li><code>org.apache.james.mailbox.cassandra.MailboxOperationLoggingListener</code>:
                      For Cassandra guice wiring. Provides more insights on mailbox operations</li>
                  <li><code>org.apache.james.mailbox.quota.mailing.listeners.QuotaThresholdCrossingListener</code>:
                      For Cassandra guice wiring. Sends emails to users exceeding 80% and 99% of their quota to warn them</li>
+                 <li><code>org.apache.james.quota.search.elasticsearch.events.ElasticSearchQuotaMailboxListener</code>:
+                     For Cassandra guice wiring. Index quota to allow to search user in a given ratio occupation range.<br/>
+                     This mailet is asynchronous by default, but this behaviour can be overridden by the <b>async</b>
+                     configuration property.</li>
             </ul>
         </section>
 
