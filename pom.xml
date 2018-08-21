@@ -874,7 +874,12 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-mailbox-tool</artifactId>
+                <artifactId>apache-james-mailbox-tools-copier</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>apache-james-mailbox-tools-indexer</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -1335,6 +1340,11 @@
             <dependency>
                 <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-mailbox-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>james-server-mailbox-jmx</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

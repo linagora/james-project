@@ -93,11 +93,11 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
+import org.apache.james.mailbox.model.SerializableQuotaValue;
+import org.apache.james.mailbox.probe.ACLProbe;
+import org.apache.james.mailbox.probe.MailboxProbe;
+import org.apache.james.mailbox.probe.QuotaProbe;
 import org.apache.james.mailbox.store.event.EventFactory;
-import org.apache.james.mailbox.store.mail.model.SerializableQuotaValue;
-import org.apache.james.mailbox.store.probe.ACLProbe;
-import org.apache.james.mailbox.store.probe.MailboxProbe;
-import org.apache.james.mailbox.store.probe.QuotaProbe;
 import org.apache.james.modules.ACLProbeImpl;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.modules.QuotaProbesImpl;
@@ -3335,8 +3335,7 @@ public abstract class SetMessagesMethodTest {
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(StandardCharsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any");
-        String mailboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any")
-            .getMailboxId()
+        String mailboxId = mailboxProbe.getMailboxId(MailboxConstants.USER_NAMESPACE, USERNAME, "any")
             .serialize();
         mailboxProbe.deleteMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any");
 
