@@ -35,11 +35,11 @@
     <dependencies>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>apache-james-mailbox-api</artifactId>
+            <artifactId>apache-james-backends-jpa</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>apache-james-mailbox-tool</artifactId>
+            <artifactId>apache-james-mailbox-api</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -70,6 +70,10 @@
         <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>james-server-mailbox-adapter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
+            <artifactId>james-server-mailbox-jmx</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
