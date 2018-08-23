@@ -17,37 +17,50 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.dlp.eventsourcing.cassandra;
+package org.apache.james.jmap.api.filtering;
 
-import org.apache.james.dlp.eventsourcing.events.ConfigurationItemsRemoved;
-import org.apache.james.eventsourcing.Event;
-import org.apache.james.eventsourcing.eventstore.cassandra.dto.EventDTO;
-import org.apache.james.eventsourcing.eventstore.cassandra.dto.EventDTOModule;
+import java.util.Objects;
 
-import com.google.common.base.Preconditions;
+import com.google.common.base.MoreObjects;
 
-public class DLPConfigurationItemsRemovedDTOModule implements EventDTOModule {
-    private static final String DLP_CONFIGURATION_CLEAR = "dlp-configuration-clear";
+public class Rule {
 
-    @Override
-    public String getType() {
-        return DLP_CONFIGURATION_CLEAR;
+    private final String id;
+
+    public static Rule of(String id) {
+        return new Rule(id);
+    }
+
+    public Rule(String id) {
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
     }
 
     @Override
-    public Class<? extends EventDTO> getDTOClass() {
-        return DLPConfigurationItemsRemovedDTO.class;
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Rule rule = (Rule) o;
+        return Objects.equals(id, rule.id);
     }
 
     @Override
-    public Class<? extends Event> getEventClass() {
-        return ConfigurationItemsRemoved.class;
+    public int hashCode() {
+        return Objects.hash(id);
     }
 
     @Override
-    public EventDTO toDTO(Event event) {
-        Preconditions.checkArgument(event instanceof ConfigurationItemsRemoved);
-        return DLPConfigurationItemsRemovedDTO
-            .from((ConfigurationItemsRemoved) event, DLP_CONFIGURATION_CLEAR);
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("id", id)
+            .toString();
     }
+
 }

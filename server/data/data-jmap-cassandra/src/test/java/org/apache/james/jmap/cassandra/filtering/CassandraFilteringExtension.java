@@ -17,40 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.eventsourcing.eventstore.cassandra.dto;
+package org.apache.james.jmap.cassandra.filtering;
 
-import org.apache.james.eventsourcing.Event;
-import org.apache.james.eventsourcing.TestEvent;
-import org.testcontainers.shaded.com.google.common.base.Preconditions;
+import org.apache.james.eventsourcing.eventstore.cassandra.CassandraGenericEventStoreExtension;
 
-public class TestEventDTOModule implements EventDTOModule {
+import com.google.common.collect.ImmutableSet;
 
-    public static final String TEST_TYPE = "TestType";
-
-    @Override
-    public String getType() {
-        return TEST_TYPE;
-    }
-
-    @Override
-    public Class<? extends EventDTO> getDTOClass() {
-        return TestEventDTO.class;
-    }
-
-    @Override
-    public Class<? extends Event> getEventClass() {
-        return TestEvent.class;
-    }
-
-    @Override
-    public EventDTO toDTO(Event event) {
-        Preconditions.checkArgument(event instanceof TestEvent);
-
-        TestEvent testEvent = (TestEvent) event;
-        return new TestEventDTO(
-            TEST_TYPE,
-            testEvent.getData(),
-            testEvent.eventId().serialize(),
-            testEvent.getAggregateId().getId());
+public class CassandraFilteringExtension extends CassandraGenericEventStoreExtension {
+    public CassandraFilteringExtension() {
+        super(ImmutableSet.of(FilteringRuleSetDefineDTOModules.FILTERING_RULE_SET_DEFINED));
     }
 }

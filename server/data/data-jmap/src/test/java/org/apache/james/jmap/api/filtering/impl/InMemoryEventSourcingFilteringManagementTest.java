@@ -17,15 +17,13 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.quota.cassandra.listeners;
+package org.apache.james.jmap.api.filtering.impl;
 
-import org.apache.james.eventsourcing.eventstore.cassandra.CassandraGenericEventStoreExtension;
-import org.apache.james.mailbox.quota.cassandra.dto.QuotaEventDTOModules;
+import org.apache.james.eventsourcing.eventstore.memory.InMemoryEventStoreExtension;
+import org.apache.james.jmap.api.filtering.FilteringManagementContract;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.google.common.collect.ImmutableSet;
+@ExtendWith(InMemoryEventStoreExtension.class)
+public class InMemoryEventSourcingFilteringManagementTest implements FilteringManagementContract {
 
-public class CassandraEventStoreExtension extends CassandraGenericEventStoreExtension {
-    public CassandraEventStoreExtension() {
-        super(ImmutableSet.of(QuotaEventDTOModules.QUOTA_THRESHOLD_CHANGE));
-    }
 }

@@ -17,15 +17,27 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.quota.cassandra.listeners;
+package org.apache.james.dlp.eventsourcing.cassandra;
 
-import org.apache.james.eventsourcing.eventstore.cassandra.CassandraGenericEventStoreExtension;
-import org.apache.james.mailbox.quota.cassandra.dto.QuotaEventDTOModules;
+import org.apache.james.dlp.eventsourcing.events.ConfigurationItemsAdded;
+import org.apache.james.dlp.eventsourcing.events.ConfigurationItemsRemoved;
+import org.apache.james.eventsourcing.eventstore.cassandra.dto.EventDTOModule;
 
-import com.google.common.collect.ImmutableSet;
+public interface DLPConfigurationModules {
 
-public class CassandraEventStoreExtension extends CassandraGenericEventStoreExtension {
-    public CassandraEventStoreExtension() {
-        super(ImmutableSet.of(QuotaEventDTOModules.QUOTA_THRESHOLD_CHANGE));
-    }
+    EventDTOModule<ConfigurationItemsAdded, DLPConfigurationItemAddedDTO> DLP_CONFIGURATION_STORE =
+        EventDTOModule
+            .forEvent(ConfigurationItemsAdded.class)
+            .convertToDTO(DLPConfigurationItemAddedDTO.class)
+            .convertWith(DLPConfigurationItemAddedDTO::from)
+            .typeName("dlp-configuration-store");
+
+    EventDTOModule<ConfigurationItemsRemoved, DLPConfigurationItemsRemovedDTO> DLP_CONFIGURATION_CLEAR =
+        EventDTOModule
+            .forEvent(ConfigurationItemsRemoved.class)
+            .convertToDTO(DLPConfigurationItemsRemovedDTO.class)
+            .convertWith(DLPConfigurationItemsRemovedDTO::from)
+            .typeName("dlp-configuration-clear");
+
+
 }

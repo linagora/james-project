@@ -17,15 +17,36 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.quota.cassandra.listeners;
+package org.apache.james.jmap.api.filtering.impl;
 
-import org.apache.james.eventsourcing.eventstore.cassandra.CassandraGenericEventStoreExtension;
-import org.apache.james.mailbox.quota.cassandra.dto.QuotaEventDTOModules;
+import java.util.List;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.james.eventsourcing.CommandHandler;
+import org.apache.james.eventsourcing.Event;
+import org.apache.james.eventsourcing.eventstore.EventStore;
 
-public class CassandraEventStoreExtension extends CassandraGenericEventStoreExtension {
-    public CassandraEventStoreExtension() {
-        super(ImmutableSet.of(QuotaEventDTOModules.QUOTA_THRESHOLD_CHANGE));
+public class DefineRulesCommandHandler implements CommandHandler<DefineRulesCommand> {
+
+    private final EventStore eventStore;
+
+    public DefineRulesCommandHandler(EventStore eventStore) {
+        this.eventStore = eventStore;
     }
+
+    @Override
+    public Class<DefineRulesCommand> handledClass() {
+        return DefineRulesCommand.class;
+    }
+
+    @Override
+    public List<? extends Event> handle(DefineRulesCommand storeCommand) {
+        FilteringAggregateId aggregateId = new FilteringAggregateId(storeCommand.getUser());
+
+        return FilteringAggregate
+            .load(
+                aggregateId,
+                eventStore.getEventsOfAggregate(aggregateId))
+            .defineRules(storeCommand.getRules());
+    }
+
 }
