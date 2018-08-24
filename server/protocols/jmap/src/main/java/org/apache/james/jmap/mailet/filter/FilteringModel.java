@@ -17,10 +17,29 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.api.filtering.impl;
+package org.apache.james.jmap.mailet.filter;
 
-import org.apache.james.jmap.api.filtering.FilteringManagementContract;
+import java.util.List;
+import java.util.Optional;
 
-public class EventSourcingFilteringManagementTest implements FilteringManagementContract {
+import org.apache.james.jmap.api.filtering.Rule;
+import org.apache.mailet.Mail;
 
+import com.google.common.base.Preconditions;
+
+class FilteringModel {
+    private final List<Rule> filteringRules;
+
+    FilteringModel(List<Rule> filteringRules) {
+        Preconditions.checkNotNull(filteringRules);
+
+        this.filteringRules = filteringRules;
+    }
+
+    Optional<Rule.Action> computeAction(Mail mail) {
+        return filteringRules.stream()
+            .filter(rule -> MailMatcher.from(rule).match(mail))
+            .findFirst()
+            .map(Rule::getAction);
+    }
 }

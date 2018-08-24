@@ -17,10 +17,21 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.api.filtering.impl;
+package org.apache.james.javax;
 
-import org.apache.james.jmap.api.filtering.FilteringManagementContract;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
-public class EventSourcingFilteringManagementTest implements FilteringManagementContract {
+import javax.mail.Address;
 
+import org.apache.james.mime4j.util.MimeUtil;
+
+public class AddressHelper {
+    public static Stream<String> asStringStream(Address[] addresses) {
+        return Arrays.stream(addresses).map(AddressHelper::asString);
+    }
+
+    private static String asString(Address address) {
+        return MimeUtil.unscrambleHeaderValue(address.toString());
+    }
 }

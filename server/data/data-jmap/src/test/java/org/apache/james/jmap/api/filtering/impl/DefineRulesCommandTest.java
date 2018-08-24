@@ -19,13 +19,7 @@
 
 package org.apache.james.jmap.api.filtering.impl;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import org.apache.james.core.User;
-import org.apache.james.jmap.api.filtering.Rule;
 import org.junit.jupiter.api.Test;
-
-import com.google.common.collect.ImmutableList;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 
@@ -35,17 +29,5 @@ class DefineRulesCommandTest {
     void shouldMatchBeanContract() {
         EqualsVerifier.forClass(DefineRulesCommand.class)
             .verify();
-    }
-
-    @Test
-    void constructorShouldThrowWhenNullUser() {
-        assertThatThrownBy(() -> new DefineRulesCommand(null, ImmutableList.of(Rule.of("1"), Rule.of("2"))))
-            .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    void constructorShouldThrowWhenNullRuleList() {
-        assertThatThrownBy(() -> new DefineRulesCommand(User.fromUsername("adam@james.org"), null))
-            .isInstanceOf(NullPointerException.class);
     }
 }
