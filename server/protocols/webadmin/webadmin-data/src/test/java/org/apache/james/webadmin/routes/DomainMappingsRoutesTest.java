@@ -48,6 +48,7 @@ import org.apache.james.rrt.lib.MappingsImpl;
 import org.apache.james.rrt.memory.MemoryRecipientRewriteTable;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
@@ -69,9 +70,14 @@ import io.restassured.specification.RequestSpecification;
 class DomainMappingsRoutesTest {
     private RecipientRewriteTable recipientRewriteTable;
     private WebAdminServer webAdminServer;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(DomainMappingsRoutes domainMappingsRoutes) throws Exception {
-        webAdminServer = WebAdminUtils.createWebAdminServer(new DefaultMetricFactory(), domainMappingsRoutes);
+        authenticationFilter = new MockAuthenticationFilter();
+        webAdminServer = WebAdminUtils.createWebAdminServer(
+                new DefaultMetricFactory(),
+                authenticationFilter,
+                domainMappingsRoutes);
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
 
@@ -91,6 +97,43 @@ class DomainMappingsRoutesTest {
     @AfterEach
     void tearDown() {
         webAdminServer.destroy();
+    }
+
+    @Nested
+    class Authentication {
+        @Test
+        void deleteDomainMappingShouldBeAuthenticated() {
+            with()
+                .body("to.com")
+                .delete("from.com");
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void addDomainMappingShouldBeAuthenticated() {
+            with()
+                .body("to.com")
+                .put("from.com");
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void getDomainMappingsShouldBeAuthenticated() {
+            with()
+                .get();
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void getDomainMappingShouldBeAuthenticated() {
+            with()
+                .get("from.com");
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
     }
 
     @Nested

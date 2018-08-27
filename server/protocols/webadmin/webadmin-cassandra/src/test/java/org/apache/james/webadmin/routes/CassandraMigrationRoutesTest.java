@@ -48,6 +48,7 @@ import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.task.MemoryTaskManager;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
@@ -67,6 +68,7 @@ public class CassandraMigrationRoutesTest {
     private WebAdminServer webAdminServer;
     private CassandraSchemaVersionDAO schemaVersionDAO;
     private MemoryTaskManager taskManager;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer() throws Exception {
         Migration successfulMigration = mock(Migration.class);
@@ -82,8 +84,10 @@ public class CassandraMigrationRoutesTest {
 
         taskManager = new MemoryTaskManager();
         JsonTransformer jsonTransformer = new JsonTransformer();
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             new CassandraMigrationRoutes(new CassandraMigrationService(schemaVersionDAO, allMigrationClazz, LATEST_VERSION),
                 taskManager, jsonTransformer),
             new TasksRoutes(taskManager, jsonTransformer));
@@ -106,6 +110,38 @@ public class CassandraMigrationRoutesTest {
     public void tearDown() {
         webAdminServer.destroy();
         taskManager.stop();
+    }
+
+    @Test
+    public void getShouldBeAuthenticated() {
+        with()
+            .get();
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void upgradeShouldBeAuthenticated() {
+        with()
+            .post("/upgrade");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void upgradeLatestShouldBeAuthenticated() {
+        with()
+            .post("/upgrade/latest");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void getLatestShouldBeAuthenticated() {
+        with()
+            .get("/latest");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
     }
 
     @Test

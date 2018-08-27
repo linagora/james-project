@@ -79,6 +79,11 @@ public class DomainMappingsRoutes implements Routes {
     }
 
     @Override
+    public String getBasePath() {
+        return DOMAIN_MAPPINGS;
+    }
+
+    @Override
     public void define(final Service service) {
         service.get(DOMAIN_MAPPINGS, this::getAllMappings, jsonTransformer);
         service.get(SPECIFIC_MAPPING, this::getMapping, jsonTransformer);

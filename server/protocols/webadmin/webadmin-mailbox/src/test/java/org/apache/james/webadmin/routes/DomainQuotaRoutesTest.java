@@ -21,6 +21,7 @@ package org.apache.james.webadmin.routes;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
+import static io.restassured.RestAssured.with;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,6 +59,73 @@ class DomainQuotaRoutesTest {
 
         RestAssured.requestSpecification = testSystem.getRequestSpecification();
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+    }
+
+    @Test
+    void getShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .get(QUOTA_DOMAINS + "/" + PERDU_COM);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void getCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .get(QUOTA_DOMAINS + "/" + PERDU_COM + "/" + COUNT);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void getSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .get(QUOTA_DOMAINS + "/" + PERDU_COM + "/" + SIZE);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void deleteCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .delete(QUOTA_DOMAINS + "/" + PERDU_COM + "/" + COUNT);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void deleteSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .delete(QUOTA_DOMAINS + "/" + PERDU_COM + "/" + SIZE);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .body("42")
+            .put(QUOTA_DOMAINS + "/" + PERDU_COM + "/" + COUNT);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .body("42")
+            .put(QUOTA_DOMAINS + "/" + PERDU_COM + "/" + SIZE);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .body("{\"count\":52,\"size\":42}")
+            .put(QUOTA_DOMAINS + "/" + PERDU_COM);
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
     }
 
     @Test

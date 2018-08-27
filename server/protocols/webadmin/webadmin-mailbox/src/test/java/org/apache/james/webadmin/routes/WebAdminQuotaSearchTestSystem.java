@@ -25,6 +25,7 @@ import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.quota.search.QuotaSearchTestSystem;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.jackson.QuotaModule;
 import org.apache.james.webadmin.service.DomainQuotaService;
 import org.apache.james.webadmin.service.GlobalQuotaService;
@@ -38,6 +39,7 @@ public class WebAdminQuotaSearchTestSystem {
     private final QuotaSearchTestSystem quotaSearchTestSystem;
     private final WebAdminServer webAdminServer;
     private final RequestSpecification requestSpecBuilder;
+    private final MockAuthenticationFilter authenticationFilter;
 
     public WebAdminQuotaSearchTestSystem(QuotaSearchTestSystem quotaSearchTestSystem) throws Exception {
         this.quotaSearchTestSystem = quotaSearchTestSystem;
@@ -62,8 +64,10 @@ public class WebAdminQuotaSearchTestSystem {
             new GlobalQuotaService(quotaSearchTestSystem.getMaxQuotaManager()),
             jsonTransformer);
 
+        authenticationFilter = new MockAuthenticationFilter();
         this.webAdminServer = WebAdminUtils.createWebAdminServer(
             new NoopMetricFactory(),
+            authenticationFilter,
             userQuotaRoutes,
             domainQuotaRoutes,
             globalQuotaRoutes);
@@ -84,5 +88,9 @@ public class WebAdminQuotaSearchTestSystem {
 
     public RequestSpecification getRequestSpecification() {
         return requestSpecBuilder;
+    }
+
+    public MockAuthenticationFilter getAuthenticationFilter() {
+        return authenticationFilter;
     }
 }

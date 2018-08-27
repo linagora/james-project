@@ -52,6 +52,7 @@ import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -78,10 +79,13 @@ class ForwardRoutesTest {
     public static final String CEDRIC_PASSWORD = "456789";
 
     private WebAdminServer webAdminServer;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(ForwardRoutes forwardRoutes) throws Exception {
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             forwardRoutes);
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -124,6 +128,41 @@ class ForwardRoutesTest {
             usersRepository.addUser(CEDRIC, CEDRIC_PASSWORD);
 
             createServer(new ForwardRoutes(memoryRecipientRewriteTable, usersRepository, new JsonTransformer()));
+        }
+
+        @Nested
+        class Authentication {
+            @Test
+            void getForwardsShouldBeAuthenticated() {
+                with()
+                    .get();
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void getForwardShouldBeAuthenticated() {
+                with()
+                    .get(ALICE);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void putForwardDestinationShouldBeAuthenticated() {
+                with()
+                    .put(ALICE + SEPARATOR + BOB);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void deleteForwardDestinationShouldBeAuthenticated() {
+                with()
+                    .put(ALICE + SEPARATOR + BOB);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
         }
 
         @Test

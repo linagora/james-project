@@ -41,6 +41,7 @@ import org.apache.james.user.api.model.User;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.service.UserService;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
@@ -59,10 +60,13 @@ class UsersRoutesTest {
     private static final Domain DOMAIN = Domain.of("domain");
     private static final String USERNAME = "username@" + DOMAIN.name();
     private WebAdminServer webAdminServer;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(UsersRepository usersRepository) throws Exception {
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             new UserRoutes(new UserService(usersRepository), new JsonTransformer()));
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -89,6 +93,34 @@ class UsersRoutesTest {
             usersRepository.setDomainList(domainList);
 
             createServer(usersRepository);
+        }
+
+        @Nested
+        class Authentication {
+            @Test
+            void getUsersShouldBeAuthenticated() {
+                with()
+                    .get();
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void createUserShouldBeAuthenticated() {
+                with()
+                    .body("{\"password\":\"password\"}")
+                    .put(USERNAME);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void deleteUserShouldBeAuthenticated() {
+                with()
+                    .delete(USERNAME);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
         }
 
         @Test

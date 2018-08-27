@@ -95,6 +95,11 @@ public class UserQuotaRoutes implements Routes {
     }
 
     @Override
+    public String getBasePath() {
+        return USERS_QUOTA_ENDPOINT;
+    }
+
+    @Override
     public void define(Service service) {
         this.service = service;
 

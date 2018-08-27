@@ -34,8 +34,11 @@ public class CassandraLdapJamesServerMain {
         .with(new LdapUsersRepositoryModule());
 
     public static void main(String[] args) throws Exception {
-        Configuration configuration = Configuration.builder().useWorkingDirectoryEnvProperty().build();
-        GuiceJamesServer server = new GuiceJamesServer(configuration)
+        Configuration configuration = Configuration.builder()
+            .useWorkingDirectoryEnvProperty()
+            .build();
+
+        GuiceJamesServer server = GuiceJamesServer.forConfiguration(configuration)
             .combineWith(cassandraLdapServerModule, new JMXServerModule());
 
         server.start();

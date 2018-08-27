@@ -86,6 +86,11 @@ public class DLPConfigurationRoutes implements Routes {
     }
 
     @Override
+    public String getBasePath() {
+        return BASE_PATH;
+    }
+
+    @Override
     public void define(Service service) {
 
         defineStore(service);

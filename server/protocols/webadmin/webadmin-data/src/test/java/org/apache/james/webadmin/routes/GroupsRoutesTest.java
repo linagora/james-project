@@ -50,6 +50,7 @@ import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -75,10 +76,13 @@ class GroupsRoutesTest {
     private static final String USER_WITH_ENCODED_SLASH = "user%2F@" + DOMAIN.name();
 
     private WebAdminServer webAdminServer;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(GroupsRoutes groupsRoutes) throws Exception {
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             groupsRoutes);
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -112,6 +116,41 @@ class GroupsRoutesTest {
             createServer(new GroupsRoutes(memoryRecipientRewriteTable, usersRepository, domainList, new JsonTransformer()));
         }
 
+        @Nested
+        class Authentication {
+            @Test
+            void getGroupsShouldBeAuthenticated() {
+                with()
+                    .get();
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void getGroupShouldBeAuthenticated() {
+                with()
+                    .get(GROUP2);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void putGroupMemberShouldBeAuthenticated() {
+                with()
+                    .put(GROUP2 + SEPARATOR + USER_A);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void deleteGroupMemberShouldBeAuthenticated() {
+                with()
+                    .delete(GROUP2 + SEPARATOR + USER_A);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+        }
+
         @Test
         void getGroupsShouldBeEmpty() {
             when()
@@ -121,7 +160,6 @@ class GroupsRoutesTest {
                 .statusCode(HttpStatus.OK_200)
                 .body(is("[]"));
         }
-
 
         @Test
         void getShouldNotResolveRecurseGroups() throws Exception {
@@ -370,7 +408,6 @@ class GroupsRoutesTest {
                 .containsEntry("type", "InvalidArgument")
                 .containsEntry("message", "Server doesn't own the domain: unregisteredDomain");
         }
-
 
         @Test
         void putUserInGroupShouldNotAllowUserShadowing() throws UsersRepositoryException {

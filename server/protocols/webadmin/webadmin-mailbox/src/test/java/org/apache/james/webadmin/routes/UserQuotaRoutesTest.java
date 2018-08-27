@@ -463,6 +463,85 @@ class UserQuotaRoutesTest {
 
     @Nested
     @ExtendWith(ScanningQuotaSearchExtension.class)
+    class Authentication {
+        @Test
+        void getUsersShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .get("/quota/users");
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void getShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .get(QUOTA_USERS + "/" + JOE.asString());
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void getCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .get(QUOTA_USERS + "/" + JOE.asString() + "/" + COUNT);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void getSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .get(QUOTA_USERS + "/" + JOE.asString() + "/" + SIZE);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void deleteCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .delete(QUOTA_USERS + "/" + JOE.asString() + "/" + COUNT);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void deleteSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .delete(QUOTA_USERS + "/" + JOE.asString() + "/" + SIZE);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void putShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .body("{\"count\":52,\"size\":42}")
+                .put(QUOTA_USERS + "/" + ESCAPED_BOB.asString() + "/" + COUNT);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void putCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .body("35")
+                .put(QUOTA_USERS + "/" + ESCAPED_BOB.asString() + "/" + COUNT);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void putSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+            with()
+                .body("35")
+                .put(QUOTA_USERS + "/" + ESCAPED_BOB.asString() + "/" + SIZE);
+
+            assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+        }
+    }
+
+    @Nested
+    @ExtendWith(ScanningQuotaSearchExtension.class)
     class GetCount {
 
         @Test

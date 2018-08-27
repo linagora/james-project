@@ -70,6 +70,7 @@ import org.apache.james.util.ClassLoaderUtils;
 import org.apache.james.webadmin.Constants;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.service.ClearMailRepositoryTask;
 import org.apache.james.webadmin.service.MailRepositoryStoreService;
 import org.apache.james.webadmin.service.ReprocessingAllMailsTask;
@@ -108,6 +109,7 @@ public class MailRepositoriesRoutesTest {
 
     private FileSystemImpl fileSystem;
     private Configuration configuration;
+    private MockAuthenticationFilter authenticationFilter;
 
     @Before
     public void setUp() throws Exception {
@@ -123,8 +125,10 @@ public class MailRepositoriesRoutesTest {
 
         ReprocessingService reprocessingService = new ReprocessingService(queueFactory, repositoryStoreService);
 
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
                 new NoopMetricFactory(),
+                authenticationFilter,
                 new MailRepositoriesRoutes(repositoryStoreService,
                     jsonTransformer, reprocessingService, taskManager),
             new TasksRoutes(taskManager, jsonTransformer));
@@ -140,6 +144,81 @@ public class MailRepositoriesRoutesTest {
     @After
     public void tearDown() {
         webAdminServer.destroy();
+    }
+
+    @Test
+    public void putShouldBeAuthenticated() {
+        with()
+            .params("protocol", "memory")
+            .put(PATH_ESCAPED_MY_REPO);
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void listShouldBeAuthenticated() {
+        with()
+            .get();
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void getShouldBeAuthenticated() {
+        with()
+            .get(PATH_ESCAPED_MY_REPO);
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void getMailsShouldBeAuthenticated() {
+        with()
+            .get(MY_REPO_MAILS);
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void getMailShouldBeAuthenticated() {
+        with()
+            .get(PATH_ESCAPED_MY_REPO + "/mails/1");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void deleteAMailShouldBeAuthenticated() {
+        with()
+            .delete(PATH_ESCAPED_MY_REPO + "/mails/1");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void deleteMailsShouldBeAuthenticated() {
+        with()
+            .delete(PATH_ESCAPED_MY_REPO + "/mails");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void reprocessingAllShouldBeAuthenticated() {
+        with()
+            .param("action", "reprocess")
+            .patch(PATH_ESCAPED_MY_REPO + "/mails");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void reprocessingOneShouldBeAuthenticated() {
+        with()
+            .param("action", "reprocess")
+            .patch(PATH_ESCAPED_MY_REPO + "/mails/name1");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
     }
 
     @Test

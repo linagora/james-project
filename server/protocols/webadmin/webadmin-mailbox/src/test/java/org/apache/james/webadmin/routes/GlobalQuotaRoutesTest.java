@@ -21,6 +21,7 @@ package org.apache.james.webadmin.routes;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
+import static io.restassured.RestAssured.with;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
@@ -47,6 +48,73 @@ class GlobalQuotaRoutesTest {
         RestAssured.requestSpecification = testSystem.getRequestSpecification();
 
         maxQuotaManager = testSystem.getQuotaSearchTestSystem().getMaxQuotaManager();
+    }
+
+    @Test
+    void getShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .get("/quota");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void getCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .get("/quota/count");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void getSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .get("/quota/size");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void deleteCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .delete("/quota/count");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void deleteSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .delete("/quota/size");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putCountShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .body("42")
+            .put("/quota/count");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putSizeShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .body("42")
+            .put("/quota/size");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putShouldBeAuthenticated(WebAdminQuotaSearchTestSystem testSystem) {
+        with()
+            .body("{\"count\":52,\"size\":42}")
+            .put("/quota");
+
+        assertThat(testSystem.getAuthenticationFilter().hasBeenAuthenticated()).isTrue();
     }
 
     @Test
@@ -129,7 +197,6 @@ class GlobalQuotaRoutesTest {
 
         assertThat(maxQuotaManager.getGlobalMaxMessage()).contains(QuotaCount.unlimited());
     }
-
 
     @Test
     void putCountShouldAcceptValidValue() throws Exception {

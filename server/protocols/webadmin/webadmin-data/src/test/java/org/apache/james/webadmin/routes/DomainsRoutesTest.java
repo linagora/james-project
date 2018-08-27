@@ -42,6 +42,7 @@ import org.apache.james.domainlist.memory.MemoryDomainList;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -57,10 +58,13 @@ public class DomainsRoutesTest {
     public static final String DOMAIN = "domain";
 
     private WebAdminServer webAdminServer;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(DomainList domainList) throws Exception {
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             new DomainsRoutes(domainList, new JsonTransformer()));
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -87,6 +91,33 @@ public class DomainsRoutesTest {
             MemoryDomainList domainList = new MemoryDomainList(dnsService);
             domainList.setAutoDetectIP(false);
             createServer(domainList);
+        }
+
+        @Nested
+        class Authentication {
+            @Test
+            void getDomainsShouldBeAuthenticated() {
+                with()
+                    .get();
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void createDomainShouldBeAuthenticated() {
+                with()
+                    .put(DOMAIN);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void deleteDomainShouldBeAuthenticated() {
+                with()
+                    .delete(DOMAIN);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
         }
 
         @Test

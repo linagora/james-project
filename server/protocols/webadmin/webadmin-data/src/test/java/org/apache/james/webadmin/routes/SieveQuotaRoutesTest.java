@@ -20,6 +20,7 @@
 package org.apache.james.webadmin.routes;
 
 import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.with;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,6 +31,7 @@ import org.apache.james.sieverepository.api.SieveQuotaRepository;
 import org.apache.james.sieverepository.memory.InMemorySieveQuotaRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -45,12 +47,15 @@ public class SieveQuotaRoutesTest {
 
     private WebAdminServer webAdminServer;
     private SieveQuotaRepository sieveRepository;
+    private MockAuthenticationFilter authenticationFilter;
 
     @BeforeEach
     void setUp() throws Exception {
         sieveRepository = new InMemorySieveQuotaRepository();
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
                 new DefaultMetricFactory(),
+                authenticationFilter,
                 new SieveQuotaRoutes(sieveRepository, new JsonTransformer()));
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -62,6 +67,56 @@ public class SieveQuotaRoutesTest {
     @AfterEach
     void tearDown() {
         webAdminServer.destroy();
+    }
+
+    @Test
+    void getGlobalSieveQuotaShouldBeAuthenticated() {
+        with()
+            .get("/sieve/quota/default");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void deleteGlobalSieveQuotaShouldBeAuthenticated() {
+        with()
+            .delete("/sieve/quota/default");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putGlobalSieveQuotaShouldBeAuthenticated() {
+        with()
+            .body("42")
+            .put("/sieve/quota/default");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void getPerUserSieveQuotaShouldBeAuthenticated() {
+        with()
+            .get("/sieve/quota/users/" + USER_A.asString());
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void deletePerUsersSieveQuotaShouldBeAuthenticated() {
+        with()
+            .delete("/sieve/quota/users/" + USER_A.asString());
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    void putPerUserSieveQuotaShouldBeAuthenticated() {
+        with()
+            .body("42")
+            .put("/sieve/quota/users/" + USER_A.asString());
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
     }
 
     @Test

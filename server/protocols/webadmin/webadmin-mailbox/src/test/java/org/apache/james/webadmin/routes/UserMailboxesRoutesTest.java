@@ -50,6 +50,7 @@ import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.service.UserMailboxesService;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
@@ -70,13 +71,16 @@ class UserMailboxesRoutesTest {
     private static final String MAILBOX_NAME = "myMailboxName";
     private WebAdminServer webAdminServer;
     private UsersRepository usersRepository;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(MailboxManager mailboxManager) throws Exception {
         usersRepository = mock(UsersRepository.class);
         when(usersRepository.contains(USERNAME)).thenReturn(true);
 
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             new UserMailboxesRoutes(new UserMailboxesService(mailboxManager, usersRepository), new JsonTransformer()));
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -99,6 +103,49 @@ class UserMailboxesRoutesTest {
             InMemoryIntegrationResources inMemoryIntegrationResources = new InMemoryIntegrationResources();
 
             createServer(inMemoryIntegrationResources.createMailboxManager(new SimpleGroupMembershipResolver()));
+        }
+
+        @Nested
+        class Authentication {
+            @Test
+            void getMailboxesShouldBeAuthenticated() {
+                with()
+                    .get();
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void getMailboxShouldBeAuthenticated() {
+                with()
+                    .get(MAILBOX_NAME);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void deleteMailboxesShouldBeAuthenticated() {
+                with()
+                    .delete();
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void deleteMailboxShouldBeAuthenticated() {
+                with()
+                    .delete(MAILBOX_NAME);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
+
+            @Test
+            void createMailboxShouldBeAuthenticated() {
+                with()
+                    .put(MAILBOX_NAME);
+
+                assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+            }
         }
 
         @Test

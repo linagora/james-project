@@ -78,6 +78,11 @@ public class SieveQuotaRoutes implements Routes {
     }
 
     @Override
+    public String getBasePath() {
+        return ROOT_PATH;
+    }
+
+    @Override
     public void define(Service service) {
         defineGetGlobalSieveQuota(service);
         defineUpdateGlobalSieveQuota(service);

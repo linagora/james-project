@@ -23,6 +23,7 @@ import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
 import static io.restassured.RestAssured.with;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -38,6 +39,7 @@ import org.apache.james.task.TaskId;
 import org.apache.james.task.TaskManager;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
@@ -50,13 +52,16 @@ public class TasksRoutesTest {
 
     private MemoryTaskManager taskManager;
     private WebAdminServer webAdminServer;
+    private MockAuthenticationFilter authenticationFilter;
 
     @Before
     public void setUp() throws Exception {
         taskManager = new MemoryTaskManager();
 
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             new TasksRoutes(taskManager, new JsonTransformer()));
 
         webAdminServer.configure(NO_CONFIGURATION);
@@ -71,6 +76,38 @@ public class TasksRoutesTest {
     public void tearDown() {
         taskManager.stop();
         webAdminServer.destroy();
+    }
+
+    @Test
+    public void listShouldBeAuthenticated() {
+        with()
+            .get();
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void getTaskShouldBeAuthenticated() {
+        with()
+            .get("/taskId");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void cancelTaskShouldBeAuthenticated() {
+        with()
+            .delete("/taskId");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+    }
+
+    @Test
+    public void awaitTaskShouldBeAuthenticated() {
+        with()
+            .get("/taskId/await");
+
+        assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
     }
 
     @Test

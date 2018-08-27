@@ -48,6 +48,7 @@ import org.apache.james.task.MemoryTaskManager;
 import org.apache.james.task.TaskManager;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.service.ClearMailQueueTask;
 import org.apache.james.webadmin.service.DeleteMailsFromMailQueueTask;
 import org.apache.james.webadmin.utils.JsonTransformer;
@@ -82,14 +83,17 @@ public class MailQueueRoutesTest {
 
     WebAdminServer webAdminServer;
     MemoryMailQueueFactory mailQueueFactory;
+    private MockAuthenticationFilter authenticationFilter;
 
 
     WebAdminServer createServer(MemoryMailQueueFactory mailQueueFactory) throws Exception {
         TaskManager taskManager = new MemoryTaskManager();
         JsonTransformer jsonTransformer = new JsonTransformer();
 
+        authenticationFilter = new MockAuthenticationFilter();
         WebAdminServer server = WebAdminUtils.createWebAdminServer(
             new NoopMetricFactory(),
+            authenticationFilter,
             new MailQueueRoutes(mailQueueFactory, jsonTransformer, taskManager),
             new TasksRoutes(taskManager, jsonTransformer));
         server.configure(NO_CONFIGURATION);
@@ -118,6 +122,53 @@ public class MailQueueRoutesTest {
     @AfterEach
     public void tearDown() {
         webAdminServer.destroy();
+    }
+
+    @Nested
+    class Authentication {
+        @Test
+        void listMailShouldBeAuthenticated() {
+            with()
+                .get();
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void getMailQueueShouldBeAuthenticated() {
+            with()
+                .get(FIRST_QUEUE);
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void deleteMailShouldBeAuthenticated() {
+            with()
+                .param("sender", "123")
+                .delete(FIRST_QUEUE + "/mails");
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void clearShouldBeAuthenticated() {
+            with()
+                .delete(SECOND_QUEUE + "/mails");
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
+        @Test
+        void flushShouldBeAuthenticated() {
+            with()
+                .queryParam("delayed", "true")
+                .body("{\"delayed\": \"false\"}")
+                .patch(FIRST_QUEUE + "/mails");
+
+            assertThat(authenticationFilter.hasBeenAuthenticated()).isTrue();
+        }
+
     }
 
     @Nested

@@ -75,6 +75,11 @@ public class GlobalQuotaRoutes implements Routes {
     }
 
     @Override
+    public String getBasePath() {
+        return QUOTA_ENDPOINT;
+    }
+
+    @Override
     public void define(Service service) {
         this.service = service;
 

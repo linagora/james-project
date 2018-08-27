@@ -26,6 +26,7 @@ import static io.restassured.RestAssured.with;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.apache.james.webadmin.Constants.JSON_CONTENT_TYPE;
 import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,6 +44,7 @@ import org.apache.james.eventsourcing.eventstore.memory.InMemoryEventStore;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.authentication.MockAuthenticationFilter;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,10 +65,13 @@ class DLPConfigurationRoutesTest {
 
     private WebAdminServer webAdminServer;
     private EventSourcingDLPConfigurationStore dlpStore;
+    private MockAuthenticationFilter authenticationFilter;
 
     private void createServer(DLPConfigurationStore dlpConfigurationStore, DomainList domainList) throws Exception {
+        authenticationFilter = new MockAuthenticationFilter();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
+            authenticationFilter,
             new DLPConfigurationRoutes(dlpConfigurationStore, domainList, new JsonTransformer()));
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
@@ -82,7 +87,6 @@ class DLPConfigurationRoutesTest {
                 .setBasePath(DLPConfigurationRoutes.BASE_PATH)
                 .build();
     }
-
 
     @BeforeEach
     void setup() throws Exception {
@@ -100,6 +104,55 @@ class DLPConfigurationRoutesTest {
         createServer(dlpStore, domainList);
     }
 
+    @Nested
+    class Authentication {
+        @Test
+        void storeShouldBeAuthenticated() {
+            String storeBody =
+                    "{\"rules\": [" +
+                            "  {" +
+                            "    \"id\": \"1\"," +
+                            "    \"expression\": \"expression 1\"," +
+                            "    \"explanation\": \"explanation 1\"," +
+                            "    \"targetsSender\": true," +
+                            "    \"targetsRecipients\": true," +
+                            "    \"targetsContent\": true" +
+                            "  }," +
+                            "  {" +
+                            "    \"id\": \"2\"," +
+                            "    \"expression\": \"expression 2\"," +
+                            "    \"explanation\": \"explanation 2\"," +
+                            "    \"targetsSender\": false," +
+                            "    \"targetsRecipients\": false," +
+                            "    \"targetsContent\": false" +
+                            "  }]}";
+
+            with()
+                .body(storeBody)
+                .put(DEFAULT_DOMAIN);
+
+            assertThat(authenticationFilter.hasBeenAuthenticated())
+                .isTrue();
+        }
+
+        @Test
+        void clearShouldBeAuthenticated() {
+            with()
+                .delete(DEFAULT_DOMAIN);
+
+            assertThat(authenticationFilter.hasBeenAuthenticated())
+                .isTrue();
+        }
+
+        @Test
+        void listShouldBeAuthenticated() {
+            with()
+                .get(DEFAULT_DOMAIN);
+
+            assertThat(authenticationFilter.hasBeenAuthenticated())
+                .isTrue();
+        }
+    }
 
     @Nested
     class DefineStore {
