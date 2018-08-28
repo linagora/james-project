@@ -50,7 +50,6 @@
         <module>spring</module>
         <module>store</module>
         <module>tika</module>
-        <module>tool</module>
         <module>zoo-seq-provider</module>
 
         <module>plugin/quota-mailing</module>
@@ -60,6 +59,10 @@
         <module>plugin/quota-search-elasticsearch</module>
         <module>plugin/quota-search-scanning</module>
         <module>plugin/spamassassin</module>
+        <module>tools/copier</module>
+        <module>tools/indexer</module>
+        <module>tools/jpa-migrator</module>
+        <module>tools/maildir-utils</module>
     </modules>
 
     <issueManagement>
