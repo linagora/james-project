@@ -16,39 +16,24 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap;
 
-import java.util.concurrent.ExecutionException;
+package org.apache.james;
 
-import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.mock.MockMailboxSession;
-import org.apache.james.metrics.api.NoopMetricFactory;
-import org.apache.james.user.memory.MemoryUsersRepository;
-import org.apache.james.util.concurrency.ConcurrentTestRunner;
-import org.junit.Before;
-import org.junit.Test;
+import java.io.IOException;
 
-public class UserProvisioningFilterThreadTest {
+import org.junit.Rule;
 
-    private UserProvisioningFilter sut;
-    private MemoryUsersRepository usersRepository;
-    private MailboxSession session;
+public class MemoryJmapJamesServerTest extends AbstractJmapJamesServerTest {
 
-    @Before
-    public void before() {
-        usersRepository = MemoryUsersRepository.withoutVirtualHosting();
-        session = new MockMailboxSession("username");
-        sut = new UserProvisioningFilter(usersRepository, new NoopMetricFactory());
+    @Rule
+    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
+
+    @Override
+    protected GuiceJamesServer createJamesServer() throws IOException {
+        return memoryJmap.jmapServer();
     }
 
-    @Test
-    public void testConcurrentAccessToFilterShouldNotThrow() throws ExecutionException, InterruptedException {
-        ConcurrentTestRunner
-            .builder()
-            .threadCount(2)
-            .build((threadNumber, step) -> sut.createAccountIfNeeded(session))
-            .run()
-            .assertNoException();
+    @Override
+    protected void clean() {
     }
 }
-
