@@ -17,40 +17,21 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.util;
+package org.apache.james.javax;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
-public class StreamUtils {
+import javax.mail.Address;
 
-    public static <T> Stream<T> ofNullables(T... array) {
-        return ofNullable(array);
+import org.apache.james.mime4j.util.MimeUtil;
+
+public class AddressHelper {
+    public static Stream<String> asStringStream(Address[] addresses) {
+        return Arrays.stream(addresses).map(AddressHelper::asString);
     }
 
-    public static <T> Stream<T> ofNullable(T[] array) {
-        return ofOptional(Optional.ofNullable(array));
-    }
-
-    public static <T> Stream<T> ofOptional(Optional<T[]> array) {
-        return array
-            .map(Arrays::stream)
-            .orElse(Stream.empty());
-    }
-
-    public static <T> Stream<T> flatten(Collection<Stream<T>> streams) {
-        return flatten(streams.stream());
-    }
-
-    public static <T> Stream<T> flatten(Stream<Stream<T>> streams) {
-        return streams.flatMap(Function.identity());
-    }
-
-    @SafeVarargs
-    public static <T> Stream<T> flatten(Stream<T>... streams) {
-        return flatten(Arrays.stream(streams));
+    private static String asString(Address address) {
+        return MimeUtil.unscrambleHeaderValue(address.toString());
     }
 }

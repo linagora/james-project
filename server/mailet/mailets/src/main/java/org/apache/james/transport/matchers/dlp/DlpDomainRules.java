@@ -19,14 +19,14 @@
 
 package org.apache.james.transport.matchers.dlp;
 
+import static org.apache.james.javax.AddressHelper.asStringStream;
+
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import javax.mail.Address;
 import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -36,9 +36,10 @@ import javax.mail.internet.MimeMessage;
 import org.apache.james.core.MailAddress;
 import org.apache.james.dlp.api.DLPConfigurationItem;
 import org.apache.james.dlp.api.DLPConfigurationItem.Targets;
+import org.apache.james.javax.AddressHelper;
 import org.apache.james.javax.MultipartUtil;
-import org.apache.james.mime4j.util.MimeUtil;
 import org.apache.james.util.OptionalUtils;
+import org.apache.james.util.StreamUtils;
 import org.apache.mailet.Mail;
 
 import com.github.fge.lambdas.Throwing;
@@ -70,15 +71,6 @@ public class DlpDomainRules {
     static class Rule {
 
         interface MatcherFunction extends ThrowingPredicate<Mail> { }
-
-
-        private static Stream<String> asStringStream(Address[] addresses) {
-            return Arrays.stream(addresses).map(Rule::asString);
-        }
-
-        private static String asString(Address address) {
-            return MimeUtil.unscrambleHeaderValue(address.toString());
-        }
 
         private static class ContentMatcher implements Rule.MatcherFunction {
 
@@ -153,7 +145,7 @@ public class DlpDomainRules {
             private Stream<String> listHeaderRecipients(Mail mail) throws MessagingException {
                 return Optional.ofNullable(mail.getMessage())
                     .flatMap(Throwing.function(m -> Optional.ofNullable(m.getAllRecipients())))
-                    .map(Rule::asStringStream)
+                    .map(AddressHelper::asStringStream)
                     .orElse(Stream.of());
             }
 
@@ -177,7 +169,7 @@ public class DlpDomainRules {
             }
 
             private Stream<String> listEnvelopSender(Mail mail) {
-                return OptionalUtils.toStream(Optional.ofNullable(mail.getSender()).map(MailAddress::asString));
+                return StreamUtils.ofNullables(mail.getSender()).map(MailAddress::asString);
             }
 
             private Stream<String> listFromHeaders(Mail mail) throws MessagingException {

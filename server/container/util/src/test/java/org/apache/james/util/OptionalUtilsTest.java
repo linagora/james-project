@@ -27,8 +27,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.github.steveash.guavate.Guavate;
-
 public class OptionalUtilsTest {
 
     @Rule
@@ -69,18 +67,14 @@ public class OptionalUtilsTest {
 
     @Test
     public void toStreamShouldConvertEmptyOptionalToEmptyStream() {
-        assertThat(
-            OptionalUtils.toStream(Optional.empty())
-                .collect(Guavate.toImmutableList()))
+        assertThat(OptionalUtils.toStream(Optional.empty()))
             .isEmpty();
     }
 
     @Test
     public void toStreamShouldConvertFullOptionalToStream() {
         long value = 18L;
-        assertThat(
-            OptionalUtils.toStream(Optional.of(value))
-                .collect(Guavate.toImmutableList()))
+        assertThat(OptionalUtils.toStream(Optional.of(value)))
             .containsExactly(value);
     }
 

@@ -17,40 +17,27 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.util;
+package org.apache.james.jmap.mailet.filter;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.function.Function;
+import java.util.List;
 import java.util.stream.Stream;
 
-public class StreamUtils {
+import org.apache.james.jmap.api.filtering.Rule;
+import org.apache.mailet.Mail;
 
-    public static <T> Stream<T> ofNullables(T... array) {
-        return ofNullable(array);
+import com.google.common.base.Preconditions;
+
+class RuleMatcher {
+    private final List<Rule> filteringRules;
+
+    RuleMatcher(List<Rule> filteringRules) {
+        Preconditions.checkNotNull(filteringRules);
+
+        this.filteringRules = filteringRules;
     }
 
-    public static <T> Stream<T> ofNullable(T[] array) {
-        return ofOptional(Optional.ofNullable(array));
-    }
-
-    public static <T> Stream<T> ofOptional(Optional<T[]> array) {
-        return array
-            .map(Arrays::stream)
-            .orElse(Stream.empty());
-    }
-
-    public static <T> Stream<T> flatten(Collection<Stream<T>> streams) {
-        return flatten(streams.stream());
-    }
-
-    public static <T> Stream<T> flatten(Stream<Stream<T>> streams) {
-        return streams.flatMap(Function.identity());
-    }
-
-    @SafeVarargs
-    public static <T> Stream<T> flatten(Stream<T>... streams) {
-        return flatten(Arrays.stream(streams));
+    Stream<Rule> findApplicableRules(Mail mail) {
+        return filteringRules.stream()
+            .filter(rule -> MailMatcher.from(rule).match(mail));
     }
 }
