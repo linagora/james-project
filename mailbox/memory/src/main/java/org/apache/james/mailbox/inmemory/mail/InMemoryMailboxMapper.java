@@ -38,8 +38,8 @@ import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 
 public class InMemoryMailboxMapper implements MailboxMapper {
     
@@ -88,7 +88,7 @@ public class InMemoryMailboxMapper implements MailboxMapper {
             .stream()
             .filter(mailbox -> mailboxMatchesRegex(mailbox, path, regex))
             .map(SimpleMailbox::new)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private boolean mailboxMatchesRegex(Mailbox mailbox, MailboxPath path, String regex) {
@@ -166,7 +166,7 @@ public class InMemoryMailboxMapper implements MailboxMapper {
         return mailboxesByPath.values()
             .stream()
             .filter(mailbox -> hasRightOn(mailbox, userName, right))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private Boolean hasRightOn(Mailbox mailbox, String userName, Right right) {

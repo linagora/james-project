@@ -32,7 +32,7 @@ import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.assertj.core.api.AbstractAssert;
 import org.assertj.core.error.BasicErrorMessageFactory;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class ZipAssert extends AbstractAssert<ZipAssert, ZipFile> {
     interface EntryCheck {
@@ -97,11 +97,11 @@ public class ZipAssert extends AbstractAssert<ZipAssert, ZipFile> {
         isNotNull();
         List<EntryChecks> sortedEntryChecks = Arrays.stream(entryChecks)
             .sorted(Comparator.comparing(checks -> checks.name))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         List<ZipArchiveEntry> entries = Collections.list(zipFile.getEntries())
             .stream()
             .sorted(Comparator.comparing(ZipArchiveEntry::getName))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         if (entries.size() != entryChecks.length) {
             throwAssertionError(shouldHaveSize(zipFile, entryChecks.length, entries.size()));
         }

@@ -59,10 +59,6 @@
             <artifactId>jackson-datatype-guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.steveash.guavate</groupId>
-            <artifactId>guavate</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>

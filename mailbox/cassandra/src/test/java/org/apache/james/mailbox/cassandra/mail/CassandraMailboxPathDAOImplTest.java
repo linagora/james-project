@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraMailboxPathDAOImplTest extends CassandraMailboxPathDAOTest {
 
@@ -60,7 +60,7 @@ public class CassandraMailboxPathDAOImplTest extends CassandraMailboxPathDAOTest
 
         CassandraMailboxPathDAOImpl daoV1 = (CassandraMailboxPathDAOImpl) testee;
 
-        assertThat(daoV1.readAll().join().collect(Guavate.toImmutableList()))
+        assertThat(daoV1.readAll().join().collect(ImmutableList.toImmutableList()))
             .containsOnly(
                 new CassandraIdAndPath(INBOX_ID, USER_INBOX_MAILBOXPATH),
                 new CassandraIdAndPath(OUTBOX_ID, USER_OUTBOX_MAILBOXPATH),
@@ -71,7 +71,7 @@ public class CassandraMailboxPathDAOImplTest extends CassandraMailboxPathDAOTest
     public void readAllShouldReturnEmptyByDefault() {
         CassandraMailboxPathDAOImpl daoV1 = (CassandraMailboxPathDAOImpl) testee;
 
-        assertThat(daoV1.readAll().join().collect(Guavate.toImmutableList()))
+        assertThat(daoV1.readAll().join().collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 }

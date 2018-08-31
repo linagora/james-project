@@ -32,8 +32,8 @@ import org.apache.james.mime4j.dom.address.MailboxList;
 import org.apache.james.util.StreamUtils;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 
 public class Envelope {
 
@@ -48,7 +48,7 @@ public class Envelope {
 
         return new Envelope(sender,
             StreamUtils.flatten(Stream.of(to, cc, bcc))
-                .collect(Guavate.toImmutableSet()));
+                .collect(ImmutableSet.toImmutableSet()));
     }
 
     public static Envelope fromMime4JMessage(org.apache.james.mime4j.dom.Message mime4JMessage) {
@@ -65,7 +65,7 @@ public class Envelope {
 
         return new Envelope(sender,
             StreamUtils.flatten(Stream.of(to, cc, bcc))
-                .collect(Guavate.toImmutableSet()));
+                .collect(ImmutableSet.toImmutableSet()));
     }
 
     private static Stream<MailAddress> emailersToMailAddresses(List<Emailer> emailers) {

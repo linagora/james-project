@@ -46,7 +46,8 @@ import org.apache.james.util.OptionalUtils;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class CassandraRecipientRewriteTable extends AbstractRecipientRewriteTable {
 
@@ -124,7 +125,7 @@ public class CassandraRecipientRewriteTable extends AbstractRecipientRewriteTabl
             .setString(DOMAIN, source.getFixedDomain()))
             .thenApply(resultSet -> cassandraUtils.convertToStream(resultSet)
                 .map(row -> row.getString(MAPPING))
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .join();
 
         return MappingsImpl.fromCollection(mappings).toOptional();
@@ -135,7 +136,7 @@ public class CassandraRecipientRewriteTable extends AbstractRecipientRewriteTabl
         return executor.execute(retrieveAllMappingsStatement.bind())
             .thenApply(resultSet -> cassandraUtils.convertToStream(resultSet)
                 .map(row -> new UserMapping(MappingSource.fromUser(row.getString(USER), row.getString(DOMAIN)), row.getString(MAPPING)))
-                .collect(Guavate.toImmutableMap(
+                .collect(ImmutableMap.toImmutableMap(
                     UserMapping::getSource,
                     UserMapping::toMapping,
                     Mappings::union)))

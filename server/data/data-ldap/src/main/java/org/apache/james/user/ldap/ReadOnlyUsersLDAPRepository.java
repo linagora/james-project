@@ -58,8 +58,8 @@ import org.apache.james.util.retry.naming.ldap.RetryingLdapContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 /**
  * <p>
@@ -587,7 +587,7 @@ public class ReadOnlyUsersLDAPRepository implements UsersRepository, Configurabl
             return buildUserCollection(getValidUsers())
                 .stream()
                 .map(ReadOnlyLDAPUser::getUserName)
-                .collect(Guavate.toImmutableList())
+                .collect(ImmutableList.toImmutableList())
                 .iterator();
         } catch (NamingException namingException) {
             throw new UsersRepositoryException(

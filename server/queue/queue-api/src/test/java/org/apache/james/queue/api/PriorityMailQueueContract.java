@@ -28,7 +28,6 @@ import org.apache.mailet.Mail;
 import org.junit.jupiter.api.Test;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public interface PriorityMailQueueContract {
@@ -93,7 +92,7 @@ public interface PriorityMailQueueContract {
                 item.done(true);
                 return item;
             }))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(items)
             .extracting(MailQueue.MailQueueItem::getMail)

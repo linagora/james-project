@@ -56,7 +56,6 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.consumers.ConsumerChainer;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -186,7 +185,7 @@ public class CassandraBlobsDAO implements BlobStore {
                 () -> LOGGER.warn("Missing blob part for blobId {} and position {}", blobPart.blobId, blobPart.position)))
             .flatMap(OptionalUtils::toStream)
             .map(this::rowToData)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         return Bytes.concat(parts.toArray(new byte[parts.size()][]));
     }

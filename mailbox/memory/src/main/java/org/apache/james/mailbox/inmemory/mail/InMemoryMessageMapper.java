@@ -45,7 +45,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.mailbox.store.mail.utils.ApplicableFlagCalculator;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class InMemoryMessageMapper extends AbstractMessageMapper {
     private final Map<InMemoryId, Map<MessageUid, MailboxMessage>> mailboxByUid;
@@ -122,7 +122,7 @@ public class InMemoryMessageMapper extends AbstractMessageMapper {
             .filter(MailboxMessage::isRecent)
             .map(MailboxMessage::getUid)
             .sorted()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override

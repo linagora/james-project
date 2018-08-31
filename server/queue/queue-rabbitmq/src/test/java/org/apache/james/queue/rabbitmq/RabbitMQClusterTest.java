@@ -49,7 +49,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.rabbitmq.client.Address;
@@ -120,7 +119,7 @@ class RabbitMQClusterTest {
 
             awaitAtMostOneMinute.until(() -> consumer2.getConsumedMessages().size() == nbMessages);
 
-            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(Guavate.toImmutableList());
+            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(ImmutableList.toImmutableList());
             assertThat(consumer2.getConsumedMessages()).containsOnlyElementsOf(expectedResult);
         }
 
@@ -141,7 +140,7 @@ class RabbitMQClusterTest {
 
             awaitAtMostOneMinute.until(() -> consumer2.getConsumedMessages().size() == nbMessages);
 
-            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(Guavate.toImmutableList());
+            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(ImmutableList.toImmutableList());
             assertThat(consumer2.getConsumedMessages()).containsOnlyElementsOf(expectedResult);
         }
 
@@ -198,7 +197,7 @@ class RabbitMQClusterTest {
 
             awaitAtMostOneMinute.until(() -> consumer.getConsumedMessages().size() == nbMessages);
 
-            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(Guavate.toImmutableList());
+            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(ImmutableList.toImmutableList());
             assertThat(consumer.getConsumedMessages()).containsOnlyElementsOf(expectedResult);
         }
 
@@ -240,7 +239,7 @@ class RabbitMQClusterTest {
 
                 awaitAtMostOneMinute.until(() -> consumer.getConsumedMessages().size() == nbMessages);
 
-                List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(Guavate.toImmutableList());
+                List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(ImmutableList.toImmutableList());
                 assertThat(consumer.getConsumedMessages()).containsOnlyElementsOf(expectedResult);
             }
         }
@@ -264,7 +263,7 @@ class RabbitMQClusterTest {
 
             awaitAtMostOneMinute.until(() -> consumer.getConsumedMessages().size() == nbMessages);
 
-            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(Guavate.toImmutableList());
+            List<Integer> expectedResult = IntStream.range(0, nbMessages).boxed().collect(ImmutableList.toImmutableList());
             assertThat(consumer.getConsumedMessages()).containsOnlyElementsOf(expectedResult);
         }
 

@@ -44,7 +44,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraMessageIdToImapUidDAOTest {
 
@@ -99,7 +99,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.delete(messageId, mailboxId).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).isEmpty();
+        assertThat(messages.collect(ImmutableList.toImmutableList())).isEmpty();
     }
 
     @Test
@@ -130,7 +130,7 @@ public class CassandraMessageIdToImapUidDAOTest {
                 .modSeq(1)
                 .build();
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.empty()).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -152,7 +152,7 @@ public class CassandraMessageIdToImapUidDAOTest {
                 .modSeq(1)
                 .build();
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -213,7 +213,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -238,7 +238,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -263,7 +263,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -288,7 +288,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -313,7 +313,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -338,7 +338,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -363,7 +363,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -388,7 +388,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -415,7 +415,7 @@ public class CassandraMessageIdToImapUidDAOTest {
         testee.updateMetadata(expectedComposedMessageId, 1).join();
 
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -437,7 +437,7 @@ public class CassandraMessageIdToImapUidDAOTest {
                 .build();
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.of(mailboxId)).join();
 
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId);
     }
 
     @Test
@@ -472,6 +472,6 @@ public class CassandraMessageIdToImapUidDAOTest {
                 .build();
         Stream<ComposedMessageIdWithMetaData> messages = testee.retrieve(messageId, Optional.empty()).join();
 
-        assertThat(messages.collect(Guavate.toImmutableList())).containsOnly(expectedComposedMessageId, expectedComposedMessageId2);
+        assertThat(messages.collect(ImmutableList.toImmutableList())).containsOnly(expectedComposedMessageId, expectedComposedMessageId2);
     }
 }

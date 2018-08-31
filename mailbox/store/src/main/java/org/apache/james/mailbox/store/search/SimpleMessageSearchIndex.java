@@ -51,7 +51,6 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
@@ -153,7 +152,7 @@ public class SimpleMessageSearchIndex implements MessageSearchIndex {
 
     private List<SearchResult> searchResults(MailboxSession session, Stream<Mailbox> mailboxes, SearchQuery query) throws MailboxException {
         return mailboxes.flatMap(mailbox -> getSearchResultStream(session, query, mailbox))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private Stream<? extends SearchResult> getSearchResultStream(MailboxSession session, SearchQuery query, Mailbox mailbox) {
@@ -169,7 +168,7 @@ public class SimpleMessageSearchIndex implements MessageSearchIndex {
             .map(searchResult -> searchResult.getMessageId().get())
             .filter(SearchUtil.distinct())
             .limit(Long.valueOf(limit).intValue())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
 }

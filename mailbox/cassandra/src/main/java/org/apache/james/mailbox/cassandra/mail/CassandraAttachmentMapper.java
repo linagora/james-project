@@ -41,7 +41,6 @@ import org.apache.james.util.FluentFutureStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
@@ -105,7 +104,7 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
 
         return FluentFutureStream
             .ofOptionals(attachments)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private CompletableFuture<Optional<Attachment>> getAttachmentInternal(AttachmentId id) {
@@ -146,7 +145,7 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
 
     @Override
     public Collection<Username> getOwners(AttachmentId attachmentId) throws MailboxException {
-        return ownerDAO.retrieveOwners(attachmentId).join().collect(Guavate.toImmutableList());
+        return ownerDAO.retrieveOwners(attachmentId).join().collect(ImmutableList.toImmutableList());
     }
 
     public CompletableFuture<Void> storeAttachmentAsync(Attachment attachment, MessageId ownerMessageId) {

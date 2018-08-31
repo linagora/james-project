@@ -25,6 +25,7 @@ import static spark.Spark.halt;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,7 +63,6 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
@@ -146,7 +146,7 @@ public class ForwardRoutes implements Routes {
                     .map(Map.Entry::getKey)
                     .flatMap(source -> OptionalUtils.toStream(source.asMailAddress()))
                     .map(MailAddress::asString)
-                    .collect(Guavate.toImmutableSortedSet()))
+                    .collect(ImmutableSortedSet.toImmutableSortedSet(Comparator.naturalOrder())))
             .orElse(ImmutableSortedSet.of());
     }
 
@@ -246,7 +246,7 @@ public class ForwardRoutes implements Routes {
                 .map(MailAddress::asString)
                 .sorted()
                 .map(ForwardDestinationResponse::new)
-                .collect(Guavate.toImmutableSet());
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     private MailAddress parseMailAddress(String address) {

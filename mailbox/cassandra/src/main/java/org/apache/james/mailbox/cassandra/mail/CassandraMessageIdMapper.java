@@ -55,7 +55,8 @@ import org.apache.james.util.streams.Limit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
 public class CassandraMessageIdMapper implements MessageIdMapper {
@@ -94,14 +95,14 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         return messageIds.stream()
             .collect(JamesCollectors.chunker(cassandraConfiguration.getMessageReadChunkSize()))
             .flatMap(chuckedIds -> findAsStream(messageIds, fetchType))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private Stream<SimpleMailboxMessage> findAsStream(Collection<MessageId> messageIds, FetchType fetchType) {
         return FluentFutureStream.ofNestedStreams(
             messageIds.stream()
                 .map(messageId -> imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.empty())))
-            .collect(Guavate.toImmutableList())
+            .collect(ImmutableList.toImmutableList())
             .thenCompose(composedMessageIds -> messageDAO.retrieveMessages(composedMessageIds, fetchType, Limit.unlimited()))
             .thenApply(stream -> stream
                 .filter(CassandraMessageDAO.MessageResult::isFound)
@@ -137,7 +138,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         return imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.empty()).join()
             .map(ComposedMessageIdWithMetaData::getComposedMessageId)
             .map(ComposedMessageId::getMailboxId)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -239,7 +240,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
             .flatMap(mailboxId -> flagsUpdateWithRetry(newState, updateMode, mailboxId, messageId))
             .map(this::updateCounts)
             .map(CompletableFuture::join)
-            .collect(Guavate.toImmutableMap(Pair::getLeft, Pair::getRight));
+            .collect(ImmutableMap.toImmutableMap(Pair::getLeft, Pair::getRight));
     }
 
     private Stream<Pair<MailboxId, UpdatedFlags>> flagsUpdateWithRetry(Flags newState, MessageManager.FlagsUpdateMode updateMode, MailboxId mailboxId, MessageId messageId) {

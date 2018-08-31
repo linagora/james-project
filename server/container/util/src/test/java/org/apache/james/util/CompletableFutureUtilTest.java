@@ -35,7 +35,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class CompletableFutureUtilTest {
@@ -70,7 +69,7 @@ public class CompletableFutureUtilTest {
         assertThat(
             CompletableFutureUtil.allOf(Stream.empty())
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -79,7 +78,7 @@ public class CompletableFutureUtilTest {
         int itemCount = 10;
         ImmutableList<Integer> ints = IntStream.range(0, itemCount)
             .boxed()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         ConcurrentLinkedDeque<Integer> queue = new ConcurrentLinkedDeque<>();
 
@@ -105,7 +104,7 @@ public class CompletableFutureUtilTest {
             i -> CompletableFuture.supplyAsync(() -> i, executorService))
             .join();
 
-        assertThat(result.collect(Guavate.toImmutableList()))
+        assertThat(result.collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -114,13 +113,13 @@ public class CompletableFutureUtilTest {
         int itemCount = 10;
         ImmutableList<Integer> ints = IntStream.range(0, itemCount)
             .boxed()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         Stream<Integer> result = CompletableFutureUtil.chainAll(ints.stream(),
             i -> CompletableFuture.supplyAsync(() -> i, executorService))
             .join();
 
-        assertThat(result.collect(Guavate.toImmutableList()))
+        assertThat(result.collect(ImmutableList.toImmutableList()))
             .containsExactlyElementsOf(ints);
     }
 
@@ -136,7 +135,7 @@ public class CompletableFutureUtilTest {
                     CompletableFuture.completedFuture(value2),
                     CompletableFuture.completedFuture(value3)))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsOnly(value1, value2, value3);
     }
 
@@ -166,7 +165,7 @@ public class CompletableFutureUtilTest {
                     CompletableFuture.completedFuture(value9),
                     CompletableFuture.completedFuture(value10)))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(value1, value2, value3, value4, value5, value6, value7, value8, value9, value10);
     }
 
@@ -195,7 +194,7 @@ public class CompletableFutureUtilTest {
                     CompletableFuture.completedFuture(value9),
                     CompletableFuture.completedFuture(value10))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(value1, value2, value3, value4, value5, value6, value7, value8, value9, value10);
     }
 
@@ -204,7 +203,7 @@ public class CompletableFutureUtilTest {
         assertThat(
             CompletableFutureUtil.allOfArray()
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -219,7 +218,7 @@ public class CompletableFutureUtilTest {
                     CompletableFuture.completedFuture(value2),
                     CompletableFuture.completedFuture(value3))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsOnly(value1, value2, value3);
     }
 
@@ -240,7 +239,7 @@ public class CompletableFutureUtilTest {
             CompletableFutureUtil.map(futurOfInteger, integer ->
                 integer * 2)
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(2, 4, 6);
     }
 
@@ -252,7 +251,7 @@ public class CompletableFutureUtilTest {
             CompletableFutureUtil.map(futurOfInteger, integer ->
                 integer * 2)
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -264,7 +263,7 @@ public class CompletableFutureUtilTest {
             CompletableFutureUtil.thenComposeOnAll(futurOfInteger, integer ->
                 CompletableFuture.completedFuture(integer * 2))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(2, 4, 6);
     }
 
@@ -276,7 +275,7 @@ public class CompletableFutureUtilTest {
             CompletableFutureUtil.thenComposeOnAll(futurOfInteger, integer ->
                 CompletableFuture.completedFuture(integer * 2))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 

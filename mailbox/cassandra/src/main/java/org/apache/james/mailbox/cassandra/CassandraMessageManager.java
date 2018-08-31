@@ -40,7 +40,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Cassandra implementation of {@link StoreMessageManager}
@@ -77,7 +77,7 @@ public class CassandraMessageManager extends StoreMessageManager {
             .storeAttachmentsForMessage(
                 messageAttachments.stream()
                     .map(MessageAttachment::getAttachment)
-                    .collect(Guavate.toImmutableList()),
+                    .collect(ImmutableList.toImmutableList()),
                 message.getMessageId());
     }
 

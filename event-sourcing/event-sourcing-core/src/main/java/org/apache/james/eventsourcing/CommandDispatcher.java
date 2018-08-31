@@ -30,7 +30,7 @@ import javax.inject.Inject;
 
 import org.apache.james.eventsourcing.eventstore.EventStoreFailedException;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableMap;
 
 public class CommandDispatcher {
 
@@ -78,7 +78,7 @@ public class CommandDispatcher {
     public CommandDispatcher(EventBus eventBus, Set<CommandHandler<?>> handlers) {
         this.eventBus = eventBus;
         this.handlers = handlers.stream()
-            .collect(Guavate.toImmutableMap(CommandHandler::handledClass, handler -> handler));
+            .collect(ImmutableMap.toImmutableMap(CommandHandler::handledClass, handler -> handler));
     }
 
     public void dispatch(Command c) {

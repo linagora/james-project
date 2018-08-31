@@ -80,7 +80,6 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.UDTValue;
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -179,7 +178,7 @@ public class CassandraMailRepositoryMailDAO {
         List<MailAddress> recipients = row.getList(RECIPIENTS, String.class)
             .stream()
             .map(Throwing.function(MailAddress::new))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         String state = row.getString(STATE);
         String remoteAddr = row.getString(REMOTE_ADDR);
         String remoteHost = row.getString(REMOTE_HOST);
@@ -210,18 +209,18 @@ public class CassandraMailRepositoryMailDAO {
         return rowAttributes.entrySet()
             .stream()
             .map(entry -> Pair.of(entry.getKey(), fromByteBuffer(entry.getValue())))
-            .collect(Guavate.toImmutableMap(Pair::getLeft, Pair::getRight));
+            .collect(ImmutableMap.toImmutableMap(Pair::getLeft, Pair::getRight));
     }
 
     private ImmutableList<String> asStringList(Collection<MailAddress> mailAddresses) {
-        return mailAddresses.stream().map(MailAddress::asString).collect(Guavate.toImmutableList());
+        return mailAddresses.stream().map(MailAddress::asString).collect(ImmutableList.toImmutableList());
     }
 
     private ImmutableMap<String, ByteBuffer> toRawAttributeMap(Mail mail) {
         return Iterators.toStream(mail.getAttributeNames())
             .map(name -> Pair.of(name, mail.getAttribute(name)))
             .map(pair -> Pair.of(pair.getLeft(), toByteBuffer(pair.getRight())))
-            .collect(Guavate.toImmutableMap(Pair::getLeft, Pair::getRight));
+            .collect(ImmutableMap.toImmutableMap(Pair::getLeft, Pair::getRight));
     }
 
     private ImmutableMap<String, UDTValue> toHeaderMap(PerRecipientHeaders perRecipientHeaders) {
@@ -235,7 +234,7 @@ public class CassandraMailRepositoryMailDAO {
                     .newValue()
                     .setString(HEADER_NAME, entry.getRight().getName())
                     .setString(HEADER_VALUE, entry.getRight().getValue())))
-            .collect(Guavate.toImmutableMap(Pair::getLeft, Pair::getRight));
+            .collect(ImmutableMap.toImmutableMap(Pair::getLeft, Pair::getRight));
     }
 
     private PerRecipientHeaders fromHeaderMap(Map<String, UDTValue> rawMap) {

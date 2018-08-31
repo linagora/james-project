@@ -52,7 +52,6 @@ import org.apache.james.mime4j.util.MimeUtil;
 import org.apache.james.util.mime.MessageContentExtractor;
 import org.apache.james.util.mime.MessageContentExtractor.MessageContent;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -164,7 +163,7 @@ public class MessageFactory {
         return list.flatten()
             .stream()
             .map(this::fromMailbox)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
     
     private Emailer fromMailbox(Mailbox mailbox) {
@@ -194,7 +193,7 @@ public class MessageFactory {
                 .asMap()
                 .entrySet()
                 .stream()
-                .collect(Guavate.toImmutableMap(Map.Entry::getKey, bodyConcatenator));
+                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, bodyConcatenator));
     }
     
     private String getHeader(org.apache.james.mime4j.dom.Message message, String header) {
@@ -208,7 +207,7 @@ public class MessageFactory {
     private List<Attachment> getAttachments(List<MessageAttachment> attachments) {
         return attachments.stream()
                 .map(this::fromMailboxAttachment)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
     }
 
     private Attachment fromMailboxAttachment(MessageAttachment attachment) {

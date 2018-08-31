@@ -49,7 +49,7 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.Select;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraSieveDAO {
 
@@ -117,7 +117,7 @@ public class CassandraSieveDAO {
                 .map(row -> new ScriptSummary(
                     new ScriptName(row.getString(SCRIPT_NAME)),
                     row.getBool(IS_ACTIVE)))
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
     }
 
     public CompletableFuture<Boolean> updateScriptActivation(User user, ScriptName scriptName, boolean active) {

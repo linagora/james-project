@@ -35,7 +35,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 
@@ -122,7 +122,7 @@ public abstract class CassandraMailboxPathDAOTest {
         List<CassandraIdAndPath> cassandraIds = testee
             .listUserMailboxes(USER_INBOX_MAILBOXPATH.getNamespace(), USER_INBOX_MAILBOXPATH.getUser())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(cassandraIds)
             .hasSize(2)

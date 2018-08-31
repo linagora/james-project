@@ -68,8 +68,8 @@ import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -94,7 +94,7 @@ public class StoreMessageIdManager implements MessageIdManager {
         return mailboxMessages
             .stream()
             .map(MailboxMessage::getMailboxId)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreMessageIdManager.class);
@@ -140,7 +140,7 @@ public class StoreMessageIdManager implements MessageIdManager {
         return messageList.stream()
             .filter(message -> allowedMailboxIds.contains(message.getMailboxId()))
             .map(MailboxMessage::getMessageId)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
     }
 
     @Override
@@ -153,7 +153,7 @@ public class StoreMessageIdManager implements MessageIdManager {
         return messageList.stream()
             .filter(inMailboxes(allowedMailboxIds))
             .map(Throwing.function(messageResultConverter(fetchGroup)).sneakyThrow())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private ImmutableSet<MailboxId> getAllowedMailboxIds(MailboxSession mailboxSession, List<MailboxMessage> messageList, Right... rights) {
@@ -161,7 +161,7 @@ public class StoreMessageIdManager implements MessageIdManager {
                 .map(MailboxMessage::getMailboxId)
                 .distinct()
                 .filter(hasRightsOnMailbox(mailboxSession, rights))
-                .collect(Guavate.toImmutableSet());
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     @Override
@@ -174,7 +174,7 @@ public class StoreMessageIdManager implements MessageIdManager {
             .find(ImmutableList.of(messageId), MessageMapper.FetchType.Metadata)
             .stream()
             .filter(inMailboxes(mailboxIds))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         if (!messageList.isEmpty()) {
             delete(messageIdMapper, messageList, mailboxSession);
@@ -194,7 +194,7 @@ public class StoreMessageIdManager implements MessageIdManager {
             .filter(message -> allowedMailboxIds.contains(message.getMailboxId()))
             .map(MailboxMessage::getMessageId)
             .distinct()
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
         Sets.SetView<MessageId> nonAccessibleMessages = Sets.difference(ImmutableSet.copyOf(messageIds), accessibleMessages);
 
         delete(messageIdMapper, messageList, mailboxSession);
@@ -208,11 +208,11 @@ public class StoreMessageIdManager implements MessageIdManager {
     private void delete(MessageIdMapper messageIdMapper, List<MailboxMessage> messageList, MailboxSession mailboxSession) throws MailboxException {
         ImmutableList<MetadataWithMailboxId> metadataWithMailbox = messageList.stream()
             .map(StoreMessageIdManager::toMetadataWithMailboxId)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         messageIdMapper.delete(
             messageList.stream()
-                .collect(Guavate.toImmutableListMultimap(
+                .collect(ImmutableListMultimap.toImmutableListMultimap(
                     Message::getMessageId,
                     MailboxMessage::getMailboxId)));
 
@@ -264,7 +264,7 @@ public class StoreMessageIdManager implements MessageIdManager {
         return messageIdMapper.find(ImmutableList.of(messageId), MessageMapper.FetchType.Full)
             .stream()
             .filter(hasRightsOn(mailboxSession, Right.Read))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private void applyMessageMoves(MailboxSession mailboxSession, List<MailboxMessage> currentMailboxMessages, MessageMoves messageMoves) throws MailboxException {

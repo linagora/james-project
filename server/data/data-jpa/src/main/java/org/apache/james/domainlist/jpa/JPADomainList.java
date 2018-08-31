@@ -38,7 +38,6 @@ import org.apache.james.domainlist.lib.AbstractDomainList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -90,7 +89,7 @@ public class JPADomainList extends AbstractDomainList {
             domains = resultList
                     .stream()
                     .map(domainAsString -> Domain.of(domainAsString))
-                    .collect(Guavate.toImmutableList());
+                    .collect(ImmutableList.toImmutableList());
             transaction.commit();
         } catch (PersistenceException e) {
             LOGGER.error("Failed to list domains", e);

@@ -33,7 +33,6 @@ import org.apache.james.eventsourcing.eventstore.EventStore;
 import org.apache.james.eventsourcing.eventstore.History;
 import org.junit.jupiter.api.Test;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -231,7 +230,7 @@ public interface EventSourcingSystemTest {
                         eventIdIncrementer.next(),
                         AGGREGATE_ID,
                         word))
-                    .collect(Guavate.toImmutableList());
+                    .collect(ImmutableList.toImmutableList());
             }
         };
     }

@@ -28,7 +28,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class JamesCollectorsTest {
@@ -41,7 +40,7 @@ public class JamesCollectorsTest {
         Stream<Integer> emptyStream = Stream.of();
 
         assertThat(emptyStream.collect(JamesCollectors.chunker(10))
-            .collect(Guavate.toImmutableList()))
+            .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -65,7 +64,7 @@ public class JamesCollectorsTest {
 
         List<List<Integer>> values = monoValueStream.collect(JamesCollectors.chunker(10))
             .map(ImmutableList::copyOf)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         assertThat(values)
             .isEqualTo(ImmutableList.of(ImmutableList.of(1)));
     }
@@ -76,7 +75,7 @@ public class JamesCollectorsTest {
 
         List<List<Integer>> values = stream.collect(JamesCollectors.chunker(3))
             .map(ImmutableList::copyOf)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         assertThat(values)
             .isEqualTo(ImmutableList.of(ImmutableList.of(1, 2)));
     }
@@ -87,7 +86,7 @@ public class JamesCollectorsTest {
 
         List<List<Integer>> values = stream.collect(JamesCollectors.chunker(3))
             .map(ImmutableList::copyOf)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         assertThat(values)
             .isEqualTo(ImmutableList.of(ImmutableList.of(1, 2, 3)));
     }
@@ -98,7 +97,7 @@ public class JamesCollectorsTest {
 
         List<List<Integer>> values = stream.collect(JamesCollectors.chunker(3))
             .map(ImmutableList::copyOf)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         assertThat(values)
             .isEqualTo(ImmutableList.of(
                 ImmutableList.of(1, 2, 3),
@@ -111,7 +110,7 @@ public class JamesCollectorsTest {
 
         List<List<Integer>> values = stream.collect(JamesCollectors.chunker(3))
             .map(ImmutableList::copyOf)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         assertThat(values)
             .isEqualTo(ImmutableList.of(
                 ImmutableList.of(1, 2, 3),

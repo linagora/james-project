@@ -31,7 +31,6 @@ import org.apache.james.util.Host;
 
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.PoolingOptions;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class ClusterConfiguration {
@@ -195,7 +194,7 @@ public class ClusterConfiguration {
 
         return Arrays.stream(ipAndPorts)
             .map(string -> Host.parseConfString(string, ClusterBuilder.DEFAULT_CASSANDRA_PORT))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private static Optional<PoolingOptions> readPoolingOptions(PropertiesConfiguration configuration) {

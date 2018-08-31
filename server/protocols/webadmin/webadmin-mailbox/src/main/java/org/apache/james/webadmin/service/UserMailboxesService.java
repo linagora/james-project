@@ -41,9 +41,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 
 public class UserMailboxesService {
@@ -83,7 +83,7 @@ public class UserMailboxesService {
         MailboxSession mailboxSession = mailboxManager.createSystemSession(username);
         return listUserMailboxes(mailboxSession)
             .map(mailboxMetaData -> new MailboxResponse(mailboxMetaData.getPath().getName()))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     public boolean testMailboxExists(String username, MailboxName mailboxName) throws MailboxException, UsersRepositoryException {

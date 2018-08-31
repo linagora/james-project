@@ -57,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -159,7 +158,7 @@ public class MailImpl implements Disposable, Mail {
         public Builder recipients(String... recipients) {
             return recipients(Arrays.stream(recipients)
                 .map(Throwing.function(MailAddress::new))
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
         }
 
         public Builder recipient(MailAddress recipient) {
@@ -249,7 +248,7 @@ public class MailImpl implements Disposable, Mail {
     private static ImmutableList<MailAddress> getRecipients(MimeMessage mimeMessage) throws MessagingException {
         return Arrays.stream(mimeMessage.getAllRecipients())
             .map(Throwing.function(MailImpl::castToMailAddress).sneakyThrow())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private static MailAddress getSender(MimeMessage mimeMessage) throws MessagingException {

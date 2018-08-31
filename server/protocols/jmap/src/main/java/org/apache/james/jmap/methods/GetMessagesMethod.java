@@ -53,9 +53,10 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ser.PropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 
 public class GetMessagesMethod implements Method {
@@ -136,14 +137,14 @@ public class GetMessagesMethod implements Method {
                 .messages(
                     messageIdManager.getMessages(getMessagesRequest.getIds(), FetchGroupImpl.FULL_CONTENT, mailboxSession)
                         .stream()
-                        .collect(Guavate.toImmutableListMultimap(MessageResult::getMessageId))
+                        .collect(ImmutableListMultimap.toImmutableListMultimap(MessageResult::getMessageId, Function.identity()))
                         .asMap()
                         .values()
                         .stream()
                         .filter(collection -> !collection.isEmpty())
                         .flatMap(toMetaDataWithContent())
                         .flatMap(toMessage())
-                        .collect(Guavate.toImmutableList()))
+                        .collect(ImmutableList.toImmutableList()))
                 .expectedMessageIds(getMessagesRequest.getIds())
                 .build();
         } catch (MailboxException e) {
@@ -168,7 +169,7 @@ public class GetMessagesMethod implements Method {
             List<MailboxId> mailboxIds = messageResults.stream()
                 .map(MessageResult::getMailboxId)
                 .distinct()
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
             try {
                 Keywords keywords = messageResults.stream()
                     .map(MessageMetaData::getFlags)

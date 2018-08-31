@@ -47,7 +47,8 @@ import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 
 import com.github.fge.lambdas.consumers.ThrowingBiConsumer;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -139,7 +140,7 @@ public class DomainMappingsRoutes implements Routes {
                 .stream()
                 .filter(mappingsEntry -> !mappingsEntry.getValue().isEmpty())
                 .filter(mappingsEntry -> mappingsEntry.getValue().contains(Mapping.Type.Domain))
-                .collect(Guavate.toImmutableMap(
+                .collect(ImmutableMap.toImmutableMap(
                         mappingsEntry -> mappingsEntry.getKey().getFixedDomain(),
                         mappingsEntry -> toDomainList(mappingsEntry.getValue())
                 ));
@@ -206,6 +207,6 @@ public class DomainMappingsRoutes implements Routes {
                 .asStream()
                 .map(Mapping::asString)
                 .map(Mapping.Type.Domain::withoutPrefix)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
     }
 }

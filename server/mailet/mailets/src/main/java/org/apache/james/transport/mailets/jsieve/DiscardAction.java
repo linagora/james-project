@@ -24,7 +24,7 @@ import org.apache.jsieve.mail.Action;
 import org.apache.jsieve.mail.ActionDiscard;
 import org.apache.mailet.Mail;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 
 public class DiscardAction extends FileIntoAction implements MailAction {
@@ -41,6 +41,6 @@ public class DiscardAction extends FileIntoAction implements MailAction {
         mail.setRecipients(mail.getRecipients()
             .stream()
             .filter(mailAddress -> !mailAddress.equals(context.getRecipient()))
-            .collect(Guavate.toImmutableList()));
+            .collect(ImmutableList.toImmutableList()));
     }
 }

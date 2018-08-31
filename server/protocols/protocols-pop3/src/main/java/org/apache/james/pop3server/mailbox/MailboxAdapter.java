@@ -40,7 +40,6 @@ import org.apache.james.mailbox.model.MessageResult.FetchGroup;
 import org.apache.james.protocols.pop3.mailbox.Mailbox;
 import org.apache.james.protocols.pop3.mailbox.MessageMetaData;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class MailboxAdapter implements Mailbox {
@@ -172,7 +171,7 @@ public class MailboxAdapter implements Mailbox {
     public void remove(String... uids) throws IOException {
         List<MessageUid> uidList = Arrays.stream(uids)
             .map(uid -> MessageUid.of(Long.valueOf(uid)))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         List<MessageRange> ranges = MessageRange.toRanges(uidList);
         try {

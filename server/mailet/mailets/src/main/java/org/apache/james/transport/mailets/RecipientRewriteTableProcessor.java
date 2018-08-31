@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -171,7 +170,7 @@ public class RecipientRewriteTableProcessor {
             .map(mapping -> mapping.appendDomainIfNone(defaultDomainSupplier))
             .map(Mapping::asMailAddress)
             .flatMap(OptionalUtils::toStream)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         forwardToRemoteAddress(sender, recipient, message, mailAddresses);
 
@@ -181,13 +180,13 @@ public class RecipientRewriteTableProcessor {
     private ImmutableList<MailAddress> getLocalAddresses(ImmutableList<MailAddress> mailAddresses) {
         return mailAddresses.stream()
             .filter(mailAddress -> mailetContext.isLocalServer(mailAddress.getDomain()))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private void forwardToRemoteAddress(MailAddress sender, MailAddress recipient, MimeMessage message, ImmutableList<MailAddress> mailAddresses) {
         ImmutableList<MailAddress> remoteAddresses = mailAddresses.stream()
             .filter(mailAddress -> !mailetContext.isLocalServer(mailAddress.getDomain()))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         if (!remoteAddresses.isEmpty()) {
             try {

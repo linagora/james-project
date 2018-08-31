@@ -35,11 +35,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
 
 /**
  * All implementations of the DomainList interface should extends this abstract
@@ -175,7 +175,7 @@ public abstract class AbstractDomainList implements DomainList, Configurable {
     private ImmutableList<Domain> detectIps(Iterable<Domain> domains) {
         if (autoDetectIP) {
             return getDomainsIpStream(domains, dns, LOGGER)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
         }
         return ImmutableList.of();
     }
@@ -205,7 +205,7 @@ public abstract class AbstractDomainList implements DomainList, Configurable {
      * @return Stream of ipaddress for domains
      */
     private static Stream<Domain> getDomainsIpStream(Iterable<Domain> domains, DNSService dns, Logger log) {
-        return Guavate.stream(domains)
+        return Streams.stream(domains)
             .flatMap(domain -> getDomainIpStream(domain, dns, log))
             .distinct();
     }

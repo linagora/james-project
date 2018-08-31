@@ -60,8 +60,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class CassandraMessageMapper implements MessageMapper {
     public static final MailboxCounters INITIAL_COUNTERS =  MailboxCounters.builder()
@@ -174,7 +174,7 @@ public class CassandraMessageMapper implements MessageMapper {
     private List<ComposedMessageIdWithMetaData> retrieveMessageIds(CassandraId mailboxId, MessageRange messageRange) {
         return messageIdDAO.retrieveMessages(mailboxId, messageRange)
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private CompletableFuture<Stream<SimpleMailboxMessage>> retrieveMessages(List<ComposedMessageIdWithMetaData> messageIds, FetchType fetchType, Limit limit) {
@@ -190,7 +190,7 @@ public class CassandraMessageMapper implements MessageMapper {
         CassandraId mailboxId = (CassandraId) mailbox.getMailboxId();
         return mailboxRecentDAO.getRecentMessageUidsInMailbox(mailboxId)
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -210,7 +210,7 @@ public class CassandraMessageMapper implements MessageMapper {
             .collect(JamesCollectors.chunker(cassandraConfiguration.getExpungeChunkSize()))
             .map(uidChunk -> expungeUidChunk(mailboxId, uidChunk))
             .flatMap(CompletableFuture::join)
-            .collect(Guavate.toImmutableMap(MailboxMessage::getUid, SimpleMessageMetaData::new));
+            .collect(ImmutableMap.toImmutableMap(MailboxMessage::getUid, SimpleMessageMetaData::new));
     }
 
     private CompletableFuture<Stream<SimpleMailboxMessage>> expungeUidChunk(CassandraId mailboxId, Collection<MessageUid> uidChunk) {

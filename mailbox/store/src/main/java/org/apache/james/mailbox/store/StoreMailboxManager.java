@@ -90,9 +90,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -669,14 +669,14 @@ public class StoreMailboxManager implements MailboxManager {
                 delegatedMailboxes)
             .distinct()
             .filter(Throwing.predicate(mailbox -> storeRightManager.hasRight(mailbox, right, session)))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         return mailboxes
             .stream()
             .filter(mailbox -> mailboxExpression.isPathMatch(mailbox.generateAssociatedPath()))
             .map(mailbox -> toMailboxMetadata(session, mailboxes, mailbox))
             .sorted(new StandardMailboxMetaDataComparator())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @VisibleForTesting
@@ -728,7 +728,7 @@ public class StoreMailboxManager implements MailboxManager {
         ImmutableSet<MailboxId> wantedMailboxesId =
             getInMailboxes(expression.getInMailboxes(), session)
                 .filter(id -> !expression.getNotInMailboxes().contains(id))
-                .collect(Guavate.toImmutableSet());
+                .collect(ImmutableSet.toImmutableSet());
 
         return index.search(session, wantedMailboxesId, expression.getSearchQuery(), limit);
     }
@@ -786,7 +786,7 @@ public class StoreMailboxManager implements MailboxManager {
             .list()
             .stream()
             .map(Mailbox::generateAssociatedPath)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override

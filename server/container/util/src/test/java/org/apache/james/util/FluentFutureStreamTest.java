@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class FluentFutureStreamTest {
 
@@ -40,7 +40,7 @@ public class FluentFutureStreamTest {
                 CompletableFuture.completedFuture(2),
                 CompletableFuture.completedFuture(3))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -51,7 +51,7 @@ public class FluentFutureStreamTest {
                 CompletableFuture.completedFuture(
                     Stream.of(1, 2, 3)))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -64,7 +64,7 @@ public class FluentFutureStreamTest {
                     CompletableFuture.completedFuture(2),
                     CompletableFuture.completedFuture(3)))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -77,7 +77,7 @@ public class FluentFutureStreamTest {
                     CompletableFuture.completedFuture(Stream.of()),
                     CompletableFuture.completedFuture(Stream.of(3))))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -92,7 +92,7 @@ public class FluentFutureStreamTest {
                     CompletableFuture.completedFuture(Optional.empty()),
                     CompletableFuture.completedFuture(Optional.of(3))))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -104,7 +104,7 @@ public class FluentFutureStreamTest {
                     Stream.of(1, 2, 3)))
                 .completableFuture()
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -116,7 +116,7 @@ public class FluentFutureStreamTest {
                     Stream.of(1, 2, 3)))
                 .map(i -> i + 1)
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(2, 3, 4);
     }
 
@@ -128,7 +128,7 @@ public class FluentFutureStreamTest {
                     Stream.of(1, 2, 3)))
                 .flatMap(i -> Stream.of(i, i + 1))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 2, 3, 3, 4);
     }
 
@@ -141,7 +141,7 @@ public class FluentFutureStreamTest {
                 .flatMapOptional(i -> Optional.of(i + 1)
                     .filter(j -> j % 2 == 0))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(2, 4);
     }
 
@@ -175,7 +175,7 @@ public class FluentFutureStreamTest {
                     Stream.of(1, 2, 3)))
                 .filter(i -> i % 2 == 1)
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 3);
     }
 
@@ -187,7 +187,7 @@ public class FluentFutureStreamTest {
                     Stream.of(1, 2, 3)))
                 .thenComposeOnAll(i -> CompletableFuture.completedFuture(i + 1))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(2, 3, 4);
     }
 
@@ -199,7 +199,7 @@ public class FluentFutureStreamTest {
                     Stream.of(1, 2, 3)))
                 .thenFlatCompose(i -> CompletableFuture.completedFuture(Stream.of(i, i + 1)))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 2, 3, 3, 4);
     }
 
@@ -212,7 +212,7 @@ public class FluentFutureStreamTest {
                 .thenFlatComposeOnOptional(i -> CompletableFuture.completedFuture(Optional.of(i + 1)
                     .filter(j -> j % 2 == 0)))
                 .join()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(2, 4);
     }
 
@@ -228,7 +228,7 @@ public class FluentFutureStreamTest {
                 return CompletableFuture.completedFuture(null);
             })
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(sideEffects).containsOnly(1, 2, 3);
     }
@@ -241,7 +241,7 @@ public class FluentFutureStreamTest {
                     CompletableFuture.completedFuture(1),
                     CompletableFuture.completedFuture(2),
                     CompletableFuture.completedFuture(3)))
-                .collect(Guavate.toImmutableList())
+                .collect(ImmutableList.toImmutableList())
                 .join())
             .containsExactly(1, 2, 3);
     }
@@ -250,7 +250,7 @@ public class FluentFutureStreamTest {
     public void collectShouldReturnEmptyWhenStreamIsEmpty() {
         assertThat(
             FluentFutureStream.ofFutures()
-                .collect(Guavate.toImmutableList())
+                .collect(ImmutableList.toImmutableList())
                 .join())
             .isEmpty();
     }

@@ -47,7 +47,6 @@ import org.apache.mailet.base.test.FakeMailetConfig;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -58,7 +57,7 @@ public class RemoteDeliveryTest {
             return new MailProjection(mail.getName(), mail.getRecipients(),
                 Iterators.toStream(mail.getAttributeNames())
                     .map(name -> Pair.of(name, mail.getAttribute(name)))
-                    .collect(Guavate.toImmutableMap(Pair::getKey, Pair::getValue)));
+                    .collect(ImmutableMap.toImmutableMap(Pair::getKey, Pair::getValue)));
         }
 
         public static MailProjection from(ManageableMailQueue.MailQueueItemView item) {

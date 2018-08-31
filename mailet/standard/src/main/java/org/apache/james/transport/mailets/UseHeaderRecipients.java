@@ -42,7 +42,6 @@ import org.apache.mailet.base.GenericMailet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
@@ -175,7 +174,7 @@ public class UseHeaderRecipients extends GenericMailet {
         return addressList.stream()
             .flatMap(address -> convertAddressToMailboxCollection(address))
             .map(this::toMailAddress)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private MailAddress toMailAddress(Mailbox mailbox) {

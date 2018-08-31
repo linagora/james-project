@@ -88,7 +88,6 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
@@ -211,7 +210,7 @@ public class CassandraMessageDAO {
     private ImmutableList<UDTValue> buildAttachmentUdt(MailboxMessage message) {
         return message.getAttachments().stream()
             .map(this::toUDT)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private UDTValue toUDT(MessageAttachment messageAttachment) {
@@ -230,7 +229,7 @@ public class CassandraMessageDAO {
                 .setString(Properties.NAMESPACE, x.getNamespace())
                 .setString(Properties.NAME, x.getLocalName())
                 .setString(Properties.VALUE, x.getValue()))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     public CompletableFuture<Stream<MessageResult>> retrieveMessages(List<ComposedMessageIdWithMetaData> messageIds, FetchType fetchType, Limit limit) {
@@ -418,7 +417,7 @@ public class CassandraMessageDAO {
         MessageId messageId = messageIdFactory.of(row.getUUID(MESSAGE_ID));
         Set<AttachmentId> attachmentIds = attachmentByIds(row.getList(ATTACHMENTS, UDTValue.class))
             .map(MessageAttachmentRepresentation::getAttachmentId)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
         return new MessageIdAttachmentIds(messageId, attachmentIds);
     }
 

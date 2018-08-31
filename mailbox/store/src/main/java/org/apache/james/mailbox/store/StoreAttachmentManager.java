@@ -37,7 +37,7 @@ import org.apache.james.mailbox.store.mail.model.Username;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class StoreAttachmentManager implements AttachmentManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreAttachmentManager.class);
@@ -68,7 +68,7 @@ public class StoreAttachmentManager implements AttachmentManager {
     public List<Attachment> getAttachments(List<AttachmentId> attachmentIds, MailboxSession mailboxSession) throws MailboxException {
         List<AttachmentId> accessibleAttachmentIds = attachmentIds.stream()
             .filter(attachmentId -> userHasAccessToAttachment(attachmentId, mailboxSession))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         return attachmentMapperFactory.getAttachmentMapper(mailboxSession).getAttachments(accessibleAttachmentIds);
     }

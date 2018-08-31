@@ -37,7 +37,7 @@ import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.util.OptionalUtils;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableMap;
 
 public class CassandraPerUserMaxQuotaManager implements MaxQuotaManager {
 
@@ -170,7 +170,7 @@ public class CassandraPerUserMaxQuotaManager implements MaxQuotaManager {
                 Pair.of(Quota.Scope.Domain, quotaRoot.getDomain().flatMap(domainQuotaSupplier)),
                 Pair.of(Quota.Scope.Global, globalQuota.getGlobalMaxMessage()))
             .filter(pair -> pair.getValue().isPresent())
-            .collect(Guavate.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
+            .collect(ImmutableMap.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
     }
 
     @Override
@@ -181,6 +181,6 @@ public class CassandraPerUserMaxQuotaManager implements MaxQuotaManager {
                 Pair.of(Quota.Scope.Domain, quotaRoot.getDomain().flatMap(domainQuotaSupplier)),
                 Pair.of(Quota.Scope.Global, globalQuota.getGlobalMaxStorage()))
             .filter(pair -> pair.getValue().isPresent())
-            .collect(Guavate.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
+            .collect(ImmutableMap.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
     }
 }

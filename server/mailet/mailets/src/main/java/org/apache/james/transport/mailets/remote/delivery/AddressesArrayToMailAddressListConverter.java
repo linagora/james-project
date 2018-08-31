@@ -31,7 +31,6 @@ import org.apache.james.util.OptionalUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class AddressesArrayToMailAddressListConverter {
@@ -45,7 +44,7 @@ public class AddressesArrayToMailAddressListConverter {
             .stream()
             .map(address -> toMailAddress(address))
             .flatMap(OptionalUtils::toStream)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private static Optional<MailAddress> toMailAddress(Address address) {

@@ -33,7 +33,7 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -118,6 +118,6 @@ public class HealthCheckRoutes implements PublicRoutes {
         return healthChecks.stream()
             .map(HealthCheck::check)
             .filter(result -> result.isUnHealthy() || result.isDegraded())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 }

@@ -46,7 +46,7 @@ import org.apache.james.webadmin.utils.JsonExtractor;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -150,7 +150,7 @@ public class DLPConfigurationRoutes implements Routes {
             Domain senderDomain = parseDomain(request);
             List<DLPConfigurationItem> dlpConfigurations = dlpConfigurationStore
                 .list(senderDomain)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
 
             DLPConfigurationDTO dto = DLPConfigurationDTO.toDTO(dlpConfigurations);
             response.status(HttpStatus.OK_200);

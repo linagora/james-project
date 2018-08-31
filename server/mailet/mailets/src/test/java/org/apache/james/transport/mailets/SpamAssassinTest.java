@@ -39,7 +39,7 @@ import org.apache.mailet.base.test.FakeMailetConfig;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class SpamAssassinTest {
 
@@ -169,7 +169,7 @@ public class SpamAssassinTest {
                 .get(new MailAddress("user1@exemple.com"))
                 .stream()
                 .map(PerRecipientHeaders.Header::getName)
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .contains(SpamAssassinResult.FLAG_MAIL_ATTRIBUTE_NAME, SpamAssassinResult.STATUS_MAIL_ATTRIBUTE_NAME);
     }
 

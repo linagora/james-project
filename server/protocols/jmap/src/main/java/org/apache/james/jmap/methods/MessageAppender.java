@@ -53,7 +53,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
@@ -156,7 +155,7 @@ public class MessageAppender {
         return attachments.stream()
             .map(Throwing.function(toMessageAttachment).sneakyThrow())
             .flatMap(OptionalUtils::toStream)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private Optional<MessageAttachment> messageAttachment(MailboxSession session, Attachment attachment) throws MailboxException {

@@ -47,7 +47,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class EventStoreDao {
     private final CassandraUtils cassandraUtils;
@@ -108,7 +108,7 @@ public class EventStoreDao {
     private History toHistory(ResultSet resultSet) {
         List<Event> events = cassandraUtils.convertToStream(resultSet)
             .map(this::toEvent)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         return History.of(events);
     }
 

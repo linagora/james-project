@@ -58,7 +58,6 @@ import org.apache.james.mime4j.util.MimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -95,7 +94,7 @@ public class MIMEMessageConverter {
             FieldName.CONTENT_TRANSFER_ENCODING);
     private static final List<String> LOWERCASED_COMPUTED_HEADERS = COMPUTED_HEADERS.stream()
             .map(s -> s.toLowerCase(Locale.ENGLISH))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
     private final BasicBodyFactory bodyFactory;
 

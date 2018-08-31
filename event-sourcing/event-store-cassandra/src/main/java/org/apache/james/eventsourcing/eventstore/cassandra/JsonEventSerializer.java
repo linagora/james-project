@@ -37,7 +37,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 public class JsonEventSerializer {
@@ -61,12 +61,12 @@ public class JsonEventSerializer {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT);
 
         typeToModule = modules.stream()
-            .collect(Guavate.toImmutableMap(
+            .collect(ImmutableMap.toImmutableMap(
                 EventDTOModule::getType,
                 Function.identity()));
 
         eventClassToModule = modules.stream()
-            .collect(Guavate.toImmutableMap(
+            .collect(ImmutableMap.toImmutableMap(
                 EventDTOModule::getEventClass,
                 Function.identity()));
     }

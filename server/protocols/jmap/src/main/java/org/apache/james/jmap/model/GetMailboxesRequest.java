@@ -27,7 +27,6 @@ import org.apache.james.mailbox.model.MailboxId;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -71,7 +70,7 @@ public class GetMailboxesRequest implements JmapRequest {
                     .map(MailboxProperty::findProperty)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .collect(Guavate.toImmutableSet()));
+                    .collect(ImmutableSet.toImmutableSet()));
             return this;
         }
         

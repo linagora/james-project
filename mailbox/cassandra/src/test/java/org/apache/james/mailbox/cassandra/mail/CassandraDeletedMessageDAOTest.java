@@ -37,7 +37,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraDeletedMessageDAOTest {
     
@@ -79,7 +79,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).isEmpty();
     }
@@ -91,7 +91,7 @@ public class CassandraDeletedMessageDAOTest {
 
         List<MessageUid> result = testee.retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_1, UID_2);
     }
@@ -103,7 +103,7 @@ public class CassandraDeletedMessageDAOTest {
 
         List<MessageUid> result = testee.retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_1);
     }
@@ -116,7 +116,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).isEmpty();
     }
@@ -131,7 +131,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_2);
     }
@@ -145,7 +145,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).isEmpty();
     }
@@ -166,7 +166,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.all())
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_1, UID_2, UID_3, UID_4, UID_7, UID_8);
     }
@@ -178,7 +178,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.one(UID_1))
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_1);
     }
@@ -190,7 +190,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.one(MessageUid.of(42)))
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).isEmpty();
     }
@@ -202,7 +202,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.range(MessageUid.of(3), MessageUid.of(7)))
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_3, UID_4, UID_7);
     }
@@ -214,7 +214,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.range(MessageUid.of(5), MessageUid.of(6)))
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).isEmpty();
     }
@@ -226,7 +226,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.from(MessageUid.of(9)))
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).isEmpty();
     }
@@ -238,7 +238,7 @@ public class CassandraDeletedMessageDAOTest {
         List<MessageUid> result = testee
             .retrieveDeletedMessage(MAILBOX_ID, MessageRange.from(MessageUid.of(4)))
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(result).containsExactly(UID_4, UID_7, UID_8);
     }

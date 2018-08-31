@@ -43,8 +43,8 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class InMemoryMessageIdMapper implements MessageIdMapper {
 
@@ -66,7 +66,7 @@ public class InMemoryMessageIdMapper implements MessageIdMapper {
                         messageMapper.findInMailbox(mailbox, MessageRange.all(), fetchType, UNLIMITED))
                         .stream()))
                 .filter(message -> messageIds.contains(message.getMessageId()))
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
         } catch (MailboxException e) {
             throw new RuntimeException(e);
         }
@@ -78,7 +78,7 @@ public class InMemoryMessageIdMapper implements MessageIdMapper {
         return find(ImmutableList.of(messageId), MessageMapper.FetchType.Metadata)
             .stream()
             .map(MailboxMessage::getMailboxId)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -122,7 +122,7 @@ public class InMemoryMessageIdMapper implements MessageIdMapper {
             .stream()
             .filter(message -> mailboxIds.contains(message.getMailboxId()))
             .map(updateMessage(newState, updateMode))
-            .collect(Guavate.entriesToMap());
+            .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private Function<MailboxMessage, Pair<MailboxId, UpdatedFlags>> updateMessage(Flags newState, FlagsUpdateMode updateMode) {

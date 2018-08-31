@@ -40,8 +40,8 @@ import org.apache.james.domainlist.lib.AbstractDomainList;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraDomainList extends AbstractDomainList {
     private final CassandraAsyncExecutor executor;
@@ -96,7 +96,7 @@ public class CassandraDomainList extends AbstractDomainList {
         return executor.execute(readAllStatement.bind())
             .thenApply(resultSet -> cassandraUtils.convertToStream(resultSet)
                 .map(row -> Domain.of(row.getString(DOMAIN)))
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .join();
     }
 

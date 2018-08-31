@@ -38,7 +38,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class ElasticSearchQuotaSearcher implements QuotaSearcher {
     private static final TimeValue TIMEOUT = new TimeValue(60000);
@@ -67,7 +67,7 @@ public class ElasticSearchQuotaSearcher implements QuotaSearcher {
         return query.getLimit().getValue()
             .map(results::limit)
             .orElse(results)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     public SearchRequestBuilder prepareSearch(QuotaQuery query) {

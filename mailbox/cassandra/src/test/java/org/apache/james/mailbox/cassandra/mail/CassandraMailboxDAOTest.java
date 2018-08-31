@@ -39,7 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraMailboxDAOTest {
 
@@ -118,7 +118,7 @@ public class CassandraMailboxDAOTest {
     public void retrieveAllMailboxesShouldBeEmptyByDefault() {
         List<SimpleMailbox> mailboxes = testee.retrieveAllMailboxes()
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(mailboxes).isEmpty();
     }
@@ -129,7 +129,7 @@ public class CassandraMailboxDAOTest {
 
         List<SimpleMailbox> mailboxes = testee.retrieveAllMailboxes()
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(mailboxes).containsOnly(mailbox1);
     }
@@ -141,7 +141,7 @@ public class CassandraMailboxDAOTest {
 
         List<SimpleMailbox> mailboxes = testee.retrieveAllMailboxes()
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         assertThat(mailboxes).containsOnly(mailbox1, mailbox2);
     }

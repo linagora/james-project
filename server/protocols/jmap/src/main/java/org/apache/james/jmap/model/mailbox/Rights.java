@@ -42,9 +42,10 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
@@ -181,7 +182,7 @@ public class Rights {
         return rights.list()
             .stream()
             .flatMap(right -> OptionalUtils.toStream(Right.forRight(right)))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private static boolean isSupported(EntryKey key) {
@@ -228,7 +229,7 @@ public class Rights {
                 .flatMap(entry -> entry.getValue()
                     .stream()
                     .map(v -> Pair.of(entry.getKey(), v)))
-                .collect(Guavate.toImmutableListMultimap(Pair::getKey, Pair::getValue)));
+                .collect(ImmutableListMultimap.toImmutableListMultimap(Pair::getKey, Pair::getValue)));
     }
 
     public MailboxACL toMailboxAcl() {

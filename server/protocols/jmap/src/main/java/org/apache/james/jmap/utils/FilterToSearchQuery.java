@@ -33,7 +33,6 @@ import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.DateResolution;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class FilterToSearchQuery {
@@ -121,6 +120,6 @@ public class FilterToSearchQuery {
         return filter.getConditions().stream()
             .map(this::convert)
             .flatMap(sq -> sq.getCriterias().stream())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 }

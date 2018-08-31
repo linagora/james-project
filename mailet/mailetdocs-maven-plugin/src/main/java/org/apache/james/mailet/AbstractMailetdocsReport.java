@@ -30,8 +30,8 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 /**
  * <p>
@@ -91,11 +91,11 @@ public abstract class AbstractMailetdocsReport extends AbstractMavenReport {
 
         final List<MailetMatcherDescriptor> matchers = descriptors.stream()
             .filter(descriptor -> descriptor.getType() == MailetMatcherDescriptor.Type.MATCHER)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         final List<MailetMatcherDescriptor> mailets = descriptors.stream()
             .filter(descriptor -> descriptor.getType() == MailetMatcherDescriptor.Type.MAILET)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         
         final boolean matchersExist = matchers.size() > 0;
         final boolean mailetsExist = mailets.size() > 0;

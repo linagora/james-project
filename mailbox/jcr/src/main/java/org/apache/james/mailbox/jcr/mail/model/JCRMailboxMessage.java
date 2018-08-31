@@ -57,7 +57,7 @@ import org.apache.james.mime4j.MimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Persistent {
 
@@ -319,7 +319,7 @@ public class JCRMailboxMessage implements MailboxMessage, JCRImapConstants, Pers
             List<Property> currentProperties = getProperties();
             List<Property> newProperties = currentProperties.stream()
                 .map(JCRProperty::new)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
             // remove old properties, we will add a bunch of new ones
             NodeIterator iterator = node.getNodes("messageProperty");
             while (iterator.hasNext()) {

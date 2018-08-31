@@ -28,7 +28,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -59,7 +58,7 @@ public class LimitTest {
         assertThat(
             testee
                 .applyOnStream(aList.stream())
-                .collect(Guavate.toImmutableList())
+                .collect(ImmutableList.toImmutableList())
         ).isEqualTo(aList);
     }
 
@@ -78,7 +77,7 @@ public class LimitTest {
 
         assertThat(testee
             .applyOnStream(aList.stream())
-            .collect(Guavate.toImmutableList())
+            .collect(ImmutableList.toImmutableList())
         ).isEqualTo(ImmutableList.of(1, 2, 3));
     }
 

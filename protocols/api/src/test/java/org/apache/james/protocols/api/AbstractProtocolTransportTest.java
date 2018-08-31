@@ -36,7 +36,7 @@ import org.apache.james.protocols.api.future.FutureResponseImpl;
 import org.apache.james.protocols.api.handler.LineHandler;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Test-case for PROTOCOLS-62
@@ -50,7 +50,7 @@ public class AbstractProtocolTransportTest {
     public void testWriteOrder() throws InterruptedException, UnsupportedEncodingException {
         final List<Response> messages = IntStream.range(0, 2000)
             .mapToObj(i -> new TestResponse())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         checkWrittenResponses(messages);
     }
@@ -71,7 +71,7 @@ public class AbstractProtocolTransportTest {
     public void testWriteOrderFutureResponse() throws InterruptedException, UnsupportedEncodingException {
         final List<Response> messages = IntStream.range(0, 2000)
             .mapToObj(i -> new FutureResponseImpl())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         notifyFutureResponses(messages, false);
         
@@ -82,7 +82,7 @@ public class AbstractProtocolTransportTest {
     public void testWriteOrderFutureResponseReverseNotify() throws InterruptedException, UnsupportedEncodingException {
         final List<Response> messages = IntStream.range(0, 2000)
             .mapToObj(i -> new FutureResponseImpl())
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         notifyFutureResponses(messages, true);
 

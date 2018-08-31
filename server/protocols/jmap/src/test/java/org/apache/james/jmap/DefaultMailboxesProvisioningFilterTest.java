@@ -36,7 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class DefaultMailboxesProvisioningFilterTest {
 
@@ -64,7 +64,7 @@ public class DefaultMailboxesProvisioningFilterTest {
             .containsOnlyElementsOf(DefaultMailboxes.DEFAULT_MAILBOXES
                 .stream()
                 .map(mailboxName -> MailboxPath.forUser(USERNAME, mailboxName))
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
     }
 
     @Test
@@ -100,7 +100,7 @@ public class DefaultMailboxesProvisioningFilterTest {
             .containsOnlyElementsOf(DefaultMailboxes.DEFAULT_MAILBOXES
                 .stream()
                 .map(mailboxName -> MailboxPath.forUser(USERNAME, mailboxName))
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
     }
 
 }

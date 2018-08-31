@@ -36,8 +36,8 @@ import org.apache.james.rrt.lib.Mappings;
 import org.apache.james.rrt.lib.MappingsImpl;
 import org.apache.james.util.OptionalUtils;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimaps;
 
 public class MemoryRecipientRewriteTable extends AbstractRecipientRewriteTable {
@@ -114,7 +114,7 @@ public class MemoryRecipientRewriteTable extends AbstractRecipientRewriteTable {
             .entrySet()
             .stream()
             .map(entry -> Pair.of(entry.getKey(), toMappings(entry.getValue())))
-            .collect(Guavate.toImmutableMap(Pair::getKey, Pair::getValue));
+            .collect(ImmutableMap.toImmutableMap(Pair::getKey, Pair::getValue));
     }
 
     private MappingsImpl toMappings(Collection<InMemoryMappingEntry> inMemoryMappingEntries) {

@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -49,11 +48,11 @@ public class MessageProperties {
     }
 
     private ImmutableSet<MessageProperty> toMessageProperties(ImmutableSet<String> properties) {
-        return properties.stream().flatMap(MessageProperty::find).collect(Guavate.toImmutableSet());
+        return properties.stream().flatMap(MessageProperty::find).collect(ImmutableSet.toImmutableSet());
     }
     
     private ImmutableSet<HeaderProperty> toHeadersProperties(ImmutableSet<String> properties) {
-        return properties.stream().flatMap(HeaderProperty::find).collect(Guavate.toImmutableSet());
+        return properties.stream().flatMap(HeaderProperty::find).collect(ImmutableSet.toImmutableSet());
     }
 
     public Optional<ImmutableSet<HeaderProperty>> getOptionalHeadersProperties() {
@@ -170,7 +169,7 @@ public class MessageProperties {
         }
 
         public static ImmutableSet<MessageProperty> allOutputProperties() {
-            return Arrays.stream(values()).filter(MessageProperty::outputProperty).collect(Guavate.toImmutableSet());
+            return Arrays.stream(values()).filter(MessageProperty::outputProperty).collect(ImmutableSet.toImmutableSet());
         }
 
         private static boolean outputProperty(MessageProperty p) {

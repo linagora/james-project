@@ -47,8 +47,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.steveash.guavate</groupId>
-            <artifactId>guavate</artifactId>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
@@ -58,6 +58,10 @@
             <groupId>nl.jqno.equalsverifier</groupId>
             <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>

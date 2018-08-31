@@ -31,7 +31,7 @@ import org.assertj.core.api.JUnitSoftAssertions;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class MailQueueItemDTOTest {
 
@@ -58,7 +58,7 @@ public class MailQueueItemDTOTest {
         MailQueueItemDTO mailQueueItemDTO = MailQueueItemDTO.from(mailQueueItemView);
         List<String> expectedRecipients = mail.getRecipients().stream()
                 .map(MailAddress::asString)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
 
         softly.assertThat(mailQueueItemDTO.getName()).isEqualTo(mail.getName());
         softly.assertThat(mailQueueItemDTO.getSender()).isEqualTo(mail.getSender().asString());

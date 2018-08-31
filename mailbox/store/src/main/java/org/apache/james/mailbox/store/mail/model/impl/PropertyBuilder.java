@@ -51,7 +51,7 @@ import java.util.function.Predicate;
 
 import org.apache.james.mailbox.store.mail.model.Property;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Builds properties
@@ -128,7 +128,7 @@ public class PropertyBuilder {
         return properties.stream()
             .filter(property -> property.isNamed(namespace, localName))
             .map(SimpleProperty::getValue)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
     
     /**

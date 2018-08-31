@@ -52,7 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
@@ -156,7 +155,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
             .filter(mailboxV1 -> mailboxesV2.stream()
                 .map(Mailbox::generateAssociatedPath)
                 .noneMatch(mailboxV2path -> mailboxV2path.equals(mailboxV1.generateAssociatedPath())))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
 
         return ImmutableList.<Mailbox>builder()
             .addAll(mailboxesV2)
@@ -171,7 +170,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
                 .filter(idAndPath -> regex.matcher(idAndPath.getMailboxPath().getName()).matches())
                 .thenFlatComposeOnOptional(this::retrieveMailbox)
                 .join()
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
     }
 
     private CompletableFuture<Optional<SimpleMailbox>> retrieveMailbox(CassandraIdAndPath idAndPath) {
@@ -229,7 +228,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
         return mailboxDAO.retrieveAllMailboxes()
             .thenComposeOnAll(this::toMailboxWithAclFuture)
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -285,7 +284,7 @@ public class CassandraMailboxMapper implements MailboxMapper {
             .thenApply(map -> toAuthorizedMailboxIds(map, right)))
             .thenFlatComposeOnOptional(this::retrieveMailbox)
             .join()
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private Stream<CassandraId> toAuthorizedMailboxIds(Map<CassandraId, MailboxACL.Rfc4314Rights> map, Right right) {

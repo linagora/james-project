@@ -33,7 +33,6 @@ import org.apache.james.mailbox.FlagsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
@@ -84,18 +83,18 @@ public class Keywords {
 
             return new Keywords(setKeywords.stream()
                     .filter(filter.orElse(keyword -> true))
-                    .collect(Guavate.toImmutableSet()));
+                    .collect(ImmutableSet.toImmutableSet()));
         }
 
         public Keywords from(Keyword... keywords) {
             return fromSet(Arrays.stream(keywords)
-                    .collect(Guavate.toImmutableSet()));
+                    .collect(ImmutableSet.toImmutableSet()));
         }
 
         public Keywords fromList(List<String> keywords) {
             return fromSet(keywords.stream()
                     .map(Keyword::new)
-                    .collect(Guavate.toImmutableSet()));
+                    .collect(ImmutableSet.toImmutableSet()));
         }
 
         @VisibleForTesting
@@ -106,7 +105,7 @@ public class Keywords {
             Set<Keyword> setKeywords = mapKeywords.keySet()
                 .stream()
                 .map(Keyword::new)
-                .collect(Guavate.toImmutableSet());
+                .collect(ImmutableSet.toImmutableSet());
 
             return fromSet(setKeywords);
         }
@@ -117,7 +116,7 @@ public class Keywords {
                             .flatMap(this::asKeyword),
                         Stream.of(flags.getSystemFlags())
                             .map(Keyword::fromFlag))
-                    .collect(Guavate.toImmutableSet()));
+                    .collect(ImmutableSet.toImmutableSet()));
         }
 
         private Stream<Keyword> asKeyword(String flagName) {
@@ -160,7 +159,7 @@ public class Keywords {
 
     public ImmutableMap<String, Boolean> asMap() {
         return keywords.stream()
-            .collect(Guavate.toImmutableMap(Keyword::getFlagName, keyword -> Keyword.FLAG_VALUE));
+            .collect(ImmutableMap.toImmutableMap(Keyword::getFlagName, keyword -> Keyword.FLAG_VALUE));
     }
 
     public ImmutableSet<Keyword> getKeywords() {

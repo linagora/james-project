@@ -22,8 +22,8 @@ import java.util.List;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 public class ListenersConfiguration {
 
@@ -32,7 +32,7 @@ public class ListenersConfiguration {
                 configuration.configurationsAt("listener")
                     .stream()
                     .map(ListenerConfiguration::from)
-                    .collect(Guavate.toImmutableList()));
+                    .collect(ImmutableList.toImmutableList()));
     }
     
     private final List<ListenerConfiguration> listenersConfiguration;

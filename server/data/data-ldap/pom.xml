@@ -51,10 +51,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.steveash.guavate</groupId>
-            <artifactId>guavate</artifactId>
-        </dependency>
-        <dependency>
             <groupId>commons-configuration</groupId>
             <artifactId>commons-configuration</artifactId>
         </dependency>

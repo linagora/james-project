@@ -22,7 +22,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class InMemoryMessageManager extends StoreMessageManager {
 
@@ -59,7 +59,7 @@ public class InMemoryMessageManager extends StoreMessageManager {
             .storeAttachmentsForMessage(
                 messageAttachments.stream()
                     .map(MessageAttachment::getAttachment)
-                    .collect(Guavate.toImmutableList()),
+                    .collect(ImmutableList.toImmutableList()),
                 message.getMessageId());
     }
 }

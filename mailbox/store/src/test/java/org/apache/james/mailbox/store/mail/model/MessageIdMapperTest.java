@@ -53,7 +53,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 
@@ -906,7 +905,7 @@ public abstract class MessageIdMapperTest {
             sut.find(ImmutableList.of(message1.getMessageId(), message2.getMessageId()), FetchType.Metadata)
                 .stream()
                 .map(message -> Pair.of(message.getMessageId(), message.getMailboxId()))
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
 
         assertThat(storedMessages)
             .containsOnly(Pair.of(message1.getMessageId(), benwaInboxMailbox.getMailboxId()));

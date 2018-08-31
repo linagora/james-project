@@ -29,7 +29,7 @@ import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.api.RecipientRewriteTableException;
 import org.apache.james.rrt.api.RecipientRewriteTableManagementMBean;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Management for RecipientRewriteTables
@@ -116,7 +116,7 @@ public class RecipientRewriteTableManagement extends StandardMBean implements Re
             .entrySet()
             .stream()
             .collect(
-                Guavate.toImmutableMap(
+                ImmutableMap.toImmutableMap(
                     entry -> entry.getKey().asString(),
                     entry -> entry.getValue()));
     }

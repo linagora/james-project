@@ -33,10 +33,10 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.util.FluentFutureStream;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 public class AttachmentLoader {
 
@@ -52,7 +52,7 @@ public class AttachmentLoader {
         if (fetchType == MessageMapper.FetchType.Body || fetchType == MessageMapper.FetchType.Full) {
             return FluentFutureStream.<SimpleMailboxMessage>of(
                 messageRepresentations
-                    .map(pair -> getAttachments(pair.getRight().collect(Guavate.toImmutableList()))
+                    .map(pair -> getAttachments(pair.getRight().collect(ImmutableList.toImmutableList()))
                         .thenApply(attachments -> pair.getLeft().toMailboxMessage(attachments))))
                 .completableFuture();
         } else {
@@ -67,12 +67,12 @@ public class AttachmentLoader {
         CompletableFuture<Map<AttachmentId, Attachment>> attachmentsByIdFuture =
             attachmentsById(attachmentRepresentations.stream()
                 .map(MessageAttachmentRepresentation::getAttachmentId)
-                .collect(Guavate.toImmutableSet()));
+                .collect(ImmutableSet.toImmutableSet()));
 
         return attachmentsByIdFuture.thenApply(attachmentsById ->
             attachmentRepresentations.stream()
                 .map(representation -> constructMessageAttachment(attachmentsById.get(representation.getAttachmentId()), representation))
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
     }
 
     private MessageAttachment constructMessageAttachment(Attachment attachment, MessageAttachmentRepresentation messageAttachmentRepresentation) {
@@ -92,7 +92,7 @@ public class AttachmentLoader {
         return attachmentMapper.getAttachmentsAsFuture(attachmentIds)
             .thenApply(attachments -> attachments
                 .stream()
-                .collect(Guavate.toImmutableMap(Attachment::getAttachmentId, Function.identity())));
+                .collect(ImmutableMap.toImmutableMap(Attachment::getAttachmentId, Function.identity())));
     }
 
 }

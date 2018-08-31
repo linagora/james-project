@@ -37,7 +37,7 @@ import org.apache.james.mailbox.quota.MaxQuotaManager;
 import org.apache.james.util.OptionalUtils;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableMap;
 
 public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
 
@@ -146,7 +146,7 @@ public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
             Pair.of(Quota.Scope.Domain, quotaRoot.getDomain().flatMap(domainQuotaFunction)),
             Pair.of(Quota.Scope.Global, dao.getGlobalMaxMessage()))
         .filter(pair -> pair.getValue().isPresent())
-        .collect(Guavate.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
+        .collect(ImmutableMap.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
     }
 
     @Override
@@ -157,7 +157,7 @@ public class JPAPerUserMaxQuotaManager implements MaxQuotaManager {
             Pair.of(Quota.Scope.Domain, quotaRoot.getDomain().flatMap(domainQuotaFunction)),
             Pair.of(Quota.Scope.Global, dao.getGlobalMaxStorage()))
         .filter(pair -> pair.getValue().isPresent())
-        .collect(Guavate.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
+        .collect(ImmutableMap.toImmutableMap(Pair::getKey, value -> value.getValue().get()));
     }
 
     @Override

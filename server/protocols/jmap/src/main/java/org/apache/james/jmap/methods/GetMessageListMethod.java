@@ -46,10 +46,11 @@ import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.OptionalUtils;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 
 public class GetMessageListMethod implements Method {
 
@@ -156,14 +157,14 @@ public class GetMessageListMethod implements Method {
 
     private Set<MailboxId> buildFilterMailboxesSet(Optional<Filter> maybeFilter, Function<FilterCondition, Optional<List<String>>> mailboxListExtractor) {
         return filterToFilterCondition(maybeFilter)
-            .flatMap(condition -> Guavate.stream(mailboxListExtractor.apply(condition)))
+            .flatMap(condition -> OptionalUtils.toStream(mailboxListExtractor.apply(condition)))
             .flatMap(List::stream)
             .map(mailboxIdFactory::fromString)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
     }
     
     private Stream<FilterCondition> filterToFilterCondition(Optional<Filter> maybeCondition) {
-        return Guavate.stream(maybeCondition)
+        return OptionalUtils.toStream(maybeCondition)
                 .flatMap(c -> {
                     if (c instanceof FilterCondition) {
                         return Stream.of((FilterCondition)c);

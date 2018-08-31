@@ -28,8 +28,8 @@ import java.util.Set;
 import org.apache.james.eventsourcing.Event;
 import org.apache.james.eventsourcing.EventId;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 public class History {
     public static History empty() {
@@ -56,7 +56,7 @@ public class History {
     public boolean hasEventIdDuplicates(List<Event> events) {
         Set<EventId> eventIds = events.stream()
             .map(Event::eventId)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
 
         return eventIds.size() != events.size();
     }

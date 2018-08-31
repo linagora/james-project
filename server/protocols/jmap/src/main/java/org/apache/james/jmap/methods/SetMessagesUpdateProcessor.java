@@ -68,7 +68,6 @@ import org.apache.james.util.OptionalUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -201,7 +200,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
 
         ImmutableList<MailboxId> previousMailboxes = messagesToBeUpdated.stream()
             .map(MessageResult::getMailboxId)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         List<MailboxId> targetMailboxes = getTargetedMailboxes(previousMailboxes, updateMessagePatch);
 
         boolean isDraft = messagesToBeUpdated.stream()
@@ -237,14 +236,14 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
 
     private List<MailboxId> getTargetedMailboxes(ImmutableList<MailboxId> previousMailboxes, UpdateMessagePatch updateMessagePatch) {
         return updateMessagePatch.getMailboxIds()
-            .map(ids -> ids.stream().map(mailboxIdFactory::fromString).collect(Guavate.toImmutableList()))
+            .map(ids -> ids.stream().map(mailboxIdFactory::fromString).collect(ImmutableList.toImmutableList()))
             .orElse(previousMailboxes);
     }
 
     private List<MailboxId> mailboxIdFor(Role role, MailboxSession session) throws MailboxException {
         return systemMailboxesProvider.getMailboxByRole(role, session)
             .map(MessageManager::getId)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private MailImpl buildMailFromMessage(MessageResult message) throws MessagingException, IOException, MailboxException {
@@ -258,7 +257,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
         return OptionalUtils.toStream(updateMessagePatch.getMailboxIds())
             .flatMap(Collection::stream)
             .map(mailboxIdFactory::fromString)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
     }
 
     private boolean isTargetingOutbox(MailboxSession mailboxSession, Set<MailboxId> targetMailboxIds) throws MailboxException {
@@ -272,7 +271,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
     private Set<MailboxId> listMailboxIdsForRole(MailboxSession session, Role role) throws MailboxException {
         return systemMailboxesProvider.getMailboxByRole(role, session)
             .map(MessageManager::getId)
-            .collect(Guavate.toImmutableSet());
+            .collect(ImmutableSet.toImmutableSet());
     }
 
     private Stream<MailboxException> updateFlags(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, MessageResult messageResult) {
@@ -294,7 +293,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
             List<MailboxId> mailboxIds = serializedMailboxIds.get()
                 .stream()
                 .map(mailboxIdFactory::fromString)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
 
             messageIdManager.setInMailboxes(messageId, mailboxIds, mailboxSession);
         }

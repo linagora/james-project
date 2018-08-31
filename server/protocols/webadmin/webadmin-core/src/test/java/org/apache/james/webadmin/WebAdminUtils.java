@@ -30,7 +30,7 @@ import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.Port;
 import org.apache.james.webadmin.authentication.NoAuthenticationFilter;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableSet;
 
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
@@ -48,14 +48,14 @@ public class WebAdminUtils {
     private static Set<Routes> privateRoutes(Routes[] routes) {
         return Arrays.stream(routes)
                 .filter(route -> !(route instanceof PublicRoutes))
-                .collect(Guavate.toImmutableSet());
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     private static Set<PublicRoutes> publicRoutes(Routes[] routes) {
         return Arrays.stream(routes)
                 .filter(PublicRoutes.class::isInstance)
                 .map(PublicRoutes.class::cast)
-                .collect(Guavate.toImmutableSet());
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     public static RequestSpecBuilder buildRequestSpecification(WebAdminServer webAdminServer) {

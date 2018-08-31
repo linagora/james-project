@@ -49,7 +49,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 public class EventConverter {
@@ -179,7 +179,7 @@ public class EventConverter {
                                                                List<UpdatedFlags> updatedFlagsList) {
         List<UpdatedFlagsDataTransferObject> updatedFlagsDataTransferObjects = updatedFlagsList.stream()
             .map(UpdatedFlagsDataTransferObject::new)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
         return EventDataTransferObject.builder()
             .type(EventType.FLAGS)
             .session(new MailboxSessionDataTransferObject(session))
@@ -226,7 +226,7 @@ public class EventConverter {
     private List<UpdatedFlags> retrieveUpdatedFlags(List<UpdatedFlagsDataTransferObject> updatedFlagsDataTransferObject) {
         return updatedFlagsDataTransferObject.stream()
             .map(UpdatedFlagsDataTransferObject::retrieveUpdatedFlags)
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
 }

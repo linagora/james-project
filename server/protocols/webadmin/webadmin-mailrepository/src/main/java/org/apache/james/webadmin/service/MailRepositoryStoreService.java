@@ -49,7 +49,7 @@ import org.eclipse.jetty.http.HttpStatus;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class MailRepositoryStoreService {
     private final MailRepositoryStore mailRepositoryStore;
@@ -73,7 +73,7 @@ public class MailRepositoryStoreService {
         ThrowingFunction<MailRepository, Stream<MailKeyDTO>> list = repository -> list(repository, offset, limit);
         return Optional.of(getRepositories(path)
                 .flatMap(Throwing.function(list).sneakyThrow())
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
     }
 
     private Stream<MailKeyDTO> list(MailRepository mailRepository, Offset offset, Limit limit) throws MessagingException {
@@ -106,7 +106,7 @@ public class MailRepositoryStoreService {
     }
 
     public Task createClearMailRepositoryTask(MailRepositoryPath path) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
-        return new ClearMailRepositoryTask(getRepositories(path).collect(Guavate.toImmutableList()), path);
+        return new ClearMailRepositoryTask(getRepositories(path).collect(ImmutableList.toImmutableList()), path);
     }
 
     public MailRepository getRepository(MailRepositoryUrl url) throws MailRepositoryStore.MailRepositoryStoreException {

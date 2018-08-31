@@ -38,7 +38,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
 
 public class CassandraAttachmentDAOTest {
     public static final AttachmentId ATTACHMENT_ID = AttachmentId.from("id1");
@@ -84,7 +84,7 @@ public class CassandraAttachmentDAOTest {
     public void retrieveAllShouldReturnEmptyByDefault() {
         assertThat(
             testee.retrieveAll()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -105,7 +105,7 @@ public class CassandraAttachmentDAOTest {
 
         assertThat(
             testee.retrieveAll()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsOnly(attachment1, attachment2);
     }
 

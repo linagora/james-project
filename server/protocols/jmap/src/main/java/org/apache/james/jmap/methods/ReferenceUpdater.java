@@ -46,7 +46,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 public class ReferenceUpdater {
@@ -66,7 +67,7 @@ public class ReferenceUpdater {
 
     public void updateReferences(Headers headers, MailboxSession session) throws MailboxException {
         Map<String, String> headersAsMap = Iterators.toStream(headers.headers())
-            .collect(Guavate.toImmutableMap(Header::getName, Header::getValue));
+            .collect(ImmutableMap.toImmutableMap(Header::getName, Header::getValue));
         updateReferences(headersAsMap, session);
     }
 
@@ -95,7 +96,7 @@ public class ReferenceUpdater {
             MessageId reference = Iterables.getOnlyElement(references);
             List<MailboxId> mailboxIds = messageIdManager.getMessages(references, FetchGroupImpl.MINIMAL, session).stream()
                 .map(MessageResult::getMailboxId)
-                .collect(Guavate.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
             messageIdManager.setFlags(flag, FlagsUpdateMode.ADD, reference, mailboxIds, session);
         } catch (NoSuchElementException e) {
             logger.info("Unable to find a message with this Mime Message Id: " + messageId);

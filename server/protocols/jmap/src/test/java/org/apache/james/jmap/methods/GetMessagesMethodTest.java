@@ -74,7 +74,6 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -519,7 +518,7 @@ public class GetMessagesMethodTest {
             .properties(ImmutableList.of("mailboxIds"))
             .build();
 
-        List<JmapResponse> responses = testee.process(request, clientId, session).collect(Guavate.toImmutableList());
+        List<JmapResponse> responses = testee.process(request, clientId, session).collect(ImmutableList.toImmutableList());
 
         assertThat(responses).hasSize(1);
         Method.Response response = responses.get(0).getResponse();

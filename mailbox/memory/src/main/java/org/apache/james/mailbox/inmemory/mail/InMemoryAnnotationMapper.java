@@ -34,7 +34,6 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.AnnotationMapper;
 import org.apache.james.util.streams.Iterators;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
@@ -86,7 +85,7 @@ public class InMemoryAnnotationMapper implements AnnotationMapper {
     public List<MailboxAnnotation> getAnnotationsByKeysWithAllDepth(MailboxId mailboxId, final Set<MailboxAnnotationKey> keys) {
         return Iterators.toStream(retrieveAllAnnotations((InMemoryId)mailboxId).iterator())
             .filter(getPredicateFilterByAll(keys))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -94,7 +93,7 @@ public class InMemoryAnnotationMapper implements AnnotationMapper {
         return getAnnotationsByKeysWithAllDepth(mailboxId, keys)
             .stream()
             .filter(getPredicateFilterByOne(keys))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     private Predicate<MailboxAnnotation> getPredicateFilterByAll(final Set<MailboxAnnotationKey> keys) {

@@ -38,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
@@ -88,7 +87,7 @@ public class SpamAssassinListener implements SpamEventListener {
                     .values()
                     .stream()
                     .map(Throwing.function(MailboxMessage::getFullContent))
-                    .collect(Guavate.toImmutableList());
+                    .collect(ImmutableList.toImmutableList());
                 spamAssassin.learnHam(contents, addedEvent.getSession().getUser().getUserName());
             }
         }
@@ -99,7 +98,7 @@ public class SpamAssassinListener implements SpamEventListener {
             .values()
             .stream()
             .map(Throwing.function(Message::getFullContent))
-            .collect(Guavate.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     @VisibleForTesting

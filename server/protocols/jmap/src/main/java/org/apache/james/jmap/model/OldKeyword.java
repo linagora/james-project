@@ -27,9 +27,9 @@ import javax.mail.Flags;
 import org.apache.james.util.OptionalUtils;
 import org.apache.james.util.StreamUtils;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableSet;
 
 public class OldKeyword {
 
@@ -181,7 +181,7 @@ public class OldKeyword {
                     OptionalUtils.toStream(isForwarded.filter(b -> b).map(b -> Keyword.FORWARDED)),
                     OptionalUtils.toStream(isFlagged.filter(b -> b).map(b -> Keyword.FLAGGED)),
                     OptionalUtils.toStream(isUnread.filter(b -> !b).map(b -> Keyword.SEEN)))
-                .collect(Guavate.toImmutableSet()));
+                .collect(ImmutableSet.toImmutableSet()));
     }
 
     @Override

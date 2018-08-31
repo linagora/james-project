@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -122,7 +121,7 @@ public class MDCBuilder {
                 .stream()
                 .map(MDCBuilder::buildContextMap)
                 .flatMap(map -> map.entrySet().stream())
-                .collect(Guavate.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))
+                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))
             .putAll(contextMap.build())
             .build();
     }
@@ -141,7 +140,7 @@ public class MDCBuilder {
                 .entrySet()
                 .stream()
                 .map(entry -> MDC.putCloseable(entry.getKey(), entry.getValue()))
-                .collect(Guavate.toImmutableList()));
+                .collect(ImmutableList.toImmutableList()));
     }
 
 }

@@ -42,8 +42,8 @@ import org.apache.james.mailbox.model.MessageId;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 
 public class CassandraAttachmentMessageIdDAO {
 
@@ -84,7 +84,7 @@ public class CassandraAttachmentMessageIdDAO {
                 .setUUID(ATTACHMENT_ID_AS_UUID, attachmentId.asUUID()))
             .thenApply(resultSet -> cassandraUtils.convertToStream(resultSet)
                 .map(this::rowToMessageId)
-                .collect(Guavate.toImmutableSet()));
+                .collect(ImmutableSet.toImmutableSet()));
     }
 
     private MessageId rowToMessageId(Row row) {
