@@ -29,27 +29,18 @@ import org.apache.james.queue.api.MailQueueFactory;
 
 import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-
 
 public class RabbitMQMailQueueFactory implements MailQueueFactory<RabbitMQMailQueue> {
-
-    private static final String ROUTING_KEY = "";
-    private static final boolean RABBIT_OPTION_DURABLE = true;
-    private static final boolean RABBIT_OPTION_EXCLUSIVE = true;
-    private static final boolean RABBIT_OPTION_AUTO_DELETE = true;
-    private static final ImmutableMap<String, Object> RABBIT_OPTION_NO_ARGUMENTS = ImmutableMap.of();
-
-    private final Channel channel;
+    private final RabbitClient rabbitClient;
     private final RabbitMQManagementApi mqManagementApi;
+    private final RabbitMQMailQueue.Factory mailQueueFactory;
 
     @VisibleForTesting
     @Inject
-    RabbitMQMailQueueFactory(Connection connection, RabbitMQManagementApi mqManagementApi) throws IOException {
-        this.channel = connection.createChannel();
+    RabbitMQMailQueueFactory(RabbitClient rabbitClient, RabbitMQManagementApi mqManagementApi, RabbitMQMailQueue.Factory mailQueueFactory) throws IOException {
+        this.rabbitClient = rabbitClient;
         this.mqManagementApi = mqManagementApi;
+        this.mailQueueFactory = mailQueueFactory;
     }
 
     @Override
@@ -67,26 +58,19 @@ public class RabbitMQMailQueueFactory implements MailQueueFactory<RabbitMQMailQu
     @Override
     public Set<RabbitMQMailQueue> listCreatedMailQueues() {
         return mqManagementApi.listCreatedMailQueueNames()
-            .map(RabbitMQMailQueue::new)
+            .map(mailQueueFactory::create)
             .collect(Guavate.toImmutableSet());
+    }
+
+    private RabbitMQMailQueue attemptQueueCreation(MailQueueName mailQueueName) {
+        rabbitClient.attemptQueueCreation(mailQueueName);
+        return mailQueueFactory.create(mailQueueName);
     }
 
     private Optional<RabbitMQMailQueue> getQueue(MailQueueName name) {
         return mqManagementApi.listCreatedMailQueueNames()
             .filter(name::equals)
-            .map(RabbitMQMailQueue::new)
+            .map(mailQueueFactory::create)
             .findFirst();
     }
-
-    private RabbitMQMailQueue attemptQueueCreation(MailQueueName name) {
-        try {
-            channel.exchangeDeclare(name.toRabbitExchangeName().asString(), "direct", RABBIT_OPTION_DURABLE);
-            channel.queueDeclare(name.toWorkQueueName().asString(), RABBIT_OPTION_DURABLE, !RABBIT_OPTION_EXCLUSIVE, !RABBIT_OPTION_AUTO_DELETE, RABBIT_OPTION_NO_ARGUMENTS);
-            channel.queueBind(name.toWorkQueueName().asString(), name.toRabbitExchangeName().asString(), ROUTING_KEY);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return new RabbitMQMailQueue(name);
-    }
-
 }

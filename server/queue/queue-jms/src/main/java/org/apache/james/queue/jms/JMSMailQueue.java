@@ -63,6 +63,7 @@ import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.server.core.MailImpl;
 import org.apache.james.server.core.MimeMessageCopyOnWriteProxy;
+import org.apache.james.util.SerializationUtil;
 import org.apache.mailet.Mail;
 import org.apache.mailet.PerRecipientHeaders;
 import org.slf4j.Logger;
@@ -323,7 +324,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
         // won't serialize the empty headers so it is mandatory
         // to handle nulls when reconstructing mail from message
         if (!mail.getPerRecipientSpecificHeaders().getHeadersByRecipient().isEmpty()) {
-            props.put(JAMES_MAIL_PER_RECIPIENT_HEADERS, JMSSerializationUtils.serialize(mail.getPerRecipientSpecificHeaders()));
+            props.put(JAMES_MAIL_PER_RECIPIENT_HEADERS, SerializationUtil.serialize(mail.getPerRecipientSpecificHeaders()));
         }
 
         String recipientsAsString = joiner.join(mail.getRecipients());
@@ -335,7 +336,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
         String sender = Optional.ofNullable(mail.getSender()).map(MailAddress::asString).orElse("");
 
         org.apache.james.util.streams.Iterators.toStream(mail.getAttributeNames())
-                .forEach(attrName -> props.put(attrName, JMSSerializationUtils.serialize(mail.getAttribute(attrName))));
+                .forEach(attrName -> props.put(attrName, SerializationUtil.serialize(mail.getAttribute(attrName))));
 
         props.put(JAMES_MAIL_ATTRIBUTE_NAMES, joiner.join(mail.getAttributeNames()));
         props.put(JAMES_MAIL_SENDER, sender);
@@ -392,7 +393,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
         mail.setLastUpdated(new Date(message.getLongProperty(JAMES_MAIL_LAST_UPDATED)));
         mail.setName(message.getStringProperty(JAMES_MAIL_NAME));
 
-        Optional.ofNullable(JMSSerializationUtils.<PerRecipientHeaders>deserialize(message.getStringProperty(JAMES_MAIL_PER_RECIPIENT_HEADERS)))
+        Optional.ofNullable(SerializationUtil.<PerRecipientHeaders>deserialize(message.getStringProperty(JAMES_MAIL_PER_RECIPIENT_HEADERS)))
                 .ifPresent(mail::addAllSpecificHeaderForRecipient);
 
         List<MailAddress> rcpts = new ArrayList<>();
@@ -418,24 +419,8 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
         splitter.split(attributeNames)
                 .forEach(name -> setMailAttribute(message, mail, name));
 
-        mail.setSender(getMailSender(message.getStringProperty(JAMES_MAIL_SENDER), mail));
+        mail.setSender(MailAddress.getMailSender(message.getStringProperty(JAMES_MAIL_SENDER)));
         mail.setState(message.getStringProperty(JAMES_MAIL_STATE));
-    }
-
-    private MailAddress getMailSender(String sender, Mail mail) {
-        if (sender == null || sender.trim().length() <= 0) {
-            return null;
-        }
-        if (sender.equals(MailAddress.NULL_SENDER_AS_STRING)) {
-            return MailAddress.nullSender();
-        }
-        try {
-            return new MailAddress(sender);
-        } catch (AddressException e) {
-            // Should never happen as long as the user does not modify the header by himself
-            LOGGER.error("Unable to parse the sender address {} for mail {}, so we fallback to a null sender", sender, mail.getName(), e);
-            return MailAddress.nullSender();
-        }
     }
 
     /**
@@ -451,7 +436,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
         Object attrValue = Throwing.function(message::getObjectProperty).apply(name);
 
         if (attrValue instanceof String) {
-            mail.setAttribute(name, JMSSerializationUtils.deserialize((String) attrValue));
+            mail.setAttribute(name, SerializationUtil.deserialize((String) attrValue));
         } else {
             LOGGER.error("Not supported mail attribute {} of type {} for mail {}", name, attrValue, mail.getName());
         }

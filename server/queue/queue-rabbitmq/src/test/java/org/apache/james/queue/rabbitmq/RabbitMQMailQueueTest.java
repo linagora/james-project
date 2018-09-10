@@ -36,8 +36,8 @@ import org.apache.james.blob.cassandra.CassandraBlobModule;
 import org.apache.james.blob.cassandra.CassandraBlobsDAO;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.blob.mail.MimeMessageStore;
-import org.apache.james.queue.api.MailQueueFactory;
-import org.apache.james.queue.api.MailQueueFactoryContract;
+import org.apache.james.queue.api.MailQueue;
+import org.apache.james.queue.api.MailQueueContract;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -45,7 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ReusableDockerRabbitMQExtension.class, DockerCassandraExtension.class})
-class RabbitMqMailQueueFactoryTest implements MailQueueFactoryContract<RabbitMQMailQueue> {
+public class RabbitMQMailQueueTest implements MailQueueContract {
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
 
     private static CassandraCluster cassandra;
@@ -85,7 +85,7 @@ class RabbitMqMailQueueFactoryTest implements MailQueueFactoryContract<RabbitMQM
     }
 
     @Override
-    public MailQueueFactory<RabbitMQMailQueue> getMailQueueFactory() {
-        return mailQueueFactory;
+    public MailQueue getMailQueue() {
+        return mailQueueFactory.createQueue("spool");
     }
 }
