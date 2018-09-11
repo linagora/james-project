@@ -33,6 +33,7 @@ import org.apache.james.blob.objectstorage.swift.SwiftKeystone3ObjectStorage;
 import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
 import org.jclouds.blobstore.domain.Blob;
 import org.jclouds.blobstore.options.CopyOptions;
+import org.jclouds.domain.Location;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Preconditions;
@@ -41,6 +42,7 @@ import com.google.common.hash.HashingInputStream;
 
 public class ObjectStorageBlobsDAO implements BlobStore {
     private static final InputStream EMPTY_STREAM = new ByteArrayInputStream(new byte[0]);
+    public static final Location DEFAULT_LOCATION = null;
 
 
     private final BlobId.Factory blobIdFactory;
@@ -65,6 +67,22 @@ public class ObjectStorageBlobsDAO implements BlobStore {
 
     public static ObjectStorageBlobsDAOBuilder builder(SwiftKeystone3ObjectStorage.Configuration testConfig) {
         return SwiftKeystone3ObjectStorage.daoBuilder(testConfig);
+    }
+
+    public CompletableFuture<ContainerName> createContainer(ContainerName name) {
+        CompletableFuture<ContainerName> futureResult = new CompletableFuture<>();
+        try {
+            boolean created = blobStore.createContainerInLocation(DEFAULT_LOCATION, name.value());
+            if (created) {
+                futureResult.complete(name);
+            } else {
+                futureResult.completeExceptionally(
+                    new ObjectStoreException("Unable to create container " + name.value()));
+            }
+        } catch (RuntimeException e) {
+            futureResult.completeExceptionally(e);
+        }
+        return futureResult;
     }
 
     @Override
