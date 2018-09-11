@@ -351,6 +351,7 @@ public interface MailQueueContract {
 
         int threadCount = 10;
         int operationCount = 100;
+        int totalDequeuedMessages = 500;
         ConcurrentTestRunner.builder()
             .operation((threadNumber, step) -> {
                 if (step % 2 == 0) {
@@ -371,7 +372,7 @@ public interface MailQueueContract {
             dequeuedMails.stream()
                 .map(Mail::getName)
                 .distinct())
-            .hasSize(threadCount * operationCount / 2);
+            .hasSize(totalDequeuedMessages);
     }
 
     class SerializableAttribute implements Serializable {
