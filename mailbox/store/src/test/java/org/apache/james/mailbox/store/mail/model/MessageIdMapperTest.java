@@ -716,8 +716,7 @@ public abstract class MessageIdMapperTest {
             })
             .threadCount(threadCount)
             .operationCount(updateCount)
-            .runSuccessfullyWithin(1, TimeUnit.MINUTES)
-            .assertNoException();
+            .runSuccessfullyWithin(1, TimeUnit.MINUTES);
 
         List<MailboxMessage> messages = sut.find(ImmutableList.of(message1.getMessageId()), MessageMapper.FetchType.Body);
         assertThat(messages).hasSize(1);
