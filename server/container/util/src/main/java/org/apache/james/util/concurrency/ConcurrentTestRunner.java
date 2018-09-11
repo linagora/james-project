@@ -68,7 +68,7 @@ public class ConcurrentTestRunner {
             return this;
         }
 
-        public ConcurrentTestRunner build() {
+        private ConcurrentTestRunner build() {
             return new ConcurrentTestRunner(
                 threadCount,
                 operationCount.orElse(DEFAULT_OPERATION_COUNT),
