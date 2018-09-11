@@ -29,14 +29,14 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 public class ConcurrentTestRunnerTest {
-    public static final ConcurrentTestRunner.ConcurrentOperation EMPTY_BI_CONSUMER = (threadNumber, step) -> { };
+    public static final ConcurrentTestRunner.ConcurrentOperation NOOP = (threadNumber, step) -> { };
     public static final int DEFAULT_AWAIT_TIME = 100;
 
     @Test
     public void constructorShouldThrowOnNegativeThreadCount() {
         assertThatThrownBy(() ->
             ConcurrentTestRunner.builder()
-                .operation(EMPTY_BI_CONSUMER)
+                .operation(NOOP)
                 .threadCount(-1)
                 .build())
             .isInstanceOf(IllegalArgumentException.class);
@@ -46,7 +46,7 @@ public class ConcurrentTestRunnerTest {
     public void constructorShouldThrowOnNegativeOperationCount() {
         assertThatThrownBy(() ->
             ConcurrentTestRunner.builder()
-                .operation(EMPTY_BI_CONSUMER)
+                .operation(NOOP)
                 .threadCount(1)
                 .operationCount(-1))
             .isInstanceOf(IllegalArgumentException.class);
@@ -56,7 +56,7 @@ public class ConcurrentTestRunnerTest {
     public void constructorShouldThrowOnZeroThreadCount() {
         assertThatThrownBy(() ->
             ConcurrentTestRunner.builder()
-                .operation(EMPTY_BI_CONSUMER)
+                .operation(NOOP)
                 .threadCount(0)
                 .build())
             .isInstanceOf(IllegalArgumentException.class);
@@ -66,7 +66,7 @@ public class ConcurrentTestRunnerTest {
     public void constructorShouldThrowOnZeroOperationCount() {
         assertThatThrownBy(() ->
             ConcurrentTestRunner.builder()
-                .operation(EMPTY_BI_CONSUMER)
+                .operation(NOOP)
                 .threadCount(1)
                 .operationCount(0))
             .isInstanceOf(IllegalArgumentException.class);
@@ -85,7 +85,7 @@ public class ConcurrentTestRunnerTest {
     @Test
     public void awaitTerminationShouldReturnTrueWhenFinished() throws Exception {
         ConcurrentTestRunner concurrentTestRunner = ConcurrentTestRunner.builder()
-            .operation(EMPTY_BI_CONSUMER)
+            .operation(NOOP)
             .threadCount(1)
             .build()
             .run();
@@ -152,7 +152,7 @@ public class ConcurrentTestRunnerTest {
     @Test
     public void noExceptionsShouldNotThrowWhenNoExceptionGenerated() throws Exception {
         ConcurrentTestRunner concurrentTestRunner = ConcurrentTestRunner.builder()
-            .operation(EMPTY_BI_CONSUMER)
+            .operation(NOOP)
             .threadCount(2)
             .operationCount(2)
             .build()
