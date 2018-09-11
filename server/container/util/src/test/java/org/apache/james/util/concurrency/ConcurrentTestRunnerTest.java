@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 public class ConcurrentTestRunnerTest {
-    public static final ConcurrentTestRunner.BiConsumer EMPTY_BI_CONSUMER = (threadNumber, step) -> { };
+    public static final ConcurrentTestRunner.ConcurrentOperation EMPTY_BI_CONSUMER = (threadNumber, step) -> { };
     public static final int DEFAULT_AWAIT_TIME = 100;
 
     @Test

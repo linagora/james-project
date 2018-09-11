@@ -40,7 +40,7 @@ public class ConcurrentTestRunner {
 
     @FunctionalInterface
     public interface RequireOperation {
-        RequireThreadCount operation(BiConsumer operation);
+        RequireThreadCount operation(ConcurrentOperation operation);
     }
 
     @FunctionalInterface
@@ -50,10 +50,10 @@ public class ConcurrentTestRunner {
 
     public static class Builder {
         private final int threadCount;
-        private final BiConsumer operation;
-        private Optional<Integer>  operationCount;
+        private final ConcurrentOperation operation;
+        private Optional<Integer> operationCount;
 
-        public Builder(int threadCount, BiConsumer operation) {
+        public Builder(int threadCount, ConcurrentOperation operation) {
             Preconditions.checkArgument(threadCount > 0, "Thread count should be strictly positive");
             Preconditions.checkNotNull(operation);
 
@@ -76,18 +76,18 @@ public class ConcurrentTestRunner {
         }
     }
 
-    public interface BiConsumer {
-        void consume(int threadNumber, int step) throws Exception;
+    public interface ConcurrentOperation {
+        void execute(int threadNumber, int step) throws Exception;
     }
 
     private class ConcurrentRunnableTask implements Runnable {
         private final int threadNumber;
-        private final BiConsumer biConsumer;
+        private final ConcurrentOperation concurrentOperation;
         private Exception exception;
 
-        public ConcurrentRunnableTask(int threadNumber, BiConsumer biConsumer) {
+        public ConcurrentRunnableTask(int threadNumber, ConcurrentOperation concurrentOperation) {
             this.threadNumber = threadNumber;
-            this.biConsumer = biConsumer;
+            this.concurrentOperation = concurrentOperation;
         }
 
         @Override
@@ -96,7 +96,7 @@ public class ConcurrentTestRunner {
             countDownLatch.countDown();
             for (int i = 0; i < operationCount; i++) {
                 try {
-                    biConsumer.consume(threadNumber, i);
+                    concurrentOperation.execute(threadNumber, i);
                 } catch (Exception e) {
                     LOGGER.error("Error caught during concurrent testing", e);
                     exception = e;
@@ -117,11 +117,11 @@ public class ConcurrentTestRunner {
     private final int threadCount;
     private final int operationCount;
     private final CountDownLatch countDownLatch;
-    private final BiConsumer biConsumer;
+    private final ConcurrentOperation biConsumer;
     private final ExecutorService executorService;
     private final List<Future<?>> futures;
 
-    private ConcurrentTestRunner(int threadCount, int operationCount, BiConsumer biConsumer) {
+    private ConcurrentTestRunner(int threadCount, int operationCount, ConcurrentOperation biConsumer) {
         this.threadCount = threadCount;
         this.operationCount = operationCount;
         this.countDownLatch = new CountDownLatch(threadCount);
