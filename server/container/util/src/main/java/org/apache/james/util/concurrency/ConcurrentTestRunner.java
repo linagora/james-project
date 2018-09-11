@@ -38,19 +38,28 @@ public class ConcurrentTestRunner {
 
     public static final int DEFAULT_OPERATION_COUNT = 1;
 
+    @FunctionalInterface
+    public interface RequireOperation {
+        RequireThreadCount operation(BiConsumer operation);
+    }
+
+    @FunctionalInterface
+    public interface RequireThreadCount {
+        Builder threadCount(int threadCount);
+    }
+
     public static class Builder {
-        private Optional<Integer> threadCount;
+        private final int threadCount;
+        private final BiConsumer operation;
         private Optional<Integer>  operationCount;
 
-        public Builder() {
-            threadCount = Optional.empty();
-            operationCount = Optional.empty();
-        }
-
-        public Builder threadCount(int threadCount) {
+        public Builder(int threadCount, BiConsumer operation) {
             Preconditions.checkArgument(threadCount > 0, "Thread count should be strictly positive");
-            this.threadCount = Optional.of(threadCount);
-            return this;
+            Preconditions.checkNotNull(operation);
+
+            this.threadCount = threadCount;
+            this.operation = operation;
+            this.operationCount = Optional.empty();
         }
 
         public Builder operationCount(int operationCount) {
@@ -59,12 +68,9 @@ public class ConcurrentTestRunner {
             return this;
         }
 
-        public ConcurrentTestRunner build(BiConsumer operation) {
-            Preconditions.checkState(threadCount.isPresent(), "'threadCount' is compulsory");
-            Preconditions.checkNotNull(operation);
-
+        public ConcurrentTestRunner build() {
             return new ConcurrentTestRunner(
-                threadCount.get(),
+                threadCount,
                 operationCount.orElse(DEFAULT_OPERATION_COUNT),
                 operation);
         }
@@ -104,8 +110,8 @@ public class ConcurrentTestRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConcurrentTestRunner.class);
 
-    public static Builder builder() {
-        return new Builder();
+    public static RequireOperation builder() {
+        return operation -> threadCount -> new Builder(threadCount, operation);
     }
 
     private final int threadCount;
