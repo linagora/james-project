@@ -74,6 +74,7 @@ public class ConcurrentTestRunner {
                 operationCount.orElse(DEFAULT_OPERATION_COUNT),
                 operation);
         }
+
         public ConcurrentTestRunner runSuccessfullyWithin(long time, TimeUnit unit) throws InterruptedException, ExecutionException {
             return build()
                 .runSuccessfullyWithin(time, unit);
