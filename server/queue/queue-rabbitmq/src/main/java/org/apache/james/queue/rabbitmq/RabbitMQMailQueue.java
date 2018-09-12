@@ -32,12 +32,14 @@ import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.MimeMessage;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.Store;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.core.MailAddress;
-import org.apache.james.queue.api.MailQueue;
+import org.apache.james.queue.api.ManageableMailQueue;
+import org.apache.james.queue.rabbitmq.helper.api.MailQueueView;
 import org.apache.james.server.core.MailImpl;
 import org.apache.james.util.SerializationUtil;
 import org.apache.mailet.Mail;
@@ -56,7 +58,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 import com.rabbitmq.client.GetResponse;
 
-public class RabbitMQMailQueue implements MailQueue {
+public class RabbitMQMailQueue implements ManageableMailQueue {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RabbitMQMailQueue.class);
 
@@ -65,11 +67,13 @@ public class RabbitMQMailQueue implements MailQueue {
 
     private static class RabbitMQMailQueueItem implements MailQueueItem {
         private final RabbitClient rabbitClient;
+        private final MailQueueView mailQueueView;
         private final long deliveryTag;
         private final Mail mail;
 
-        private RabbitMQMailQueueItem(RabbitClient rabbitClient, long deliveryTag, Mail mail) {
+        private RabbitMQMailQueueItem(RabbitClient rabbitClient, MailQueueView mailQueueView, long deliveryTag, Mail mail) {
             this.rabbitClient = rabbitClient;
+            this.mailQueueView = mailQueueView;
             this.deliveryTag = deliveryTag;
             this.mail = mail;
         }
@@ -82,7 +86,10 @@ public class RabbitMQMailQueue implements MailQueue {
         @Override
         public void done(boolean success) throws MailQueueException {
             try {
-                rabbitClient.ack(deliveryTag);
+                if (success) {
+                    rabbitClient.ack(deliveryTag);
+                    mailQueueView.deleteMail(mail).join();
+                }
             } catch (IOException e) {
                 throw new MailQueueException("Failed to ACK " + mail.getName() + " with delivery tag " + deliveryTag, e);
             }
@@ -93,16 +100,19 @@ public class RabbitMQMailQueue implements MailQueue {
         private final RabbitClient rabbitClient;
         private final Store<MimeMessage, MimeMessagePartsId> mimeMessageStore;
         private final BlobId.Factory blobIdFactory;
+        private final MailQueueView mailQueueView;
 
         @Inject
-        @VisibleForTesting Factory(RabbitClient rabbitClient, Store<MimeMessage, MimeMessagePartsId> mimeMessageStore, BlobId.Factory blobIdFactory) {
+        @VisibleForTesting Factory(RabbitClient rabbitClient, Store<MimeMessage, MimeMessagePartsId> mimeMessageStore,
+                                   BlobId.Factory blobIdFactory, MailQueueView mailQueueView) {
             this.rabbitClient = rabbitClient;
             this.mimeMessageStore = mimeMessageStore;
             this.blobIdFactory = blobIdFactory;
+            this.mailQueueView = mailQueueView;
         }
 
         RabbitMQMailQueue create(MailQueueName mailQueueName) {
-            return new RabbitMQMailQueue(mailQueueName, rabbitClient, mimeMessageStore, blobIdFactory);
+            return new RabbitMQMailQueue(mailQueueName, rabbitClient, mimeMessageStore, blobIdFactory, mailQueueView);
         }
     }
 
@@ -113,12 +123,14 @@ public class RabbitMQMailQueue implements MailQueue {
     private final Store<MimeMessage, MimeMessagePartsId> mimeMessageStore;
     private final BlobId.Factory blobIdFactory;
     private final ObjectMapper objectMapper;
+    private final MailQueueView mailQueueView;
 
-    RabbitMQMailQueue(MailQueueName name, RabbitClient rabbitClient, Store<MimeMessage, MimeMessagePartsId> mimeMessageStore, BlobId.Factory blobIdFactory) {
+    RabbitMQMailQueue(MailQueueName name, RabbitClient rabbitClient, Store<MimeMessage, MimeMessagePartsId> mimeMessageStore, BlobId.Factory blobIdFactory, MailQueueView mailQueueView) {
         this.mimeMessageStore = mimeMessageStore;
         this.blobIdFactory = blobIdFactory;
         this.name = name;
         this.rabbitClient = rabbitClient;
+        this.mailQueueView = mailQueueView;
         this.objectMapper = new ObjectMapper()
             .registerModule(new Jdk8Module())
             .registerModule(new JavaTimeModule())
@@ -144,6 +156,7 @@ public class RabbitMQMailQueue implements MailQueue {
         MailDTO mailDTO = MailDTO.fromMail(mail, partsId);
         byte[] message = getMessageBytes(mailDTO);
         rabbitClient.publish(name, message);
+        mailQueueView.storeMail(mail).join();
     }
 
     private CompletableFuture<MimeMessagePartsId> saveBlobs(Mail mail) throws MailQueueException {
@@ -167,7 +180,7 @@ public class RabbitMQMailQueue implements MailQueue {
         GetResponse getResponse = pollChannel();
         MailDTO mailDTO = toDTO(getResponse);
         Mail mail = toMail(mailDTO);
-        return new RabbitMQMailQueueItem(rabbitClient, getResponse.getEnvelope().getDeliveryTag(), mail);
+        return new RabbitMQMailQueueItem(rabbitClient, mailQueueView, getResponse.getEnvelope().getDeliveryTag(), mail);
     }
 
     private MailDTO toDTO(GetResponse getResponse) throws MailQueueException {
@@ -242,5 +255,31 @@ public class RabbitMQMailQueue implements MailQueue {
                 .map(Throwing.function(header -> Pair.of(new MailAddress(entry.getKey()), header))))
             .forEach(pair -> perRecipientHeaders.addHeaderForRecipient(pair.getValue(), pair.getKey()));
         return perRecipientHeaders;
+    }
+
+    @Override
+    public long getSize() {
+        return mailQueueView.getSize();
+    }
+
+    @Override
+    public long flush() {
+        LOGGER.warn("Delays are not supported by RabbitMQ. Flush is a NOOP.");
+        return 0;
+    }
+
+    @Override
+    public long clear() {
+        throw new NotImplementedException("Not yet implemented");
+    }
+
+    @Override
+    public long remove(Type type, String value) {
+        throw new NotImplementedException("Not yet implemented");
+    }
+
+    @Override
+    public MailQueueIterator browse() {
+        return mailQueueView.browse();
     }
 }

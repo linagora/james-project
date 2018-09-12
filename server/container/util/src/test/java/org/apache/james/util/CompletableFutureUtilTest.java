@@ -420,4 +420,27 @@ public class CompletableFutureUtilTest {
                 .join())
             .isEmpty();
     }
+
+    @Test
+    public void sortShouldWork() {
+        assertThat(
+            CompletableFutureUtil.sort(
+                CompletableFutureUtil.allOfArray(
+                    CompletableFuture.completedFuture(4L),
+                    CompletableFuture.completedFuture(3L),
+                    CompletableFuture.completedFuture(2L),
+                    CompletableFuture.completedFuture(1L)
+                ),
+                Long::compareTo)
+                .join())
+            .containsExactly(1L, 2L, 3L, 4L);
+    }
+
+    @Test
+    public void sortShouldReturnEmptyWhenEmpty() {
+        assertThat(CompletableFutureUtil
+            .sort(CompletableFutureUtil.allOfArray(), Long::compareTo)
+                .join())
+            .isEmpty();
+    }
 }

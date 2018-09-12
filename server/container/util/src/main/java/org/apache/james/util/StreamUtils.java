@@ -22,8 +22,11 @@ package org.apache.james.util;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import com.google.common.collect.ImmutableList;
 
 public class StreamUtils {
 
@@ -53,5 +56,13 @@ public class StreamUtils {
     @SafeVarargs
     public static <T> Stream<T> flatten(Stream<T>... streams) {
         return flatten(Arrays.stream(streams));
+    }
+
+    public static <A, B, R> Stream<R> cartesianProduct(Stream<A> s1, Stream<B> s2, BiFunction<A, B, R> combinator) {
+        ImmutableList<B> s2InList = s2.collect(ImmutableList.toImmutableList());
+
+        return s1.flatMap(s1Item -> s2InList
+                .stream()
+                .map(s2Item -> combinator.apply(s1Item, s2Item)));
     }
 }
