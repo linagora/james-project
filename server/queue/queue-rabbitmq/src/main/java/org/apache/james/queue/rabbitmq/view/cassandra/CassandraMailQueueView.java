@@ -22,6 +22,8 @@ package org.apache.james.queue.rabbitmq.view.cassandra;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
+import javax.inject.Inject;
+
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.rabbitmq.MailQueueName;
 import org.apache.james.queue.rabbitmq.view.api.MailQueueView;
@@ -56,25 +58,42 @@ public class CassandraMailQueueView implements MailQueueView {
         }
     }
 
-    private final StoreMailHelper daoHelper;
+    public static class Factory {
+        private final StoreMailHelper storeHelper;
+        private final BrowseHelper browseHelper;
+        private final DeleteMailHelper deleteMailHelper;
+
+        @Inject
+        public Factory(StoreMailHelper storeHelper, BrowseHelper browseHelper, DeleteMailHelper deleteMailHelper) {
+            this.storeHelper = storeHelper;
+            this.browseHelper = browseHelper;
+            this.deleteMailHelper = deleteMailHelper;
+        }
+
+        public MailQueueView create(MailQueueName mailQueueName) {
+            return new CassandraMailQueueView(storeHelper, mailQueueName, browseHelper, deleteMailHelper);
+        }
+    }
+
+    private final StoreMailHelper storeHelper;
     private final BrowseHelper browseHelper;
     private final DeleteMailHelper deleteMailHelper;
 
     private final MailQueueName mailQueueName;
 
-    public CassandraMailQueueView(StoreMailHelper daoHelper,
+    public CassandraMailQueueView(StoreMailHelper storeHelper,
                                   MailQueueName mailQueueName,
                                   BrowseHelper browseHelper,
                                   DeleteMailHelper deleteMailHelper) {
         this.mailQueueName = mailQueueName;
-        this.daoHelper = daoHelper;
+        this.storeHelper = storeHelper;
         this.browseHelper = browseHelper;
         this.deleteMailHelper = deleteMailHelper;
     }
 
     @Override
     public CompletableFuture<Void> storeMail(Mail mail) {
-        return daoHelper.storeMailInEnqueueTable(mail, mailQueueName);
+        return storeHelper.storeMailInEnqueueTable(mail, mailQueueName);
     }
 
     @Override
