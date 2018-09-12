@@ -19,6 +19,7 @@
 
 package org.apache.james.util;
 
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
@@ -165,6 +166,14 @@ public class FluentFutureStream<T> {
      */
     public CompletableFuture<T> reduce(T emptyAccumulator, BinaryOperator<T> combiner) {
         return CompletableFutureUtil.reduce(combiner, completableFuture, emptyAccumulator);
+    }
+
+    /**
+     * sort all elements of the stream by the provided {@code Comparator}.
+     */
+    public FluentFutureStream<T> sort(Comparator<T> comparator) {
+        return FluentFutureStream.of(
+            CompletableFutureUtil.sort(completableFuture(), comparator));
     }
 
     /**
