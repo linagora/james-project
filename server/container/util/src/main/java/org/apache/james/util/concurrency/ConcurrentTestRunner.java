@@ -54,7 +54,7 @@ public class ConcurrentTestRunner {
         private final ConcurrentOperation operation;
         private Optional<Integer> operationCount;
 
-        public Builder(int threadCount, ConcurrentOperation operation) {
+        private Builder(int threadCount, ConcurrentOperation operation) {
             Preconditions.checkArgument(threadCount > 0, "Thread count should be strictly positive");
             Preconditions.checkNotNull(operation);
 
