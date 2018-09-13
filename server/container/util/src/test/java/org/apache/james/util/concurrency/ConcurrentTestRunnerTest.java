@@ -26,7 +26,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
@@ -135,7 +134,7 @@ public class ConcurrentTestRunnerTest {
                 })
                 .threadCount(2)
                 .operationCount(2)
-                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME))
+                .runAcceptingErrorsWithin(DEFAULT_AWAIT_TIME))
             .doesNotThrowAnyException();
     }
 
@@ -164,18 +163,21 @@ public class ConcurrentTestRunnerTest {
     }
 
     @Test
-    public void runShouldPerformAllOperationsEvenOnExceptions() {
+    public void runShouldPerformAllOperationsEvenOnExceptions() throws Exception {
         ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
 
-        assertThatCode(() -> ConcurrentTestRunner.builder()
+        try {
+            ConcurrentTestRunner.builder()
                 .operation((threadNumber, step) -> {
                     queue.add(threadNumber + ":" + step);
                     throw new RuntimeException();
                 })
                 .threadCount(2)
                 .operationCount(2)
-                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME))
-            .doesNotThrowAnyException();
+                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME);
+        } catch (Exception e) {
+            // ignore
+        }
 
         assertThat(queue).containsOnly("0:0", "0:1", "1:0", "1:1");
     }
@@ -184,7 +186,8 @@ public class ConcurrentTestRunnerTest {
     public void runShouldPerformAllOperationsEvenOnOccasionalExceptions() {
         ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
 
-        assertThatCode(() -> ConcurrentTestRunner.builder()
+        try {
+            ConcurrentTestRunner.builder()
                 .operation((threadNumber, step) -> {
                     queue.add(threadNumber + ":" + step);
                     if ((threadNumber + step) % 2 == 0) {
@@ -193,8 +196,10 @@ public class ConcurrentTestRunnerTest {
                 })
                 .threadCount(2)
                 .operationCount(2)
-                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME))
-            .doesNotThrowAnyException();
+                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME);
+        } catch (Exception e) {
+            // ignore
+        }
 
         assertThat(queue).containsOnly("0:0", "0:1", "1:0", "1:1");
     }
