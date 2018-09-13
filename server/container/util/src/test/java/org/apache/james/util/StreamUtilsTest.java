@@ -22,11 +22,11 @@ package org.apache.james.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.Test;
 
-import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 
 public class StreamUtilsTest {
@@ -35,7 +35,7 @@ public class StreamUtilsTest {
     public void flattenShouldReturnEmptyWhenEmptyStreams() {
         assertThat(
             StreamUtils.<Integer>flatten(ImmutableList.of())
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -44,7 +44,7 @@ public class StreamUtilsTest {
         assertThat(
             StreamUtils.flatten(ImmutableList.of(
                 Stream.of(1, 2, 3)))
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -54,7 +54,7 @@ public class StreamUtilsTest {
             StreamUtils.flatten(ImmutableList.of(
                 Stream.of(1, 2, 3),
                 Stream.of(4, 5)))
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3, 4, 5);
     }
 
@@ -63,7 +63,7 @@ public class StreamUtilsTest {
         assertThat(
             StreamUtils.flatten(ImmutableList.of(
                 Stream.of()))
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
@@ -74,7 +74,7 @@ public class StreamUtilsTest {
                 Stream.of(1, 2),
                 Stream.of(),
                 Stream.of(3)))
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2, 3);
     }
 
@@ -82,34 +82,44 @@ public class StreamUtilsTest {
     public void flattenShouldAcceptEmptyVarArg() {
         assertThat(
             StreamUtils.flatten()
-                .collect(Guavate.toImmutableList()))
+                .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
     @Test
     public void flattenShouldThrowOnNullVarArg() {
         Stream<String>[] streams = null;
-        assertThatThrownBy(() -> StreamUtils.flatten(streams).collect(Guavate.toImmutableList()))
+        assertThatThrownBy(() -> StreamUtils.flatten(streams).collect(ImmutableList.toImmutableList()))
             .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     public void flattenShouldFlattenNonEmptyVarArg() {
-        assertThat(StreamUtils.flatten(Stream.of(1), Stream.of(2)).collect(Guavate.toImmutableList()))
+        assertThat(StreamUtils.flatten(Stream.of(1), Stream.of(2)).collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2);
     }
 
     @Test
     public void ofNullableShouldReturnEmptyStreamWhenNull() {
         assertThat(StreamUtils.ofNullable(null)
-            .collect(Guavate.toImmutableList()))
+            .collect(ImmutableList.toImmutableList()))
             .isEmpty();
     }
 
     @Test
     public void ofNullableShouldReturnAStreamWithElementsOfTheArray() {
         assertThat(StreamUtils.ofNullable(ImmutableList.of(1, 2).toArray())
-            .collect(Guavate.toImmutableList()))
+            .collect(ImmutableList.toImmutableList()))
             .containsExactly(1, 2);
+    }
+
+    @Test
+    public void cartesianProductShouldReturnAllCombinationsOfInputStreams() {
+        Stream<Integer> firstStream = IntStream.rangeClosed(1, 3).boxed();
+        Stream<String> secondStream = Stream.of("A", "B", "C");
+
+        assertThat(StreamUtils.cartesianProduct(firstStream, secondStream, (number, character) -> String.valueOf(number) + character)
+                .collect(ImmutableList.toImmutableList()))
+            .containsExactly("1A", "1B", "1C", "2A", "2B", "2C", "3A", "3B", "3C");
     }
 }
