@@ -31,8 +31,10 @@ public class ObjectStorageBlobsDAOBuilder {
     private final Supplier<BlobStore> supplier;
     private ContainerName containerName;
     private BlobId.Factory blobIdFactory;
+    private PayloadCodec payloadCodec;
 
     public ObjectStorageBlobsDAOBuilder(Supplier<BlobStore> supplier) {
+        this.payloadCodec = PayloadCodec.DEFAULT_CODEC;
         this.supplier = supplier;
     }
 
@@ -46,10 +48,16 @@ public class ObjectStorageBlobsDAOBuilder {
         return this;
     }
 
+    public ObjectStorageBlobsDAOBuilder payloadCodec(PayloadCodec payloadCodec) {
+        this.payloadCodec = payloadCodec;
+        return this;
+    }
+
     public ObjectStorageBlobsDAO build() {
         Preconditions.checkState(containerName != null);
         Preconditions.checkState(blobIdFactory != null);
-        return new ObjectStorageBlobsDAO(containerName, blobIdFactory, supplier.get());
+
+        return new ObjectStorageBlobsDAO(containerName, blobIdFactory, supplier.get(), payloadCodec);
     }
 
     @VisibleForTesting
