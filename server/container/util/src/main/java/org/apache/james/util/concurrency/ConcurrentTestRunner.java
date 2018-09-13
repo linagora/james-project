@@ -81,9 +81,9 @@ public class ConcurrentTestRunner {
                 .runSuccessfullyWithin(duration);
         }
 
-        public ConcurrentTestRunner runAcceptErrorsWithin(Duration duration) throws InterruptedException, ExecutionException {
+        public ConcurrentTestRunner runAcceptingErrorsWithin(Duration duration) throws InterruptedException, ExecutionException {
             return build()
-                .runAcceptErrorsWithin(duration);
+                .runAcceptingErrorsWithin(duration);
         }
     }
 
@@ -174,7 +174,7 @@ public class ConcurrentTestRunner {
             .assertNoException();
     }
 
-    public ConcurrentTestRunner runAcceptErrorsWithin(Duration duration) throws InterruptedException, ExecutionException {
+    public ConcurrentTestRunner runAcceptingErrorsWithin(Duration duration) throws InterruptedException, ExecutionException {
         return run()
             .awaitTermination(duration);
     }
