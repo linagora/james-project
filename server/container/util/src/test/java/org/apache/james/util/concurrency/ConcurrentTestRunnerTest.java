@@ -166,40 +166,32 @@ public class ConcurrentTestRunnerTest {
     public void runShouldPerformAllOperationsEvenOnExceptions() throws Exception {
         ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
 
-        try {
-            ConcurrentTestRunner.builder()
-                .operation((threadNumber, step) -> {
-                    queue.add(threadNumber + ":" + step);
-                    throw new RuntimeException();
-                })
-                .threadCount(2)
-                .operationCount(2)
-                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME);
-        } catch (Exception e) {
-            // ignore
-        }
+        ConcurrentTestRunner.builder()
+            .operation((threadNumber, step) -> {
+                queue.add(threadNumber + ":" + step);
+                throw new RuntimeException();
+            })
+            .threadCount(2)
+            .operationCount(2)
+            .runAcceptingErrorsWithin(DEFAULT_AWAIT_TIME);
 
         assertThat(queue).containsOnly("0:0", "0:1", "1:0", "1:1");
     }
 
     @Test
-    public void runShouldPerformAllOperationsEvenOnOccasionalExceptions() {
+    public void runShouldPerformAllOperationsEvenOnOccasionalExceptions() throws Exception {
         ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
 
-        try {
-            ConcurrentTestRunner.builder()
-                .operation((threadNumber, step) -> {
-                    queue.add(threadNumber + ":" + step);
-                    if ((threadNumber + step) % 2 == 0) {
-                        throw new RuntimeException();
-                    }
-                })
-                .threadCount(2)
-                .operationCount(2)
-                .runSuccessfullyWithin(DEFAULT_AWAIT_TIME);
-        } catch (Exception e) {
-            // ignore
-        }
+        ConcurrentTestRunner.builder()
+            .operation((threadNumber, step) -> {
+                queue.add(threadNumber + ":" + step);
+                if ((threadNumber + step) % 2 == 0) {
+                    throw new RuntimeException();
+                }
+            })
+            .threadCount(2)
+            .operationCount(2)
+            .runAcceptingErrorsWithin(DEFAULT_AWAIT_TIME);
 
         assertThat(queue).containsOnly("0:0", "0:1", "1:0", "1:1");
     }
