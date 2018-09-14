@@ -27,5 +27,19 @@ public interface MetricFactory {
 
     TimeMetric timer(String name);
 
-    <T> T withMetric(String name, Supplier<T> operation);
+    default <T> T runPublishingTimerMetric(String name, Supplier<T> operation) {
+        TimeMetric timer = timer(name);
+        try {
+            return operation.get();
+        } finally {
+            timer.stopAndPublish();
+        }
+    }
+
+    default void runPublishingTimerMetric(String name, Runnable runnable) {
+        runPublishingTimerMetric(name, () -> {
+            runnable.run();
+            return null;
+        });
+    }
 }

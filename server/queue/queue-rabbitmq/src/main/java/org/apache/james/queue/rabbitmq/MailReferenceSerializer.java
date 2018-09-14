@@ -16,51 +16,33 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.metrics.api;
 
-public class NoopMetricFactory implements MetricFactory {
+package org.apache.james.queue.rabbitmq;
 
-    @Override
-    public Metric generate(String name) {
-        return new NoopMetric();
+import java.io.IOException;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+class MailReferenceSerializer {
+
+    private final ObjectMapper objectMapper;
+
+    MailReferenceSerializer() {
+        this.objectMapper = new ObjectMapper()
+            .registerModule(new Jdk8Module())
+            .registerModule(new JavaTimeModule())
+            .registerModule(new GuavaModule());
     }
 
-    public static class NoopMetric implements Metric  {
-
-        @Override
-        public void increment() {
-        }
-
-        @Override
-        public void decrement() {
-        }
-
-        @Override
-        public void add(int value) {
-        }
-
-        @Override
-        public void remove(int value) {
-        }
+    MailReferenceDTO read(byte[] bytes) throws IOException {
+        return objectMapper.readValue(bytes, MailReferenceDTO.class);
     }
 
-    @Override
-    public TimeMetric timer(String name) {
-        return new NoopTimeMetric();
+    byte[] write(MailReferenceDTO mailDTO) throws JsonProcessingException {
+        return objectMapper.writeValueAsBytes(mailDTO);
     }
-
-    public static class NoopTimeMetric implements TimeMetric {
-
-        @Override
-        public String name() {
-            return "";
-        }
-
-
-        @Override
-        public long stopAndPublish() {
-            return 0;
-        }
-    }
-
 }

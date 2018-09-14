@@ -19,6 +19,7 @@
 
 package org.apache.james.queue.rabbitmq;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
@@ -27,8 +28,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.core.MailAddress;
+import org.apache.james.server.core.MailImpl;
 import org.apache.james.util.SerializationUtil;
 import org.apache.james.util.streams.Iterators;
 import org.apache.mailet.Mail;
@@ -36,14 +42,15 @@ import org.apache.mailet.PerRecipientHeaders;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.fge.lambdas.Throwing;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-class MailDTO {
+class MailReferenceDTO {
 
-    static MailDTO fromMail(Mail mail, MimeMessagePartsId partsId) {
-        return new MailDTO(
+    static MailReferenceDTO fromMail(Mail mail, MimeMessagePartsId partsId) {
+        return new MailReferenceDTO(
             Optional.ofNullable(mail.getRecipients()).map(Collection::stream)
                 .orElse(Stream.empty())
                 .map(MailAddress::asString)
@@ -92,18 +99,18 @@ class MailDTO {
     private final String bodyBlobId;
 
     @JsonCreator
-    private MailDTO(@JsonProperty("recipients") ImmutableList<String> recipients,
-                    @JsonProperty("name") String name,
-                    @JsonProperty("sender") Optional<String> sender,
-                    @JsonProperty("state") String state,
-                    @JsonProperty("errorMessage") String errorMessage,
-                    @JsonProperty("lastUpdated") Optional<Instant> lastUpdated,
-                    @JsonProperty("attributes") ImmutableMap<String, String> attributes,
-                    @JsonProperty("remoteAddr") String remoteAddr,
-                    @JsonProperty("remoteHost") String remoteHost,
-                    @JsonProperty("perRecipientHeaders") Map<String, HeadersDto>  perRecipientHeaders,
-                    @JsonProperty("headerBlobId") String headerBlobId,
-                    @JsonProperty("bodyBlobId") String bodyBlobId) {
+    private MailReferenceDTO(@JsonProperty("recipients") ImmutableList<String> recipients,
+                             @JsonProperty("name") String name,
+                             @JsonProperty("sender") Optional<String> sender,
+                             @JsonProperty("state") String state,
+                             @JsonProperty("errorMessage") String errorMessage,
+                             @JsonProperty("lastUpdated") Optional<Instant> lastUpdated,
+                             @JsonProperty("attributes") ImmutableMap<String, String> attributes,
+                             @JsonProperty("remoteAddr") String remoteAddr,
+                             @JsonProperty("remoteHost") String remoteHost,
+                             @JsonProperty("perRecipientHeaders") Map<String, HeadersDto>  perRecipientHeaders,
+                             @JsonProperty("headerBlobId") String headerBlobId,
+                             @JsonProperty("bodyBlobId") String bodyBlobId) {
         this.recipients = recipients;
         this.name = name;
         this.sender = sender;
@@ -178,10 +185,45 @@ class MailDTO {
         return bodyBlobId;
     }
 
+    MailImpl toMailWithMimeMessage(MimeMessage mimeMessage) throws MessagingException {
+        MailImpl mail = new MailImpl(name,
+            sender.map(MailAddress::getMailSender).orElse(null),
+            recipients.stream()
+                .map(Throwing.<String, MailAddress>function(MailAddress::new).sneakyThrow())
+                .collect(Guavate.toImmutableList()),
+            mimeMessage);
+
+        mail.setErrorMessage(errorMessage);
+        mail.setRemoteAddr(remoteAddr);
+        mail.setRemoteHost(remoteHost);
+        mail.setState(state);
+        lastUpdated
+            .map(Instant::toEpochMilli)
+            .map(Date::new)
+            .ifPresent(mail::setLastUpdated);
+
+        attributes
+            .forEach((name, value) -> mail.setAttribute(name, SerializationUtil.<Serializable>deserialize(value)));
+
+        mail.addAllSpecificHeaderForRecipient(retrievePerRecipientHeaders());
+
+        return mail;
+    }
+
+    private PerRecipientHeaders retrievePerRecipientHeaders() {
+        PerRecipientHeaders perRecipientHeaders = new PerRecipientHeaders();
+        this.perRecipientHeaders.entrySet()
+            .stream()
+            .flatMap(entry -> entry.getValue().toHeaders().stream()
+                .map(Throwing.function(header -> Pair.of(new MailAddress(entry.getKey()), header))))
+            .forEach(pair -> perRecipientHeaders.addHeaderForRecipient(pair.getValue(), pair.getKey()));
+        return perRecipientHeaders;
+    }
+
     @Override
     public final boolean equals(Object o) {
-        if (o instanceof MailDTO) {
-            MailDTO mailDTO = (MailDTO) o;
+        if (o instanceof MailReferenceDTO) {
+            MailReferenceDTO mailDTO = (MailReferenceDTO) o;
 
             return Objects.equals(this.recipients, mailDTO.recipients)
                 && Objects.equals(this.name, mailDTO.name)
