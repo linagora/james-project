@@ -19,17 +19,20 @@
 
 package org.apache.james.queue.rabbitmq;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import javax.inject.Inject;
 import javax.mail.internet.MimeMessage;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.Store;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.metrics.api.MetricFactory;
-import org.apache.james.queue.api.MailQueue;
+import org.apache.james.queue.api.ManageableMailQueue;
+import org.apache.james.queue.rabbitmq.view.api.MailQueueView;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +40,7 @@ import org.slf4j.LoggerFactory;
 import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
 
-public class RabbitMQMailQueue implements MailQueue {
+public class RabbitMQMailQueue implements ManageableMailQueue {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RabbitMQMailQueue.class);
 
@@ -47,21 +50,32 @@ public class RabbitMQMailQueue implements MailQueue {
         private final Store<MimeMessage, MimeMessagePartsId> mimeMessageStore;
         private final MailReferenceSerializer mailReferenceSerializer;
         private final Function<MailReferenceDTO, Mail> mailLoader;
+        private final MailQueueView mailQueueView;
+        private final Clock clock;
 
         @Inject
         @VisibleForTesting Factory(MetricFactory metricFactory, RabbitClient rabbitClient,
-                                   Store<MimeMessage, MimeMessagePartsId> mimeMessageStore, BlobId.Factory blobIdFactory) {
+                                   Store<MimeMessage, MimeMessagePartsId> mimeMessageStore,
+                                   BlobId.Factory blobIdFactory,
+                                   MailQueueView mailQueueView,
+                                   Clock clock) {
             this.metricFactory = metricFactory;
             this.rabbitClient = rabbitClient;
             this.mimeMessageStore = mimeMessageStore;
+            this.mailQueueView = mailQueueView;
+            this.clock = clock;
             this.mailReferenceSerializer = new MailReferenceSerializer();
             this.mailLoader = Throwing.function(new MailLoader(mimeMessageStore, blobIdFactory)::load).sneakyThrow();
         }
 
         RabbitMQMailQueue create(MailQueueName mailQueueName) {
+            mailQueueView.initialize(mailQueueName);
+
             return new RabbitMQMailQueue(metricFactory, mailQueueName,
-                new Enqueuer(mailQueueName, rabbitClient, mimeMessageStore, mailReferenceSerializer, metricFactory),
-                new Dequeuer(mailQueueName, rabbitClient, mailLoader, mailReferenceSerializer, metricFactory));
+                new Enqueuer(mailQueueName, rabbitClient, mimeMessageStore, mailReferenceSerializer,
+                    metricFactory, mailQueueView, clock),
+                new Dequeuer(mailQueueName, rabbitClient, mailLoader, mailReferenceSerializer,
+                    metricFactory, mailQueueView), mailQueueView);
         }
     }
 
@@ -69,15 +83,16 @@ public class RabbitMQMailQueue implements MailQueue {
     private final MetricFactory metricFactory;
     private final Enqueuer enqueuer;
     private final Dequeuer dequeuer;
+    private final MailQueueView mailQueueView;
 
     RabbitMQMailQueue(MetricFactory metricFactory, MailQueueName name,
-                      Enqueuer enqueuer, Dequeuer dequeuer) {
-
+                      Enqueuer enqueuer, Dequeuer dequeuer,
+                      MailQueueView mailQueueView) {
+        this.metricFactory = metricFactory;
         this.name = name;
         this.enqueuer = enqueuer;
         this.dequeuer = dequeuer;
-
-        this.metricFactory = metricFactory;
+        this.mailQueueView = mailQueueView;
     }
 
     @Override
@@ -94,14 +109,40 @@ public class RabbitMQMailQueue implements MailQueue {
     }
 
     @Override
-    public void enQueue(Mail mail) throws MailQueueException {
+    public void enQueue(Mail mail) {
         metricFactory.runPublishingTimerMetric(ENQUEUED_TIMER_METRIC_NAME_PREFIX + name.asString(),
             Throwing.runnable(() -> enqueuer.enQueue(mail)).sneakyThrow());
     }
 
     @Override
-    public MailQueueItem deQueue() throws MailQueueException {
+    public MailQueueItem deQueue() {
         return metricFactory.runPublishingTimerMetric(DEQUEUED_TIMER_METRIC_NAME_PREFIX + name.asString(),
             Throwing.supplier(dequeuer::deQueue).sneakyThrow());
+    }
+
+    @Override
+    public long getSize() {
+        return mailQueueView.getSize();
+    }
+
+    @Override
+    public long flush() {
+        LOGGER.warn("Delays are not supported by RabbitMQ. Flush is a NOOP.");
+        return 0;
+    }
+
+    @Override
+    public long clear() {
+        throw new NotImplementedException("Not yet implemented");
+    }
+
+    @Override
+    public long remove(Type type, String value) {
+        throw new NotImplementedException("Not yet implemented");
+    }
+
+    @Override
+    public MailQueueIterator browse() {
+        return mailQueueView.browse();
     }
 }
