@@ -665,4 +665,14 @@ public class MailAddress implements java.io.Serializable {
     public boolean isNullSender() {
         return false;
     }
+
+
+    /**
+     * Return <code>true</code> if the {@link MailAddress} equals the given address ignoring the case.
+     *
+     * @return nullsender
+     */
+    public boolean equalsIgnoreCase(String address) {
+        return asString().equalsIgnoreCase(address);
+    }
 }

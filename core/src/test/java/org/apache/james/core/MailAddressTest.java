@@ -249,4 +249,40 @@ public class MailAddressTest {
         EqualsVerifier.forClass(MailAddress.class)
             .verify();
     }
+
+    @Test
+    public void equalsIgnoreCaseShouldReturnFalseWhenNotEquals() throws Exception {
+        MailAddress mailAddress = new MailAddress("user@james.org");
+
+        assertThat(mailAddress.equalsIgnoreCase("test@other.org")).isFalse();
+    }
+
+    @Test
+    public void equalsIgnoreCaseShouldReturnFalseWhenStringIsNull() throws Exception {
+        MailAddress mailAddress = new MailAddress("user@james.org");
+
+        assertThat(mailAddress.equalsIgnoreCase(null)).isFalse();
+    }
+
+    @Test
+    public void equalsIgnoreCaseShouldReturnFalseWhenStringIsEmpty() throws Exception {
+        MailAddress mailAddress = new MailAddress("user@james.org");
+
+        assertThat(mailAddress.equalsIgnoreCase("")).isFalse();
+    }
+
+    @Test
+    public void equalsIgnoreCaseShouldReturnTrueWhenEquals() throws Exception {
+        String address = "user@james.org";
+        MailAddress mailAddress = new MailAddress(address);
+
+        assertThat(mailAddress.equalsIgnoreCase(address)).isTrue();
+    }
+
+    @Test
+    public void equalsIgnoreCaseShouldReturnTrueWhenEqualsWithDifferentCase() throws Exception {
+        MailAddress mailAddress = new MailAddress("user@james.org");
+
+        assertThat(mailAddress.equalsIgnoreCase("uSEr@jaMEs.org")).isTrue();
+    }
 }
