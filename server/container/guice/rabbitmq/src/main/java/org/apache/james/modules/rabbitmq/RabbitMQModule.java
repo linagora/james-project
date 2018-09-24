@@ -25,6 +25,8 @@ import javax.inject.Singleton;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.james.backend.rabbitmq.RabbitMQConfiguration;
+import org.apache.james.queue.api.MailQueueFactory;
+import org.apache.james.queue.rabbitmq.RabbitMQMailQueueFactory;
 import org.apache.james.utils.PropertiesProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +42,7 @@ public class RabbitMQModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        install(new CassandraMailQueueViewModule());
     }
 
     @Provides
@@ -49,8 +52,14 @@ public class RabbitMQModule extends AbstractModule {
             Configuration configuration = propertiesProvider.getConfiguration(RABBITMQ_CONFIGURATION_NAME);
             return RabbitMQConfiguration.from(configuration);
         } catch (FileNotFoundException e) {
-            LOGGER.error("Could not find " + RABBITMQ_CONFIGURATION_NAME + " configuration file.");
-            throw new RuntimeException(e);
+            LOGGER.error("Could not find " + RABBITMQ_CONFIGURATION_NAME + " configuration file. Using the default one");
+            return RabbitMQConfiguration.DEFAULT;
         }
+    }
+
+    @Provides
+    @Singleton
+    private MailQueueFactory<?> mailQueueFactory(RabbitMQMailQueueFactory rabbitMQMailQueueFactory) {
+        return rabbitMQMailQueueFactory;
     }
 }

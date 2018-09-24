@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,12 @@ class RabbitMQConfigurationTest {
     void shouldRespectBeanContract() {
         EqualsVerifier.forClass(RabbitMQConfiguration.class).verify();
     }
+
+    @Test
+    void managementCredentialShouldRespectBeanContract() {
+            EqualsVerifier.forClass(RabbitMQConfiguration.ManagementCredential.class)
+                .verify();
+        }
 
     @Test
     void fromShouldThrowWhenURIIsNotInTheConfiguration() {
@@ -181,5 +188,30 @@ class RabbitMQConfigurationTest {
 
         assertThat(rabbitMQConfiguration.getMinDelay())
             .isEqualTo(minDelay);
+    }
+
+    @Test
+    void managementCredentialShouldEqualsDefaultValueWhenNotGiven() throws URISyntaxException {
+        RabbitMQConfiguration rabbitMQConfiguration = RabbitMQConfiguration.builder()
+            .amqpUri(new URI("amqp://james:james@rabbitmq_host:5672"))
+            .managementUri(new URI("http://james:james@rabbitmq_host:15672/api/"))
+            .build();
+
+        assertThat(rabbitMQConfiguration.getManagementCredential())
+            .isEqualTo(RabbitMQConfiguration.Builder.DEFAULT_MANAGEMENT_CREDENTIAL);
+    }
+
+    @Test
+    void managementCredentialShouldEqualsCustomValueWhenGiven() throws URISyntaxException {
+        RabbitMQConfiguration.ManagementCredential credential = new RabbitMQConfiguration.ManagementCredential(
+            "james", "james".toCharArray());
+        RabbitMQConfiguration rabbitMQConfiguration = RabbitMQConfiguration.builder()
+            .amqpUri(new URI("amqp://james:james@rabbitmq_host:5672"))
+            .managementUri(new URI("http://james:james@rabbitmq_host:15672/api/"))
+            .managementCredential(Optional.of(credential))
+            .build();
+
+        assertThat(rabbitMQConfiguration.getManagementCredential())
+            .isEqualTo(credential);
     }
 }

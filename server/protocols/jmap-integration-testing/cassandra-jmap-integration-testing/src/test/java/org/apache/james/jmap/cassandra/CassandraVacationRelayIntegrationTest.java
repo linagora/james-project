@@ -21,35 +21,27 @@ package org.apache.james.jmap.cassandra;
 
 import java.io.IOException;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.dnsservice.api.InMemoryDNSService;
 import org.apache.james.jmap.VacationRelayIntegrationTest;
-import org.junit.ClassRule;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class CassandraVacationRelayIntegrationTest extends VacationRelayIntegrationTest {
 
     private final InMemoryDNSService inMemoryDNSService = new InMemoryDNSService();
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-
-    @Rule
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultModules()
+        .ignoreEach()
+        .build();
 
     @Override
     protected GuiceJamesServer getJmapServer() throws IOException {
-        return rule.jmapServer(
-                cassandra.getModule(),
-                (binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
-    }
-
-    @Override
-    protected void await() {
-        rule.await();
+        return testExtension.createJmapServer(
+                binder -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
     }
 
     @Override

@@ -17,37 +17,17 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james;
-import org.apache.james.mailbox.tika.TikaContainer;
-import org.apache.james.modules.TestTikaModule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+package org.apache.james.queue.rabbitmq.view.cassandra.configuration;
 
-import com.google.inject.Module;
+import org.junit.jupiter.api.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 
-public class GuiceTikaRule implements GuiceModuleTestRule {
+class CassandraMailQueueViewConfigurationTest {
 
-    private TikaContainer tika;
-
-    @Override
-    public Statement apply(Statement base, Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                tika = new TikaContainer();
-                tika.start();
-                base.evaluate();
-            }
-        };
-    }
-
-    @Override
-    public void await() {
-    }
-
-    @Override
-    public Module getModule() {
-        return new TestTikaModule(tika);
+    @Test
+    void shouldMatchBeanContract() {
+        EqualsVerifier.forClass(CassandraMailQueueViewConfiguration.class)
+            .verify();
     }
 }

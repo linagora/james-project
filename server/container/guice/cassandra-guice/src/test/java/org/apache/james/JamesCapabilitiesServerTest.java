@@ -18,7 +18,7 @@
  ****************************************************************/
 package org.apache.james;
 
-import static org.apache.james.CassandraJamesServerMain.ALL_BUT_JMX_CASSANDRA_MODULE;
+import static org.apache.james.CassandraJmapTestExtension.EMBEDDED_ES;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,52 +28,34 @@ import java.util.EnumSet;
 
 import org.apache.activemq.store.PersistenceAdapter;
 import org.apache.activemq.store.memory.MemoryPersistenceAdapter;
-import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.jmap.methods.GetMessageListMethod;
 import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.server.core.configuration.Configuration;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
-
-import com.google.inject.Module;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class JamesCapabilitiesServerTest {
 
     private GuiceJamesServer server;
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
 
-    @ClassRule
-    public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
-    
-    @Rule
-    public RuleChain chain = RuleChain.outerRule(temporaryFolder).around(embeddedElasticSearch);
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.builder()
+        .modules(
+            (binder) -> binder.bind(PersistenceAdapter.class).to(MemoryPersistenceAdapter.class),
+            new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT))
+        .extensions(EMBEDDED_ES)
+        .ignoreEach()
+        .build();
 
-    @After
+    @AfterEach
     public void teardown() {
         server.stop();
     }
     
     private GuiceJamesServer createCassandraJamesServer(final MailboxManager mailboxManager) throws IOException {
-        Module mockMailboxManager = (binder) -> binder.bind(MailboxManager.class).toInstance(mailboxManager);
-        Configuration configuration = Configuration.builder()
-            .workingDirectory(temporaryFolder.newFolder())
-            .configurationFromClasspath()
-            .build();
-
-        return GuiceJamesServer.forConfiguration(configuration)
-            .combineWith(ALL_BUT_JMX_CASSANDRA_MODULE)
-            .overrideWith((binder) -> binder.bind(PersistenceAdapter.class).to(MemoryPersistenceAdapter.class))
-            .overrideWith(new TestElasticSearchModule(embeddedElasticSearch),
-                cassandraServer.getModule(),
-                new TestJMAPServerModule(GetMessageListMethod.DEFAULT_MAXIMUM_LIMIT),
-                mockMailboxManager);
+        return testExtension.createJmapServer(
+            binder -> binder.bind(MailboxManager.class).toInstance(mailboxManager));
     }
     
     @Test

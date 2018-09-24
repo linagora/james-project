@@ -19,36 +19,18 @@
 
 package org.apache.james.jmap.cassandra;
 
-import java.io.IOException;
-
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
-import org.apache.james.GuiceJamesServer;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.jmap.methods.integration.SetMessagesMethodTest;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.model.MessageId;
-import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class CassandraSetMessagesMethodTest extends SetMessagesMethodTest {
+class CassandraSetMessagesMethodTest extends SetMessagesMethodTest {
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-
-    @Rule
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
-
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return rule.jmapServer(cassandra.getModule());
-    }
-
-    @Override
-    protected void await() {
-        rule.await();
-    }
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder.withDefaultModules().build();
     
     @Override
     protected MessageId randomMessageId() {

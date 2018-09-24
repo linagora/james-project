@@ -17,24 +17,35 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.queue.rabbitmq;
+package org.apache.james;
 
-public class RabbitMQManagementCredentials {
+import org.apache.james.mailbox.tika.TikaContainer;
+import org.apache.james.modules.TestTikaModule;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
-    private final String user;
-    private final char[] password;
+import com.google.inject.Module;
 
-    RabbitMQManagementCredentials(String user, char[] password) {
-        this.user = user;
-        this.password = password;
+class TikaExtension implements BeforeAllCallback, AfterAllCallback {
+
+    private TikaContainer tika;
+
+    TikaExtension() {
+        this.tika = new TikaContainer();
     }
 
-    public String getUser() {
-        return user;
+    @Override
+    public void beforeAll(ExtensionContext extensionContext) throws Exception {
+        tika.start();
     }
 
-    public char[] getPassword() {
-        return password;
+    @Override
+    public void afterAll(ExtensionContext extensionContext) throws Exception {
+        tika.stop();
     }
 
+    public Module getTikaGuiceModule() {
+        return new TestTikaModule(tika);
+    }
 }

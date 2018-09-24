@@ -19,43 +19,13 @@
 
 package org.apache.james;
 
-import org.apache.james.backends.es.EmbeddedElasticSearch;
-import org.apache.james.modules.TestElasticSearchModule;
-import org.elasticsearch.node.Node;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 
 import com.google.inject.Module;
 
-
-public class EmbeddedElasticSearchRule implements GuiceModuleTestRule {
-
-    private final TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private final EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-
-    private final RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch);
-
-    @Override
-    public Statement apply(Statement base, Description description) {
-        return chain.apply(base, description);
-    }
-
-    @Override
-    public void await() {
-        embeddedElasticSearch.awaitForElasticSearch();
-    }
-
-
-    @Override
-    public Module getModule() {
-        return new TestElasticSearchModule(embeddedElasticSearch);
-    }
-
-    public Node getNode() {
-        return embeddedElasticSearch.getNode();
-    }
+public interface GuiceModuleTestExtension extends BeforeAllCallback, BeforeEachCallback, AfterAllCallback, AfterEachCallback {
+    Module getModule();
 }

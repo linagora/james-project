@@ -22,49 +22,35 @@ package org.apache.james.webadmin.integration;
 import static io.restassured.RestAssured.when;
 import static org.hamcrest.core.IsNot.not;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.utils.WebAdminGuiceProbe;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.routes.HealthCheckRoutes;
 import org.eclipse.jetty.http.HttpStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.restassured.RestAssured;
 
-public class AuthorizedEndpointsTest {
+class AuthorizedEndpointsTest {
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmapTestRule = CassandraJmapTestRule.defaultTestRule();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultFromModules(new UnauthorizedModule(), new WebAdminConfigurationModule())
+        .build();
 
-    private GuiceJamesServer guiceJamesServer;
-
-    @Before
-    public void setUp() throws Exception {
-        guiceJamesServer = cassandraJmapTestRule.jmapServer(cassandra.getModule(), new UnauthorizedModule())
-                .overrideWith(new WebAdminConfigurationModule());
-        guiceJamesServer.start();
+    @BeforeEach
+    void setUp(GuiceJamesServer guiceJamesServer) {
         WebAdminGuiceProbe webAdminGuiceProbe = guiceJamesServer.getProbe(WebAdminGuiceProbe.class);
 
         RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminGuiceProbe.getWebAdminPort())
             .build();
     }
 
-    @After
-    public void tearDown() {
-        guiceJamesServer.stop();
-    }
-
     @Test
-    public void getHealthchecksShouldNotNeedAuthentication() {
+    void getHealthchecksShouldNotNeedAuthentication() {
         when()
             .get(HealthCheckRoutes.HEALTHCHECK)
         .then()

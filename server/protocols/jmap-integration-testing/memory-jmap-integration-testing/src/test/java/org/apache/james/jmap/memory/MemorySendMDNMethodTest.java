@@ -19,28 +19,21 @@
 
 package org.apache.james.jmap.memory;
 
-import java.io.IOException;
 import java.util.Random;
 
-import org.apache.james.GuiceJamesServer;
-import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.MemoryJmapTestExtension;
 import org.apache.james.jmap.methods.integration.SendMDNMethodTest;
 import org.apache.james.mailbox.inmemory.InMemoryMessageId;
 import org.apache.james.mailbox.model.MessageId;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class MemorySendMDNMethodTest extends SendMDNMethodTest {
+class MemorySendMDNMethodTest extends SendMDNMethodTest {
 
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
+    @RegisterExtension
+    static MemoryJmapTestExtension testExtension = MemoryJmapTestExtension.builder().build();
 
     private Random random = new Random();
-    
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return memoryJmap.jmapServer();
-    }
-    
+
     @Override
     protected MessageId randomMessageId() {
         return new InMemoryMessageId.Factory().fromString(String.valueOf(random.nextInt(100000) + 100));

@@ -16,22 +16,18 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.webadmin.integration;
-
-import static org.apache.james.CassandraJamesServerMain.ALL_BUT_JMX_CASSANDRA_MODULE;
+package org.apache.james.jmap.cassandra;
 
 import java.io.IOException;
 
-import org.apache.james.DockerCassandraRule;
-import org.apache.james.GuiceJamesServer;
-import org.apache.james.backends.es.EmbeddedElasticSearch;
+import org.apache.james.CassandraJmapTestExtension;
+import org.apache.james.jmap.methods.integration.JamesWithSpamAssassin;
+import org.apache.james.jmap.methods.integration.SpamAssassinModule;
 import org.apache.james.mailbox.extractor.TextExtractor;
 import org.apache.james.mailbox.store.search.PDFTextExtractor;
 import org.apache.james.modules.TestESMetricReporterModule;
-import org.apache.james.modules.TestElasticSearchModule;
 import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.server.core.configuration.Configuration;
-import org.apache.james.util.Runnables;
+import org.apache.james.spamassassin.SpamAssassinExtension;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -40,67 +36,59 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-import org.junit.rules.TemporaryFolder;
 
-public class CassandraJmapExtension implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+public class SpamAssassinCassandraJmapExtension implements BeforeAllCallback, AfterAllCallback,
+    BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
     private static final int LIMIT_TO_20_MESSAGES = 20;
 
-    private final TemporaryFolder temporaryFolder;
-    private final DockerCassandraRule cassandra;
-    private final EmbeddedElasticSearch elasticSearch;
-    private GuiceJamesServer james;
+    private final CassandraJmapTestExtension jamesExtension;
+    private final SpamAssassinExtension spamAssassinExtension;
+    private JamesWithSpamAssassin james;
 
-    public CassandraJmapExtension() {
-        this.temporaryFolder = new TemporaryFolder();
-        this.cassandra = new DockerCassandraRule();
-        this.elasticSearch = new EmbeddedElasticSearch(temporaryFolder);
+    public SpamAssassinCassandraJmapExtension() {
+        this.spamAssassinExtension = new SpamAssassinExtension();
+        this.jamesExtension = CassandraJmapTestExtension.Builder.withDefaultModules()
+            .additionalModules(
+                binder -> binder.bind(TextExtractor.class).to(PDFTextExtractor.class),
+                new TestJMAPServerModule(LIMIT_TO_20_MESSAGES),
+                new TestESMetricReporterModule(),
+                new SpamAssassinModule(spamAssassinExtension))
+            .build();
     }
 
-    private GuiceJamesServer james() throws IOException {
-        Configuration configuration = Configuration.builder()
-                .workingDirectory(temporaryFolder.newFolder())
-                .configurationFromClasspath()
-                .build();
-
-        return GuiceJamesServer.forConfiguration(configuration)
-                .combineWith(ALL_BUT_JMX_CASSANDRA_MODULE).overrideWith(binder -> binder.bind(TextExtractor.class).to(PDFTextExtractor.class))
-                .overrideWith(new TestJMAPServerModule(LIMIT_TO_20_MESSAGES))
-                .overrideWith(new TestESMetricReporterModule())
-                .overrideWith(cassandra.getModule())
-                .overrideWith(new TestElasticSearchModule(elasticSearch))
-                .overrideWith(new WebAdminConfigurationModule())
-                .overrideWith(new UnauthorizedModule());
+    private JamesWithSpamAssassin james() throws IOException {
+        return new JamesWithSpamAssassin(
+            jamesExtension.getJamesServer(),
+            spamAssassinExtension);
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
-        temporaryFolder.create();
-
-        Runnables.runParallel(cassandra::start, elasticSearch::before);
+        jamesExtension.beforeAll(context);
     }
 
     @Override
-    public void afterAll(ExtensionContext context) {
-        elasticSearch.after();
-
-        Runnables.runParallel(cassandra::stop, elasticSearch::after);
+    public void afterAll(ExtensionContext context) throws Exception {
+        jamesExtension.afterAll(context);
     }
 
     @Override
     public void beforeEach(ExtensionContext context) throws Exception {
         james = james();
-        james.start();
+        spamAssassinExtension.beforeEach(context);
+        james.getJmapServer().start();
     }
 
     @Override
     public void afterEach(ExtensionContext context) {
-        james.stop();
+        james.getJmapServer().stop();
+        spamAssassinExtension.afterEach(context);
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-        return parameterContext.getParameter().getType() == GuiceJamesServer.class;
+        return parameterContext.getParameter().getType() == JamesWithSpamAssassin.class;
     }
 
     @Override

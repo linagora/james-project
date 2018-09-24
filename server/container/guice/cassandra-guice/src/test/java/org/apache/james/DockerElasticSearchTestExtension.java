@@ -24,33 +24,34 @@ import org.apache.james.modules.mailbox.ElasticSearchConfiguration;
 import org.apache.james.util.Host;
 import org.apache.james.util.docker.Images;
 import org.apache.james.util.docker.SwarmGenericContainer;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.google.inject.Module;
 
-public class DockerElasticSearchRule implements GuiceModuleTestRule {
+public class DockerElasticSearchTestExtension implements GuiceModuleTestExtension {
 
     private static final int ELASTIC_SEARCH_PORT = 9300;
-    public static final int ELASTIC_SEARCH_HTTP_PORT = 9200;
-
-    public ElasticSearchConfiguration getElasticSearchConfigurationForDocker() {
-        return ElasticSearchConfiguration.builder()
-            .addHost(Host.from(getIp(), elasticSearchContainer.getMappedPort(ELASTIC_SEARCH_PORT)))
-            .indexAttachment(IndexAttachments.NO)
-            .build();
-    }
+    private static final int ELASTIC_SEARCH_HTTP_PORT = 9200;
 
     private SwarmGenericContainer elasticSearchContainer = new SwarmGenericContainer(Images.ELASTICSEARCH)
         .withExposedPorts(ELASTIC_SEARCH_HTTP_PORT, ELASTIC_SEARCH_PORT);
 
     @Override
-    public Statement apply(Statement base, Description description) {
-        return elasticSearchContainer.apply(base, description);
+    public void beforeAll(ExtensionContext extensionContext) throws Exception {
+        elasticSearchContainer.start();
     }
 
     @Override
-    public void await() {
+    public void afterAll(ExtensionContext extensionContext) throws Exception {
+        elasticSearchContainer.stop();
+    }
+
+    @Override
+    public void afterEach(ExtensionContext extensionContext) throws Exception {
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext extensionContext) throws Exception {
     }
 
     @Override
@@ -74,5 +75,12 @@ public class DockerElasticSearchRule implements GuiceModuleTestRule {
 
     public void unpause() {
         elasticSearchContainer.unpause();
+    }
+
+    private ElasticSearchConfiguration getElasticSearchConfigurationForDocker() {
+        return ElasticSearchConfiguration.builder()
+            .addHost(Host.from(getIp(), elasticSearchContainer.getMappedPort(ELASTIC_SEARCH_PORT)))
+            .indexAttachment(IndexAttachments.NO)
+            .build();
     }
 }

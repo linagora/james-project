@@ -35,8 +35,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
 import org.apache.james.jmap.HttpJmapAuthentication;
@@ -49,37 +48,36 @@ import org.apache.james.mime4j.dom.Message;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.restassured.RestAssured;
 import io.restassured.parsing.Parser;
 
 public class CassandraBulkOperationTest {
+
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultModules()
+        .ignoreEach()
+        .build();
+
     private static final Integer NUMBER_OF_MAIL_TO_CREATE = 250;
-
-    @ClassRule
-    public static DockerCassandraRule cassandra =  new DockerCassandraRule();
-
-    @Rule
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
-
     private static final String USERNAME = "username@" + DOMAIN;
     private static final MailboxPath TRASH_PATH = MailboxPath.forUser(USERNAME, DefaultMailboxes.TRASH);
     private static final String PASSWORD = "password";
 
     private GuiceJamesServer jmapServer;
 
-    @Before
+    @BeforeEach
     public void setup() {
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
         RestAssured.defaultParser = Parser.JSON;
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         if (jmapServer != null) {
             jmapServer.stop();
@@ -127,7 +125,7 @@ public class CassandraBulkOperationTest {
     }
 
     private GuiceJamesServer createServerWithExpungeChunkSize(int expungeChunkSize) throws Exception {
-        GuiceJamesServer jmapServer = rule.jmapServer(cassandra.getModule(),
+        GuiceJamesServer jmapServer = testExtension.createJmapServer(
             binder -> binder.bind(CassandraConfiguration.class)
                 .toInstance(
                     CassandraConfiguration.builder()

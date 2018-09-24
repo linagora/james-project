@@ -23,6 +23,7 @@ import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.data.CassandraDLPConfigurationStoreModule;
 import org.apache.james.modules.data.CassandraDomainListModule;
 import org.apache.james.modules.data.CassandraJmapModule;
+import org.apache.james.modules.data.CassandraMailQueueViewModule;
 import org.apache.james.modules.data.CassandraMailRepositoryModule;
 import org.apache.james.modules.data.CassandraRecipientRewriteTableModule;
 import org.apache.james.modules.data.CassandraSieveRepositoryModule;
@@ -43,7 +44,6 @@ import org.apache.james.modules.protocols.POP3ServerModule;
 import org.apache.james.modules.protocols.ProtocolHandlerModule;
 import org.apache.james.modules.protocols.SMTPServerModule;
 import org.apache.james.modules.rabbitmq.RabbitMQModule;
-import org.apache.james.modules.server.ActiveMQQueueModule;
 import org.apache.james.modules.server.CassandraRoutesModule;
 import org.apache.james.modules.server.DLPRoutesModule;
 import org.apache.james.modules.server.DataRoutesModules;
@@ -89,7 +89,8 @@ public class CassandraJamesServerMain {
         new CassandraQuotaMailingModule());
 
     public static final Module CASSANDRA_SERVER_CORE_MODULE = Modules.combine(
-        new ActiveMQQueueModule(),
+        new RabbitMQModule(),
+        new CassandraMailQueueViewModule(),
         new CassandraDomainListModule(),
         new CassandraDLPConfigurationStoreModule(),
         new CassandraEventStoreModule(),
@@ -107,8 +108,7 @@ public class CassandraJamesServerMain {
         new ElasticSearchMetricReporterModule(),
         new MailboxModule(),
         new TikaMailboxModule(),
-        new SpamAssassinListenerModule(),
-        new RabbitMQModule());
+        new SpamAssassinListenerModule());
 
     public static Module ALL_BUT_JMX_CASSANDRA_MODULE = Modules.combine(
         CASSANDRA_SERVER_CORE_MODULE,

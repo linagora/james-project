@@ -39,7 +39,6 @@ import static org.apache.james.jmap.TestingConstants.jmapRequestSpecBuilder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.GuiceJamesServer;
@@ -47,33 +46,21 @@ import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.apache.james.utils.SMTPMessageSender;
 import org.apache.james.utils.WebAdminGuiceProbe;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.awaitility.Duration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 import io.restassured.specification.RequestSpecification;
 
 public abstract class ForwardIntegrationTest {
 
-    @Rule
-    public SMTPMessageSender messageSender = new SMTPMessageSender(DOMAIN);
-
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
-    private GuiceJamesServer jmapServer;
     private RequestSpecification webAdminApi;
 
-    @Before
-    public void setUp() throws Exception {
-        jmapServer = createJmapServer();
-        jmapServer.start();
-
+    @BeforeEach
+    public void setUp(GuiceJamesServer jmapServer) throws Exception {
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         dataProbe.addDomain(DOMAIN);
         dataProbe.addUser(BOB, BOB_PASSWORD);
@@ -90,13 +77,8 @@ public abstract class ForwardIntegrationTest {
             .spec(WebAdminUtils.buildRequestSpecification(webAdminGuiceProbe.getWebAdminPort()).build());
     }
 
-    @After
-    public void tearDown() {
-        jmapServer.stop();
-    }
-
     @Test
-    public void messageShouldBeForwardedWhenDefinedInRESTAPI() {
+    public void messageShouldBeForwardedWhenDefinedInRESTAPI(GuiceJamesServer jmapServer) {
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, BOB));
 
         AccessToken cedricAccessToken = authenticateJamesUser(baseUri(jmapServer), CEDRIC, CEDRIC_PASSWORD);
@@ -143,7 +125,7 @@ public abstract class ForwardIntegrationTest {
     }
 
     @Test
-    public void messageShouldBeForwardedWhenBaseRecipientWhenInDestination() {
+    public void messageShouldBeForwardedWhenBaseRecipientWhenInDestination(GuiceJamesServer jmapServer) {
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, BOB));
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, ALICE));
 
@@ -203,7 +185,7 @@ public abstract class ForwardIntegrationTest {
     }
 
     @Test
-    public void recursiveForwardShouldWork() {
+    public void recursiveForwardShouldWork(GuiceJamesServer jmapServer) {
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, CEDRIC));
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", CEDRIC, BOB));
 
@@ -251,7 +233,7 @@ public abstract class ForwardIntegrationTest {
     }
 
     @Test
-    public void recursiveWithRecipientCopyForwardShouldWork() {
+    public void recursiveWithRecipientCopyForwardShouldWork(GuiceJamesServer jmapServer) {
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, ALICE));
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, BOB));
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", BOB, CEDRIC));
@@ -300,7 +282,7 @@ public abstract class ForwardIntegrationTest {
     }
 
     @Test
-    public void baseRecipientShouldNotReceiveEmailOnDefaultForward() {
+    public void baseRecipientShouldNotReceiveEmailOnDefaultForward(GuiceJamesServer jmapServer) {
         webAdminApi.put(String.format("/address/forwards/%s/targets/%s", ALICE, BOB));
 
         AccessToken cedricAccessToken = authenticateJamesUser(baseUri(jmapServer), CEDRIC, CEDRIC_PASSWORD);

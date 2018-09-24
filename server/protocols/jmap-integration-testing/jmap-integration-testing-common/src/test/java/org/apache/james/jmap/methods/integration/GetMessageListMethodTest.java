@@ -40,7 +40,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -72,32 +71,24 @@ import org.apache.james.util.ClassLoaderUtils;
 import org.apache.james.util.date.ImapDateTimeFormatter;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 
 public abstract class GetMessageListMethodTest {
-    public static final int LIMIT_TO_3_MESSAGES = 3;
+    protected static final int LIMIT_TO_3_MESSAGES = 3;
     private static final String FORWARDED = "$Forwarded";
     private static final ZoneId ZONE_ID = ZoneId.of("Europe/Paris");
     private ACLProbeImpl aclProbe;
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
-    protected abstract void await();
-
     private AccessToken aliceAccessToken;
     private AccessToken bobAccessToken;
-    private GuiceJamesServer jmapServer;
     private MailboxProbeImpl mailboxProbe;
     private DataProbe dataProbe;
     
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         aclProbe = jmapServer.getProbe(ACLProbeImpl.class);
@@ -113,11 +104,6 @@ public abstract class GetMessageListMethodTest {
         this.bobAccessToken = authenticateJamesUser(baseUri(jmapServer), BOB, BOB_PASSWORD);
     }
 
-    @After
-    public void teardown() {
-        jmapServer.stop();
-    }
-
     @Test
     public void getMessageListShouldNotListMessageIfTheUserHasOnlyLookupRight() throws Exception {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, BOB, "delegated");
@@ -125,7 +111,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.appendMessage(BOB, delegatedMailboxPath,
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        await();
 
         aclProbe.replaceRights(delegatedMailboxPath,
             ALICE,
@@ -149,7 +134,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId message = mailboxProbe.appendMessage(BOB, delegatedMailboxPath,
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        await();
 
         aclProbe.replaceRights(delegatedMailboxPath,
             ALICE,
@@ -173,7 +157,6 @@ public abstract class GetMessageListMethodTest {
 
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags());
-        await();
 
         String messageId = message.getMessageId().serialize();
 
@@ -184,7 +167,6 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200);
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -207,7 +189,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId message = mailboxProbe.appendMessage(BOB, notDelegatedMailboxPath,
             new ByteArrayInputStream("Subject: chaussette\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        await();
 
         aclProbe.replaceRights(delegatedMailboxPath,
             ALICE,
@@ -222,7 +203,6 @@ public abstract class GetMessageListMethodTest {
             .post("/jmap")
         .then()
             .statusCode(200);
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -236,14 +216,13 @@ public abstract class GetMessageListMethodTest {
     }
 
     @Test
-    public void getMessageListShouldNotDuplicateMessagesInSeveralMailboxes() throws Exception {
+    public void getMessageListShouldNotDuplicateMessagesInSeveralMailboxes(GuiceJamesServer jmapServer) throws Exception {
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         MailboxId mailboxId2 = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
 
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        await();
 
         jmapServer.getProbe(JmapGuiceProbe.class).setInMailboxes(message.getMessageId(), ALICE, mailboxId, mailboxId2);
 
@@ -267,7 +246,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.FLAGGED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -291,7 +269,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.FLAGGED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -315,7 +292,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageRead = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.SEEN));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -339,7 +315,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageRead = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.SEEN));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -363,7 +338,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageDraft = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.DRAFT));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -387,7 +361,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageDraft = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.DRAFT));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -411,7 +384,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageAnswered = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.ANSWERED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -435,7 +407,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageAnswered = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(Flags.Flag.ANSWERED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -459,7 +430,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageForwarded = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(FORWARDED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -483,7 +453,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageForwarded = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags(FORWARDED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -511,7 +480,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageSeenFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/oneInlinedImage.eml"), new Date(), false, FlagsBuilder.builder().add(Flags.Flag.SEEN, Flags.Flag.FLAGGED).build());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -541,7 +509,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageSeenFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/oneInlinedImage.eml"), new Date(), false, FlagsBuilder.builder().add(Flags.Flag.SEEN, Flags.Flag.FLAGGED).build());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -571,7 +538,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageSeenFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/oneInlinedImage.eml"), new Date(), false, FlagsBuilder.builder().add(Flags.Flag.SEEN, Flags.Flag.FLAGGED).build());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -601,7 +567,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageSeenFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/oneInlinedImage.eml"), new Date(), false, FlagsBuilder.builder().add(Flags.Flag.SEEN, Flags.Flag.FLAGGED).build());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -657,7 +622,6 @@ public abstract class GetMessageListMethodTest {
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags());
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/oneInlinedImage.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -680,7 +644,6 @@ public abstract class GetMessageListMethodTest {
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags());
         ComposedMessageId message3 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/oneInlinedImage.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -713,7 +676,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -735,7 +697,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox2"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -761,12 +722,10 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox2"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, otherUser, "mailbox");
         mailboxProbe.appendMessage(otherUser, MailboxPath.forUser(otherUser, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -784,7 +743,6 @@ public abstract class GetMessageListMethodTest {
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -804,7 +762,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         MailboxId mailboxId2 = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -823,7 +780,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
-        await();
         
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -845,7 +801,6 @@ public abstract class GetMessageListMethodTest {
         MailboxId mailbox2Id = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox2"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -863,7 +818,6 @@ public abstract class GetMessageListMethodTest {
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -883,7 +837,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         MailboxId mailbox2Id = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -903,7 +856,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -923,7 +875,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -940,7 +891,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -957,7 +907,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -974,7 +923,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/twoAttachments.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -991,7 +939,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1008,7 +955,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1025,7 +971,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1042,7 +987,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1059,7 +1003,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1076,7 +1019,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1093,7 +1035,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1110,7 +1051,6 @@ public abstract class GetMessageListMethodTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             ClassLoader.getSystemResourceAsStream("eml/mailWithRecipients.eml"), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1138,7 +1078,6 @@ public abstract class GetMessageListMethodTest {
                 .build();
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream(DefaultMessageWriter.asBytes(message)), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1166,7 +1105,6 @@ public abstract class GetMessageListMethodTest {
                 .build();
         ComposedMessageId composedMessageId = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream(DefaultMessageWriter.asBytes(message)), new Date(), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1187,7 +1125,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1210,7 +1147,6 @@ public abstract class GetMessageListMethodTest {
         LocalDate date2 = LocalDate.parse("Tue, 27 Jun 2017 09:23:01 +0200", ImapDateTimeFormatter.rfc5322());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date2), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1232,7 +1168,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1254,7 +1189,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: a subject\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: b subject\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1276,7 +1210,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: a subject\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: b subject\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1298,7 +1231,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: subject\r\nFrom: bbb\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: subject\r\nFrom: aaa\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1320,7 +1252,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: subject\r\nFrom: aaa\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: subject\r\nFrom: bbb\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1342,7 +1273,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: subject\r\nTo: bbb\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: subject\r\nTo: aaa\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1364,7 +1294,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: subject\r\nTo: aaa\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: subject\r\nTo: bbb\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1387,7 +1316,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: subject\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: subject\r\n\r\ntestmail bigger".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1409,7 +1337,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 13:54:59 +0200\r\nSubject: subject\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 14:54:59 +0200\r\nSubject: subject\r\n\r\ntestmail bigger".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1434,7 +1361,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId message3 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 15:54:59 +0200\r\nSubject: test\r\n\r\ntestmail really bigger".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1459,7 +1385,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId message3 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Date: Fri, 02 Jun 2017 15:54:59 +0200\r\nSubject: test\r\n\r\ntestmail really bigger".getBytes()), convertToDate(date), false, new Flags());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1481,7 +1406,6 @@ public abstract class GetMessageListMethodTest {
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1503,7 +1427,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1549,7 +1472,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1571,7 +1493,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1595,7 +1516,6 @@ public abstract class GetMessageListMethodTest {
             new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1617,7 +1537,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1639,7 +1558,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1665,7 +1583,6 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test3\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test4\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1685,7 +1602,6 @@ public abstract class GetMessageListMethodTest {
         LocalDate date = LocalDate.now();
         ComposedMessageId message = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1713,7 +1629,6 @@ public abstract class GetMessageListMethodTest {
         LocalDate date = LocalDate.now();
         mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream(mailContent.getBytes()), convertToDate(date.plusDays(1)), false, new Flags());
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1738,7 +1653,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.FLAGGED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1767,7 +1681,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, flags);
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1791,7 +1704,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.FLAGGED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1820,7 +1732,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, flags);
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1849,7 +1760,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, flags);
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1872,7 +1782,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.FLAGGED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1896,7 +1805,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.DELETED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1919,7 +1827,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.RECENT));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1942,7 +1849,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.DELETED));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1965,7 +1871,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId messageFlagged = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags(Flags.Flag.RECENT));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -1989,7 +1894,6 @@ public abstract class GetMessageListMethodTest {
         ComposedMessageId message2 = mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
             new ByteArrayInputStream("Subject: test2\r\n\r\ntestmail".getBytes()), convertToDate(date), false, new Flags());
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -2025,7 +1929,6 @@ public abstract class GetMessageListMethodTest {
                                 .build())
                             .build())));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -2056,7 +1959,6 @@ public abstract class GetMessageListMethodTest {
                                 .build())
                             .build())));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())
@@ -2092,7 +1994,6 @@ public abstract class GetMessageListMethodTest {
                                 .build())
                             .build())));
 
-        await();
 
         given()
             .header("Authorization", aliceAccessToken.serialize())

@@ -17,40 +17,45 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.server;
+package org.apache.james.modules;
 
-import javax.jms.ConnectionFactory;
+import java.net.URI;
+import java.net.URISyntaxException;
 
-import org.apache.activemq.store.PersistenceAdapter;
-import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
-import org.apache.james.queue.activemq.ActiveMQMailQueueFactory;
-import org.apache.james.queue.activemq.EmbeddedActiveMQ;
-import org.apache.james.queue.api.MailQueueFactory;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.james.backend.rabbitmq.DockerRabbitMQ;
+import org.apache.james.backend.rabbitmq.RabbitMQConfiguration;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 
-public class ActiveMQQueueModule extends AbstractModule {
-    @Override
-    protected void configure() {
-        bind(PersistenceAdapter.class).to(KahaDBPersistenceAdapter.class);
-        bind(KahaDBPersistenceAdapter.class).in(Scopes.SINGLETON);
-        bind(EmbeddedActiveMQ.class).in(Scopes.SINGLETON);
-    }
-    
-    @Provides
-    @Singleton
-    ConnectionFactory provideEmbededActiveMQ(EmbeddedActiveMQ embeddedActiveMQ) {
-        return embeddedActiveMQ.getConnectionFactory();
+public class TestRabbitMQModule extends AbstractModule {
+
+    private final DockerRabbitMQ rabbitDocker;
+
+    public TestRabbitMQModule(DockerRabbitMQ rabbitDocker) {
+        this.rabbitDocker = rabbitDocker;
     }
 
-    @Provides
     @Singleton
-    public MailQueueFactory<?> createActiveMailQueueFactory(ActiveMQMailQueueFactory activeMQMailQueueFactory) {
-        activeMQMailQueueFactory.setUseJMX(true);
-        activeMQMailQueueFactory.init();
-        return activeMQMailQueueFactory;
+    @Provides
+    private RabbitMQConfiguration rabbitMQConfiguration() throws URISyntaxException {
+        URI amqpUri = new URIBuilder()
+            .setScheme("amqp")
+            .setHost(rabbitDocker.getHostIp())
+            .setPort(rabbitDocker.getPort())
+            .build();
+        URI managementUri = new URIBuilder()
+            .setScheme("http")
+            .setHost(rabbitDocker.getHostIp())
+            .setPort(rabbitDocker.getAdminPort())
+            .build();
+
+        return RabbitMQConfiguration.builder()
+            .amqpUri(amqpUri)
+            .managementUri(managementUri)
+            .build();
     }
+
 }

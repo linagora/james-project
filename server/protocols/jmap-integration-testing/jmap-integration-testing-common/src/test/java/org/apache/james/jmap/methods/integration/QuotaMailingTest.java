@@ -32,7 +32,6 @@ import static org.apache.james.jmap.TestingConstants.jmapRequestSpecBuilder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -49,9 +48,8 @@ import org.apache.james.modules.QuotaProbesImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Strings;
 
@@ -64,16 +62,11 @@ public abstract class QuotaMailingTest {
     private static final String PASSWORD = "password";
     private static final String BOB_PASSWORD = "bobPassword";
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
     private AccessToken homerAccessToken;
     private AccessToken bartAccessToken;
-    private GuiceJamesServer jmapServer;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    void setup(GuiceJamesServer jmapServer) throws Throwable {
         MailboxProbe mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
 
@@ -90,13 +83,8 @@ public abstract class QuotaMailingTest {
         bartAccessToken = authenticateJamesUser(baseUri(jmapServer), BART, BOB_PASSWORD);
     }
 
-    @After
-    public void tearDown() {
-        jmapServer.stop();
-    }
-
     @Test
-    public void shouldSendANoticeWhenThresholdExceeded() throws Exception {
+    public void shouldSendANoticeWhenThresholdExceeded(GuiceJamesServer jmapServer) throws Exception {
         jmapServer.getProbe(QuotaProbesImpl.class)
             .setMaxStorage(MailboxConstants.USER_NAMESPACE + "&" + HOMER,
                 new SerializableQuotaValue<>(QuotaSize.size(100 * 1000)));
@@ -125,7 +113,7 @@ public abstract class QuotaMailingTest {
     }
 
     @Test
-    public void configurationShouldBeWellLoaded() throws Exception {
+    public void configurationShouldBeWellLoaded(GuiceJamesServer jmapServer) throws Exception {
         jmapServer.getProbe(QuotaProbesImpl.class)
             .setMaxStorage(MailboxConstants.USER_NAMESPACE + "&" + HOMER,
                 new SerializableQuotaValue<>(QuotaSize.size(100 * 1000)));

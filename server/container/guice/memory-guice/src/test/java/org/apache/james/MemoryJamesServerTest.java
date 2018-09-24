@@ -19,20 +19,12 @@
 
 package org.apache.james;
 
-import java.io.IOException;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.junit.Rule;
+class MemoryJamesServerTest implements JamesServerContract {
 
-public class MemoryJamesServerTest extends AbstractJamesServerTest {
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
-
-    @Override
-    protected GuiceJamesServer createJamesServer() throws IOException {
-        return memoryJmap.jmapServer(DOMAIN_LIST_CONFIGURATION_MODULE);
-    }
-
-    @Override
-    protected void clean() {
-    }
+    @RegisterExtension
+    static MemoryJmapTestExtension jamesMemoryServerExtension = MemoryJmapTestExtension.builder()
+        .modules(DOMAIN_LIST_CONFIGURATION_MODULE)
+        .build();
 }

@@ -29,7 +29,6 @@ import static org.apache.james.jmap.TestingConstants.jmapRequestSpecBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
@@ -41,9 +40,8 @@ import org.apache.james.jmap.api.vacation.VacationPatch;
 import org.apache.james.util.ValuePatch;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -54,18 +52,10 @@ public abstract class SetVacationResponseTest {
     public static final String PASSWORD = "password";
     public static final String SUBJECT = "subject";
     private JmapGuiceProbe jmapGuiceProbe;
-
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
-    protected abstract void await();
-
     private AccessToken accessToken;
-    private GuiceJamesServer jmapServer;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    void setup(GuiceJamesServer jmapServer) throws Throwable {
         jmapGuiceProbe = jmapServer.getProbe(JmapGuiceProbe.class);
         RestAssured.requestSpecification = jmapRequestSpecBuilder
                 .setPort(jmapGuiceProbe.getJmapPort())
@@ -76,11 +66,6 @@ public abstract class SetVacationResponseTest {
             .addDomain(DOMAIN)
             .addUser(USER, PASSWORD);
         accessToken = authenticateJamesUser(baseUri(jmapServer), USER, PASSWORD);
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test

@@ -21,6 +21,7 @@ package org.apache.james.webadmin.integration;
 
 import static io.restassured.RestAssured.when;
 
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.utils.WebAdminGuiceProbe;
 import org.apache.james.webadmin.WebAdminUtils;
@@ -41,14 +42,20 @@ import org.apache.james.webadmin.routes.UserQuotaRoutes;
 import org.apache.james.webadmin.routes.UserRoutes;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.RestAssured;
 
-@ExtendWith(CassandraJmapExtension.class)
 class UnauthorizedEndpointsTest {
+
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultFromModules(
+            new WebAdminConfigurationModule(),
+            new UnauthorizedModule())
+        .build();
 
     @BeforeEach
     void setup(GuiceJamesServer james) {

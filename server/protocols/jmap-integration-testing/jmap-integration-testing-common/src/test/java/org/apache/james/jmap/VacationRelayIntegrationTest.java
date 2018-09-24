@@ -22,7 +22,6 @@ package org.apache.james.jmap;
 import static org.apache.james.jmap.TestingConstants.DOMAIN;
 import static org.apache.james.jmap.TestingConstants.LOCALHOST_IP;
 import static org.apache.james.jmap.TestingConstants.calmlyAwait;
-import static org.awaitility.Duration.ONE_MINUTE;
 import static org.hamcrest.Matchers.equalTo;
 
 import java.io.IOException;
@@ -40,13 +39,12 @@ import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
-import org.apache.james.utils.FakeSmtp;
+import org.apache.james.utils.FakeSmtpExtension;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public abstract class VacationRelayIntegrationTest {
 
@@ -55,24 +53,16 @@ public abstract class VacationRelayIntegrationTest {
     private static final String PASSWORD = "secret";
     private static final String REASON = "Message explaining my wonderful vacations";
 
-    @ClassRule
-    public static FakeSmtp fakeSmtp = new FakeSmtp();
+    @RegisterExtension
+    static FakeSmtpExtension fakeSmtp = new FakeSmtpExtension();
 
     private GuiceJamesServer guiceJamesServer;
     private JmapGuiceProbe jmapGuiceProbe;
 
-    protected abstract void await();
-
     protected abstract GuiceJamesServer getJmapServer() throws IOException;
-
     protected abstract InMemoryDNSService getInMemoryDns();
 
-    @BeforeClass
-    public static void classSetUp() {
-        fakeSmtp.awaitStarted(calmlyAwait.atMost(ONE_MINUTE));
-    }
-
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         getInMemoryDns()
             .registerMxRecord("yopmail.com", fakeSmtp.getContainer().getContainerIp());
@@ -86,14 +76,12 @@ public abstract class VacationRelayIntegrationTest {
         MailboxProbe mailboxProbe = guiceJamesServer.getProbe(MailboxProbeImpl.class);
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_WITH_DOMAIN, DefaultMailboxes.SENT);
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_WITH_DOMAIN, DefaultMailboxes.INBOX);
-        await();
 
         jmapGuiceProbe = guiceJamesServer.getProbe(JmapGuiceProbe.class);
     }
 
-    @After
+    @AfterEach
     public void teardown() {
-        fakeSmtp.clean();
         guiceJamesServer.stop();
     }
 

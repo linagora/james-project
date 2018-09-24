@@ -33,7 +33,6 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -49,9 +48,8 @@ import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 
@@ -64,17 +62,10 @@ public abstract class VacationIntegrationTest {
     private static final String HTML_REASON = "<b>" + REASON + "</b>";
     public static final String ORIGINAL_MESSAGE_TEXT_BODY = "Hello someone, and thank you for joining example.com!";
 
-    private GuiceJamesServer guiceJamesServer;
     private JmapGuiceProbe jmapGuiceProbe;
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
-    protected abstract void await();
-
-    @Before
-    public void setUp() throws Exception {
-        guiceJamesServer = createJmapServer();
-        guiceJamesServer.start();
+    @BeforeEach
+    public void setUp(GuiceJamesServer guiceJamesServer) throws Exception {
 
         DataProbe dataProbe = guiceJamesServer.getProbe(DataProbeImpl.class);
         dataProbe.addDomain(DOMAIN);
@@ -86,7 +77,6 @@ public abstract class VacationIntegrationTest {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_2, DefaultMailboxes.SENT);
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_1, DefaultMailboxes.INBOX);
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USER_2, DefaultMailboxes.INBOX);
-        await();
 
         jmapGuiceProbe = guiceJamesServer.getProbe(JmapGuiceProbe.class);
         RestAssured.requestSpecification = jmapRequestSpecBuilder
@@ -94,13 +84,8 @@ public abstract class VacationIntegrationTest {
             .build();
     }
 
-    @After
-    public void teardown() {
-        guiceJamesServer.stop();
-    }
-
     @Test
-    public void jmapVacationShouldGenerateAReplyWhenActive() throws Exception {
+    public void jmapVacationShouldGenerateAReplyWhenActive(GuiceJamesServer guiceJamesServer) throws Exception {
         /* Test scenario :
             - User 1 benw@mydomain.tld sets a Vacation on its account
             - User 2 matthieu@mydomain.tld sends User 1 a mail
@@ -129,7 +114,7 @@ public abstract class VacationIntegrationTest {
     }
 
     @Test
-    public void jmapVacationShouldGenerateAReplyEvenWhenNoText() throws Exception {
+    public void jmapVacationShouldGenerateAReplyEvenWhenNoText(GuiceJamesServer guiceJamesServer) throws Exception {
         // Given
         AccessToken user1AccessToken = authenticateJamesUser(baseUri(guiceJamesServer), USER_1, PASSWORD);
         AccessToken user2AccessToken = authenticateJamesUser(baseUri(guiceJamesServer), USER_2, PASSWORD);
@@ -153,7 +138,7 @@ public abstract class VacationIntegrationTest {
     }
 
     @Test
-    public void jmapVacationShouldHaveSupportForHtmlMail() throws Exception {
+    public void jmapVacationShouldHaveSupportForHtmlMail(GuiceJamesServer guiceJamesServer) throws Exception {
         // Given
         AccessToken user1AccessToken = authenticateJamesUser(baseUri(guiceJamesServer), USER_1, PASSWORD);
         AccessToken user2AccessToken = authenticateJamesUser(baseUri(guiceJamesServer), USER_2, PASSWORD);
@@ -171,7 +156,7 @@ public abstract class VacationIntegrationTest {
     }
 
     @Test
-    public void jmapVacationShouldNotGenerateAReplyWhenInactive() throws Exception {
+    public void jmapVacationShouldNotGenerateAReplyWhenInactive(GuiceJamesServer guiceJamesServer) throws Exception {
         /* Test scenario :
             - User 2 matthieu@mydomain.tld sends User 1 a mail
             - User 1 should well receive this mail
@@ -210,7 +195,7 @@ public abstract class VacationIntegrationTest {
     }
 
     @Test
-    public void jmapVacationShouldNotSendNotificationTwice() throws Exception {
+    public void jmapVacationShouldNotSendNotificationTwice(GuiceJamesServer guiceJamesServer) throws Exception {
         /* Test scenario :
             - User 1 benw@mydomain.tld sets a Vacation on its account
             - User 2 matthieu@mydomain.tld sends User 1 a mail
@@ -241,7 +226,7 @@ public abstract class VacationIntegrationTest {
     }
 
     @Test
-    public void jmapVacationShouldSendNotificationTwiceWhenVacationReset() throws Exception {
+    public void jmapVacationShouldSendNotificationTwiceWhenVacationReset(GuiceJamesServer guiceJamesServer) throws Exception {
         /* Test scenario :
             - User 1 benw@mydomain.tld sets a Vacation on its account
             - User 2 matthieu@mydomain.tld sends User 1 a mail

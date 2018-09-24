@@ -21,45 +21,26 @@ package org.apache.james;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.server.core.configuration.ConfigurationProvider;
 import org.apache.james.utils.FailingPropertiesProvider;
 import org.apache.james.utils.PropertiesProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class DefaultCassandraJamesServerTest {
+class DefaultCassandraJamesServerTest {
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
-
-    private GuiceJamesServer guiceJamesServer;
-
-    @Before
-    public void setUp() throws IOException {
-        guiceJamesServer = cassandraJmap.jmapServer(cassandra.getModule())
-            .overrideWith(binder -> binder.bind(PropertiesProvider.class).to(FailingPropertiesProvider.class))
-            .overrideWith(binder -> binder.bind(ConfigurationProvider.class).toInstance(s -> new HierarchicalConfiguration()));
-    }
-
-    @After
-    public void clean() {
-        guiceJamesServer.stop();
-    }
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultFromModules(
+            binder -> binder.bind(PropertiesProvider.class).to(FailingPropertiesProvider.class),
+            binder -> binder.bind(ConfigurationProvider.class).toInstance(s -> new HierarchicalConfiguration()))
+        .build();
 
     @Test
-    public void memoryJamesServerShouldStartWithNoConfigurationFile() throws Exception {
-        guiceJamesServer.start();
-
-        assertThat(guiceJamesServer.isStarted()).isTrue();
+    void memoryJamesServerShouldStartWithNoConfigurationFile(GuiceJamesServer guiceJamesServer) throws Exception {
+        assertThat(guiceJamesServer.isStarted())
+            .isTrue();
     }
 
 }

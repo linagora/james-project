@@ -25,8 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.jwt.JwtConfiguration;
 import org.apache.james.util.ClassLoaderUtils;
@@ -37,11 +36,10 @@ import org.apache.james.webadmin.authentication.AuthenticationFilter;
 import org.apache.james.webadmin.authentication.JwtFilter;
 import org.apache.james.webadmin.routes.DomainsRoutes;
 import org.eclipse.jetty.http.HttpStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.restassured.RestAssured;
 
@@ -60,25 +58,25 @@ public class JwtFilterIntegrationTest {
         "xtedOK2JnQZn7t9sUzSrcyjWverm7gZkPptkIVoS8TsEeMMME5vFXe_nqkEG69q3kuBUm_33tbR5oNS0ZGZKlG9r41lHBjyf9J1xN4UYV8n866d" +
         "a7RPPCzshIWUtO0q9T2umWTnp-6OnOdBCkndrZmRR6pPxsD5YL0_77Wq8KT_5__fGA";
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmapTestRule = CassandraJmapTestRule.defaultTestRule();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultModules()
+        .ignoreEach()
+        .build();
 
     private GuiceJamesServer guiceJamesServer;
     private DataProbeImpl dataProbe;
     private WebAdminGuiceProbe webAdminGuiceProbe;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         JwtConfiguration jwtConfiguration = new JwtConfiguration(
             Optional.of(ClassLoaderUtils.getSystemResourceAsString("jwt_publickey")));
 
-        guiceJamesServer = cassandraJmapTestRule.jmapServer(cassandra.getModule())
-            .overrideWith(new WebAdminConfigurationModule(),
-                binder -> binder.bind(AuthenticationFilter.class).to(JwtFilter.class),
-                binder -> binder.bind(JwtConfiguration.class).toInstance(jwtConfiguration));
+        guiceJamesServer = testExtension.createJmapServer(
+            new WebAdminConfigurationModule(),
+            binder -> binder.bind(AuthenticationFilter.class).to(JwtFilter.class),
+            binder -> binder.bind(JwtConfiguration.class).toInstance(jwtConfiguration));
         guiceJamesServer.start();
         dataProbe = guiceJamesServer.getProbe(DataProbeImpl.class);
         webAdminGuiceProbe = guiceJamesServer.getProbe(WebAdminGuiceProbe.class);
@@ -86,7 +84,7 @@ public class JwtFilterIntegrationTest {
         RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminGuiceProbe.getWebAdminPort()).build();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         guiceJamesServer.stop();
     }

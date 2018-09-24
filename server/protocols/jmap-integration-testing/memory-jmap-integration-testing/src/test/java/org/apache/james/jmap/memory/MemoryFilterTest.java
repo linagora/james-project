@@ -19,26 +19,19 @@
 
 package org.apache.james.jmap.memory;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.james.GuiceJamesServer;
-import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.MemoryJmapTestExtension;
 import org.apache.james.jmap.methods.integration.FilterTest;
 import org.apache.james.mailbox.inmemory.InMemoryId;
 import org.apache.james.mailbox.model.MailboxId;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class MemoryFilterTest extends FilterTest {
     private static final AtomicLong MAILBOX_ID_GENERATOR = new AtomicLong(0);
 
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
-
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return memoryJmap.jmapServer();
-    }
+    @RegisterExtension
+    static MemoryJmapTestExtension jmapExtension = MemoryJmapTestExtension.builder().build();
 
     @Override
     protected MailboxId randomMailboxId() {

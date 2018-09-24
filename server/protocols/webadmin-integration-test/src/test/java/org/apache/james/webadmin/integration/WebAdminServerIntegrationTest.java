@@ -31,8 +31,7 @@ import static org.hamcrest.Matchers.is;
 
 import java.util.List;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager;
 import org.apache.james.modules.MailboxProbeImpl;
@@ -48,11 +47,9 @@ import org.apache.james.webadmin.routes.UserMailboxesRoutes;
 import org.apache.james.webadmin.routes.UserRoutes;
 import org.apache.james.webadmin.swagger.routes.SwaggerRoutes;
 import org.eclipse.jetty.http.HttpStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.restassured.RestAssured;
 
@@ -69,30 +66,20 @@ public class WebAdminServerIntegrationTest {
     public static final String UPGRADE_VERSION = VERSION + "/upgrade";
     public static final String UPGRADE_TO_LATEST_VERSION = UPGRADE_VERSION + "/latest";
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmapTestRule = CassandraJmapTestRule.defaultTestRule();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultFromModules(new WebAdminConfigurationModule())
+        .build();
 
-    private GuiceJamesServer guiceJamesServer;
     private DataProbe dataProbe;
 
-    @Before
-    public void setUp() throws Exception {
-        guiceJamesServer = cassandraJmapTestRule.jmapServer(cassandra.getModule())
-                .overrideWith(new WebAdminConfigurationModule());
-        guiceJamesServer.start();
+    @BeforeEach
+    public void setUp(GuiceJamesServer guiceJamesServer) throws Exception {
         dataProbe = guiceJamesServer.getProbe(DataProbeImpl.class);
         WebAdminGuiceProbe webAdminGuiceProbe = guiceJamesServer.getProbe(WebAdminGuiceProbe.class);
 
         RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminGuiceProbe.getWebAdminPort())
             .build();
-    }
-
-    @After
-    public void tearDown() {
-        guiceJamesServer.stop();
     }
 
     @Test
@@ -195,7 +182,7 @@ public class WebAdminServerIntegrationTest {
     }
 
     @Test
-    public void putMailboxShouldAddAMailbox() throws Exception {
+    public void putMailboxShouldAddAMailbox(GuiceJamesServer guiceJamesServer) throws Exception {
         dataProbe.addDomain(DOMAIN);
         dataProbe.addUser(USERNAME, "anyPassword");
 
@@ -208,7 +195,7 @@ public class WebAdminServerIntegrationTest {
     }
 
     @Test
-    public void deleteMailboxShouldRemoveAMailbox() throws Exception {
+    public void deleteMailboxShouldRemoveAMailbox(GuiceJamesServer guiceJamesServer) throws Exception {
         dataProbe.addDomain(DOMAIN);
         dataProbe.addUser(USERNAME, "anyPassword");
         guiceJamesServer.getProbe(MailboxProbeImpl.class).createMailbox("#private", USERNAME, MAILBOX);

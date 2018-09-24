@@ -28,47 +28,32 @@ import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.utils.ConfigurationPerformer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
-import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 
 public class CassandraMessageIdManagerInjectionTest {
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
-    
-    private GuiceJamesServer server;
+    private static AbstractModule CALL_ME = new AbstractModule() {
+        @Override
+        protected void configure() {
+            Multibinder.newSetBinder(binder(), ConfigurationPerformer.class)
+                .addBinding()
+                .to(CallMe.class);
+        }
+    };
 
-    @Before
-    public void setup() throws Exception {
-        Module module = new AbstractModule() {
-            @Override
-            protected void configure() {
-                Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(CallMe.class);
-            }
-        };
-        server = cassandraJmap.jmapServer(module, cassandra.getModule());
-        server.start();
-    }
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultFromModules(CALL_ME)
+        .build();
 
     @Test
     public void messageIdManagerShouldBeInjected() {
 
-    }
-
-    @After
-    public void tearDown() {
-        server.stop();
     }
 
     public static class CallMe implements ConfigurationPerformer {

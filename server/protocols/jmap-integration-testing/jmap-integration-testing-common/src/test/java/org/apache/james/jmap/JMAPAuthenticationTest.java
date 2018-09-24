@@ -36,9 +36,9 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.model.ContinuationToken;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -55,7 +55,7 @@ public abstract class JMAPAuthenticationTest {
     private FixedDateZonedDateTimeProvider zonedDateTimeProvider;
     private GuiceJamesServer jmapServer;
 
-    @Before
+    @BeforeEach
     public void setup() throws Throwable {
         zonedDateTimeProvider = new FixedDateZonedDateTimeProvider();
         zonedDateTimeProvider.setFixedDateTime(oldDate);
@@ -79,7 +79,7 @@ public abstract class JMAPAuthenticationTest {
         
     }
     
-    @After
+    @AfterEach
     public void teardown() {
         jmapServer.stop();
     }

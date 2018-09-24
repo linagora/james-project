@@ -26,84 +26,83 @@ import java.io.IOException;
 
 import org.apache.commons.net.imap.IMAPClient;
 import org.apache.james.core.Domain;
+import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.protocols.ImapGuiceProbe;
 import org.apache.james.modules.protocols.SmtpGuiceProbe;
-import org.apache.james.user.ldap.LdapGenericContainer;
 import org.apache.james.utils.IMAPMessageReader;
 import org.apache.james.utils.SMTPMessageSender;
 import org.apache.james.utils.SpoolerProbe;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionFactory;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class CassandraLdapJamesServerTest extends AbstractJmapJamesServerTest {
+public class CassandraLdapJamesServerTest implements JmapJamesServerContract {
+    private static final int LIMIT_TO_3_MESSAGES = 3;
     private static final String JAMES_USER = "james-user";
     private static final String PASSWORD = "secret";
-    private static final String DOMAIN = "james.org";
-    private static final String ADMIN_PASSWORD = "mysecretpassword";
-    private static Duration slowPacedPollInterval = ONE_HUNDRED_MILLISECONDS;
-    private static ConditionFactory calmlyAwait = Awaitility.with()
+    private static final Duration slowPacedPollInterval = ONE_HUNDRED_MILLISECONDS;
+    private static final ConditionFactory calmlyAwait = Awaitility.with()
         .pollInterval(slowPacedPollInterval)
         .and()
         .with()
         .pollDelay(slowPacedPollInterval)
         .await();
 
-    private LdapGenericContainer ldapContainer = LdapGenericContainer.builder()
-        .domain(DOMAIN)
-        .password(ADMIN_PASSWORD)
+    private static final LdapExtension ldapExtension = new LdapExtension();
+    private static final EmbeddedElasticSearchExtension embbededESExtension = new EmbeddedElasticSearchExtension();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.builder()
+        .coreModule(CassandraLdapJamesServerMain.cassandraLdapServerModule)
+        .modules(
+            new TestJMAPServerModule(LIMIT_TO_3_MESSAGES),
+            DOMAIN_LIST_CONFIGURATION_MODULE)
+        .extensions(embbededESExtension, ldapExtension)
         .build();
-    private CassandraLdapJmapTestRule cassandraLdapJmap = CassandraLdapJmapTestRule.defaultTestRule();
-    private IMAPClient imapClient = new IMAPClient();
 
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(ldapContainer).around(cassandraLdapJmap);
-
-    @Rule
-    public IMAPMessageReader imapMessageReader = new IMAPMessageReader();
-    @Rule
-    public SMTPMessageSender messageSender = new SMTPMessageSender(Domain.LOCALHOST.asString());
+    private IMAPClient imapClient;
+    private IMAPMessageReader imapMessageReader;
+    private SMTPMessageSender messageSender;
 
     @Override
-    protected GuiceJamesServer createJamesServer() throws IOException {
-        ldapContainer.start();
-        return cassandraLdapJmap.jmapServer(ldapContainer.getLdapHost(), DOMAIN_LIST_CONFIGURATION_MODULE);
+    public GuiceJamesServer jamesServer() {
+        return testExtension.getJamesServer();
     }
 
-    @Override
-    protected void clean() {
-        if (ldapContainer != null) {
-            ldapContainer.stop();
-        }
+    @BeforeEach
+    public void setUpLocally() {
+        this.imapClient = new IMAPClient();
+        this.imapMessageReader = new IMAPMessageReader();
+        this.messageSender = new SMTPMessageSender(Domain.LOCALHOST.asString());
+    }
 
-        try {
-            imapClient.disconnect();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    @AfterEach
+    public void tearDown() throws IOException {
+        this.messageSender.close();
+        this.imapMessageReader.close();
+        this.imapClient.disconnect();
     }
 
     @Test
-    public void userFromLdapShouldLoginViaImapProtocol() throws Exception {
-        imapClient.connect(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort());
+    void userFromLdapShouldLoginViaImapProtocol() throws Exception {
+        imapClient.connect(JAMES_SERVER_HOST, jamesServer().getProbe(ImapGuiceProbe.class).getImapPort());
 
         assertThat(imapClient.login(JAMES_USER, PASSWORD)).isTrue();
     }
 
     @Test
-    public void mailsShouldBeWellReceivedBeforeFirstUserConnectionWithLdap() throws Exception {
-        messageSender.connect(JAMES_SERVER_HOST, server.getProbe(SmtpGuiceProbe.class).getSmtpPort())
+    void mailsShouldBeWellReceivedBeforeFirstUserConnectionWithLdap() throws Exception {
+        messageSender.connect(JAMES_SERVER_HOST, jamesServer().getProbe(SmtpGuiceProbe.class).getSmtpPort())
             .sendMessage("bob@any.com", JAMES_USER + "@localhost");
 
-        calmlyAwait.until(() -> server.getProbe(SpoolerProbe.class).processingFinished());
+        calmlyAwait.until(() -> jamesServer().getProbe(SpoolerProbe.class).processingFinished());
 
-        imapMessageReader.connect(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort())
+        imapMessageReader.connect(JAMES_SERVER_HOST, jamesServer().getProbe(ImapGuiceProbe.class).getImapPort())
             .login(JAMES_USER, PASSWORD)
             .select("INBOX")
             .awaitMessage(calmlyAwait);
     }
-
 }

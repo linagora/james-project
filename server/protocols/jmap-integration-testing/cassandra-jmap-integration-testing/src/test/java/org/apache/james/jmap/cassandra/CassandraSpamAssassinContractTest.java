@@ -21,7 +21,7 @@ package org.apache.james.jmap.cassandra;
 import org.apache.james.jmap.methods.integration.SpamAssassinContract;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(CassandraJmapExtension.class)
+@ExtendWith(SpamAssassinCassandraJmapExtension.class)
 public class CassandraSpamAssassinContractTest implements SpamAssassinContract {
 
 }

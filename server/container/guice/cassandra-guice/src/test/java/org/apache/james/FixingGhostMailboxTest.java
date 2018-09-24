@@ -64,11 +64,9 @@ import org.apache.james.webadmin.WebAdminConfiguration;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.routes.CassandraMailboxMergingRoutes;
 import org.apache.james.webadmin.routes.TasksRoutes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
@@ -78,24 +76,25 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 
-public class FixingGhostMailboxTest {
+class FixingGhostMailboxTest {
 
     private static final String NAME = "[0][0]";
     private static final String ARGUMENTS = "[0][1]";
     private static final String FIRST_MAILBOX = ARGUMENTS + ".list[0]";
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-
-    @Rule
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
+    private static EmbeddedElasticSearchExtension esExtension = new EmbeddedElasticSearchExtension();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withExtension(esExtension,
+            binder -> binder.bind(WebAdminConfiguration.class)
+                .toInstance(WebAdminConfiguration.TEST_CONFIGURATION))
+        .build();
 
     private AccessToken accessToken;
     private String domain;
     private String alice;
     private String bob;
     private String cedric;
-    private GuiceJamesServer jmapServer;
     private MailboxProbeImpl mailboxProbe;
     private ACLProbe aclProbe;
     private Session session;
@@ -106,12 +105,8 @@ public class FixingGhostMailboxTest {
     private WebAdminGuiceProbe webAdminProbe;
     private RequestSpecification webadminSpecification;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = rule.jmapServer(cassandra.getModule(),
-            binder -> binder.bind(WebAdminConfiguration.class)
-            .toInstance(WebAdminConfiguration.TEST_CONFIGURATION));
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         webAdminProbe = jmapServer.getProbe(WebAdminGuiceProbe.class);
         mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         aclProbe = jmapServer.getProbe(ACLProbeImpl.class);
@@ -137,6 +132,7 @@ public class FixingGhostMailboxTest {
         dataProbe.addUser(bob, "bobSecret");
         accessToken = authenticateJamesUser(baseUri(jmapServer), alice, alicePassword);
 
+        DockerCassandraRule cassandra = testExtension.getCassandra();
         session = Cluster.builder()
             .addContactPoint(cassandra.getIp())
             .withPort(cassandra.getMappedPort(9042))
@@ -153,7 +149,7 @@ public class FixingGhostMailboxTest {
         aliceGhostInboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, alice, MailboxConstants.INBOX);
         aclProbe.addRights(aliceInboxPath, bob, MailboxACL.FULL_RIGHTS);
         message1 = mailboxProbe.appendMessage(alice, aliceInboxPath, AppendCommand.from(generateMessageContent()));
-        rule.await();
+        esExtension.awaitForElasticSearch();
 
         // Simulate ghost mailbox bug
         session.execute(delete().from(CassandraMailboxPathV2Table.TABLE_NAME)
@@ -172,7 +168,7 @@ public class FixingGhostMailboxTest {
 
         // Received a new message
         message2 = mailboxProbe.appendMessage(alice, aliceInboxPath, AppendCommand.from(generateMessageContent()));
-        rule.await();
+        esExtension.awaitForElasticSearch();
     }
 
     private Message generateMessageContent() throws IOException {
@@ -180,11 +176,6 @@ public class FixingGhostMailboxTest {
             .setSubject("toto")
             .setBody("content", StandardCharsets.UTF_8)
             .build();
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test
@@ -308,7 +299,8 @@ public class FixingGhostMailboxTest {
             .spec(webadminSpecification)
             .basePath(TasksRoutes.BASE)
             .get(taskId + "/await");
-        rule.await();
+        esExtension.awaitForElasticSearch();
+
         return taskId;
     }
 

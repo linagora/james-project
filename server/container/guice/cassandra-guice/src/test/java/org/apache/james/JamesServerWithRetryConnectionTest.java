@@ -31,65 +31,57 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.modules.protocols.ImapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class JamesServerWithRetryConnectionTest {
     private static final long WAITING_TIME = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
 
-    @ClassRule
-    public static DockerCassandraRule dockerCassandraRule = new DockerCassandraRule();
-    private final DockerElasticSearchRule dockerElasticSearchRule = new DockerElasticSearchRule();
+    private static DockerElasticSearchTestExtension esExtension = new DockerElasticSearchTestExtension();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withExtension(esExtension)
+        .build();
 
-    @Rule
-    public CassandraJmapTestRule cassandraJmapTestRule = new CassandraJmapTestRule(dockerElasticSearchRule);
-
-    private GuiceJamesServer jamesServer;
     private SocketChannel socketChannel;
     private ExecutorService executorService;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         executorService = Executors.newFixedThreadPool(1);
         socketChannel = SocketChannel.open();
     }
 
-    @After
+    @AfterEach
     public void after() throws IOException {
         socketChannel.close();
-        if (jamesServer != null) {
-            jamesServer.stop();
-        }
         executorService.shutdownNow();
     }
 
     @Test
-    public void serverShouldStartAtDefault() throws Exception {
-        jamesServer = cassandraJmapTestRule.jmapServer(dockerCassandraRule.getModule());
-        assertThatServerStartCorrectly();
+    public void serverShouldStartAtDefault(GuiceJamesServer jamesServer) throws Exception {
+        assertThatServerStartCorrectly(jamesServer);
     }
 
     @Test
-    public void serverShouldRetryToConnectToCassandraWhenStartService() throws Exception {
-        jamesServer = cassandraJmapTestRule.jmapServer(dockerCassandraRule.getModule());
-        dockerCassandraRule.pause();
+    public void serverShouldRetryToConnectToCassandraWhenStartService(GuiceJamesServer jamesServer) throws Exception {
+        DockerCassandraRule cassandra = testExtension.getCassandra();
+        cassandra.pause();
 
-        waitToStartContainer(WAITING_TIME, dockerCassandraRule::unpause);
+        waitToStartContainer(WAITING_TIME, cassandra::unpause);
 
-        assertThatServerStartCorrectly();
+        assertThatServerStartCorrectly(jamesServer);
     }
 
     @Test
-    public void serverShouldRetryToConnectToElasticSearchWhenStartService() throws Exception {
-        jamesServer = cassandraJmapTestRule.jmapServer(dockerCassandraRule.getModule());
-        dockerElasticSearchRule.pause();
+    public void serverShouldRetryToConnectToElasticSearchWhenStartService(GuiceJamesServer jamesServer) throws Exception {
+        esExtension.pause();
 
-        waitToStartContainer(WAITING_TIME, dockerElasticSearchRule::unpause);
+        waitToStartContainer(WAITING_TIME, esExtension::unpause);
 
-        assertThatServerStartCorrectly();
+        assertThatServerStartCorrectly(jamesServer);
     }
 
     interface StartAction {
@@ -107,8 +99,7 @@ public class JamesServerWithRetryConnectionTest {
         });
     }
 
-    private void assertThatServerStartCorrectly() throws Exception {
-        jamesServer.start();
+    private void assertThatServerStartCorrectly(GuiceJamesServer jamesServer) throws Exception {
         socketChannel.connect(new InetSocketAddress("127.0.0.1", jamesServer.getProbe(ImapGuiceProbe.class).getImapPort()));
         assertThat(getServerConnectionResponse(socketChannel)).startsWith("* OK JAMES IMAP4rev1 Server");
     }
