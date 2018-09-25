@@ -19,6 +19,7 @@
 
 package org.apache.james.util;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
@@ -29,6 +30,31 @@ import java.util.stream.Stream;
 
 public class FluentFutureStream<T> {
 
+    public static <T> FluentFutureStream<T> unboxStream(FluentFutureStream<Stream<T>> streams) {
+        return FluentFutureStream.of(
+            streams.completableFuture()
+                .thenApply(StreamUtils::flatten));
+    }
+
+    public static <T> FluentFutureStream<T> unboxOptional(FluentFutureStream<Optional<T>> optionals) {
+        return unboxStream(optionals.map(OptionalUtils::toStream));
+    }
+
+    public static <T> FluentFutureStream<T> unboxFuture(FluentFutureStream<CompletableFuture<T>> futures) {
+        return FluentFutureStream.of(futures.completableFuture()
+            .thenCompose(CompletableFutureUtil::allOf));
+    }
+
+    public static <T> FluentFutureStream<T> unboxFluentFuture(FluentFutureStream<FluentFutureStream<T>> futures) {
+        return unboxStream(
+            unboxFuture(
+                futures.map(FluentFutureStream::completableFuture)));
+    }
+
+    public static <T> FluentFutureStream<T> unboxFutureOptional(FluentFutureStream<CompletableFuture<Optional<T>>> futures) {
+        return unboxOptional(unboxFuture(futures));
+    }
+
     private final CompletableFuture<Stream<T>> completableFuture;
 
     /**
@@ -36,6 +62,11 @@ public class FluentFutureStream<T> {
      */
     public static <T> FluentFutureStream<T> of(CompletableFuture<Stream<T>> completableFuture) {
         return new FluentFutureStream<>(completableFuture);
+    }
+
+    public static <T, U> FluentFutureStream<U> of(Stream<CompletableFuture<T>> completableFuture,
+                                               Function<FluentFutureStream<T>, FluentFutureStream<U>> unboxer) {
+        return unboxer.apply(of(completableFuture));
     }
 
     /**
@@ -46,31 +77,11 @@ public class FluentFutureStream<T> {
     }
 
     /**
-     * Constructs a FluentFutureStream from a Stream of Future of Stream.
-     *
-     * Underlying streams are flatMapped.
-     */
-    public static <T> FluentFutureStream<T> ofNestedStreams(Stream<CompletableFuture<Stream<T>>> completableFuture) {
-        return of(completableFuture)
-            .flatMap(Function.identity());
-    }
-
-    /**
-     * Constructs a FluentFutureStream from a Stream of Future of Optionals.
-     *
-     * Underlying optionals are unboxed.
-     */
-    public static <T> FluentFutureStream<T> ofOptionals(Stream<CompletableFuture<Optional<T>>> completableFuture) {
-        return of(completableFuture)
-            .flatMapOptional(Function.identity());
-    }
-
-    /**
      * Constructs a FluentFutureStream from the supplied futures.
      */
     @SafeVarargs
     public static <T> FluentFutureStream<T> ofFutures(CompletableFuture<T>... completableFutures) {
-        return new FluentFutureStream<>(CompletableFutureUtil.allOfArray(completableFutures));
+        return of(Arrays.stream(completableFutures));
     }
 
     private FluentFutureStream(CompletableFuture<Stream<T>> completableFuture) {
@@ -81,8 +92,8 @@ public class FluentFutureStream<T> {
      * For all values of the underlying stream, an action will be performed.
      */
     public FluentFutureStream<T> performOnAll(Function<T, CompletableFuture<Void>> action) {
-        return FluentFutureStream.of(
-            CompletableFutureUtil.performOnAll(completableFuture(), action));
+        return map(t -> action.apply(t).thenApply(any -> t),
+            FluentFutureStream::unboxFuture);
     }
 
     /**
@@ -93,56 +104,8 @@ public class FluentFutureStream<T> {
             CompletableFutureUtil.map(completableFuture(), function));
     }
 
-    /**
-     * Apply a transformation to all value of the underlying stream.
-     *
-     * As the supplied transformation produces streams, the results will be flatMapped.
-     */
-    public <U> FluentFutureStream<U> flatMap(Function<T, Stream<U>> function) {
-        return FluentFutureStream.of(completableFuture().thenApply(stream ->
-            stream.flatMap(function)));
-    }
-
-    /**
-     * Apply a transformation to all value of the underlying stream.
-     *
-     * As the supplied transformation produces optionals, the results will be unboxed.
-     */
-    public <U> FluentFutureStream<U> flatMapOptional(Function<T, Optional<U>> function) {
-        return map(function)
-            .flatMap(OptionalUtils::toStream);
-    }
-
-    /**
-     * Apply a transformation to all value of the underlying stream.
-     *
-     * As the supplied transformation produces futures, we need to compose the returned values.
-     */
-    public <U> FluentFutureStream<U> thenComposeOnAll(Function<T, CompletableFuture<U>> function) {
-        return FluentFutureStream.of(
-            CompletableFutureUtil.thenComposeOnAll(completableFuture(), function));
-    }
-
-    /**
-     * Apply a transformation to all value of the underlying stream.
-     *
-     * As the supplied transformation produces futures of stream, we need to compose then flatMap the returned values.
-     */
-    public <U> FluentFutureStream<U> thenFlatCompose(Function<T, CompletableFuture<Stream<U>>> function) {
-        return FluentFutureStream.of(
-            CompletableFutureUtil.thenComposeOnAll(completableFuture(), function))
-            .flatMap(Function.identity());
-    }
-
-    /**
-     * Apply a transformation to all value of the underlying stream.
-     *
-     * As the supplied transformation produces futures of optionals, we need to compose then unbox the returned values.
-     */
-    public <U> FluentFutureStream<U> thenFlatComposeOnOptional(Function<T, CompletableFuture<Optional<U>>> function) {
-        return FluentFutureStream.of(
-            CompletableFutureUtil.thenComposeOnAll(completableFuture(), function))
-            .flatMapOptional(Function.identity());
+    public <U, V> FluentFutureStream<V> map(Function<T, U> function, Function<FluentFutureStream<U>, FluentFutureStream<V>> unboxer) {
+        return unboxer.apply(map(function));
     }
 
     /**

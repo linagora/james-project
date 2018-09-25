@@ -35,11 +35,6 @@ public class CompletableFutureUtil {
                 .orElse(CompletableFuture.completedFuture(Optional.empty())));
     }
 
-    @SafeVarargs
-    public static <T> CompletableFuture<Stream<T>> allOfArray(CompletableFuture<T>... futures) {
-        return allOf(Stream.of(futures));
-    }
-
     public static <T, U, V> CompletableFuture<V> combine(CompletableFuture<T> t, CompletableFuture<U> u, BiFunction<T,U,V> combiner) {
         return t.thenCompose(valueT ->
             u.thenApply(valueU -> combiner.apply(valueT, valueU)));
@@ -81,20 +76,6 @@ public class CompletableFutureUtil {
                     CompletableFuture.completedFuture(Stream.concat(stream1, stream2))));
     }
 
-    public static <T> CompletableFuture<Stream<T>> performOnAll(CompletableFuture<Stream<T>> futurStream, Function<T, CompletableFuture<Void>> action) {
-        return thenComposeOnAll(futurStream, value ->
-            keepValue(() ->
-                action.apply(value),
-                value));
-    }
-
-    public static <T, U> CompletableFuture<Stream<U>> thenComposeOnAll(CompletableFuture<Stream<T>> futurStream, Function<T, CompletableFuture<U>> action) {
-        return futurStream
-            .thenCompose(stream ->
-                CompletableFutureUtil.allOf(
-                    stream.map(action)));
-    }
-
     public static <T, U> CompletableFuture<Stream<U>> map(CompletableFuture<Stream<T>> futurStream, Function<T, U> action) {
         return futurStream
             .thenApply(stream ->
@@ -107,10 +88,6 @@ public class CompletableFutureUtil {
 
     public static <T> CompletableFuture<T> reduce(BinaryOperator<T> binaryOperator, CompletableFuture<Stream<T>> futureStream, T emptyAccumulator) {
         return futureStream.thenApply(stream -> stream.reduce(binaryOperator).orElse(emptyAccumulator));
-    }
-
-    public static <T> CompletableFuture<T> keepValue(Supplier<CompletableFuture<Void>> supplier, T value) {
-        return supplier.get().thenApply(any -> value);
     }
 
     public static <T> Function<Boolean, CompletableFuture<Boolean>> composeIfTrue(Supplier<CompletableFuture<T>> composeOperation) {

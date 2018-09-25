@@ -71,11 +71,12 @@ public class FluentFutureStreamTest {
     @Test
     public void ofNestedStreamsShouldConstructAFluentFutureStreamWhenProvidedAStreamOfFutureOfStream() {
         assertThat(
-            FluentFutureStream.ofNestedStreams(
+            FluentFutureStream.<Stream<Integer>, Integer>of(
                 Stream.of(
                     CompletableFuture.completedFuture(Stream.of(1, 2)),
                     CompletableFuture.completedFuture(Stream.of()),
-                    CompletableFuture.completedFuture(Stream.of(3))))
+                    CompletableFuture.completedFuture(Stream.of(3))),
+                    FluentFutureStream::unboxStream)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(1, 2, 3);
@@ -85,12 +86,13 @@ public class FluentFutureStreamTest {
     @Test
     public void ofOptionalsShouldConstructAFluentFutureStreamWhenProvidedAStreamOfFutureOfOptionals() {
         assertThat(
-            FluentFutureStream.ofOptionals(
+            FluentFutureStream.<Optional<Integer>, Integer>of(
                 Stream.of(
                     CompletableFuture.completedFuture(Optional.of(1)),
                     CompletableFuture.completedFuture(Optional.of(2)),
                     CompletableFuture.completedFuture(Optional.empty()),
-                    CompletableFuture.completedFuture(Optional.of(3))))
+                    CompletableFuture.completedFuture(Optional.of(3))),
+                    FluentFutureStream::unboxOptional)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(1, 2, 3);
@@ -126,7 +128,7 @@ public class FluentFutureStreamTest {
             FluentFutureStream.of(
                 CompletableFuture.completedFuture(
                     Stream.of(1, 2, 3)))
-                .flatMap(i -> Stream.of(i, i + 1))
+                .map(i -> Stream.of(i, i + 1), FluentFutureStream::unboxStream)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(1, 2, 2, 3, 3, 4);
@@ -138,8 +140,9 @@ public class FluentFutureStreamTest {
             FluentFutureStream.of(
                 CompletableFuture.completedFuture(
                     Stream.of(1, 2, 3)))
-                .flatMapOptional(i -> Optional.of(i + 1)
-                    .filter(j -> j % 2 == 0))
+                .map(i -> Optional.of(i + 1)
+                    .filter(j -> j % 2 == 0),
+                    FluentFutureStream::unboxOptional)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(2, 4);
@@ -185,7 +188,7 @@ public class FluentFutureStreamTest {
             FluentFutureStream.of(
                 CompletableFuture.completedFuture(
                     Stream.of(1, 2, 3)))
-                .thenComposeOnAll(i -> CompletableFuture.completedFuture(i + 1))
+                .map(i -> CompletableFuture.completedFuture(i + 1), FluentFutureStream::unboxFuture)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(2, 3, 4);
@@ -197,7 +200,7 @@ public class FluentFutureStreamTest {
             FluentFutureStream.of(
                 CompletableFuture.completedFuture(
                     Stream.of(1, 2, 3)))
-                .thenFlatCompose(i -> CompletableFuture.completedFuture(Stream.of(i, i + 1)))
+                .map(i -> FluentFutureStream.of(CompletableFuture.completedFuture(Stream.of(i, i + 1))), FluentFutureStream::unboxFluentFuture)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(1, 2, 2, 3, 3, 4);
@@ -209,8 +212,9 @@ public class FluentFutureStreamTest {
             FluentFutureStream.of(
                 CompletableFuture.completedFuture(
                     Stream.of(1, 2, 3)))
-                .thenFlatComposeOnOptional(i -> CompletableFuture.completedFuture(Optional.of(i + 1)
-                    .filter(j -> j % 2 == 0)))
+                .map(i -> CompletableFuture.completedFuture(
+                    Optional.of(i + 1).filter(j -> j % 2 == 0)),
+                    FluentFutureStream::unboxFutureOptional)
                 .join()
                 .collect(Guavate.toImmutableList()))
             .containsExactly(2, 4);
