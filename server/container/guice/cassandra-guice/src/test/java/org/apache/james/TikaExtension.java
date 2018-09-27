@@ -19,43 +19,33 @@
 
 package org.apache.james;
 
-import org.apache.james.backends.es.EmbeddedElasticSearch;
-import org.apache.james.modules.TestElasticSearchModule;
-import org.elasticsearch.node.Node;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.apache.james.mailbox.tika.TikaContainer;
+import org.apache.james.modules.TestTikaModule;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.google.inject.Module;
 
+class TikaExtension implements BeforeAllCallback, AfterAllCallback {
 
-public class EmbeddedElasticSearchRule implements GuiceModuleTestRule {
+    private TikaContainer tika;
 
-    private final TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private final EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
-
-    private final RuleChain chain = RuleChain
-        .outerRule(temporaryFolder)
-        .around(embeddedElasticSearch);
-
-    @Override
-    public Statement apply(Statement base, Description description) {
-        return chain.apply(base, description);
+    TikaExtension() {
+        this.tika = new TikaContainer();
     }
 
     @Override
-    public void await() {
-        embeddedElasticSearch.awaitForElasticSearch();
+    public void beforeAll(ExtensionContext extensionContext) throws Exception {
+        tika.start();
     }
-
 
     @Override
-    public Module getModule() {
-        return new TestElasticSearchModule(embeddedElasticSearch);
+    public void afterAll(ExtensionContext extensionContext) throws Exception {
+        tika.stop();
     }
 
-    public Node getNode() {
-        return embeddedElasticSearch.getNode();
+    public Module getTikaGuiceModule() {
+        return new TestTikaModule(tika);
     }
 }

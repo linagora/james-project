@@ -31,47 +31,28 @@ import org.apache.james.utils.SMTPMessageSender;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class CassandraMailRepositoryIntegrationTest {
 
     private static final MailRepositoryUrl SENDER_DENIED_URL = MailRepositoryUrl.from("cassandra://var/mail/sender-denied/");
     private static final Duration ONE_MILLISECOND = new Duration(1, TimeUnit.MILLISECONDS);
+    private static ConditionFactory await = Awaitility.with()
+        .pollInterval(FIVE_HUNDRED_MILLISECONDS)
+        .and()
+        .with()
+        .pollDelay(ONE_MILLISECOND)
+        .await();
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
-    @Rule
-    public SMTPMessageSender smtpMessageSender = new SMTPMessageSender("other.com");
-
-    private GuiceJamesServer server;
-    private ConditionFactory await;
-
-    @Before
-    public void setup() throws Exception {
-        server = cassandraJmap.jmapServer(cassandra.getModule());
-        server.start();
-        await = Awaitility.with()
-            .pollInterval(FIVE_HUNDRED_MILLISECONDS)
-            .and()
-            .with()
-            .pollDelay(ONE_MILLISECOND)
-            .await();
-    }
-
-    @After
-    public void tearDown() {
-        server.stop();
-    }
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder.withDefaultModules().build();
 
     @Test
-    public void deniedSenderMailShouldBeStoredInCassandraMailRepositoryWhenConfigured() throws Exception {
+    public void deniedSenderMailShouldBeStoredInCassandraMailRepositoryWhenConfigured(
+        GuiceJamesServer server) throws Exception {
+        SMTPMessageSender smtpMessageSender = new SMTPMessageSender("other.com");
+
         server.getProbe(DataProbeImpl.class)
             .fluent()
             .addDomain("domain.com")
@@ -83,6 +64,4 @@ public class CassandraMailRepositoryIntegrationTest {
         MailRepositoryProbeImpl repositoryProbe = server.getProbe(MailRepositoryProbeImpl.class);
         await.until(() -> repositoryProbe.getRepositoryMailCount(SENDER_DENIED_URL) == 1);
     }
-
-
 }

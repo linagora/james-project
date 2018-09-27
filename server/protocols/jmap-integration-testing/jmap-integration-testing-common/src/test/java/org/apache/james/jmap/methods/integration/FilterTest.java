@@ -40,7 +40,6 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 
-import java.io.IOException;
 import java.util.Locale;
 
 import org.apache.james.GuiceJamesServer;
@@ -52,30 +51,23 @@ import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 
 public abstract class FilterTest {
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
     protected abstract MailboxId randomMailboxId();
 
     private AccessToken accessToken;
     private AccessToken bobAccessToken;
-    private GuiceJamesServer jmapServer;
 
     private MailboxId matchedMailbox;
     private MailboxId inbox;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
-
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         RestAssured.requestSpecification = jmapRequestSpecBuilder
             .setPort(jmapServer.getProbe(JmapGuiceProbe.class).getJmapPort())
             .build();
@@ -90,11 +82,6 @@ public abstract class FilterTest {
         MailboxProbeImpl mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         matchedMailbox = mailboxProbe.createMailbox(MailboxPath.forUser(ALICE, "matched"));
         inbox = mailboxProbe.createMailbox(MailboxPath.forUser(ALICE, INBOX));
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test

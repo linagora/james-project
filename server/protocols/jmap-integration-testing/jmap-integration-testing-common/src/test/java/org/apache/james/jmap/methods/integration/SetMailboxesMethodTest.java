@@ -43,8 +43,6 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
 
-import java.io.IOException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.api.access.AccessToken;
@@ -62,9 +60,8 @@ import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -79,20 +76,13 @@ public abstract class SetMailboxesMethodTest {
 
     private static int MAILBOX_NAME_LENGTH_64K = 65536;
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
-    protected abstract void await();
-
     private AccessToken accessToken;
     private String username;
-    private GuiceJamesServer jmapServer;
     private MailboxProbe mailboxProbe;
     private MailboxId inboxId;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         
@@ -107,11 +97,6 @@ public abstract class SetMailboxesMethodTest {
         dataProbe.addUser(username, password);
         inboxId = mailboxProbe.createMailbox("#private", username, DefaultMailboxes.INBOX);
         accessToken = authenticateJamesUser(baseUri(jmapServer), username, password);
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test
@@ -1202,7 +1187,7 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
-    public void updateShouldRejectInvalidRights() {
+    public void updateShouldRejectInvalidRights(GuiceJamesServer jmapServer) {
         String mailboxId = jmapServer.getProbe(MailboxProbeImpl.class)
             .createMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox")
             .serialize();
@@ -1231,7 +1216,7 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
-    public void updateShouldRejectUnhandledRight() {
+    public void updateShouldRejectUnhandledRight(GuiceJamesServer jmapServer) {
         String mailboxId = jmapServer.getProbe(MailboxProbeImpl.class)
             .createMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox")
             .serialize();
@@ -1260,7 +1245,7 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
-    public void updateShouldRejectNonExistingRights() {
+    public void updateShouldRejectNonExistingRights(GuiceJamesServer jmapServer) {
         String mailboxId = jmapServer.getProbe(MailboxProbeImpl.class)
             .createMailbox(MailboxConstants.USER_NAMESPACE, username, "myBox")
             .serialize();
@@ -1476,7 +1461,7 @@ public abstract class SetMailboxesMethodTest {
     }
 
     @Test
-    public void updateShouldFilterOwnerACL() throws Exception {
+    public void updateShouldFilterOwnerACL(GuiceJamesServer jmapServer) throws Exception {
         String myBox = "myBox";
         String user2 = "user2";
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, username, myBox);

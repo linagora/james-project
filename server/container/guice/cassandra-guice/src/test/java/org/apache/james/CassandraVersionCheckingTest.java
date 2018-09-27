@@ -19,6 +19,7 @@
 package org.apache.james;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,12 +35,10 @@ import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionDAO;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager;
 import org.apache.james.backends.cassandra.versions.SchemaVersion;
 import org.apache.james.modules.protocols.ImapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class CassandraVersionCheckingTest {
 
@@ -47,26 +46,23 @@ public class CassandraVersionCheckingTest {
     private static final SchemaVersion MIN_VERSION = new SchemaVersion(2);
     private static final SchemaVersion MAX_VERSION = new SchemaVersion(4);
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-
-    @Rule
-    public CassandraJmapTestRule cassandraJmapTestRule = CassandraJmapTestRule.defaultTestRule();
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withDefaultModules()
+        .ignoreEach()
+        .build();
 
     private GuiceJamesServer jamesServer;
     private SocketChannel socketChannel;
     private CassandraSchemaVersionDAO versionDAO;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         socketChannel = SocketChannel.open();
         versionDAO = mock(CassandraSchemaVersionDAO.class);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException {
         socketChannel.close();
         if (jamesServer != null) {
@@ -79,8 +75,7 @@ public class CassandraVersionCheckingTest {
         when(versionDAO.getCurrentSchemaVersion())
             .thenReturn(CompletableFuture.completedFuture(Optional.of(MAX_VERSION)));
 
-        jamesServer = cassandraJmapTestRule.jmapServer(
-            cassandra.getModule(),
+        jamesServer = testExtension.createJmapServer(
             binder -> binder.bind(CassandraSchemaVersionDAO.class)
                 .toInstance(versionDAO),
             binder -> binder.bind(CassandraSchemaVersionManager.class)
@@ -94,8 +89,7 @@ public class CassandraVersionCheckingTest {
         when(versionDAO.getCurrentSchemaVersion())
             .thenReturn(CompletableFuture.completedFuture(Optional.of(MIN_VERSION.next())));
 
-        jamesServer = cassandraJmapTestRule.jmapServer(
-            cassandra.getModule(),
+        jamesServer = testExtension.createJmapServer(
             binder -> binder.bind(CassandraSchemaVersionDAO.class)
                 .toInstance(versionDAO),
             binder -> binder.bind(CassandraSchemaVersionManager.class)
@@ -109,8 +103,7 @@ public class CassandraVersionCheckingTest {
         when(versionDAO.getCurrentSchemaVersion())
             .thenReturn(CompletableFuture.completedFuture(Optional.of(MIN_VERSION)));
 
-        jamesServer = cassandraJmapTestRule.jmapServer(
-            cassandra.getModule(),
+        jamesServer = testExtension.createJmapServer(
             binder -> binder.bind(CassandraSchemaVersionDAO.class)
                 .toInstance(versionDAO),
             binder -> binder.bind(CassandraSchemaVersionManager.class)
@@ -124,16 +117,14 @@ public class CassandraVersionCheckingTest {
         when(versionDAO.getCurrentSchemaVersion())
             .thenReturn(CompletableFuture.completedFuture(Optional.of(MIN_VERSION.previous())));
 
-        jamesServer = cassandraJmapTestRule.jmapServer(
-            cassandra.getModule(),
+        jamesServer = testExtension.createJmapServer(
             binder -> binder.bind(CassandraSchemaVersionDAO.class)
                 .toInstance(versionDAO),
             binder -> binder.bind(CassandraSchemaVersionManager.class)
                 .toInstance(new CassandraSchemaVersionManager(versionDAO, MIN_VERSION, MAX_VERSION)));
 
-        expectedException.expect(IllegalStateException.class);
-
-        jamesServer.start();
+        assertThatThrownBy(()  -> jamesServer.start())
+            .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -141,16 +132,14 @@ public class CassandraVersionCheckingTest {
         when(versionDAO.getCurrentSchemaVersion())
             .thenReturn(CompletableFuture.completedFuture(Optional.of(MAX_VERSION.next())));
 
-        jamesServer = cassandraJmapTestRule.jmapServer(
-            cassandra.getModule(),
+        jamesServer = testExtension.createJmapServer(
             binder -> binder.bind(CassandraSchemaVersionDAO.class)
                 .toInstance(versionDAO),
             binder -> binder.bind(CassandraSchemaVersionManager.class)
                 .toInstance(new CassandraSchemaVersionManager(versionDAO, MIN_VERSION, MAX_VERSION)));
 
-        expectedException.expect(IllegalStateException.class);
-
-        jamesServer.start();
+        assertThatThrownBy(()  -> jamesServer.start())
+            .isInstanceOf(IllegalStateException.class);
     }
 
     private void assertThatServerStartCorrectly() throws Exception {

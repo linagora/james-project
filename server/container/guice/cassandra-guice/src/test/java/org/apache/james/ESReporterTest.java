@@ -41,11 +41,10 @@ import org.apache.james.utils.JmapGuiceProbe;
 import org.awaitility.Duration;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +52,7 @@ import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 
-public class ESReporterTest {
+class ESReporterTest {
 
     private static final int DELAY_IN_MS = 100;
     private static final int PERIOD_IN_MS = 100;
@@ -64,23 +63,17 @@ public class ESReporterTest {
     private static final String USERNAME = "user1@" + DOMAIN;
     private static final String PASSWORD = "secret";
 
-    @ClassRule
-    public static final DockerCassandraRule cassandra = new DockerCassandraRule();
-
-    private EmbeddedElasticSearchRule embeddedElasticSearchRule = new EmbeddedElasticSearchRule();
+    static EmbeddedElasticSearchExtension embeddedElasticSearch = new EmbeddedElasticSearchExtension();
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder
+        .withExtension(embeddedElasticSearch)
+        .build();
 
     private Timer timer;
-
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = new CassandraJmapTestRule(embeddedElasticSearchRule);
-
-    private GuiceJamesServer server;
     private AccessToken accessToken;
 
-    @Before
-    public void setup() throws Exception {
-        server = cassandraJmap.jmapServer(cassandra.getModule());
-        server.start();
+    @BeforeEach
+    void setup(GuiceJamesServer server) throws Exception {
         server.getProbe(DataProbeImpl.class)
             .fluent()
             .addDomain(DOMAIN)
@@ -97,16 +90,14 @@ public class ESReporterTest {
         timer = new Timer();
     }
 
-    @After
-    public void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() {
         timer.cancel();
-        if (server != null) {
-            server.stop();
-        }
+        timer.purge();
     }
 
     @Test
-    public void timeMetricsShouldBeReportedWhenImapCommandsReceived() throws Exception {
+    public void timeMetricsShouldBeReportedWhenImapCommandsReceived(GuiceJamesServer server) throws Exception {
         IMAPClient client = new IMAPClient();
         client.connect(InetAddress.getLocalHost(), server.getProbe(ImapGuiceProbe.class).getImapPort());
         client.login(USERNAME, PASSWORD);
@@ -150,7 +141,7 @@ public class ESReporterTest {
     }
 
     private boolean checkMetricRecordedInElasticSearch() {
-        try (Client client = embeddedElasticSearchRule.getNode().client()) {
+        try (Client client = embeddedElasticSearch.getEmbeddedElasticSearch().getNode().client()) {
             return !Arrays.stream(client.prepareSearch()
                     .setQuery(QueryBuilders.matchAllQuery())
                     .get().getHits().getHits())

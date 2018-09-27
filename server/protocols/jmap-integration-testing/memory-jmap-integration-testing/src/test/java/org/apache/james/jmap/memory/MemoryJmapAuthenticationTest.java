@@ -22,20 +22,22 @@ package org.apache.james.jmap.memory;
 import java.io.IOException;
 
 import org.apache.james.GuiceJamesServer;
-import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.MemoryJmapTestExtension;
 import org.apache.james.jmap.FixedDateZonedDateTimeProvider;
 import org.apache.james.jmap.JMAPAuthenticationTest;
 import org.apache.james.util.date.ZonedDateTimeProvider;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class MemoryJmapAuthenticationTest extends JMAPAuthenticationTest {
     
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
+    @RegisterExtension
+    static MemoryJmapTestExtension testExtension = MemoryJmapTestExtension.builder()
+        .ignoreEach()
+        .build();
 
     @Override
     protected GuiceJamesServer createJmapServer(FixedDateZonedDateTimeProvider zonedDateTimeProvider) throws IOException {
-        return memoryJmap.jmapServer()
-                .overrideWith((binder) -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider));
+        return testExtension.jmapServer(
+            binder -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider));
     }
 }

@@ -22,23 +22,21 @@ package org.apache.james.jmap.memory;
 import java.io.IOException;
 
 import org.apache.james.GuiceJamesServer;
-import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.MemoryJmapTestExtension;
 import org.apache.james.jmap.methods.integration.GetVacationResponseTest;
 import org.apache.james.util.date.ZonedDateTimeProvider;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class MemoryGetVacationResponseMethodTest extends GetVacationResponseTest {
-    
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
+
+    @RegisterExtension
+    static MemoryJmapTestExtension testExtension = MemoryJmapTestExtension.builder()
+        .ignoreEach()
+        .build();
 
     @Override
     protected GuiceJamesServer createJmapServer(ZonedDateTimeProvider zonedDateTimeProvider) throws IOException {
-        return memoryJmap.jmapServer()
-                    .overrideWith(binder -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider));
-    }
-    
-    @Override
-    protected void await() {
+        return testExtension.jmapServer(
+            binder -> binder.bind(ZonedDateTimeProvider.class).toInstance(zonedDateTimeProvider));
     }
 }

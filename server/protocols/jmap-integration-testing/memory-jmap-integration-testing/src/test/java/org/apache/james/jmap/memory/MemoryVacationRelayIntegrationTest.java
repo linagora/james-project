@@ -22,25 +22,25 @@ package org.apache.james.jmap.memory;
 import java.io.IOException;
 
 import org.apache.james.GuiceJamesServer;
-import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.MemoryJmapTestExtension;
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.dnsservice.api.InMemoryDNSService;
 import org.apache.james.jmap.VacationRelayIntegrationTest;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class MemoryVacationRelayIntegrationTest extends VacationRelayIntegrationTest {
 
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
+    @RegisterExtension
+    static MemoryJmapTestExtension testExtension = MemoryJmapTestExtension.builder()
+        .ignoreEach()
+        .build();
 
     private final InMemoryDNSService inMemoryDNSService = new InMemoryDNSService();
 
     @Override
-    protected void await() {}
-
-    @Override
     protected GuiceJamesServer getJmapServer() throws IOException {
-        return memoryJmap.jmapServer((binder) -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
+        return testExtension.jmapServer(
+            binder -> binder.bind(DNSService.class).toInstance(inMemoryDNSService));
     }
 
     @Override

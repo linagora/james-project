@@ -19,32 +19,23 @@
 
 package org.apache.james.jmap.cassandra;
 
-import java.io.IOException;
+import static org.apache.james.CassandraJmapTestExtension.EMBEDDED_ES;
 
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
-import org.apache.james.GuiceJamesServer;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.jmap.methods.integration.GetMessageListMethodTest;
 import org.apache.james.modules.TestJMAPServerModule;
-import org.junit.ClassRule;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class CassandraGetMessageListMethodTest extends GetMessageListMethodTest {
+class CassandraGetMessageListMethodTest extends GetMessageListMethodTest {
 
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-
-    @Rule 
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
-
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return rule.jmapServer(cassandra.getModule(),
-            new TestJMAPServerModule(LIMIT_TO_3_MESSAGES));
-    }
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.builder()
+        .extensions(EMBEDDED_ES)
+        .overrideModules(new TestJMAPServerModule(LIMIT_TO_3_MESSAGES))
+        .build();
 
     @Override
     protected void await() {
-        rule.await();
+        testExtension.await();
     }
 }

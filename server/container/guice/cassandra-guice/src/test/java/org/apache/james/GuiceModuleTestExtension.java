@@ -19,15 +19,15 @@
 
 package org.apache.james;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 
-class CassandraWithTikaTest implements JamesServerContract {
+import com.google.inject.Module;
 
-    @RegisterExtension
-    static TikaExtension tikaExtension = new TikaExtension();
+public interface GuiceModuleTestExtension extends BeforeAllCallback, BeforeEachCallback, AfterAllCallback, AfterEachCallback {
+    Module getModule();
 
-    @RegisterExtension
-    static CassandraJmapTestExtension cassandraJmapServer = CassandraJmapTestExtension.Builder
-        .withDefaultFromModules(tikaExtension.getTikaGuiceModule(), DOMAIN_LIST_CONFIGURATION_MODULE)
-        .build();
+    void await();
 }

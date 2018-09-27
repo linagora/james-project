@@ -19,20 +19,12 @@
 
 package org.apache.james.jmap.memory;
 
-import java.io.IOException;
-
-import org.apache.james.GuiceJamesServer;
-import org.apache.james.MemoryJmapTestRule;
+import org.apache.james.MemoryJmapTestExtension;
 import org.apache.james.jmap.methods.integration.QuotaMailingTest;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class MemoryQuotaMailingTest extends QuotaMailingTest {
+class MemoryQuotaMailingTest extends QuotaMailingTest {
 
-    @Rule
-    public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
-
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return memoryJmap.jmapServer();
-    }
+    @RegisterExtension
+    static MemoryJmapTestExtension testExtension = MemoryJmapTestExtension.builder().build();
 }

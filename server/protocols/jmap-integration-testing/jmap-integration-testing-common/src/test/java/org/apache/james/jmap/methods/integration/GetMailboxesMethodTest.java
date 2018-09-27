@@ -47,7 +47,6 @@ import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
@@ -77,9 +76,8 @@ import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.AllMatching;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -87,24 +85,19 @@ import com.google.common.collect.ImmutableMap;
 import io.restassured.RestAssured;
 
 public abstract class GetMailboxesMethodTest {
-    public static final String READ = String.valueOf(Right.Read.asCharacter());
-    public static final String LOOKUP = String.valueOf(Right.Lookup.asCharacter());
-    public static final String ADMINISTER = String.valueOf(Right.Administer.asCharacter());
-
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
+    private static final String READ = String.valueOf(Right.Read.asCharacter());
+    private static final String LOOKUP = String.valueOf(Right.Lookup.asCharacter());
+    private static final String ADMINISTER = String.valueOf(Right.Administer.asCharacter());
 
     private AccessToken accessToken;
-    private GuiceJamesServer jmapServer;
     private MailboxProbeImpl mailboxProbe;
     private ACLProbe aclProbe;
     private QuotaProbe quotaProbe;
 
     private Message message;
     
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         aclProbe = jmapServer.getProbe(ACLProbeImpl.class);
         quotaProbe = jmapServer.getProbe(QuotaProbesImpl.class);
@@ -124,11 +117,6 @@ public abstract class GetMailboxesMethodTest {
             .setSubject("test")
             .setBody("testmail", StandardCharsets.UTF_8)
             .build();
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
     
     @Test

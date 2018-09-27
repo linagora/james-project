@@ -40,7 +40,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -72,32 +71,26 @@ import org.apache.james.util.ClassLoaderUtils;
 import org.apache.james.util.date.ImapDateTimeFormatter;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 
 public abstract class GetMessageListMethodTest {
-    public static final int LIMIT_TO_3_MESSAGES = 3;
+    protected static final int LIMIT_TO_3_MESSAGES = 3;
     private static final String FORWARDED = "$Forwarded";
     private static final ZoneId ZONE_ID = ZoneId.of("Europe/Paris");
     private ACLProbeImpl aclProbe;
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
+    private AccessToken aliceAccessToken;
+    private AccessToken bobAccessToken;
+    private MailboxProbeImpl mailboxProbe;
+    private DataProbe dataProbe;
 
     protected abstract void await();
 
-    private AccessToken aliceAccessToken;
-    private AccessToken bobAccessToken;
-    private GuiceJamesServer jmapServer;
-    private MailboxProbeImpl mailboxProbe;
-    private DataProbe dataProbe;
-    
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         aclProbe = jmapServer.getProbe(ACLProbeImpl.class);
@@ -111,11 +104,6 @@ public abstract class GetMessageListMethodTest {
         this.aliceAccessToken = authenticateJamesUser(baseUri(jmapServer), ALICE, ALICE_PASSWORD);
         dataProbe.addUser(BOB, BOB_PASSWORD);
         this.bobAccessToken = authenticateJamesUser(baseUri(jmapServer), BOB, BOB_PASSWORD);
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test
@@ -236,7 +224,7 @@ public abstract class GetMessageListMethodTest {
     }
 
     @Test
-    public void getMessageListShouldNotDuplicateMessagesInSeveralMailboxes() throws Exception {
+    public void getMessageListShouldNotDuplicateMessagesInSeveralMailboxes(GuiceJamesServer jmapServer) throws Exception {
         MailboxId mailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
         MailboxId mailboxId2 = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox2");
 
@@ -257,7 +245,7 @@ public abstract class GetMessageListMethodTest {
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", hasSize(1));
     }
-    
+
     @Test
     public void getMessageListSetFlaggedFilterShouldResultFlaggedMessages() throws Exception {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
@@ -278,7 +266,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageFlagged.getMessageId().serialize()), 
+                    containsInAnyOrder(messageFlagged.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotFlagged.getMessageId().serialize()))));
     }
 
@@ -302,7 +290,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageNotFlagged.getMessageId().serialize()), 
+                    containsInAnyOrder(messageNotFlagged.getMessageId().serialize()),
                     not(containsInAnyOrder(messageFlagged.getMessageId().serialize()))));
     }
 
@@ -326,7 +314,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageRead.getMessageId().serialize()), 
+                    containsInAnyOrder(messageRead.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotRead.getMessageId().serialize()))));
     }
 
@@ -350,7 +338,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageNotRead.getMessageId().serialize()), 
+                    containsInAnyOrder(messageNotRead.getMessageId().serialize()),
                     not(containsInAnyOrder(messageRead.getMessageId().serialize()))));
     }
 
@@ -374,7 +362,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageDraft.getMessageId().serialize()), 
+                    containsInAnyOrder(messageDraft.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotDraft.getMessageId().serialize()))));
     }
 
@@ -398,7 +386,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageNotDraft.getMessageId().serialize()), 
+                    containsInAnyOrder(messageNotDraft.getMessageId().serialize()),
                     not(containsInAnyOrder(messageDraft.getMessageId().serialize()))));
     }
 
@@ -422,7 +410,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageAnswered.getMessageId().serialize()), 
+                    containsInAnyOrder(messageAnswered.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotAnswered.getMessageId().serialize()))));
     }
 
@@ -446,7 +434,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageNotAnswered.getMessageId().serialize()), 
+                    containsInAnyOrder(messageNotAnswered.getMessageId().serialize()),
                     not(containsInAnyOrder(messageAnswered.getMessageId().serialize()))));
     }
 
@@ -522,7 +510,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageNotSeenFlagged.getMessageId().serialize()), 
+                    containsInAnyOrder(messageNotSeenFlagged.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotSeenNotFlagged.getMessageId().serialize(),
                             messageSeenNotFlagged.getMessageId().serialize(),
                             messageSeenFlagged.getMessageId().serialize()))));
@@ -554,7 +542,7 @@ public abstract class GetMessageListMethodTest {
             .body(ARGUMENTS + ".messageIds", allOf(
                     containsInAnyOrder(messageNotSeenFlagged.getMessageId().serialize(),
                             messageSeenFlagged.getMessageId().serialize(),
-                            messageNotSeenNotFlagged.getMessageId().serialize()), 
+                            messageNotSeenNotFlagged.getMessageId().serialize()),
                     not(containsInAnyOrder(messageSeenNotFlagged.getMessageId().serialize()))));
     }
 
@@ -582,7 +570,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
-                    containsInAnyOrder(messageSeenNotFlagged.getMessageId().serialize()), 
+                    containsInAnyOrder(messageSeenNotFlagged.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotSeenFlagged.getMessageId().serialize(),
                             messageSeenFlagged.getMessageId().serialize(),
                             messageNotSeenNotFlagged.getMessageId().serialize()))));
@@ -616,7 +604,7 @@ public abstract class GetMessageListMethodTest {
             .body(NAME, equalTo("messageList"))
             .body(ARGUMENTS + ".messageIds", allOf(
                     containsInAnyOrder(messageSeenFlagged.getMessageId().serialize(),
-                            messageNotSeenFlagged.getMessageId().serialize()), 
+                            messageNotSeenFlagged.getMessageId().serialize()),
                     not(containsInAnyOrder(messageNotSeenNotFlagged.getMessageId().serialize(),
                             messageSeenNotFlagged.getMessageId().serialize()))));
     }
@@ -824,7 +812,7 @@ public abstract class GetMessageListMethodTest {
                 new ByteArrayInputStream("Subject: test\r\n\r\ntestmail".getBytes()), new Date(), false, new Flags());
 
         await();
-        
+
         given()
             .header("Authorization", aliceAccessToken.serialize())
             .body(String.format("[[\"getMessageList\", {\"filter\":{\"notInMailboxes\":[\"%s\"]}}, \"#0\"]]", mailboxId.serialize()))
@@ -1527,7 +1515,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"));
     }
-    
+
     @Test
     public void getMessageListShouldWorkWhenCollapseThreadIsTrue() {
         given()
@@ -1539,7 +1527,7 @@ public abstract class GetMessageListMethodTest {
             .statusCode(200)
             .body(NAME, equalTo("messageList"));
     }
-    
+
     @Test
     public void getMessageListShouldReturnAllMessagesWhenPositionIsNotGiven() throws Exception {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");

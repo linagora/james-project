@@ -19,24 +19,12 @@
 
 package org.apache.james.jmap.cassandra;
 
-import java.io.IOException;
-
-import org.apache.james.CassandraJmapTestRule;
-import org.apache.james.DockerCassandraRule;
-import org.apache.james.GuiceJamesServer;
+import org.apache.james.CassandraJmapTestExtension;
 import org.apache.james.jmap.methods.integration.QuotaMailingTest;
-import org.junit.ClassRule;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class CassandraQuotaMailingTest extends QuotaMailingTest {
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
+class CassandraQuotaMailingTest extends QuotaMailingTest {
 
-    @Rule
-    public CassandraJmapTestRule rule = CassandraJmapTestRule.defaultTestRule();
-
-    @Override
-    protected GuiceJamesServer createJmapServer() throws IOException {
-        return rule.jmapServer(cassandra.getModule());
-    }
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraJmapTestExtension.Builder.withDefaultModules().build();
 }

@@ -19,35 +19,15 @@
 
 package org.apache.james;
 
-import java.io.IOException;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.apache.james.user.ldap.LdapGenericContainer;
-import org.junit.Rule;
-import org.junit.rules.RuleChain;
+public class CassandraLdapJmapJamesServerTest implements JmapJamesServerContract {
 
-public class CassandraLdapJmapJamesServerTest extends AbstractJmapJamesServerTest {
-    private static final String DOMAIN = "james.org";
-    private static final String ADMIN_PASSWORD = "mysecretpassword";
-
-    private LdapGenericContainer ldapContainer = LdapGenericContainer.builder()
-        .domain(DOMAIN)
-        .password(ADMIN_PASSWORD)
-        .build();
-    private CassandraLdapJmapTestRule cassandraLdapJmap = CassandraLdapJmapTestRule.defaultTestRule();
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(ldapContainer).around(cassandraLdapJmap);
+    @RegisterExtension
+    static CassandraJmapTestExtension testExtension = CassandraLdapJamesServerTest.testExtension;
 
     @Override
-    protected GuiceJamesServer createJamesServer() throws IOException {
-        ldapContainer.start();
-        return cassandraLdapJmap.jmapServer(ldapContainer.getLdapHost());
-    }
-
-    @Override
-    protected void clean() {
-        if (ldapContainer != null) {
-            ldapContainer.stop();
-        }
+    public GuiceJamesServer jamesServer() {
+        return testExtension.getJamesServer();
     }
 }

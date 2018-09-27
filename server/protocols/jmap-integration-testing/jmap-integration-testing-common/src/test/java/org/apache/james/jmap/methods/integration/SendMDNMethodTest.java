@@ -40,7 +40,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,9 +59,8 @@ import org.apache.james.modules.QuotaProbesImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Iterables;
 
@@ -75,18 +73,13 @@ public abstract class SendMDNMethodTest {
     private static final String PASSWORD = "password";
     private static final String BOB_PASSWORD = "bobPassword";
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
     protected abstract MessageId randomMessageId();
 
     private AccessToken homerAccessToken;
     private AccessToken bartAccessToken;
-    private GuiceJamesServer jmapServer;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
         MailboxProbe mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         DataProbe dataProbe = jmapServer.getProbe(DataProbeImpl.class);
 
@@ -167,11 +160,6 @@ public abstract class SendMDNMethodTest {
             .path(ARGUMENTS + ".created." + messageCreationId + ".id");
 
         calmlyAwait.until(() -> !listMessageIdsForAccount(homerAccessToken).isEmpty());
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test
@@ -404,7 +392,7 @@ public abstract class SendMDNMethodTest {
     }
 
     @Test
-    public void sendMDNShouldReturnMaxQuotaReachedWhenUserReachedHisQuota() throws MailboxException {
+    public void sendMDNShouldReturnMaxQuotaReachedWhenUserReachedHisQuota(GuiceJamesServer jmapServer) throws MailboxException {
         bartSendMessageToHomer();
 
         List<String> messageIds = listMessageIdsForAccount(homerAccessToken);

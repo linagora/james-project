@@ -115,10 +115,9 @@ import org.apache.mailet.base.test.FakeMail;
 import org.awaitility.Duration;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -142,11 +141,8 @@ public abstract class SetMessagesMethodTest {
 
     private AccessToken bobAccessToken;
 
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
-
-    protected abstract MessageId randomMessageId();
-
     protected abstract void await();
+    protected abstract MessageId randomMessageId();
 
     private AccessToken accessToken;
     private GuiceJamesServer jmapServer;
@@ -155,10 +151,9 @@ public abstract class SetMessagesMethodTest {
     private MessageIdProbe messageProbe;
     private ACLProbe aclProbe;
 
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    public void setup(GuiceJamesServer jmapServer) throws Throwable {
+        this.jmapServer = jmapServer;
         mailboxProbe = jmapServer.getProbe(MailboxProbeImpl.class);
         dataProbe = jmapServer.getProbe(DataProbeImpl.class);
         messageProbe = jmapServer.getProbe(MessageIdProbe.class);
@@ -179,11 +174,6 @@ public abstract class SetMessagesMethodTest {
         mailboxProbe.createMailbox("#private", USERNAME, DefaultMailboxes.INBOX);
         accessToken = HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), USERNAME, PASSWORD);
         bobAccessToken = HttpJmapAuthentication.authenticateJamesUser(baseUri(jmapServer), BOB, BOB_PASSWORD);
-    }
-
-    @After
-    public void teardown() {
-        jmapServer.stop();
     }
 
     @Test
@@ -839,7 +829,7 @@ public abstract class SetMessagesMethodTest {
     }
 
     @Test
-    @Ignore("Jackson json deserializer stops after first error found")
+    @Disabled("Jackson json deserializer stops after first error found")
     public void setMessagesShouldRejectUpdateWhenPropertiesHaveWrongTypes() throws MailboxException {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
         mailboxProbe.appendMessage(USERNAME, USER_MAILBOX,
@@ -2189,7 +2179,7 @@ public abstract class SetMessagesMethodTest {
             "    \"#0\"" +
             "  ]" +
             "]";
-        
+
         given()
             .header("Authorization", accessToken.serialize())
             .body(copyDraftToOutBox)
@@ -2529,7 +2519,7 @@ public abstract class SetMessagesMethodTest {
         String outboxId = getMailboxId(accessToken, Role.OUTBOX);
         assertThat(hasNoMessageIn(bobAccessToken, outboxId)).isTrue();
     }
-    
+
     private boolean hasNoMessageIn(AccessToken accessToken, String mailboxId) {
         try {
             with()
@@ -2544,7 +2534,7 @@ public abstract class SetMessagesMethodTest {
             return true;
         } catch (AssertionError e) {
             return false;
-        } 
+        }
     }
 
     @Test
@@ -4382,7 +4372,7 @@ public abstract class SetMessagesMethodTest {
 
         checkBlobContent(blobId, rawBytes);
     }
-    
+
     @Test
     public void setMessagesShouldVerifyHeaderOfMessageInInbox() throws Exception {
         String toUsername = "username1@" + DOMAIN;
@@ -4694,7 +4684,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldUpdateIsAnsweredWhenInReplyToHeaderSentViaDraft() throws Exception {
         OriginalMessage firstMessage = receiveFirstMessage();
-        
+
         String draftCreationId = "creationId1337";
         String createDraft = "[" +
             "  [" +
@@ -4762,7 +4752,7 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldUpdateIsForwardedWhenXForwardedHeaderSentViaDraft() throws Exception {
         OriginalMessage firstMessage = receiveFirstMessage();
-        
+
         String draftCreationId = "creationId1337";
         String createDraft = "[" +
             "  [" +

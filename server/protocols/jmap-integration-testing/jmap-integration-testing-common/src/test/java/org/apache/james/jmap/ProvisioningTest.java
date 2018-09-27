@@ -29,7 +29,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.GuiceJamesServer;
@@ -38,9 +37,8 @@ import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.util.concurrency.ConcurrentTestRunner;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.restassured.RestAssured;
 
@@ -50,15 +48,9 @@ public abstract class ProvisioningTest {
     private static final String DOMAIN = "mydomain.tld";
     private static final String USER = "myuser@" + DOMAIN;
     private static final String PASSWORD = "secret";
-    
-    protected abstract GuiceJamesServer createJmapServer() throws IOException;
 
-    private GuiceJamesServer jmapServer;
-
-    @Before
-    public void setup() throws Throwable {
-        jmapServer = createJmapServer();
-        jmapServer.start();
+    @BeforeEach
+    void setup(GuiceJamesServer jmapServer) throws Throwable {
         RestAssured.requestSpecification = jmapRequestSpecBuilder
             .setPort(jmapServer.getProbe(JmapGuiceProbe.class).getJmapPort())
             .build();
@@ -69,13 +61,8 @@ public abstract class ProvisioningTest {
             .addUser(USER, PASSWORD);
     }
 
-    @After
-    public void teardown() {
-        jmapServer.stop();
-    }
-
     @Test
-    public void provisionMailboxesShouldNotDuplicateMailboxByName() throws Exception {
+    public void provisionMailboxesShouldNotDuplicateMailboxByName(GuiceJamesServer jmapServer) throws Exception {
         String token = authenticateJamesUser(baseUri(jmapServer), USER, PASSWORD).serialize();
 
         boolean termination = ConcurrentTestRunner.builder()
@@ -102,7 +89,7 @@ public abstract class ProvisioningTest {
     }
 
     @Test
-    public void provisionMailboxesShouldSubscribeToThem() throws Exception {
+    public void provisionMailboxesShouldSubscribeToThem(GuiceJamesServer jmapServer) throws Exception {
         String token = authenticateJamesUser(baseUri(jmapServer), USER, PASSWORD).serialize();
 
         with()
