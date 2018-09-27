@@ -35,7 +35,7 @@ import org.apache.james.backend.rabbitmq.DockerRabbitMQ;
 import org.apache.james.backend.rabbitmq.RabbitChannelPool;
 import org.apache.james.backend.rabbitmq.RabbitMQConfiguration;
 import org.apache.james.backend.rabbitmq.RabbitMQConnectionFactory;
-import org.apache.james.backend.rabbitmq.ReusableDockerRabbitMQExtension;
+import org.apache.james.backend.rabbitmq.RabbitMQExtension;
 import org.apache.james.blob.api.HashBlobId;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.blob.api.Store;
@@ -48,7 +48,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
-@ExtendWith(ReusableDockerRabbitMQExtension.class)
+@ExtendWith(RabbitMQExtension.class)
 class RabbitMqMailQueueFactoryTest implements MailQueueFactoryContract<RabbitMQMailQueue> {
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
 
@@ -59,21 +59,9 @@ class RabbitMqMailQueueFactoryTest implements MailQueueFactoryContract<RabbitMQM
         Store<MimeMessage, MimeMessagePartsId> mimeMessageStore = mock(Store.class);
         MailQueueView mailQueueView = mock(MailQueueView.class);
 
-        URI amqpUri = new URIBuilder()
-            .setScheme("amqp")
-            .setHost(rabbitMQ.getHostIp())
-            .setPort(rabbitMQ.getPort())
-            .build();
-        URI rabbitManagementUri = new URIBuilder()
-            .setScheme("http")
-            .setHost(rabbitMQ.getHostIp())
-            .setPort(rabbitMQ.getAdminPort())
-            .build();
-
-
         RabbitMQConfiguration rabbitMQConfiguration = RabbitMQConfiguration.builder()
-            .amqpUri(amqpUri)
-            .managementUri(rabbitManagementUri)
+            .amqpUri(rabbitMQ.amqpUri())
+            .managementUri(rabbitMQ.managementUri())
             .build();
 
         RabbitMQConnectionFactory rabbitMQConnectionFactory = new RabbitMQConnectionFactory(
@@ -82,7 +70,7 @@ class RabbitMqMailQueueFactoryTest implements MailQueueFactoryContract<RabbitMQM
 
         RabbitClient rabbitClient = new RabbitClient(new RabbitChannelPool(rabbitMQConnectionFactory));
         RabbitMQMailQueue.Factory factory = new RabbitMQMailQueue.Factory(new NoopMetricFactory(), rabbitClient, mimeMessageStore, BLOB_ID_FACTORY, mailQueueView, Clock.systemUTC());
-        RabbitMQManagementApi mqManagementApi = new RabbitMQManagementApi(rabbitManagementUri, new RabbitMQManagementCredentials("guest", "guest".toCharArray()));
+        RabbitMQManagementApi mqManagementApi = new RabbitMQManagementApi(rabbitMQ.managementUri(), new RabbitMQManagementCredentials("guest", "guest".toCharArray()));
         mailQueueFactory = new RabbitMQMailQueueFactory(rabbitClient, mqManagementApi, factory);
     }
 

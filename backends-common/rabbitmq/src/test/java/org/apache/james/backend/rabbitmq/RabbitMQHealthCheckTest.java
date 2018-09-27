@@ -31,18 +31,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
-@ExtendWith(DockerRabbitMQExtension.class)
+@ExtendWith(RabbitMQExtension.class)
 class RabbitMQHealthCheckTest {
     private RabbitMQHealthCheck healthCheck;
 
     @BeforeEach
     void setUp(DockerRabbitMQ rabbitMQ) throws Exception {
-        URI amqpUri = URI.create("amqp://" + rabbitMQ.getHostIp() + ":" + rabbitMQ.getPort());
-        URI managementUri = URI.create("http://" + rabbitMQ.getHostIp() + ":15672/api/");
 
         RabbitMQConfiguration rabbitMQConfiguration = RabbitMQConfiguration.builder()
-            .amqpUri(amqpUri)
-            .managementUri(managementUri)
+            .amqpUri(rabbitMQ.amqpUri())
+            .managementUri(rabbitMQ.managementUri())
             .build();
 
         RabbitMQConnectionFactory rabbitMQConnectionFactory = new RabbitMQConnectionFactory(rabbitMQConfiguration,
