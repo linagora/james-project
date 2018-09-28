@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.james.mailbox.MailboxSession;
@@ -45,10 +46,9 @@ public class UserProvisioningFilterThreadTest {
     public void testConcurrentAccessToFilterShouldNotThrow() throws ExecutionException, InterruptedException {
         ConcurrentTestRunner
             .builder()
+            .operation((threadNumber, step) -> sut.createAccountIfNeeded(session))
             .threadCount(2)
-            .build((threadNumber, step) -> sut.createAccountIfNeeded(session))
-            .run()
-            .assertNoException();
+            .runSuccessfullyWithin(Duration.ofMinutes(1));
     }
 }
 

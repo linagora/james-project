@@ -20,7 +20,7 @@ package org.apache.james.jmap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import org.apache.james.mailbox.DefaultMailboxes;
 import org.apache.james.mailbox.MailboxSession;
@@ -90,11 +90,9 @@ public class DefaultMailboxesProvisioningFilterTest {
     @Test
     public void createMailboxesIfNeededShouldNotGenerateExceptionsInConcurrentEnvironment() throws Exception {
         ConcurrentTestRunner.builder()
+            .operation((threadNumber, step) -> testee.createMailboxesIfNeeded(session))
             .threadCount(10)
-            .build((threadNumber, step) -> testee.createMailboxesIfNeeded(session))
-            .run()
-            .assertNoException()
-            .awaitTermination(10, TimeUnit.SECONDS);
+            .runSuccessfullyWithin(Duration.ofSeconds(10));
 
         assertThat(mailboxManager.list(session))
             .containsOnlyElementsOf(DefaultMailboxes.DEFAULT_MAILBOXES

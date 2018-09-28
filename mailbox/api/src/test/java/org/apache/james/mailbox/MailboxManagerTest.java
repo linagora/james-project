@@ -24,9 +24,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import javax.mail.Flags;
 
@@ -980,13 +980,10 @@ public abstract class MailboxManagerTest {
         MailboxSession session = mailboxManager.createSystemSession(USER_1);
         String mailboxName = "a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z";
 
-        ConcurrentTestRunner testRunner = ConcurrentTestRunner.builder()
+        ConcurrentTestRunner.builder()
+            .operation((a, b) -> mailboxManager.createMailbox(MailboxPath.forUser(USER_1, mailboxName + a), session))
             .threadCount(10)
-            .build(
-                (a, b) -> mailboxManager.createMailbox(MailboxPath.forUser(USER_1, mailboxName + a), session))
-            .run();
-        testRunner.awaitTermination(1, TimeUnit.MINUTES);
-        testRunner.assertNoException();
+            .runSuccessfullyWithin(Duration.ofMinutes(1));
     }
 
     @Test

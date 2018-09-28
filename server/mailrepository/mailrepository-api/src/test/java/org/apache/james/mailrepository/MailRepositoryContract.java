@@ -23,11 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import javax.mail.MessagingException;
@@ -422,13 +422,13 @@ public interface MailRepositoryContract {
         MailRepository testee = retrieveRepository();
         int nbKeys = 20;
         ConcurrentHashMap.KeySetView<MailKey, Boolean> expectedResult = ConcurrentHashMap.newKeySet();
-        List<Object> locks = IntStream.range(0, 10)
+        List<Object> locks = IntStream.range(0, nbKeys)
             .boxed()
             .collect(Guavate.toImmutableList());
 
         Random random = new Random();
         ThrowingRunnable add = () -> {
-            int keyIndex = computeKeyIndex(nbKeys, random.nextInt());
+            int keyIndex = computeKeyIndex(nbKeys, Math.abs(random.nextInt()));
             MailKey key =  computeKey(keyIndex);
             synchronized (locks.get(keyIndex)) {
                 testee.store(createMail(key));
@@ -437,7 +437,7 @@ public interface MailRepositoryContract {
         };
 
         ThrowingRunnable remove = () -> {
-            int keyIndex = computeKeyIndex(nbKeys, random.nextInt());
+            int keyIndex = computeKeyIndex(nbKeys, Math.abs(random.nextInt()));
             MailKey key =  computeKey(keyIndex);
             synchronized (locks.get(keyIndex)) {
                 testee.remove(key);
@@ -451,11 +451,10 @@ public interface MailRepositoryContract {
                 new DistributionEntry<>(remove, 0.75)));
 
         ConcurrentTestRunner.builder()
+            .operation((a, b) -> distribution.sample().run())
             .threadCount(10)
             .operationCount(10)
-            .build((a, b) -> distribution.sample().run())
-            .run()
-            .awaitTermination(1, TimeUnit.MINUTES);
+            .runSuccessfullyWithin(Duration.ofMinutes(1));
 
         assertThat(testee.list()).containsOnlyElementsOf(expectedResult);
     }
