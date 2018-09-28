@@ -19,17 +19,14 @@
 
 package org.apache.james.backend.rabbitmq;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.rnorth.ducttape.unreliables.Unreliables;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
 import org.testcontainers.containers.wait.strategy.WaitStrategyTarget;
 
 import com.google.common.primitives.Ints;
-import com.rabbitmq.client.Connection;
 
 public class RabbitMQWaitStrategy implements WaitStrategy {
 
@@ -51,13 +48,7 @@ public class RabbitMQWaitStrategy implements WaitStrategy {
     public void waitUntilReady(WaitStrategyTarget waitStrategyTarget) {
         int seconds = Ints.checkedCast(this.timeout.getSeconds());
 
-        Unreliables.retryUntilTrue(seconds, TimeUnit.SECONDS, this::isConnected);
-    }
-
-    private Boolean isConnected() throws IOException, TimeoutException {
-        try (Connection connection = rabbitMQ.connectionFactory().newConnection()) {
-            return connection.isOpen();
-        }
+        Unreliables.retryUntilTrue(seconds, TimeUnit.SECONDS, rabbitMQ::isConnected);
     }
 
     @Override

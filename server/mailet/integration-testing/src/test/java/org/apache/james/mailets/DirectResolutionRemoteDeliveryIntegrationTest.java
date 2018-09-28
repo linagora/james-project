@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.hasSize;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.function.Function;
 
 import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.dnsservice.api.InMemoryDNSService;
@@ -46,7 +47,6 @@ import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.FakeSmtp;
 import org.apache.james.utils.IMAPMessageReader;
 import org.apache.james.utils.SMTPMessageSender;
-import org.awaitility.Duration;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -56,6 +56,8 @@ import org.junit.rules.TemporaryFolder;
 
 import com.google.common.collect.ImmutableList;
 
+import io.restassured.response.ValidatableResponse;
+
 public class DirectResolutionRemoteDeliveryIntegrationTest {
     private static final String JAMES_ANOTHER_DOMAIN = "james.com";
     private static final String JAMES_ANOTHER_MX_DOMAIN_1 = "mx1.james.com";
@@ -63,6 +65,10 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
     private static final List<String> JAMES_ANOTHER_MX_DOMAINS = ImmutableList.of(JAMES_ANOTHER_MX_DOMAIN_1, JAMES_ANOTHER_MX_DOMAIN_2);
 
     private static final String FROM = "from@" + DEFAULT_DOMAIN;
+    public static final Function<ValidatableResponse, ValidatableResponse> TESTMAIL_RECEIVED_EXPECTATION = response -> response
+        .body("", hasSize(1))
+        .body("[0].from", equalTo(FROM))
+        .body("[0].subject", equalTo("test"));
     private static final String RECIPIENT = "touser@" + JAMES_ANOTHER_DOMAIN;
 
     private static final ImmutableList<InetAddress> ADDRESS_EMPTY_LIST = ImmutableList.of();
@@ -118,9 +124,8 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
         messageSender.connect(LOCALHOST_IP, jamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort())
             .sendMessage(FROM, RECIPIENT);
 
-        awaitAtMostOneMinute
-            .pollDelay(Duration.FIVE_HUNDRED_MILLISECONDS)
-            .until(this::messageIsReceivedByTheSmtpServer);
+        awaitAtMostOneMinute.untilAsserted(
+            () -> fakeSmtp.isReceived(TESTMAIL_RECEIVED_EXPECTATION));
     }
 
     @Test
@@ -147,9 +152,8 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
         messageSender.connect(LOCALHOST_IP, jamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort())
             .sendMessage(FROM, RECIPIENT);
 
-        awaitAtMostOneMinute
-            .pollDelay(Duration.FIVE_HUNDRED_MILLISECONDS)
-            .until(this::messageIsReceivedByTheSmtpServer);
+        awaitAtMostOneMinute.untilAsserted(
+            () -> fakeSmtp.isReceived(TESTMAIL_RECEIVED_EXPECTATION));
     }
 
     @Test
@@ -206,13 +210,6 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
             .login(FROM, PASSWORD)
             .select(IMAPMessageReader.INBOX)
             .awaitMessage(awaitAtMostOneMinute);
-    }
-
-    private boolean messageIsReceivedByTheSmtpServer() {
-        return fakeSmtp.isReceived(response -> response
-            .body("", hasSize(1))
-            .body("[0].from", equalTo(FROM))
-            .body("[0].subject", equalTo("test")));
     }
 
     private ProcessorConfiguration.Builder directResolutionTransport() {

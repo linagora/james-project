@@ -50,7 +50,6 @@ import org.apache.james.utils.WebAdminGuiceProbe;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.routes.GroupsRoutes;
 import org.apache.mailet.base.test.FakeMail;
-import org.awaitility.Duration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -159,9 +158,8 @@ public class GroupMappingRelayTest {
                 .sender(SENDER)
                 .recipient(GROUP_ON_DOMAIN1));
 
-        awaitAtMostOneMinute
-            .pollDelay(Duration.ONE_HUNDRED_MILLISECONDS)
-            .until(() -> fakeSmtp.isReceived(response -> response
+        awaitAtMostOneMinute.untilAsserted(() -> fakeSmtp.isReceived(
+            response -> response
                 .body("[0].from", equalTo(SENDER))
                 .body("[0].to[0]", equalTo(externalMail))
                 .body("[0].text", equalTo(MESSAGE_CONTENT))));

@@ -21,6 +21,7 @@ package org.apache.james.backend.rabbitmq;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.james.util.Runnables;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -64,13 +65,14 @@ public class DockerClusterRabbitMQExtension implements BeforeEachCallback, After
             Throwing.runnable(() -> rabbitMQ2.join(rabbitMQ1)),
             Throwing.runnable(() -> rabbitMQ3.join(rabbitMQ1)));
 
-
-
         Runnables.runParallel(
             Throwing.runnable(rabbitMQ2::startApp),
             Throwing.runnable(rabbitMQ3::startApp));
 
         cluster = new DockerRabbitMQCluster(rabbitMQ1, rabbitMQ2, rabbitMQ3);
+
+        Awaitility.await().until(rabbitMQ1::isConnected);
+        Awaitility.await().until(rabbitMQ2::isConnected);
     }
 
     @Override

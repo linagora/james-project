@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
+import java.util.function.Function;
+
 import org.apache.james.MemoryJamesServerMain;
 import org.apache.james.mailets.TemporaryJamesServer;
 import org.apache.james.mailets.configuration.CommonProcessors;
@@ -44,7 +46,6 @@ import org.apache.james.utils.IMAPMessageReader;
 import org.apache.james.utils.SMTPMessageSender;
 import org.apache.james.utils.SMTPSendingException;
 import org.apache.james.utils.SmtpSendingStep;
-import org.awaitility.Duration;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -52,9 +53,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import io.restassured.response.ValidatableResponse;
+
 public class SmtpAuthorizedAddressesTest {
     private static final String FROM = "fromuser@" + DEFAULT_DOMAIN;
     private static final String TO = "to@any.com";
+    private static final Function<ValidatableResponse, ValidatableResponse> MAIL_RECEIVED_EXPECTATION = response -> response
+        .body("", hasSize(1))
+        .body("[0].from", equalTo(FROM))
+        .body("[0].subject", equalTo("test"));
 
     @ClassRule
     public static FakeSmtp fakeSmtp = new FakeSmtp();
@@ -109,12 +116,8 @@ public class SmtpAuthorizedAddressesTest {
         messageSender.connect(LOCALHOST_IP, jamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort())
             .sendMessage(FROM, TO);
 
-        awaitAtMostOneMinute
-            .pollDelay(Duration.ONE_HUNDRED_MILLISECONDS)
-            .until(() -> fakeSmtp.isReceived(response -> response
-                .body("", hasSize(1))
-                .body("[0].from", equalTo(FROM))
-                .body("[0].subject", equalTo("test"))));
+        awaitAtMostOneMinute.untilAsserted(
+            () -> fakeSmtp.isReceived(MAIL_RECEIVED_EXPECTATION));
     }
 
     @Test
@@ -139,12 +142,8 @@ public class SmtpAuthorizedAddressesTest {
             .authenticate(FROM, PASSWORD)
             .sendMessage(FROM, TO);
 
-        awaitAtMostOneMinute
-            .pollDelay(Duration.FIVE_HUNDRED_MILLISECONDS)
-            .until(() -> fakeSmtp.isReceived(response -> response
-                .body("", hasSize(1))
-                .body("[0].from", equalTo(FROM))
-                .body("[0].subject", equalTo("test"))));
+        awaitAtMostOneMinute.untilAsserted(
+            () -> fakeSmtp.isReceived(MAIL_RECEIVED_EXPECTATION));
     }
 
     @Test
