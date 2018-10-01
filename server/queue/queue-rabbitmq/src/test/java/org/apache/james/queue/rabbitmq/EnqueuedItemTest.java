@@ -17,26 +17,17 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.queue.rabbitmq.view.api;
+package org.apache.james.queue.rabbitmq;
 
-import java.util.concurrent.CompletableFuture;
+import org.junit.jupiter.api.Test;
 
-import org.apache.james.queue.api.ManageableMailQueue;
-import org.apache.james.queue.rabbitmq.EnqueuedItem;
-import org.apache.james.queue.rabbitmq.MailQueueName;
-import org.apache.mailet.Mail;
+import nl.jqno.equalsverifier.EqualsVerifier;
 
-public interface MailQueueView {
+class EnqueuedItemTest {
 
-    void initialize(MailQueueName mailQueueName);
-
-    CompletableFuture<Void> storeMail(EnqueuedItem enqueuedItem);
-
-    CompletableFuture<Long> delete(DeleteCondition deleteCondition);
-
-    CompletableFuture<Boolean> isPresent(Mail mail);
-
-    ManageableMailQueue.MailQueueIterator browse();
-
-    long getSize();
+    @Test
+    void shouldMatchBeanContract() {
+        EqualsVerifier.forClass(EnqueuedItem.class)
+            .verify();
+    }
 }

@@ -25,10 +25,11 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.inject.Inject;
 
+import org.apache.james.queue.rabbitmq.EnqueuedItem;
 import org.apache.james.queue.rabbitmq.MailQueueName;
-import org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlices.BucketId;
-import org.apache.james.queue.rabbitmq.view.cassandra.model.EnqueuedMail;
-import org.apache.james.queue.rabbitmq.view.cassandra.model.MailKey;
+import org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlice;
+import org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlice.BucketId;
+import org.apache.james.queue.rabbitmq.view.cassandra.model.EnqueuedItemWithSlicingContext;
 import org.apache.mailet.Mail;
 
 class CassandraMailQueueMailStore {
@@ -49,32 +50,30 @@ class CassandraMailQueueMailStore {
         this.clock = clock;
     }
 
-    CompletableFuture<Void> storeMailInEnqueueTable(Mail mail, MailQueueName mailQueueName, Instant enqueuedTime) {
-        EnqueuedMail enqueuedMail = convertToEnqueuedMail(mail, mailQueueName, enqueuedTime);
+    CompletableFuture<Void> storeMail(EnqueuedItem enqueuedItem) {
+        EnqueuedItemWithSlicingContext enqueuedItemAndSlicing = addSliceContext(enqueuedItem);
 
-        return enqueuedMailsDao.insert(enqueuedMail);
+        return enqueuedMailsDao.insert(enqueuedItemAndSlicing);
     }
 
     CompletableFuture<Void> initializeBrowseStart(MailQueueName mailQueueName) {
         return browseStartDao
-            .insertInitialBrowseStart(mailQueueName, currentSliceStartInstant());
+            .insertInitialBrowseStart(mailQueueName, currentSlice().getStartSliceInstant());
     }
 
-    private EnqueuedMail convertToEnqueuedMail(Mail mail, MailQueueName mailQueueName, Instant enqueuedTime) {
-        return EnqueuedMail.builder()
-            .mail(mail)
-            .bucketId(computedBucketId(mail))
-            .timeRangeStart(currentSliceStartInstant())
-            .enqueuedTime(enqueuedTime)
-            .mailKey(MailKey.fromMail(mail))
-            .mailQueueName(mailQueueName)
+    private EnqueuedItemWithSlicingContext addSliceContext(EnqueuedItem enqueuedItem) {
+        Mail mail = enqueuedItem.getMail();
+
+        return EnqueuedItemWithSlicingContext.builder()
+            .enqueuedItem(enqueuedItem)
+            .slicingContext(BucketedSlice.of(currentSlice(), computedBucketId(mail)))
             .build();
     }
 
-    private Instant currentSliceStartInstant() {
+    private BucketedSlice.Slice currentSlice() {
         long sliceSize = configuration.getSliceWindow().getSeconds();
         long sliceId = clock.instant().getEpochSecond() / sliceSize;
-        return Instant.ofEpochSecond(sliceId * sliceSize);
+        return BucketedSlice.Slice.of(Instant.ofEpochSecond(sliceId * sliceSize));
     }
 
     private BucketId computedBucketId(Mail mail) {

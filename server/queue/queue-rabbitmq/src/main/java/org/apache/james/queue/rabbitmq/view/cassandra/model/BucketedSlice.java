@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 import com.google.common.base.Preconditions;
 
-public class BucketedSlices {
+public class BucketedSlice {
 
     public static class BucketId {
 
@@ -119,5 +119,45 @@ public class BucketedSlices {
         public final int hashCode() {
             return Objects.hash(startSliceInstant);
         }
+    }
+
+    public static BucketedSlice of(BucketedSlice.BucketId bucketId, Instant timeRangeStart) {
+        return new BucketedSlice(bucketId, Slice.of(timeRangeStart));
+    }
+
+    public static BucketedSlice of(Slice slice, BucketedSlice.BucketId bucketId) {
+        return new BucketedSlice(bucketId, slice);
+    }
+
+    private final BucketedSlice.BucketId bucketId;
+    private final Slice slice;
+
+    BucketedSlice(BucketedSlice.BucketId bucketId, Slice slice) {
+        this.bucketId = bucketId;
+        this.slice = slice;
+    }
+
+    public BucketedSlice.BucketId getBucketId() {
+        return bucketId;
+    }
+
+    public Slice getSlice() {
+        return slice;
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (o instanceof BucketedSlice) {
+            BucketedSlice that = (BucketedSlice) o;
+
+            return Objects.equals(this.bucketId, that.bucketId)
+                && Objects.equals(this.slice, that.slice);
+        }
+        return false;
+    }
+
+    @Override
+    public final int hashCode() {
+        return Objects.hash(bucketId, slice);
     }
 }

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -325,5 +326,35 @@ public class CompletableFutureUtilTest {
 
         assertThat(futureStream.sorted(Long::compareTo).join())
             .containsExactly(1L, 2L, 3L, 4L);
+    }
+
+    @Test
+    public void exceptionallyFutureShouldReturnACompletedExceptionallyFuture() {
+        CompletableFuture<Object> failedFuture = CompletableFutureUtil.exceptionallyFuture(new Exception("failure"));
+        assertThat(failedFuture)
+            .isCompletedExceptionally();
+    }
+
+    @Test
+    public void whenSuccessShouldExecuteWhenSucceeded() throws Exception {
+        AtomicBoolean isFutureSucceed = new AtomicBoolean(false);
+
+        CompletableFuture.supplyAsync(() -> "completableFuture")
+            .whenComplete(CompletableFutureUtil.whenSuccess(() -> isFutureSucceed.set(true)))
+            .join();
+
+        assertThat(isFutureSucceed.get()).isTrue();
+    }
+
+    @Test
+    public void whenSuccessShouldNotExecuteWhenFailed() {
+        AtomicBoolean isFutureSucceed = new AtomicBoolean(false);
+
+        assertThat(CompletableFutureUtil
+                .exceptionallyFuture(new Exception("should fail"))
+                .whenComplete(CompletableFutureUtil.whenSuccess(() -> isFutureSucceed.set(true))))
+            .isCompletedExceptionally();
+
+        assertThat(isFutureSucceed.get()).isFalse();
     }
 }

@@ -17,17 +17,16 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.queue.rabbitmq.view.cassandra.model;
+package org.apache.james.util;
 
-import org.junit.jupiter.api.Test;
+import java.util.function.Function;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+import com.github.fge.lambdas.Throwing;
+import com.github.fge.lambdas.functions.ThrowingFunction;
 
-class EnqueuedMailTest {
+public class ThrowingUtil {
 
-    @Test
-    void shouldMatchBeanContract() {
-        EqualsVerifier.forClass(EnqueuedMail.class)
-            .verify();
+    public static <T, R> Function<T, R> sneakyThrow(ThrowingFunction<T, R> throwingFunction) {
+        return Throwing.function(throwingFunction).sneakyThrow();
     }
 }

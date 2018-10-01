@@ -19,7 +19,7 @@
 
 package org.apache.james.queue.rabbitmq.view.cassandra.model;
 
-import static org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlices.Slice;
+import static org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlice.Slice;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -27,7 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.stream.Stream;
 
-import org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlices.BucketId;
+import org.apache.james.queue.rabbitmq.view.cassandra.model.BucketedSlice.BucketId;
 import org.junit.jupiter.api.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -53,6 +53,12 @@ class BucketedSlicesTest {
     @Test
     void sliceShouldMatchBeanContract() {
         EqualsVerifier.forClass(Slice.class)
+            .verify();
+    }
+
+    @Test
+    void BucketedSlicesShouldMatchBeanContract() {
+        EqualsVerifier.forClass(BucketedSlice.class)
             .verify();
     }
 

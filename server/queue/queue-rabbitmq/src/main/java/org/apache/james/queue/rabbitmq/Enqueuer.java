@@ -33,10 +33,11 @@ import org.apache.james.metrics.api.Metric;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.rabbitmq.view.api.MailQueueView;
+import org.apache.james.util.CompletableFutureUtil;
+import org.apache.james.util.ThrowingUtil;
 import org.apache.mailet.Mail;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.github.fge.lambdas.Throwing;
 
 class Enqueuer {
     private final MailQueueName name;
@@ -61,9 +62,9 @@ class Enqueuer {
 
     void enQueue(Mail mail) throws MailQueue.MailQueueException {
         saveMail(mail)
-            .thenAccept(Throwing.<MimeMessagePartsId>consumer(partsId -> publishReferenceToRabbit(mail, partsId)).sneakyThrow())
-            .thenRun(enqueueMetric::increment)
-            .thenCompose(any -> mailQueueView.storeMail(clock.instant(), mail))
+            .thenApply(ThrowingUtil.sneakyThrow(partsId -> publishReferenceToRabbit(mail, partsId)))
+            .whenComplete(CompletableFutureUtil.whenSuccess(enqueueMetric::increment))
+            .thenCompose(mailQueueView::storeMail)
             .join();
     }
 
@@ -75,8 +76,15 @@ class Enqueuer {
         }
     }
 
-    private void publishReferenceToRabbit(Mail mail, MimeMessagePartsId partsId) throws MailQueue.MailQueueException {
+    private EnqueuedItem publishReferenceToRabbit(Mail mail, MimeMessagePartsId partsId) throws MailQueue.MailQueueException {
         rabbitClient.publish(name, getMailReferenceBytes(mail, partsId));
+
+        return EnqueuedItem.builder()
+            .mailQueueName(name)
+            .mail(mail)
+            .enqueuedTime(clock.instant())
+            .mimeMessagePartsId(partsId)
+            .build();
     }
 
     private byte[] getMailReferenceBytes(Mail mail, MimeMessagePartsId partsId) throws MailQueue.MailQueueException {

@@ -22,6 +22,7 @@ package org.apache.james.util;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -104,5 +105,19 @@ public class CompletableFutureUtil {
         return futureStream
             .thenApply(stream ->
                 stream.sorted(comparator));
+    }
+
+    public static <T> CompletableFuture<T> exceptionallyFuture(Throwable throwable) {
+        CompletableFuture<T> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(throwable);
+        return failedFuture;
+    }
+
+    public static <T> BiConsumer<T, Throwable> whenSuccess(Runnable runnable) {
+        return (T futureResult, Throwable throwable) -> {
+            if (throwable == null) {
+                runnable.run();
+            }
+        };
     }
 }

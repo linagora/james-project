@@ -17,26 +17,21 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.queue.rabbitmq.view.api;
+package org.apache.james.util;
 
-import java.util.concurrent.CompletableFuture;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.apache.james.queue.api.ManageableMailQueue;
-import org.apache.james.queue.rabbitmq.EnqueuedItem;
-import org.apache.james.queue.rabbitmq.MailQueueName;
-import org.apache.mailet.Mail;
+import java.util.function.Function;
 
-public interface MailQueueView {
+import org.junit.jupiter.api.Test;
 
-    void initialize(MailQueueName mailQueueName);
+class ThrowingUtilTest {
 
-    CompletableFuture<Void> storeMail(EnqueuedItem enqueuedItem);
+    @Test
+    void sneakyThrowShouldThrowWhenFunctionGetException() {
+        Function<Integer, Integer> divideByZeroFunction = ThrowingUtil.sneakyThrow(number -> number / 0);
 
-    CompletableFuture<Long> delete(DeleteCondition deleteCondition);
-
-    CompletableFuture<Boolean> isPresent(Mail mail);
-
-    ManageableMailQueue.MailQueueIterator browse();
-
-    long getSize();
+        assertThatThrownBy(() -> divideByZeroFunction.apply(1))
+            .isInstanceOf(ArithmeticException.class);
+    }
 }
