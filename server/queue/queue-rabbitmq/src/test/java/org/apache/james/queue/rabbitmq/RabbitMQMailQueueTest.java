@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -55,15 +56,16 @@ import org.apache.james.blob.cassandra.CassandraBlobModule;
 import org.apache.james.blob.cassandra.CassandraBlobsDAO;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.blob.mail.MimeMessageStore;
+import org.apache.james.eventsourcing.eventstore.cassandra.CassandraEventStoreModule;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueueMetricContract;
 import org.apache.james.queue.api.MailQueueMetricExtension;
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.api.ManageableMailQueueContract;
 import org.apache.james.queue.rabbitmq.view.api.MailQueueView;
-import org.apache.james.queue.rabbitmq.view.cassandra.CassandraMailQueueViewConfiguration;
 import org.apache.james.queue.rabbitmq.view.cassandra.CassandraMailQueueViewModule;
 import org.apache.james.queue.rabbitmq.view.cassandra.CassandraMailQueueViewTestFactory;
+import org.apache.james.queue.rabbitmq.view.cassandra.configuration.CassandraMailQueueViewConfiguration;
 import org.apache.james.util.streams.Iterators;
 import org.apache.mailet.Mail;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,7 +93,8 @@ public class RabbitMQMailQueueTest implements ManageableMailQueueContract, MailQ
     @RegisterExtension
     static CassandraClusterExtension cassandraCluster = new CassandraClusterExtension(CassandraModule.aggregateModules(
         CassandraBlobModule.MODULE,
-        CassandraMailQueueViewModule.MODULE));
+        CassandraMailQueueViewModule.MODULE,
+        CassandraEventStoreModule.MODULE));
 
     private RabbitMQMailQueueFactory mailQueueFactory;
     private Clock clock;
@@ -149,16 +152,16 @@ public class RabbitMQMailQueueTest implements ManageableMailQueueContract, MailQ
         int emailCount = 5;
 
         when(clock.instant()).thenReturn(IN_SLICE_1);
-        enqueueMailsInSlice(1, emailCount);
+        enqueueSomeMails(namePatternForSlice(1), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_2);
-        enqueueMailsInSlice(2, emailCount);
+        enqueueSomeMails(namePatternForSlice(2), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_3);
-        enqueueMailsInSlice(3, emailCount);
+        enqueueSomeMails(namePatternForSlice(3), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_5);
-        enqueueMailsInSlice(5, emailCount);
+        enqueueSomeMails(namePatternForSlice(5), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_6);
         Stream<String> names = Iterators.toStream(mailQueue.browse())
@@ -178,16 +181,16 @@ public class RabbitMQMailQueueTest implements ManageableMailQueueContract, MailQ
         int emailCount = 5;
 
         when(clock.instant()).thenReturn(IN_SLICE_1);
-        enqueueMailsInSlice(1, emailCount);
+        enqueueSomeMails(namePatternForSlice(1), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_2);
-        enqueueMailsInSlice(2, emailCount);
+        enqueueSomeMails(namePatternForSlice(2), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_3);
-        enqueueMailsInSlice(3, emailCount);
+        enqueueSomeMails(namePatternForSlice(3), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_5);
-        enqueueMailsInSlice(5, emailCount);
+        enqueueSomeMails(namePatternForSlice(5), emailCount);
 
         when(clock.instant()).thenReturn(IN_SLICE_6);
 
@@ -216,13 +219,17 @@ public class RabbitMQMailQueueTest implements ManageableMailQueueContract, MailQ
     @Override
     public void constructorShouldRegisterGetQueueSizeGauge(MailQueueMetricExtension.MailQueueMetricTestSystem testSystem) {
     }
+
+    private Function<Integer, String> namePatternForSlice(int sliceId) {
+        return i -> sliceId + "-" + i;
+    }
     
-    private void enqueueMailsInSlice(int slice, int emailCount) {
+    private void enqueueSomeMails(Function<Integer, String> namePattern, int emailCount) {
         ManageableMailQueue mailQueue = getManageableMailQueue();
 
         IntStream.rangeClosed(1, emailCount)
-            .forEach(Throwing.intConsumer(bucketId -> mailQueue.enQueue(defaultMail()
-                .name(slice + "-" + bucketId)
+            .forEach(Throwing.intConsumer(i -> mailQueue.enQueue(defaultMail()
+                .name(namePattern.apply(i))
                 .build())));
     }
 

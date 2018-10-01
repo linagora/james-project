@@ -17,10 +17,12 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.queue.rabbitmq.view.cassandra;
+package org.apache.james.queue.rabbitmq.view.cassandra.configuration;
 
 import java.time.Duration;
+import java.util.Objects;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
 public class CassandraMailQueueViewConfiguration {
@@ -87,5 +89,51 @@ public class CassandraMailQueueViewConfiguration {
 
     public Duration getSliceWindow() {
         return sliceWindow;
+    }
+
+    void validateConfigurationChange(CassandraMailQueueViewConfiguration configurationUpdate) {
+        validateConfigurationChangeForSlice(configurationUpdate);
+        validateConfigurationChangeForBuckets(configurationUpdate);
+    }
+
+    private void validateConfigurationChangeForSlice(CassandraMailQueueViewConfiguration configurationUpdate) {
+        long updateSliceWindowInSecond = configurationUpdate.getSliceWindow().getSeconds();
+        long currentSliceWindowInSecond = getSliceWindow().getSeconds();
+        Preconditions.checkArgument(
+            configurationUpdate.getSliceWindow().compareTo(getSliceWindow()) <= 0
+                && currentSliceWindowInSecond % updateSliceWindowInSecond == 0,
+            "update 'sliceWindow'(" + configurationUpdate.getSliceWindow() + ") have to be less than and divide the previous sliceWindow: "
+                + getSliceWindow());
+    }
+
+    private void validateConfigurationChangeForBuckets(CassandraMailQueueViewConfiguration configurationUpdate) {
+        Preconditions.checkArgument(configurationUpdate.getBucketCount() >= getBucketCount(),
+            "can not set 'bucketCount'(" + configurationUpdate.getBucketCount() + ") to be less than the current one: " + getBucketCount());
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (o instanceof CassandraMailQueueViewConfiguration) {
+            CassandraMailQueueViewConfiguration that = (CassandraMailQueueViewConfiguration) o;
+
+            return Objects.equals(this.bucketCount, that.bucketCount)
+                && Objects.equals(this.updateBrowseStartPace, that.updateBrowseStartPace)
+                && Objects.equals(this.sliceWindow, that.sliceWindow);
+        }
+        return false;
+    }
+
+    @Override
+    public final int hashCode() {
+        return Objects.hash(bucketCount, updateBrowseStartPace, sliceWindow);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("bucketCount", bucketCount)
+            .add("updateBrowseStartPace", updateBrowseStartPace)
+            .add("sliceWindow", sliceWindow)
+            .toString();
     }
 }

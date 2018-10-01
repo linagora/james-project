@@ -36,6 +36,7 @@ import javax.inject.Inject;
 
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.rabbitmq.MailQueueName;
+import org.apache.james.queue.rabbitmq.view.cassandra.configuration.CassandraMailQueueViewConfiguration;
 import org.apache.james.queue.rabbitmq.view.cassandra.model.EnqueuedMail;
 import org.apache.james.util.FluentFutureStream;
 
@@ -77,7 +78,8 @@ class CassandraMailQueueBrowser {
     CassandraMailQueueBrowser(BrowseStartDAO browseStartDao,
                               DeletedMailsDAO deletedMailsDao,
                               EnqueuedMailsDAO enqueuedMailsDao,
-                              CassandraMailQueueViewConfiguration configuration, Clock clock) {
+                              CassandraMailQueueViewConfiguration configuration,
+                              Clock clock) {
         this.browseStartDao = browseStartDao;
         this.deletedMailsDao = deletedMailsDao;
         this.enqueuedMailsDao = enqueuedMailsDao;
