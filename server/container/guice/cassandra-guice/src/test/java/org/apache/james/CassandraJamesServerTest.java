@@ -19,26 +19,13 @@
 
 package org.apache.james;
 
-import java.io.IOException;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.junit.ClassRule;
-import org.junit.Rule;
-
-public class CassandraJamesServerTest extends AbstractJamesServerTest {
-
-    @ClassRule
-    public static DockerCassandraRule cassandra = new DockerCassandraRule();
-    
-    @Rule
-    public CassandraJmapTestRule cassandraJmap = CassandraJmapTestRule.defaultTestRule();
-
-    @Override
-    protected GuiceJamesServer createJamesServer() throws IOException {
-        return cassandraJmap.jmapServer(cassandra.getModule(), DOMAIN_LIST_CONFIGURATION_MODULE);
-    }
-
-    @Override
-    protected void clean() {
-    }
-
+class CassandraJamesServerTest implements JamesServerContract {
+    @RegisterExtension
+    static JamesServerExtension testExtension = new JamesServerExtension(
+        CassandraJamesDefinition.builder()
+            .defaultExtensions()
+            .addModules(DOMAIN_LIST_CONFIGURATION_MODULE)
+            .build());
 }

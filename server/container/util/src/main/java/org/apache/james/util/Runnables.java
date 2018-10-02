@@ -22,11 +22,16 @@ package org.apache.james.util;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class Runnables {
     public static void runParallel(Runnable... runnables) {
-        FluentFutureStream.of(
-            Arrays.stream(runnables)
+        Stream<Runnable> stream = Arrays.stream(runnables);
+        runParrallelStream(stream);
+    }
+
+    public static void runParrallelStream(Stream<Runnable> stream) {
+        FluentFutureStream.of(stream
                 .map(runnable -> CompletableFuture.supplyAsync(toVoidSupplier(runnable))))
             .join();
     }

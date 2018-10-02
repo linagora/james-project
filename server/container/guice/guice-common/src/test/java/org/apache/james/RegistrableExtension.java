@@ -19,10 +19,30 @@
 
 package org.apache.james;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
-class MemoryJamesServerTest implements JamesServerContract {
-    @RegisterExtension
-    static JamesServerExtension jamesServerExtension = new JamesServerExtension(
-        new MemoryJamesDefinition(DOMAIN_LIST_CONFIGURATION_MODULE));
+public interface RegistrableExtension extends BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
+    @Override
+    default void afterAll(ExtensionContext extensionContext) throws Exception {
+
+    }
+
+    @Override
+    default void afterEach(ExtensionContext extensionContext) throws Exception {
+
+    }
+
+    @Override
+    default void beforeAll(ExtensionContext extensionContext) throws Exception {
+
+    }
+
+    @Override
+    default void beforeEach(ExtensionContext extensionContext) throws Exception {
+
+    }
 }

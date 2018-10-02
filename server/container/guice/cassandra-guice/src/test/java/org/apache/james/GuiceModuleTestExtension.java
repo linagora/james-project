@@ -19,10 +19,13 @@
 
 package org.apache.james;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
+import com.google.inject.Module;
 
-class MemoryJamesServerTest implements JamesServerContract {
-    @RegisterExtension
-    static JamesServerExtension jamesServerExtension = new JamesServerExtension(
-        new MemoryJamesDefinition(DOMAIN_LIST_CONFIGURATION_MODULE));
+public interface GuiceModuleTestExtension extends RegistrableExtension {
+
+    default Module getModule() {
+        return binder -> {};
+    }
+
+    default void await() {}
 }

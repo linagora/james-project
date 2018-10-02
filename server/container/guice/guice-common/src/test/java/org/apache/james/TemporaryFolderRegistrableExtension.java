@@ -19,10 +19,24 @@
 
 package org.apache.james;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.rules.TemporaryFolder;
 
-class MemoryJamesServerTest implements JamesServerContract {
-    @RegisterExtension
-    static JamesServerExtension jamesServerExtension = new JamesServerExtension(
-        new MemoryJamesDefinition(DOMAIN_LIST_CONFIGURATION_MODULE));
+public class TemporaryFolderRegistrableExtension implements RegistrableExtension {
+    private TemporaryFolder temporaryFolder;
+
+    @Override
+    public void beforeEach(ExtensionContext extensionContext) throws Exception {
+        temporaryFolder = new TemporaryFolder();
+        temporaryFolder.create();
+    }
+
+    @Override
+    public void afterEach(ExtensionContext extensionContext) {
+        temporaryFolder.delete();
+    }
+
+    public TemporaryFolder getTemporaryFolder() {
+        return temporaryFolder;
+    }
 }

@@ -19,10 +19,31 @@
 
 package org.apache.james;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.apache.james.mailbox.tika.TikaContainer;
+import org.apache.james.modules.TestTikaModule;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
-class MemoryJamesServerTest implements JamesServerContract {
-    @RegisterExtension
-    static JamesServerExtension jamesServerExtension = new JamesServerExtension(
-        new MemoryJamesDefinition(DOMAIN_LIST_CONFIGURATION_MODULE));
+import com.google.inject.Module;
+
+class TikaExtension implements GuiceModuleTestExtension {
+    private final TikaContainer tika;
+
+    TikaExtension() {
+        this.tika = new TikaContainer();
+    }
+
+    @Override
+    public void beforeAll(ExtensionContext extensionContext) {
+        tika.start();
+    }
+
+    @Override
+    public void afterAll(ExtensionContext extensionContext) {
+        tika.stop();
+    }
+
+    @Override
+    public Module getModule() {
+        return new TestTikaModule(tika);
+    }
 }

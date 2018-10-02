@@ -19,18 +19,37 @@
 
 package org.apache.james;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import java.util.List;
 
-class JPAJamesServerWithSqlValidationTest extends JPAJamesServerTest {
+import org.apache.james.server.core.configuration.Configuration;
 
-    @RegisterExtension
-    static JamesServerExtension jpaJamesExtension = new JamesServerExtension(
-        new JPAJamesDefinition(
-            new TestJPAConfigurationModuleWithSqlValidation(), DOMAIN_LIST_CONFIGURATION_MODULE));
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Module;
+
+public class JPAJamesDefinition  implements JamesServerExtension.JamesDefinition {
+    private final TemporaryFolderRegistrableExtension folderRegistrableExtension;
+    private final Module[] additionalModules;
+
+    public JPAJamesDefinition(Module... additionalModules) {
+        this.additionalModules = additionalModules;
+
+        this.folderRegistrableExtension = new TemporaryFolderRegistrableExtension();
+    }
 
     @Override
-    @Disabled("Failing to create the domain: duplicate with test in JPAJamesServerTest")
-    void jpaGuiceServerShouldUpdateQuota(GuiceJamesServer jamesServer) {
+    public GuiceJamesServer getServer() throws Exception {
+        Configuration configuration = Configuration.builder()
+            .workingDirectory(folderRegistrableExtension.getTemporaryFolder().newFolder())
+            .configurationFromClasspath()
+            .build();
+
+        return GuiceJamesServer.forConfiguration(configuration)
+            .combineWith(JPAJamesServerMain.JPA_SERVER_MODULE, JPAJamesServerMain.PROTOCOLS)
+            .overrideWith(additionalModules);
+    }
+
+    @Override
+    public List<RegistrableExtension> registrableExtensions() {
+        return ImmutableList.of(folderRegistrableExtension);
     }
 }

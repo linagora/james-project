@@ -33,89 +33,72 @@ import org.apache.james.modules.protocols.LmtpGuiceProbe;
 import org.apache.james.modules.protocols.Pop3GuiceProbe;
 import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.apache.james.utils.DataProbeImpl;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.inject.Module;
 
-public abstract class AbstractJamesServerTest {
+public interface JamesServerContract {
 
-    protected static final String JAMES_SERVER_HOST = "127.0.0.1";
-
-    public static final Module DOMAIN_LIST_CONFIGURATION_MODULE = binder -> binder.bind(DomainListConfiguration.class)
+    String JAMES_SERVER_HOST = "127.0.0.1";
+    Module DOMAIN_LIST_CONFIGURATION_MODULE = binder -> binder.bind(DomainListConfiguration.class)
         .toInstance(DomainListConfiguration.builder()
             .autoDetect(true)
             .autoDetectIp(false)
             .build());
 
-    protected GuiceJamesServer server;
-    private SocketChannel socketChannel;
-
-    @Before
-    public void setup() throws Exception {
-        server = createJamesServer();
-        socketChannel = SocketChannel.open();
-        server.start();
-    }
-
-    protected abstract GuiceJamesServer createJamesServer() throws IOException;
-
-    protected abstract void clean();
-
-    @After
-    public void tearDown() throws Exception {
-        server.stop();
-        clean();
-    }
-
     @Test
-    public void hostnameShouldBeUsedAsDefaultDomain() throws Exception {
+    default void hostnameShouldBeUsedAsDefaultDomain(GuiceJamesServer jamesServer) throws Exception {
         String expectedDefaultDomain = InetAddress.getLocalHost().getHostName();
 
-        assertThat(server.getProbe(DataProbeImpl.class).getDefaultDomain()).isEqualTo(expectedDefaultDomain);
+        assertThat(jamesServer.getProbe(DataProbeImpl.class).getDefaultDomain()).isEqualTo(expectedDefaultDomain);
     }
 
     @Test
-    public void hostnameShouldBeRetrievedWhenRestarting() throws Exception {
-        server.stop();
-        server.start();
+    default void hostnameShouldBeRetrievedWhenRestarting(GuiceJamesServer jamesServer) throws Exception {
+        jamesServer.stop();
+        jamesServer.start();
         String expectedDefaultDomain = InetAddress.getLocalHost().getHostName();
 
-        assertThat(server.getProbe(DataProbeImpl.class).getDefaultDomain()).isEqualTo(expectedDefaultDomain);
+        assertThat(jamesServer.getProbe(DataProbeImpl.class).getDefaultDomain()).isEqualTo(expectedDefaultDomain);
     }
 
     @Test
-    public void connectIMAPServerShouldSendShabangOnConnect() throws Exception {
-        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort()));
+    default void connectIMAPServerShouldSendShabangOnConnect(GuiceJamesServer jamesServer) throws Exception {
+        SocketChannel socketChannel = SocketChannel.open();
+
+        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, jamesServer.getProbe(ImapGuiceProbe.class).getImapPort()));
         assertThat(getServerConnectionResponse(socketChannel)).startsWith("* OK JAMES IMAP4rev1 Server");
     }
 
     @Test
-    public void connectOnSecondaryIMAPServerIMAPServerShouldSendShabangOnConnect() throws Exception {
-        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapsPort()));
+    default void connectOnSecondaryIMAPServerIMAPServerShouldSendShabangOnConnect(GuiceJamesServer jamesServer) throws Exception {
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, jamesServer.getProbe(ImapGuiceProbe.class).getImapsPort()));
         assertThat(getServerConnectionResponse(socketChannel)).startsWith("* OK JAMES IMAP4rev1 Server");
     }
 
     @Test
-    public void connectPOP3ServerShouldSendShabangOnConnect() throws Exception {
-        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, server.getProbe(Pop3GuiceProbe.class).getPop3Port()));
+    default void connectPOP3ServerShouldSendShabangOnConnect(GuiceJamesServer jamesServer) throws Exception {
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, jamesServer.getProbe(Pop3GuiceProbe.class).getPop3Port()));
         assertThat(getServerConnectionResponse(socketChannel)).contains("POP3 server (JAMES POP3 Server ) ready");
     }
 
     @Test
-    public void connectSMTPServerShouldSendShabangOnConnect() throws Exception {
-        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, server.getProbe(SmtpGuiceProbe.class).getSmtpPort()));
+    default void connectSMTPServerShouldSendShabangOnConnect(GuiceJamesServer jamesServer) throws Exception {
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, jamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort()));
         assertThat(getServerConnectionResponse(socketChannel)).startsWith("220 JAMES Linagora's SMTP awesome Server");
     }
 
     @Test
-    public void connectLMTPServerShouldSendShabangOnConnect() throws Exception {
-        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, server.getProbe(LmtpGuiceProbe.class).getLmtpPort()));
+    default void connectLMTPServerShouldSendShabangOnConnect(GuiceJamesServer jamesServer) throws Exception {
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.connect(new InetSocketAddress(JAMES_SERVER_HOST, jamesServer.getProbe(LmtpGuiceProbe.class).getLmtpPort()));
         assertThat(getServerConnectionResponse(socketChannel)).contains("LMTP Server (JAMES Protocols Server) ready");
     }
 
-    private String getServerConnectionResponse(SocketChannel socketChannel) throws IOException {
+    static String getServerConnectionResponse(SocketChannel socketChannel) throws IOException {
         ByteBuffer byteBuffer = ByteBuffer.allocate(1000);
         socketChannel.read(byteBuffer);
         byte[] bytes = byteBuffer.array();
