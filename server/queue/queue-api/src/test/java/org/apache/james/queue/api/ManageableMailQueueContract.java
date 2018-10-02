@@ -29,6 +29,9 @@ import static org.apache.mailet.base.MailAddressFixture.SENDER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import javax.mail.internet.MimeMessage;
+
+import org.apache.james.core.builder.MimeMessageBuilder;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.MailAddressFixture;
 import org.junit.jupiter.api.Test;
@@ -418,6 +421,21 @@ public interface ManageableMailQueueContract extends MailQueueContract {
         getManageableMailQueue().remove(ManageableMailQueue.Type.Name, "name2");
 
         assertThatCode(() ->  Iterators.consumingIterator(items)).doesNotThrowAnyException();
+    }
+
+    @Test
+    default void browseShouldReturnMailsWithoutMimeMessage() throws Exception {
+        ManageableMailQueue mailQueue = getManageableMailQueue();
+        mailQueue.enQueue(defaultMail()
+            .name("mail with blob")
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setSubject("mail subject")
+                .setText("mail body")
+                .build())
+            .build());
+
+        MimeMessage mimeMessage = mailQueue.browse().next().getMail().getMessage();
+        assertThat(mimeMessage).isNull();
     }
 
     @Test

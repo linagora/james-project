@@ -27,6 +27,7 @@ import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.api.RawMailQueueItemDecoratorFactory;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class MemoryMailQueueTest implements DelayedManageableMailQueueContract {
@@ -89,5 +90,12 @@ public class MemoryMailQueueTest implements DelayedManageableMailQueueContract {
     @Override
     public ManageableMailQueue getManageableMailQueue() {
         return mailQueue;
+    }
+
+    @Test
+    @Override
+    @Disabled("JAMES-2544 ActiveMQ browse is returning MimeMessages")
+    public void browseShouldReturnMailsWithoutMimeMessage() {
+
     }
 }

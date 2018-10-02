@@ -124,6 +124,13 @@ public class ActiveMQMailQueueBlobTest implements DelayedManageableMailQueueCont
     }
 
     @Test
+    @Override
+    @Disabled("JAMES-2544 ActiveMQ browse is returning MimeMessages")
+    public void browseShouldReturnMailsWithoutMimeMessage() {
+
+    }
+
+    @Test
     void computeNextDeliveryTimestampShouldReturnLongMaxWhenOverflow() {
         long deliveryTimestamp = mailQueue.computeNextDeliveryTimestamp(Long.MAX_VALUE, TimeUnit.DAYS);
 

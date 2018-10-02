@@ -126,4 +126,11 @@ public class ActiveMQMailQueueTest implements DelayedManageableMailQueueContract
     public void clearShouldRemoveAllElements() {
 
     }
+
+    @Test
+    @Override
+    @Disabled("JAMES-2544 ActiveMQ browse is returning MimeMessages")
+    public void browseShouldReturnMailsWithoutMimeMessage() {
+
+    }
 }

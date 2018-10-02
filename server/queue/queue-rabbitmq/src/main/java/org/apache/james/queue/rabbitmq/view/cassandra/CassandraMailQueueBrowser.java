@@ -33,12 +33,18 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
+import javax.mail.internet.MimeMessage;
 
+import org.apache.james.blob.api.Store;
+import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.rabbitmq.MailQueueName;
 import org.apache.james.queue.rabbitmq.view.cassandra.configuration.CassandraMailQueueViewConfiguration;
-import org.apache.james.queue.rabbitmq.view.cassandra.model.EnqueuedMail;
+import org.apache.james.queue.rabbitmq.view.cassandra.model.EnqueuedItemWithSlicingContext;
 import org.apache.james.util.FluentFutureStream;
+import org.apache.mailet.Mail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
@@ -68,9 +74,12 @@ class CassandraMailQueueBrowser {
         }
     }
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraMailQueueBrowser.class);
+
     private final BrowseStartDAO browseStartDao;
     private final DeletedMailsDAO deletedMailsDao;
     private final EnqueuedMailsDAO enqueuedMailsDao;
+    private final Store<MimeMessage, MimeMessagePartsId> mimeMessageStore;
     private final CassandraMailQueueViewConfiguration configuration;
     private final Clock clock;
 
@@ -78,41 +87,49 @@ class CassandraMailQueueBrowser {
     CassandraMailQueueBrowser(BrowseStartDAO browseStartDao,
                               DeletedMailsDAO deletedMailsDao,
                               EnqueuedMailsDAO enqueuedMailsDao,
+                              Store<MimeMessage, MimeMessagePartsId> mimeMessageStore,
                               CassandraMailQueueViewConfiguration configuration,
                               Clock clock) {
         this.browseStartDao = browseStartDao;
         this.deletedMailsDao = deletedMailsDao;
         this.enqueuedMailsDao = enqueuedMailsDao;
+        this.mimeMessageStore = mimeMessageStore;
         this.configuration = configuration;
         this.clock = clock;
     }
 
     CompletableFuture<Stream<ManageableMailQueue.MailQueueItemView>> browse(MailQueueName queueName) {
         return browseReferences(queueName)
-            .map(EnqueuedMail::getMail)
+            .map(this::toMail)
             .map(ManageableMailQueue.MailQueueItemView::new)
             .completableFuture();
     }
 
-    FluentFutureStream<EnqueuedMail> browseReferences(MailQueueName queueName) {
+    FluentFutureStream<EnqueuedItemWithSlicingContext> browseReferences(MailQueueName queueName) {
         return FluentFutureStream.of(browseStartDao.findBrowseStart(queueName)
             .thenApply(this::allSlicesStartingAt))
             .map(slice -> browseSlice(queueName, slice), FluentFutureStream::unboxFluentFuture);
     }
 
-    private FluentFutureStream<EnqueuedMail> browseSlice(MailQueueName queueName, Slice slice) {
+    private Mail toMail(EnqueuedItemWithSlicingContext enqueuedItemWithSlicingContext) {
+        return enqueuedItemWithSlicingContext
+                .getEnqueuedItem()
+                .getMail();
+    }
+
+    private FluentFutureStream<EnqueuedItemWithSlicingContext> browseSlice(MailQueueName queueName, Slice slice) {
         return FluentFutureStream.of(
             allBucketIds()
                 .map(bucketId ->
                     browseBucket(queueName, slice, bucketId).completableFuture()),
             FluentFutureStream::unboxStream)
-            .sorted(Comparator.comparing(EnqueuedMail::getEnqueuedTime));
+            .sorted(Comparator.comparing(enqueuedMail -> enqueuedMail.getEnqueuedItem().getEnqueuedTime()));
     }
 
-    private FluentFutureStream<EnqueuedMail> browseBucket(MailQueueName queueName, Slice slice, BucketId bucketId) {
+    private FluentFutureStream<EnqueuedItemWithSlicingContext> browseBucket(MailQueueName queueName, Slice slice, BucketId bucketId) {
         return FluentFutureStream.of(
             enqueuedMailsDao.selectEnqueuedMails(queueName, slice, bucketId))
-                .thenFilter(mailReference -> deletedMailsDao.isStillEnqueued(queueName, mailReference.getMailKey()));
+                .thenFilter(mailReference -> deletedMailsDao.isStillEnqueued(queueName, mailReference.getEnqueuedItem().getMailKey()));
     }
 
     private Stream<Slice> allSlicesStartingAt(Optional<Instant> maybeBrowseStart) {
