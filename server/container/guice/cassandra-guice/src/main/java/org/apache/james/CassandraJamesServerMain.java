@@ -101,14 +101,34 @@ public class CassandraJamesServerMain {
         new CassandraSieveRepositoryModule(),
         new CassandraUsersRepositoryModule());
 
+    // JUST TEMPORALLY
+    public static final Module CASSANDRA_SERVER_CORE_MODULE_WITH_RABBIT = Modules.combine(
+        new RabbitMQModule(),
+        new CassandraDomainListModule(),
+        new CassandraDLPConfigurationStoreModule(),
+        new CassandraEventStoreModule(),
+        new CassandraMailRepositoryModule(),
+        new CassandraMetricsModule(),
+        new CassandraObjectStoreModule(),
+        new CassandraRecipientRewriteTableModule(),
+        new CassandraSessionModule(),
+        new CassandraSieveRepositoryModule(),
+        new CassandraUsersRepositoryModule());
+
     public static final Module CASSANDRA_MAILBOX_MODULE = Modules.combine(
         new CassandraMailboxModule(),
         new ElasticSearchMailboxModule(),
         new ElasticSearchMetricReporterModule(),
         new MailboxModule(),
         new TikaMailboxModule(),
-        new SpamAssassinListenerModule(),
-        new RabbitMQModule());
+        new SpamAssassinListenerModule());
+
+    // JUST TEMPORALLY
+    public static Module ALL_BUT_JMX_CASSANDRA_RABBIT_MODULE = Modules.combine(
+        CASSANDRA_SERVER_CORE_MODULE_WITH_RABBIT,
+        CASSANDRA_MAILBOX_MODULE,
+        PROTOCOLS,
+        PLUGINS);
 
     public static Module ALL_BUT_JMX_CASSANDRA_MODULE = Modules.combine(
         CASSANDRA_SERVER_CORE_MODULE,

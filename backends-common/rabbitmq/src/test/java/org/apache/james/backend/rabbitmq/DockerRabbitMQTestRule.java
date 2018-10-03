@@ -16,31 +16,29 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+package org.apache.james.backend.rabbitmq;
 
-package org.apache.james.queue.rabbitmq.view.api;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
-import java.util.concurrent.CompletableFuture;
+public class DockerRabbitMQTestRule implements TestRule {
 
-import org.apache.james.queue.api.ManageableMailQueue;
-import org.apache.james.queue.rabbitmq.EnqueuedItem;
-import org.apache.james.queue.rabbitmq.MailQueueName;
-import org.apache.mailet.Mail;
+    private DockerRabbitMQ dockerRabbitMQ;
 
-public interface MailQueueView {
-
-    interface Factory {
-        MailQueueView create(MailQueueName mailQueueName);
+    @Override
+    public Statement apply(Statement base, Description description) {
+        return new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                dockerRabbitMQ = DockerRabbitMQ.withoutCookie();
+                dockerRabbitMQ.start();
+                base.evaluate();
+            }
+        };
     }
 
-    void initialize(MailQueueName mailQueueName);
-
-    CompletableFuture<Void> storeMail(EnqueuedItem enqueuedItem);
-
-    CompletableFuture<Long> delete(DeleteCondition deleteCondition);
-
-    CompletableFuture<Boolean> isPresent(Mail mail);
-
-    ManageableMailQueue.MailQueueIterator browse();
-
-    long getSize();
+    public DockerRabbitMQ getDockerRabbitMQ() {
+        return dockerRabbitMQ;
+    }
 }
