@@ -17,47 +17,63 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.blob.objectstorage.swift;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 
-public final class Region {
-    public static Region of(String value) {
-        return new Region(value);
+public final class IdentityV3 {
+    public static IdentityV3 of(DomainName domainName, UserName userName) {
+        return new IdentityV3(domainName, userName);
     }
 
-    private final String region;
+    private final DomainName domainName;
+    private final UserName userName;
 
-    private Region(String value) {
-        this.region = value;
+    private IdentityV3(DomainName domainName, UserName userName) {
+        Preconditions.checkArgument(
+            domainName != null,
+            "Domain name cannot be null");
+        Preconditions.checkArgument(
+            userName != null,
+            "User name cannot be null");
+        this.domainName = domainName;
+        this.userName = userName;
     }
 
-    public String value() {
-        return region;
+    public String asString() {
+        return domainName.value() + ":" + userName.value();
+    }
+
+    public DomainName getDomainName() {
+        return domainName;
+    }
+
+    public UserName getUserName() {
+        return userName;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+        if (o instanceof IdentityV3) {
+            IdentityV3 that = (IdentityV3) o;
+            return Objects.equal(domainName, that.domainName) &&
+                Objects.equal(userName, that.userName);
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        Region region1 = (Region) o;
-        return Objects.equal(region, region1.region);
+        return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(region);
+        return Objects.hashCode(domainName, userName);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("region", region)
+            .add("domain", domainName)
+            .add("userName", userName)
             .toString();
     }
 }

@@ -17,47 +17,53 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.blob.objectstorage.swift;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-public final class Credentials {
-    public static Credentials of(String value) {
-        return new Credentials(value);
+public final class DomainId {
+    public static DomainId of(String value) {
+        return new DomainId(value);
     }
 
-    private final String credentials;
+    private final String value;
 
-    private Credentials(String value) {
-        this.credentials = value;
+    private DomainId(String value) {
+        Preconditions.checkArgument(
+            !Strings.isNullOrEmpty(value),
+            this.getClass().getSimpleName() + " cannot be null or empty");
+        this.value = value;
     }
 
     public String value() {
-        return credentials;
+        return value;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+        if (o instanceof DomainId) {
+            DomainId that = (DomainId) o;
+            return Objects.equal(value, that.value);
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        Credentials that = (Credentials) o;
-        return Objects.equal(credentials, that.credentials);
+        return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(credentials);
+        return Objects.hashCode(value);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("credentials", credentials)
+            .add("value", value)
             .toString();
+    }
+
+    public String asString() {
+        return "domain:" + value;
     }
 }

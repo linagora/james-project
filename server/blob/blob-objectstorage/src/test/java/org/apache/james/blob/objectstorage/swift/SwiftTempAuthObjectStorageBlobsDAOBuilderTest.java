@@ -17,72 +17,78 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.blob.objectstorage.swift;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.net.URI;
 import java.util.UUID;
 
-import org.apache.james.blob.api.BlobId;
-import org.apache.james.blob.api.BlobStore;
-import org.apache.james.blob.api.BlobStoreContract;
 import org.apache.james.blob.api.HashBlobId;
-import org.apache.james.blob.objectstorage.swift.Credentials;
-import org.apache.james.blob.objectstorage.swift.Identity;
-import org.apache.james.blob.objectstorage.swift.PassHeaderName;
-import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
-import org.apache.james.blob.objectstorage.swift.TenantName;
-import org.apache.james.blob.objectstorage.swift.UserHeaderName;
-import org.apache.james.blob.objectstorage.swift.UserName;
-import org.junit.jupiter.api.AfterEach;
+import org.apache.james.blob.objectstorage.ContainerName;
+import org.apache.james.blob.objectstorage.DockerSwift;
+import org.apache.james.blob.objectstorage.DockerSwiftExtension;
+import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
+import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAOBuilder;
+import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAOContract;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(DockerSwiftExtension.class)
-public class ObjectStorageBlobsDAOTest implements BlobStoreContract {
+class SwiftTempAuthObjectStorageBlobsDAOBuilderTest implements ObjectStorageBlobsDAOContract {
+
     private static final TenantName TENANT_NAME = TenantName.of("test");
     private static final UserName USER_NAME = UserName.of("tester");
     private static final Credentials PASSWORD = Credentials.of("testing");
     private static final Identity SWIFT_IDENTITY = Identity.of(TENANT_NAME, USER_NAME);
-
     private ContainerName containerName;
-    private org.jclouds.blobstore.BlobStore blobStore;
+    private URI endpoint;
     private SwiftTempAuthObjectStorage.Configuration testConfig;
 
     @BeforeEach
     void setUp(DockerSwift dockerSwift) throws Exception {
         containerName = ContainerName.of(UUID.randomUUID().toString());
+        endpoint = dockerSwift.swiftEndpoint();
         testConfig = SwiftTempAuthObjectStorage.configBuilder()
-            .endpoint(dockerSwift.swiftEndpoint())
+            .endpoint(endpoint)
             .identity(SWIFT_IDENTITY)
             .credentials(PASSWORD)
             .tempAuthHeaderUserName(UserHeaderName.of("X-Storage-User"))
             .tempAuthHeaderPassName(PassHeaderName.of("X-Storage-Pass"))
             .build();
-        blobStore = ObjectStorageBlobsDAO
-            .builder(testConfig)
-            .container(containerName)
-            .blobIdFactory(new HashBlobId.Factory())
-            .getSupplier().get();
-        blobStore.createContainerInLocation(null, containerName.value());
-    }
-
-    @AfterEach
-    void tearDown() throws Exception {
-        blobStore.deleteContainer(containerName.value());
-        blobStore.getContext().close();
     }
 
     @Override
-    public BlobStore testee() {
-        return ObjectStorageBlobsDAO
-            .builder(testConfig)
-            .container(containerName)
-            .blobIdFactory(new HashBlobId.Factory())
-            .build();
+    public ContainerName containerName() {
+        return containerName;
     }
 
-    @Override
-    public BlobId.Factory blobIdFactory() {
-        return new HashBlobId.Factory();
+    @Test
+    void containerNameIsMandatoryToBuildBlobsDAO() throws Exception {
+        ObjectStorageBlobsDAOBuilder builder = ObjectStorageBlobsDAO
+            .builder(testConfig)
+            .blobIdFactory(new HashBlobId.Factory());
+
+        assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void blobIdFactoryIsMandatoryToBuildBlobsDAO() throws Exception {
+        ObjectStorageBlobsDAOBuilder builder = ObjectStorageBlobsDAO
+            .builder(testConfig)
+            .container(containerName);
+
+        assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void builtBlobsDAOCanStoreAndRetrieve() throws Exception {
+        ObjectStorageBlobsDAOBuilder builder = ObjectStorageBlobsDAO
+            .builder(testConfig)
+            .container(containerName)
+            .blobIdFactory(new HashBlobId.Factory());
+
+        assertBlobsDAOCanStoreAndRetrieve(builder);
     }
 }
-

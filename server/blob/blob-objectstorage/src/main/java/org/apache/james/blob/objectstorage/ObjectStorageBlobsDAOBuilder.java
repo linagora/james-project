@@ -19,41 +19,41 @@
 
 package org.apache.james.blob.objectstorage;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
+import java.util.function.Supplier;
 
-public class HeaderName {
-    private final String value;
+import org.apache.james.blob.api.BlobId;
+import org.jclouds.blobstore.BlobStore;
 
-    protected HeaderName(String value) {
-        this.value = value;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
+public class ObjectStorageBlobsDAOBuilder {
+    private final Supplier<BlobStore> supplier;
+    private ContainerName containerName;
+    private BlobId.Factory blobIdFactory;
+
+    public ObjectStorageBlobsDAOBuilder(Supplier<BlobStore> supplier) {
+        this.supplier = supplier;
     }
 
-    public String value() {
-        return value;
+    public ObjectStorageBlobsDAOBuilder container(ContainerName containerName) {
+        this.containerName = containerName;
+        return this;
     }
 
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof HeaderName)) {
-            return false;
-        }
-        HeaderName that = (HeaderName) o;
-        return Objects.equal(value, that.value);
+    public ObjectStorageBlobsDAOBuilder blobIdFactory(BlobId.Factory blobIdFactory) {
+        this.blobIdFactory = blobIdFactory;
+        return this;
     }
 
-    @Override
-    public final int hashCode() {
-        return Objects.hashCode(value);
+    public ObjectStorageBlobsDAO build() {
+        Preconditions.checkState(containerName != null);
+        Preconditions.checkState(blobIdFactory != null);
+        return new ObjectStorageBlobsDAO(containerName, blobIdFactory, supplier.get());
     }
 
-    @Override
-    public final String toString() {
-        return MoreObjects.toStringHelper(this)
-            .add("value", value)
-            .toString();
+    @VisibleForTesting
+    Supplier<BlobStore> getSupplier() {
+        return supplier;
     }
 }

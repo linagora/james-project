@@ -17,47 +17,49 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.blob.objectstorage.swift;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-public final class Identity {
-    public static Identity of(String value) {
-        return new Identity(value);
+public final class TenantName {
+    public static TenantName of(String value) {
+        return new TenantName(value);
     }
 
-    private final String identity;
+    private final String value;
 
-    private Identity(String value) {
-        this.identity = value;
+    private TenantName(String value) {
+        Preconditions.checkArgument(
+            !Strings.isNullOrEmpty(value),
+            this.getClass().getSimpleName() + " cannot be null or empty");
+        this.value = value;
     }
 
     public String value() {
-        return identity;
+        return value;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+        if (o instanceof TenantName) {
+            TenantName that = (TenantName) o;
+            return Objects.equal(value, that.value);
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        Identity identity1 = (Identity) o;
-        return Objects.equal(identity, identity1.identity);
+        return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(identity);
+        return Objects.hashCode(value);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("identity", identity)
+            .add("value", value)
             .toString();
     }
 }

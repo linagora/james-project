@@ -17,14 +17,37 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.blob.objectstorage.swift;
 
-public final class UserHeaderName extends HeaderName {
-    public static UserHeaderName of(String value) {
-        return new UserHeaderName(value);
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.jupiter.api.Test;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
+
+class TenantNameTest {
+
+    public static final String EXPECTED = "EXPECTED";
+
+    @Test
+    public void tenantNameShouldRespectBeanContract() {
+        EqualsVerifier.forClass(TenantName.class).verify();
     }
 
-    private UserHeaderName(String value) {
-        super(value);
+    @Test
+    void tenantNameCanBeBuiltFromNonEmptyString() {
+        TenantName actual = TenantName.of(EXPECTED);
+        assertThat(actual.value()).isEqualTo(EXPECTED);
+    }
+
+    @Test
+    void tenantNameCanNotBeBuiltFromEmptyString() {
+        assertThatThrownBy(() -> TenantName.of("")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void tenantNameCanNotBeBuiltFromNull() {
+        assertThatThrownBy(() -> TenantName.of(null)).isInstanceOf(IllegalArgumentException.class);
     }
 }
