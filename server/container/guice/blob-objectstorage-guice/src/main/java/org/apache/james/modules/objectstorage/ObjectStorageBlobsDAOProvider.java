@@ -30,6 +30,9 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.objectstorage.ContainerName;
 import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
+import org.apache.james.blob.objectstorage.swift.SwiftKeystone2ObjectStorage;
+import org.apache.james.blob.objectstorage.swift.SwiftKeystone3ObjectStorage;
+import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
 import org.apache.james.utils.PropertiesProvider;
 
 import com.google.common.base.Preconditions;
@@ -42,6 +45,8 @@ public class ObjectStorageBlobsDAOProvider implements Provider<ObjectStorageBlob
     private static final String OBJECTSTORAGE_PROVIDER = "objectstorage.provider";
     private static final String OBJECTSTORAGE_SWIFT_AUTH_API = "objectstorage.swift.authapi";
 
+    public static final String OBJECTSTORAGE_PROVIDER_SWIFT = "swift";
+
     private final Configuration configuration;
     private final BlobId.Factory blobIdFactory;
     private final ImmutableMap<String, Function<ContainerName, ObjectStorageBlobsDAO>> providersByName;
@@ -50,13 +55,15 @@ public class ObjectStorageBlobsDAOProvider implements Provider<ObjectStorageBlob
     @Inject
     public ObjectStorageBlobsDAOProvider(PropertiesProvider propertiesProvider,
                                          BlobId.Factory blobIdFactory) throws ConfigurationException {
-        providersByName = ImmutableMap.<String, Function<ContainerName, ObjectStorageBlobsDAO>>builder().put("swift",
-            this::getSwiftObjectStorageBlobsDao).build();
-        swiftAuthApiByName = ImmutableMap.<String, Function<ContainerName, ObjectStorageBlobsDAO>>builder()
-            .put("tempauth", this::getTempAuthBlobsDao)
-            .put("keystone2", this::getKeystone2BlobsDao)
-            .put("keystone3", this::getKeystone3Configuration)
+        providersByName = ImmutableMap.<String, Function<ContainerName, ObjectStorageBlobsDAO>>builder()
+            .put(OBJECTSTORAGE_PROVIDER_SWIFT, this::getSwiftObjectStorageBlobsDao)
             .build();
+        swiftAuthApiByName = ImmutableMap.<String, Function<ContainerName, ObjectStorageBlobsDAO>>builder()
+            .put(SwiftTempAuthObjectStorage.AUTH_API_NAME, this::getTempAuthBlobsDao)
+            .put(SwiftKeystone2ObjectStorage.AUTH_API_NAME, this::getKeystone2BlobsDao)
+            .put(SwiftKeystone3ObjectStorage.AUTH_API_NAME, this::getKeystone3Configuration)
+            .build();
+
         this.blobIdFactory = blobIdFactory;
         try {
             this.configuration = propertiesProvider.getConfiguration(OBJECTSTORAGE_CONFIGURATION_NAME);
