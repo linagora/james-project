@@ -68,7 +68,8 @@ public class ObjectStorageBlobsDAOProvider implements Provider<ObjectStorageBlob
         try {
             this.configuration = propertiesProvider.getConfiguration(OBJECTSTORAGE_CONFIGURATION_NAME);
         } catch (FileNotFoundException e) {
-            throw new ConfigurationException(OBJECTSTORAGE_CONFIGURATION_NAME + "configuration was not found");
+            throw new ConfigurationException(OBJECTSTORAGE_CONFIGURATION_NAME + " configuration " +
+                "was not found");
         }
     }
 
