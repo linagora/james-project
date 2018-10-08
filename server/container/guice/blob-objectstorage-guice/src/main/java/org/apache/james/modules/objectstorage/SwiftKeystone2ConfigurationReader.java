@@ -46,13 +46,13 @@ public class SwiftKeystone2ConfigurationReader implements SwiftConfigurationRead
         String tenantNameStr = configuration.getString(OBJECTSTORAGE_SWIFT_KEYSTONE_2_TENANTNAME, null);
 
         Preconditions.checkArgument(endpointStr != null,
-            OBJECTSTORAGE_SWIFT_ENDPOINT + "is a mandatory configuration value");
+            OBJECTSTORAGE_SWIFT_ENDPOINT + " is a mandatory configuration value");
         Preconditions.checkArgument(crendentialsStr != null,
-            OBJECTSTORAGE_SWIFT_CREDENTIALS + "is a mandatory configuration value");
+            OBJECTSTORAGE_SWIFT_CREDENTIALS + " is a mandatory configuration value");
         Preconditions.checkArgument(userNameStr != null,
-            OBJECTSTORAGE_SWIFT_KEYSTONE_2_USERNAME + "is a mandatory configuration value");
+            OBJECTSTORAGE_SWIFT_KEYSTONE_2_USERNAME + " is a mandatory configuration value");
         Preconditions.checkArgument(tenantNameStr != null,
-            OBJECTSTORAGE_SWIFT_KEYSTONE_2_TENANTNAME + "is a mandatory configuration value");
+            OBJECTSTORAGE_SWIFT_KEYSTONE_2_TENANTNAME + " is a mandatory configuration value");
 
         URI endpoint = URI.create(endpointStr);
         Credentials credentials = Credentials.of(crendentialsStr);
