@@ -20,7 +20,6 @@
 package org.apache.james.modules.objectstorage;
 
 import java.io.FileNotFoundException;
-import java.util.HashMap;
 import java.util.function.Function;
 
 import javax.inject.Inject;
@@ -34,6 +33,7 @@ import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
 import org.apache.james.utils.PropertiesProvider;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 
 public class ObjectStorageBlobsDAOProvider implements Provider<ObjectStorageBlobsDAO> {
     private static final String OBJECTSTORAGE_CONFIGURATION_NAME = "objectstorage";
@@ -44,19 +44,19 @@ public class ObjectStorageBlobsDAOProvider implements Provider<ObjectStorageBlob
 
     private final Configuration configuration;
     private final BlobId.Factory blobIdFactory;
-    private final HashMap<String, Function<ContainerName, ObjectStorageBlobsDAO>> providersByName;
-    private final HashMap<String, Function<ContainerName, ObjectStorageBlobsDAO>> swiftAuthApiByName;
+    private final ImmutableMap<String, Function<ContainerName, ObjectStorageBlobsDAO>> providersByName;
+    private final ImmutableMap<String, Function<ContainerName, ObjectStorageBlobsDAO>> swiftAuthApiByName;
 
     @Inject
     public ObjectStorageBlobsDAOProvider(PropertiesProvider propertiesProvider,
                                          BlobId.Factory blobIdFactory) throws ConfigurationException {
-        providersByName = new HashMap<>();
-        providersByName.put("swift", this::getSwiftObjectStorageBlobsDao);
-        swiftAuthApiByName = new HashMap<>();
-        providersByName.put("tempauth", this::getTempAuthBlobsDao);
-        providersByName.put("keystone2", this::getKeystone2BlobsDao);
-        providersByName.put("keystone3", this::getKeystone3Configuration);
-
+        providersByName = ImmutableMap.<String, Function<ContainerName, ObjectStorageBlobsDAO>>builder().put("swift",
+            this::getSwiftObjectStorageBlobsDao).build();
+        swiftAuthApiByName = ImmutableMap.<String, Function<ContainerName, ObjectStorageBlobsDAO>>builder()
+            .put("tempauth", this::getTempAuthBlobsDao)
+            .put("keystone2", this::getKeystone2BlobsDao)
+            .put("keystone3", this::getKeystone3Configuration)
+            .build();
         this.blobIdFactory = blobIdFactory;
         try {
             this.configuration = propertiesProvider.getConfiguration(OBJECTSTORAGE_CONFIGURATION_NAME);
