@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-
 import org.apache.james.blob.api.BlobId;
 
 
@@ -38,7 +37,7 @@ public interface ObjectStorageBlobsDAOContract {
     ContainerName containerName();
 
     default void assertBlobsDAOCanStoreAndRetrieve(ObjectStorageBlobsDAOBuilder builder)
-        throws InterruptedException, ExecutionException,TimeoutException {
+        throws InterruptedException, ExecutionException, TimeoutException {
         ObjectStorageBlobsDAO dao = builder.build();
         dao.createContainer(containerName());
         byte[] bytes = "content".getBytes(StandardCharsets.UTF_8);
