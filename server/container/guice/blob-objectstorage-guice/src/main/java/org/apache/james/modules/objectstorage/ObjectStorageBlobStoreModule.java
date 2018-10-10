@@ -17,32 +17,19 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.modules.objectstorage;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.apache.james.blob.api.BlobStore;
+import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
 
-import org.apache.james.blob.api.BlobId;
+public class ObjectStorageBlobStoreModule extends AbstractModule {
 
-
-public interface ObjectStorageBlobsDAOContract {
-
-    ContainerName containerName();
-
-    default void assertBlobsDAOCanStoreAndRetrieve(ObjectStorageBlobsDAOBuilder builder)
-        throws InterruptedException, ExecutionException, TimeoutException {
-        ObjectStorageBlobsDAO dao = builder.build();
-        dao.createContainer(containerName());
-        byte[] bytes = "content".getBytes(StandardCharsets.UTF_8);
-        CompletableFuture<BlobId> save = dao.save(bytes);
-        InputStream inputStream = save.thenApply(dao::read).get(10, TimeUnit.SECONDS);
-        assertThat(inputStream).hasSameContentAs(new ByteArrayInputStream(bytes));
+    @Override
+    protected void configure() {
+        bind(ObjectStorageBlobsDAO.class).toProvider(ObjectStorageBlobsDAOProvider.class).in(Scopes.SINGLETON);
+        bind(BlobStore.class).to(ObjectStorageBlobsDAO.class);
     }
 }

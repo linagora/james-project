@@ -38,6 +38,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Module;
 
 public class SwiftKeystone2ObjectStorage {
+    public static final String AUTH_API_NAME = "keystone2";
+
     private static final Iterable<Module> JCLOUDS_MODULES =
         ImmutableSet.of(new SLF4JLoggingModule());
 
@@ -114,8 +116,8 @@ public class SwiftKeystone2ObjectStorage {
                 return this;
             }
 
-            public Builder region(Region region) {
-                this.region = Optional.of(region);
+            public Builder region(Optional<Region> region) {
+                this.region = region;
                 return this;
             }
 

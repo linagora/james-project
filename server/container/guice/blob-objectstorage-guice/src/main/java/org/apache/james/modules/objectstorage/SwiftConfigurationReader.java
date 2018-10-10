@@ -17,32 +17,10 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.modules.objectstorage;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import org.apache.james.blob.api.BlobId;
-
-
-public interface ObjectStorageBlobsDAOContract {
-
-    ContainerName containerName();
-
-    default void assertBlobsDAOCanStoreAndRetrieve(ObjectStorageBlobsDAOBuilder builder)
-        throws InterruptedException, ExecutionException, TimeoutException {
-        ObjectStorageBlobsDAO dao = builder.build();
-        dao.createContainer(containerName());
-        byte[] bytes = "content".getBytes(StandardCharsets.UTF_8);
-        CompletableFuture<BlobId> save = dao.save(bytes);
-        InputStream inputStream = save.thenApply(dao::read).get(10, TimeUnit.SECONDS);
-        assertThat(inputStream).hasSameContentAs(new ByteArrayInputStream(bytes));
-    }
+public interface SwiftConfigurationReader {
+    String OBJECTSTORAGE_SWIFT_ENDPOINT = "objectstorage.swift.endpoint";
+    String OBJECTSTORAGE_SWIFT_CREDENTIALS = "objectstorage.swift.credentials";
+    String OBJECTSTORAGE_SWIFT_REGION = "objectstorage.swift.region";
 }

@@ -19,30 +19,31 @@
 
 package org.apache.james.blob.objectstorage;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
+import org.testcontainers.containers.GenericContainer;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+public class DockerSwiftRule implements TestRule {
 
-import org.apache.james.blob.api.BlobId;
+    @Override
+    public Statement apply(Statement base, Description description) {
+        return base;
+    }
 
+    public void start() {
 
-public interface ObjectStorageBlobsDAOContract {
+    }
 
-    ContainerName containerName();
+    public void stop() {
 
-    default void assertBlobsDAOCanStoreAndRetrieve(ObjectStorageBlobsDAOBuilder builder)
-        throws InterruptedException, ExecutionException, TimeoutException {
-        ObjectStorageBlobsDAO dao = builder.build();
-        dao.createContainer(containerName());
-        byte[] bytes = "content".getBytes(StandardCharsets.UTF_8);
-        CompletableFuture<BlobId> save = dao.save(bytes);
-        InputStream inputStream = save.thenApply(dao::read).get(10, TimeUnit.SECONDS);
-        assertThat(inputStream).hasSameContentAs(new ByteArrayInputStream(bytes));
+    }
+
+    public GenericContainer<?> getRawContainer() {
+        return DockerSwiftSingleton.singleton.getRawContainer();
+    }
+
+    public DockerSwift dockerSwift() {
+        return DockerSwiftSingleton.singleton.dockerSwift();
     }
 }

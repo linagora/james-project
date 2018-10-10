@@ -39,6 +39,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Module;
 
 public class SwiftTempAuthObjectStorage {
+    public static final String AUTH_API_NAME = "tmpauth";
+
     private static final Iterable<Module> JCLOUDS_MODULES =
         ImmutableSet.of(new SLF4JLoggingModule());
 
@@ -123,6 +125,11 @@ public class SwiftTempAuthObjectStorage {
                 return this;
             }
 
+            public Builder region(Optional<Region> region) {
+                this.region = region;
+                return this;
+            }
+
             public Builder tempAuthHeaderUserName(UserHeaderName tmpAuthHeaderUser) {
                 userHeaderName = Optional.of(tmpAuthHeaderUser);
                 return this;
@@ -130,6 +137,16 @@ public class SwiftTempAuthObjectStorage {
 
             public Builder tempAuthHeaderPassName(PassHeaderName tmpAuthHeaderPass) {
                 passHeaderName = Optional.of(tmpAuthHeaderPass);
+                return this;
+            }
+
+            public Builder tempAuthHeaderUserName(Optional<UserHeaderName> tmpAuthHeaderUser) {
+                userHeaderName = tmpAuthHeaderUser;
+                return this;
+            }
+
+            public Builder tempAuthHeaderPassName(Optional<PassHeaderName> tmpAuthHeaderPass) {
+                passHeaderName = tmpAuthHeaderPass;
                 return this;
             }
 
@@ -195,7 +212,7 @@ public class SwiftTempAuthObjectStorage {
 
         @Override
         public boolean equals(Object o) {
-            if (o instanceof SwiftKeystone2ObjectStorage.Configuration) {
+            if (o instanceof SwiftTempAuthObjectStorage.Configuration) {
                 Configuration that = (Configuration) o;
                 return Objects.equal(endpoint, that.endpoint) &&
                     Objects.equal(identity, that.identity) &&

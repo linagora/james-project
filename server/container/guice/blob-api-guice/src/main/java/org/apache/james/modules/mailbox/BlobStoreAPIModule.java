@@ -17,32 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+package org.apache.james.modules.mailbox;
 
 import org.apache.james.blob.api.BlobId;
+import org.apache.james.blob.api.HashBlobId;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
 
-public interface ObjectStorageBlobsDAOContract {
-
-    ContainerName containerName();
-
-    default void assertBlobsDAOCanStoreAndRetrieve(ObjectStorageBlobsDAOBuilder builder)
-        throws InterruptedException, ExecutionException, TimeoutException {
-        ObjectStorageBlobsDAO dao = builder.build();
-        dao.createContainer(containerName());
-        byte[] bytes = "content".getBytes(StandardCharsets.UTF_8);
-        CompletableFuture<BlobId> save = dao.save(bytes);
-        InputStream inputStream = save.thenApply(dao::read).get(10, TimeUnit.SECONDS);
-        assertThat(inputStream).hasSameContentAs(new ByteArrayInputStream(bytes));
+public class BlobStoreAPIModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        bind(HashBlobId.Factory.class).in(Scopes.SINGLETON);
+        bind(BlobId.Factory.class).to(HashBlobId.Factory.class);
     }
 }
