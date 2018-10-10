@@ -20,6 +20,8 @@
 package org.apache.james.blob.objectstorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.UUID;
 
@@ -27,6 +29,7 @@ import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.blob.api.BlobStoreContract;
 import org.apache.james.blob.api.HashBlobId;
+import org.apache.james.blob.api.ObjectStoreException;
 import org.apache.james.blob.objectstorage.swift.Credentials;
 import org.apache.james.blob.objectstorage.swift.Identity;
 import org.apache.james.blob.objectstorage.swift.PassHeaderName;
@@ -92,6 +95,14 @@ public class ObjectStorageBlobsDAOTest implements BlobStoreContract {
         ContainerName containerName = ContainerName.of(UUID.randomUUID().toString());
         testee.createContainer(containerName).get();
         assertThat(blobStore.containerExists(containerName.value())).isTrue();
+    }
+    @Test
+    void failsWithRuntimeExceptionOnCreateContainerTwice() throws Exception {
+        ContainerName containerName = ContainerName.of(UUID.randomUUID().toString());
+        testee.createContainer(containerName).get();
+        assertThatThrownBy(() -> testee.createContainer(containerName).get())
+            .hasCauseInstanceOf(ObjectStoreException.class)
+            .hasMessageContaining("Unable to create container");
     }
 }
 

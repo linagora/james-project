@@ -70,19 +70,14 @@ public class ObjectStorageBlobsDAO implements BlobStore {
     }
 
     public CompletableFuture<ContainerName> createContainer(ContainerName name) {
-        CompletableFuture<ContainerName> futureResult = new CompletableFuture<>();
-        try {
-            boolean created = blobStore.createContainerInLocation(DEFAULT_LOCATION, name.value());
+        return CompletableFuture.supplyAsync(() -> blobStore.createContainerInLocation(DEFAULT_LOCATION,
+            name.value())).thenApply(created -> {
             if (created) {
-                futureResult.complete(name);
+                return name;
             } else {
-                futureResult.completeExceptionally(
-                    new ObjectStoreException("Unable to create container " + name.value()));
+                throw new ObjectStoreException("Unable to create container " + name.value());
             }
-        } catch (RuntimeException e) {
-            futureResult.completeExceptionally(e);
-        }
-        return futureResult;
+        });
     }
 
     @Override
