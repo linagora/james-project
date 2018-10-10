@@ -27,10 +27,5 @@ public class DockerSwiftSingleton {
         singleton.start();
     }
 
-    public static void restart() {
-        singleton.stop();
-        singleton.start();
-    }
-
     // Cleanup will be performed by test container resource reaper
 }
