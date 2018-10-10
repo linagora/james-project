@@ -38,7 +38,7 @@ import com.github.fge.lambdas.Throwing;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 
-public class DockerSwiftRule implements GuiceModuleTestRule {
+public class DockerSwiftTestRule implements GuiceModuleTestRule {
 
     private org.apache.james.blob.objectstorage.DockerSwiftRule swiftContainer =
         new org.apache.james.blob.objectstorage.DockerSwiftRule();

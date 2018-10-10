@@ -18,10 +18,10 @@
  ****************************************************************/
 package org.apache.james.jmap.cassandra.cucumber;
 
-import org.apache.james.modules.objectstorage.guice.DockerSwiftRule;
+import org.apache.james.modules.objectstorage.guice.DockerSwiftTestRule;
 
 public class CucumberSwiftSingleton {
 
-    public static DockerSwiftRule swiftServer = new DockerSwiftRule();
+    public static DockerSwiftTestRule swiftServer = new DockerSwiftTestRule();
 
 }
