@@ -17,34 +17,18 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.mailbox.tools.indexer;
+package org.apache.james.modules.server;
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.indexer.ReIndexer;
-import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.task.Task;
+import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.routes.ReindexingRoutes;
 
-public class ThrowsReIndexer implements ReIndexer {
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
+public class ReIndexingModule extends AbstractModule {
     @Override
-    public Task reIndex(MailboxPath path) throws MailboxException {
-        throw new MailboxException("Not implemented");
-    }
-
-    @Override
-    public Task reIndex() throws MailboxException {
-        throw new MailboxException("Not implemented");
-    }
-
-    @Override
-    public Task reIndex(User user) throws MailboxException {
-        throw new MailboxException("Not implemented");
-    }
-
-    @Override
-    public Task reIndex(MailboxPath path, MessageUid uid) throws MailboxException {
-        throw new MailboxException("Not implemented");
+    protected void configure() {
+        Multibinder<Routes> routesMultibinder = Multibinder.newSetBinder(binder(), Routes.class);
+        routesMultibinder.addBinding().to(ReindexingRoutes.class);
     }
 }

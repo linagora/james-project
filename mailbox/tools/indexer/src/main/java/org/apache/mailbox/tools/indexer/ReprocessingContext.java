@@ -19,32 +19,35 @@
 
 package org.apache.mailbox.tools.indexer;
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.indexer.ReIndexer;
-import org.apache.james.mailbox.model.MailboxPath;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.james.task.Task;
 
-public class ThrowsReIndexer implements ReIndexer {
+public class ReprocessingContext {
+    private final AtomicInteger successfullyReprocessedMails;
+    private final AtomicInteger failedReprocessingMails;
 
-    @Override
-    public Task reIndex(MailboxPath path) throws MailboxException {
-        throw new MailboxException("Not implemented");
+    public ReprocessingContext() {
+        failedReprocessingMails = new AtomicInteger(0);
+        successfullyReprocessedMails = new AtomicInteger(0);
     }
 
-    @Override
-    public Task reIndex() throws MailboxException {
-        throw new MailboxException("Not implemented");
+    public void updateAccordingToReprocessingResult(Task.Result result) {
+        switch (result) {
+            case COMPLETED:
+                successfullyReprocessedMails.incrementAndGet();
+                break;
+            case PARTIAL:
+                failedReprocessingMails.incrementAndGet();
+                break;
+        }
     }
 
-    @Override
-    public Task reIndex(User user) throws MailboxException {
-        throw new MailboxException("Not implemented");
+    public int successfullyReprocessedMailCount() {
+        return successfullyReprocessedMails.get();
     }
 
-    @Override
-    public Task reIndex(MailboxPath path, MessageUid uid) throws MailboxException {
-        throw new MailboxException("Not implemented");
+    public int failedReprocessingMailCount() {
+        return failedReprocessingMails.get();
     }
 }
