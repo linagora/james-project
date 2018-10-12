@@ -19,38 +19,35 @@
 
 package org.apache.mailbox.tools.indexer;
 
-import javax.inject.Inject;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.james.mailbox.indexer.ReIndexer;
-import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.task.Task;
 
-/**
- * Note about live re-indexation handling :
- *
- *  - Data races may arise... If you modify the stored value between the received event check and the index operation,
- *  you have an inconsistent behavior (for mailbox renames).
- *
- *  A mechanism for tracking mailbox renames had been implemented, and is taken into account when starting re-indexing a mailbox.
- *  Note that if a mailbox is renamed during its re-indexation process, it will not be taken into account. (We just reduce the inconsistency window).
- */
-public class ReIndexerImpl implements ReIndexer {
+public class ReprocessingContext {
+    private final AtomicInteger successfullyReprocessedMails;
+    private final AtomicInteger failedReprocessingMails;
 
-    private final ReIndexerPerformer reIndexerPerformer;
-
-    @Inject
-    public ReIndexerImpl(ReIndexerPerformer reIndexerPerformer) {
-        this.reIndexerPerformer = reIndexerPerformer;
+    public ReprocessingContext() {
+        failedReprocessingMails = new AtomicInteger(0);
+        successfullyReprocessedMails = new AtomicInteger(0);
     }
 
-    @Override
-    public Task reIndex(MailboxPath path) {
-        return new SingleMailboxReindexingTask(reIndexerPerformer, path);
+    public void updateAccordingToReprocessingResult(Task.Result result) {
+        switch (result) {
+            case COMPLETED:
+                successfullyReprocessedMails.incrementAndGet();
+                break;
+            case PARTIAL:
+                failedReprocessingMails.incrementAndGet();
+                break;
+        }
     }
 
-    @Override
-    public Task reIndex() {
-        return new FullReindexingTask(reIndexerPerformer);
+    public int successfullyReprocessedMailCount() {
+        return successfullyReprocessedMails.get();
     }
 
+    public int failedReprocessingMailCount() {
+        return failedReprocessingMails.get();
+    }
 }
