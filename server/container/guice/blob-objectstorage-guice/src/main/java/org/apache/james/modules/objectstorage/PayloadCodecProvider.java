@@ -29,6 +29,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.james.blob.objectstorage.PayloadCodec;
 import org.apache.james.utils.PropertiesProvider;
 
+import com.amazonaws.util.StringUtils;
 import com.google.common.base.Preconditions;
 
 public class PayloadCodecProvider implements Provider<PayloadCodec> {
@@ -50,9 +51,9 @@ public class PayloadCodecProvider implements Provider<PayloadCodec> {
 
     @Override
     public PayloadCodec get() {
-        String endpointStr = configuration.getString(OBJECTSTORAGE_PAYLOAD_CODEC, null);
-        Preconditions.checkArgument(endpointStr != null,
-            OBJECTSTORAGE_PAYLOAD_CODEC + "is a mandatory configuration value");
-        return PayloadCodecs.valueOf(endpointStr).codec(configuration);
+        String codecName = configuration.getString(OBJECTSTORAGE_PAYLOAD_CODEC, null);
+        Preconditions.checkArgument(!StringUtils.isNullOrEmpty(codecName),
+            OBJECTSTORAGE_PAYLOAD_CODEC + " is a mandatory configuration value");
+        return PayloadCodecs.valueOf(codecName).codec(configuration);
     }
 }

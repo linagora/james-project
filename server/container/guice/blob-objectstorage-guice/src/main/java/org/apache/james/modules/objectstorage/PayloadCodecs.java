@@ -25,6 +25,7 @@ import org.apache.james.blob.objectstorage.DefaultPayloadCodec;
 import org.apache.james.blob.objectstorage.PayloadCodec;
 import org.apache.james.blob.objectstorage.crypto.CryptoConfig;
 
+import com.amazonaws.util.StringUtils;
 import com.google.common.base.Preconditions;
 
 public enum PayloadCodecs {
@@ -39,9 +40,11 @@ public enum PayloadCodecs {
         public PayloadCodec codec(Configuration configuration) {
             String salt = configuration.getString(OBJECTSTORAGE_AES256_HEXSALT);
             String password = configuration.getString(OBJECTSTORAGE_AES256_PASSWORD);
-            Preconditions.checkArgument(salt != null, OBJECTSTORAGE_AES256_HEXSALT + "is a " +
+            Preconditions.checkArgument(!StringUtils.isNullOrEmpty(salt) ,
+                OBJECTSTORAGE_AES256_HEXSALT + " is a " +
                 "mandatory configuration value");
-            Preconditions.checkArgument(password != null, OBJECTSTORAGE_AES256_PASSWORD + "is a " +
+            Preconditions.checkArgument(!StringUtils.isNullOrEmpty(password),
+                OBJECTSTORAGE_AES256_PASSWORD + " is a " +
                 "mandatory configuration value");
             return new AESPayloadCodec(new CryptoConfig(salt, password));
         }

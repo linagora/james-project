@@ -35,6 +35,7 @@ import org.apache.james.blob.objectstorage.DefaultPayloadCodec;
 import org.apache.james.blob.objectstorage.PayloadCodec;
 import org.apache.james.utils.PropertiesProvider;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
 class PayloadCodecProviderTest {
 
@@ -71,12 +72,32 @@ class PayloadCodecProviderTest {
                     .build())
             .build();
 
+    private static final FakePropertiesProvider EMPTY_SALT_PROPERTIES_PROVIDER =
+        FakePropertiesProvider.builder()
+            .register("objectstorage",
+                newConfigBuilder()
+                    .put("objectstorage.payload.codec", PayloadCodecs.AES256.name())
+                    .put("objectstorage.aes256.hexsalt", "")
+                    .put("objectstorage.aes256.password", "james is great")
+                    .build())
+            .build();
+
     private static final FakePropertiesProvider MISSING_PASSWORD_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
             .register("objectstorage",
                 newConfigBuilder()
                     .put("objectstorage.payload.codec", PayloadCodecs.AES256.name())
                     .put("objectstorage.aes256.hexsalt", "12345123451234512345")
+                    .build())
+            .build();
+
+    private static final FakePropertiesProvider EMPTY_PASSWORD_PROPERTIES_PROVIDER =
+        FakePropertiesProvider.builder()
+            .register("objectstorage",
+                newConfigBuilder()
+                    .put("objectstorage.payload.codec", PayloadCodecs.AES256.name())
+                    .put("objectstorage.aes256.hexsalt", "12345123451234512345")
+                    .put("objectstorage.aes256.password", "")
                     .build())
             .build();
 
@@ -115,9 +136,20 @@ class PayloadCodecProviderTest {
     }
 
     @Test
+    void shouldFailForAESCodecWhenSaltKeyIsEmpty() throws Exception {
+        assertThatThrownBy(() -> new PayloadCodecProvider(EMPTY_SALT_PROPERTIES_PROVIDER).get()).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void shouldFailForAESCodecWhenPasswordKeyIsMissing() throws Exception {
 
         assertThatThrownBy(() -> new PayloadCodecProvider(MISSING_PASSWORD_PROPERTIES_PROVIDER).get()).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldFailForAESCodecWhenPasswordKeyIsEmpty() throws Exception {
+
+        assertThatThrownBy(() -> new PayloadCodecProvider(EMPTY_PASSWORD_PROPERTIES_PROVIDER).get()).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static MapConfigurationBuilder newConfigBuilder() {
@@ -170,10 +202,10 @@ class PayloadCodecProviderTest {
     }
 
     private static class MapConfigurationBuilder {
-        private Map<String, Object> config;
+        private ImmutableMap.Builder<String, Object> config;
 
         public MapConfigurationBuilder() {
-            this.config = new HashMap<>();
+            this.config = new ImmutableMap.Builder<>();
         }
 
         public MapConfigurationBuilder put(String key, Object value) {
@@ -182,7 +214,7 @@ class PayloadCodecProviderTest {
         }
 
         public MapConfiguration build() {
-            return new MapConfiguration(config);
+            return new MapConfiguration(config.build());
         }
     }
 }
