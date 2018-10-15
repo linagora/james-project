@@ -49,8 +49,8 @@ class PayloadCodecProviderTest {
     private static final FakePropertiesProvider EMPTY_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
             .register("objectstorage",
-                newConfigBuilder().build()
-            ).build();
+                newConfigBuilder().build())
+            .build();
 
     private static final FakePropertiesProvider AES_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
