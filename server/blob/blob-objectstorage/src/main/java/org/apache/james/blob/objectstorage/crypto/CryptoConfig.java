@@ -28,9 +28,9 @@ public class CryptoConfig {
     }
 
     private final String salt;
-    private final String password;
+    private final char[] password;
 
-    public CryptoConfig(String salt, String password) {
+    public CryptoConfig(String salt, char[] password) {
         this.salt = salt;
         this.password = password;
     }
@@ -39,7 +39,7 @@ public class CryptoConfig {
         return Hex.decode(salt);
     }
 
-    public String password() {
+    public char[] password() {
         return password;
     }
 }

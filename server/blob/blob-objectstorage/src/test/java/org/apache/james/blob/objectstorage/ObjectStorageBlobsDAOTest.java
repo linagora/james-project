@@ -60,7 +60,7 @@ public class ObjectStorageBlobsDAOTest implements BlobStoreContract {
     private ObjectStorageBlobsDAO testee;
     public static final CryptoConfig CRYPTO_CONFIG = CryptoConfig.builder()
         .salt(SAMPLE_SALT)
-        .password(PASSWORD.value())
+        .password(PASSWORD.value().toCharArray())
         .build();
 
     @BeforeEach

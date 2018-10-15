@@ -25,7 +25,7 @@ import com.google.crypto.tink.subtle.Hex;
 
 public class CryptoConfigBuilder {
     private String salt;
-    private String password;
+    private char[] password;
 
     CryptoConfigBuilder() {
     }
@@ -35,14 +35,14 @@ public class CryptoConfigBuilder {
         return this;
     }
 
-    public CryptoConfigBuilder password(String password) {
+    public CryptoConfigBuilder password(char[] password) {
         this.password = password;
         return this;
     }
 
     public CryptoConfig build() {
         Preconditions.checkState(!StringUtils.isNullOrEmpty(salt));
-        Preconditions.checkState(!StringUtils.isNullOrEmpty(password));
+        Preconditions.checkState(password != null && password.length > 0);
         return new CryptoConfig(Hex.encode(Hex.decode(salt)), password);
     }
 }

@@ -28,7 +28,7 @@ import com.google.crypto.tink.subtle.Hex;
 
 class CryptoConfigBuilderTest {
 
-    public static final String PASSWORD = "password";
+    public static final char[] PASSWORD = "password".toCharArray();
     public static final String SALT = "0123456789abcdef";
 
     @Test
@@ -65,7 +65,7 @@ class CryptoConfigBuilderTest {
     void should_not_build_crypto_config_if_password_empty() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.salt(SALT);
-        builder.password("");
+        builder.password("".toCharArray());
         assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
     }
 

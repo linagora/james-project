@@ -44,7 +44,7 @@ class AESPayloadCodecTest implements PayloadCodecContract {
         return new AESPayloadCodec(
             new CryptoConfig(
                 "c603a7327ee3dcbc031d8d34b1096c605feca5e1",
-                "foobar"));
+                "foobar".toCharArray()));
     }
 
     @Test

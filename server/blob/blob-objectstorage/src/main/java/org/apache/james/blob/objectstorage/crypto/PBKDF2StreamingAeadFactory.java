@@ -53,7 +53,7 @@ public class PBKDF2StreamingAeadFactory {
             throws NoSuchAlgorithmException, InvalidKeySpecException {
         byte[] saltBytes = cryptoConfig.salt();
         SecretKeyFactory skf = SecretKeyFactory.getInstance(SECRET_KEY_FACTORY_ALGORITHM);
-        PBEKeySpec spec = new PBEKeySpec(cryptoConfig.password().toCharArray(), saltBytes, PBKDF2_ITERATIONS, KEY_SIZE);
+        PBEKeySpec spec = new PBEKeySpec(cryptoConfig.password(), saltBytes, PBKDF2_ITERATIONS, KEY_SIZE);
         return skf.generateSecret(spec);
     }
 }
