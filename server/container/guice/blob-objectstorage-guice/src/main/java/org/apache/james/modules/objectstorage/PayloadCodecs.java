@@ -46,7 +46,7 @@ public enum PayloadCodecs {
             Preconditions.checkArgument(!StringUtils.isNullOrEmpty(password),
                 OBJECTSTORAGE_AES256_PASSWORD + " is a " +
                     "mandatory configuration value");
-            return new AESPayloadCodec(new CryptoConfig(salt, password));
+            return new AESPayloadCodec(new CryptoConfig(salt, password.toCharArray()));
         }
     };
 
