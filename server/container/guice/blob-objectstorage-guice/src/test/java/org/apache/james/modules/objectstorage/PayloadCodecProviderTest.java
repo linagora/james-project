@@ -38,7 +38,6 @@ import org.junit.jupiter.api.Test;
 
 class PayloadCodecProviderTest {
 
-
     private static final FakePropertiesProvider DEFAULT_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
             .register("objectstorage",
@@ -46,6 +45,7 @@ class PayloadCodecProviderTest {
                     .put("objectstorage.payload.codec", PayloadCodecs.DEFAULT.name())
                     .build())
             .build();
+
     private static final FakePropertiesProvider EMPTY_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
             .register("objectstorage",
@@ -61,6 +61,7 @@ class PayloadCodecProviderTest {
                     .put("objectstorage.aes256.password", "james is great")
                     .build())
             .build();
+
     private static final FakePropertiesProvider MISSING_SALT_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
             .register("objectstorage",
@@ -69,6 +70,7 @@ class PayloadCodecProviderTest {
                     .put("objectstorage.aes256.password", "james is great")
                     .build())
             .build();
+
     private static final FakePropertiesProvider MISSING_PASSWORD_PROPERTIES_PROVIDER =
         FakePropertiesProvider.builder()
             .register("objectstorage",
@@ -91,8 +93,20 @@ class PayloadCodecProviderTest {
     }
 
     @Test
-    void shouldFailIfCodeKeyIsMissing() throws Exception {
+    void shouldFailIfCodecKeyIsMissing() throws Exception {
         assertThatThrownBy(() -> new PayloadCodecProvider(EMPTY_PROPERTIES_PROVIDER).get()).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldFailIfCodecKeyIsIncorrect() throws Exception {
+        FakePropertiesProvider typoed_properties = FakePropertiesProvider.builder()
+            .register("objectstorage",
+                newConfigBuilder()
+                    .put("objectstorage.payload.codec", "aes255")
+                    .put("objectstorage.aes256.password", "james is great")
+                    .build())
+            .build();
+        assertThatThrownBy(()->new PayloadCodecProvider(typoed_properties).get()).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
