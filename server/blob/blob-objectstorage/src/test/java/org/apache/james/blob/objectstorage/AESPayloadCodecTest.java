@@ -20,14 +20,18 @@
 package org.apache.james.blob.objectstorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.objectstorage.crypto.CryptoConfig;
 import org.jclouds.io.Payload;
 import org.jclouds.io.Payloads;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import com.google.crypto.tink.subtle.Hex;
@@ -60,5 +64,28 @@ class AESPayloadCodecTest implements PayloadCodecContract {
         InputStream actual = codec().read(payload);
 
         assertThat(actual).hasSameContentAs(expected());
+    }
+
+    @Test
+    void aesCodecShouldRaiseExceptionWhenUnderliyingInputStreamFails() throws Exception {
+        Payload payload =
+            Payloads.newInputStreamPayload(new FilterInputStream(new ByteArrayInputStream(ENCRYPTED_BYTES)) {
+                private int readCount = 0;
+
+                @Override
+                public int read(@NotNull byte[] b, int off, int len) throws IOException {
+                    if (readCount >= ENCRYPTED_BYTES.length / 2) {
+                        throw new IOException();
+                    } else {
+                        readCount += len;
+                        return super.read(b, off, len);
+                    }
+                }
+            });
+        int i = ENCRYPTED_BYTES.length / 2;
+        byte[] bytes = new byte[i];
+        InputStream is = codec().read(payload);
+        assertThatThrownBy(() -> is.read(bytes, 0, i)).isInstanceOf(IOException.class);
+
     }
 }
