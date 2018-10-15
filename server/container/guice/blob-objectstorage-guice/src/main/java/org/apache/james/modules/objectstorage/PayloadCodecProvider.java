@@ -40,7 +40,7 @@ public class PayloadCodecProvider implements Provider<PayloadCodec> {
 
     @Inject
     public PayloadCodecProvider(PropertiesProvider propertiesProvider)
-        throws ConfigurationException {
+            throws ConfigurationException {
         try {
             this.configuration =
                 propertiesProvider.getConfiguration(OBJECTSTORAGE_CONFIGURATION_NAME);
