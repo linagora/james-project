@@ -58,7 +58,7 @@ public class AESPayloadCodec implements PayloadCodec {
                 }
             });
             copyThread.setUncaughtExceptionHandler((Thread t, Throwable e) ->
-                LOGGER.error("Unable to encrypt payload's input streal",e)
+                LOGGER.error("Unable to encrypt payload's input stream",e)
             );
             copyThread.start();
             return Payloads.newInputStreamPayload(snk);

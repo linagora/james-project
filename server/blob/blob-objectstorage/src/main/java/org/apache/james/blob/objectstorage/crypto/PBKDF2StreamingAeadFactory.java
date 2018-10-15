@@ -19,7 +19,6 @@
 
 package org.apache.james.blob.objectstorage.crypto;
 
-import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -44,19 +43,17 @@ public class PBKDF2StreamingAeadFactory {
         try {
             SecretKey secretKey = deriveKey(config);
             return new AesGcmHkdfStreaming(secretKey.getEncoded(), HKDF_ALGO, KEY_SIZE_IN_BYTES, SEGMENT_SIZE, OFFSET);
-        } catch (GeneralSecurityException | UnsupportedEncodingException e) {
+        } catch (GeneralSecurityException e) {
             throw new CryptoException("Incorrect crypto setup", e);
 
         }
     }
 
-    private static SecretKey deriveKey(CryptoConfig cryptoConfig) throws UnsupportedEncodingException,
-        NoSuchAlgorithmException,
-        InvalidKeySpecException {
+    private static SecretKey deriveKey(CryptoConfig cryptoConfig)
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
         byte[] saltBytes = cryptoConfig.salt();
         SecretKeyFactory skf = SecretKeyFactory.getInstance(SECRET_KEY_FACTORY_ALGORITHM);
-        PBEKeySpec spec = new PBEKeySpec(cryptoConfig.password().toCharArray(), saltBytes,
-            PBKDF2_ITERATIONS, KEY_SIZE);
+        PBEKeySpec spec = new PBEKeySpec(cryptoConfig.password().toCharArray(), saltBytes, PBKDF2_ITERATIONS, KEY_SIZE);
         return skf.generateSecret(spec);
     }
 }

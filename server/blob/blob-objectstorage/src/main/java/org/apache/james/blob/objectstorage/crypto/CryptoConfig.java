@@ -22,6 +22,11 @@ package org.apache.james.blob.objectstorage.crypto;
 import com.google.crypto.tink.subtle.Hex;
 
 public class CryptoConfig {
+
+    public static CryptoConfigBuilder builder() {
+        return new CryptoConfigBuilder();
+    }
+
     private final String salt;
     private final String password;
 

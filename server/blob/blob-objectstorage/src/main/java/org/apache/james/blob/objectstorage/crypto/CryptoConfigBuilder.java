@@ -17,30 +17,32 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.blob.objectstorage;
+package org.apache.james.blob.objectstorage.crypto;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.amazonaws.util.StringUtils;
+import com.google.common.base.Preconditions;
+import com.google.crypto.tink.subtle.Hex;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+public class CryptoConfigBuilder {
+    private String salt;
+    private String password;
 
-import org.junit.jupiter.api.Test;
-
-public interface PayloadCodecContract {
-    byte[] SOME_BYTES = "james".getBytes(StandardCharsets.UTF_8);
-
-    @Test
-    default void shouldBeAbleToReadFromWrittenPayload() throws Exception {
-        PayloadCodec codec = codec();
-        InputStream actual = codec.read(codec.write(expected()));
-        assertThat(actual).hasSameContentAs(expected());
+    CryptoConfigBuilder() {
     }
 
-    default ByteArrayInputStream expected() {
-        return new ByteArrayInputStream(SOME_BYTES);
+    public CryptoConfigBuilder salt(String salt) {
+        this.salt = salt;
+        return this;
     }
 
-    PayloadCodec codec();
+    public CryptoConfigBuilder password(String password) {
+        this.password = password;
+        return this;
+    }
 
+    public CryptoConfig build() {
+        Preconditions.checkState(!StringUtils.isNullOrEmpty(salt));
+        Preconditions.checkState(!StringUtils.isNullOrEmpty(password));
+        return new CryptoConfig(Hex.encode(Hex.decode(salt)), password);
+    }
 }
