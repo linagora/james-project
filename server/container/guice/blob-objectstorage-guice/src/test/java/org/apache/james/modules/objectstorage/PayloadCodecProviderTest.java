@@ -35,7 +35,8 @@ import org.apache.james.blob.objectstorage.DefaultPayloadCodec;
 import org.apache.james.blob.objectstorage.PayloadCodec;
 import org.apache.james.utils.PropertiesProvider;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
+
+import com.google.common.collect.ImmutableMap;
 
 class PayloadCodecProviderTest {
 
@@ -120,14 +121,14 @@ class PayloadCodecProviderTest {
 
     @Test
     void shouldFailIfCodecKeyIsIncorrect() throws Exception {
-        FakePropertiesProvider typoed_properties = FakePropertiesProvider.builder()
+        FakePropertiesProvider propertiesWithTypo = FakePropertiesProvider.builder()
             .register("objectstorage",
                 newConfigBuilder()
                     .put("objectstorage.payload.codec", "aes255")
                     .put("objectstorage.aes256.password", "james is great")
                     .build())
             .build();
-        assertThatThrownBy(()->new PayloadCodecProvider(typoed_properties).get()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PayloadCodecProvider(propertiesWithTypo).get()).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

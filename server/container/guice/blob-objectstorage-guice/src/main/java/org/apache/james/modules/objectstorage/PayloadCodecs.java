@@ -40,12 +40,12 @@ public enum PayloadCodecs {
         public PayloadCodec codec(Configuration configuration) {
             String salt = configuration.getString(OBJECTSTORAGE_AES256_HEXSALT);
             String password = configuration.getString(OBJECTSTORAGE_AES256_PASSWORD);
-            Preconditions.checkArgument(!StringUtils.isNullOrEmpty(salt) ,
+            Preconditions.checkArgument(!StringUtils.isNullOrEmpty(salt),
                 OBJECTSTORAGE_AES256_HEXSALT + " is a " +
-                "mandatory configuration value");
+                    "mandatory configuration value");
             Preconditions.checkArgument(!StringUtils.isNullOrEmpty(password),
                 OBJECTSTORAGE_AES256_PASSWORD + " is a " +
-                "mandatory configuration value");
+                    "mandatory configuration value");
             return new AESPayloadCodec(new CryptoConfig(salt, password));
         }
     };

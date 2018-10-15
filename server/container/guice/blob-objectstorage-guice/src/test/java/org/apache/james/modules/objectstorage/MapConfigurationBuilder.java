@@ -20,7 +20,8 @@
 package org.apache.james.modules.objectstorage;
 
 import org.apache.commons.configuration.MapConfiguration;
-import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
+
+import com.google.common.collect.ImmutableMap;
 
 class MapConfigurationBuilder {
     private ImmutableMap.Builder<String, Object> config;
