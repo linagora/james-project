@@ -100,7 +100,7 @@ class ObjectStorageBlobsDAOProviderTest {
     }
 
     @Test
-    void provides_a_tempauth_backed_blobstore_dao() throws ConfigurationException {
+    void providesTempauthBackedBlobstoreDao() throws ConfigurationException {
         ObjectStorageBlobsDAOProvider objectStorageBlobsDAOProvider =
             new ObjectStorageBlobsDAOProvider(tempAuthPropertiesProvider(), BLOB_ID_FACTORY);
         ObjectStorageBlobsDAO objectStorageBlobsDAO = objectStorageBlobsDAOProvider.get();
@@ -108,7 +108,7 @@ class ObjectStorageBlobsDAOProviderTest {
     }
 
     @Test
-    void provides_a_keystone2_backed_blobstore_dao() throws ConfigurationException {
+    void providesKeystone2BackedBlobstoreDao() throws ConfigurationException {
         ObjectStorageBlobsDAOProvider objectStorageBlobsDAOProvider =
             new ObjectStorageBlobsDAOProvider(keystone2PropertiesProvider(),
                 BLOB_ID_FACTORY);
@@ -117,7 +117,7 @@ class ObjectStorageBlobsDAOProviderTest {
     }
 
     @Test
-    void provides_a_keystone3_backed_blobstore_dao() throws ConfigurationException {
+    void providesKeystone3BackedBlobstoreDao() throws ConfigurationException {
         ObjectStorageBlobsDAOProvider objectStorageBlobsDAOProvider =
             new ObjectStorageBlobsDAOProvider(keystone3PropertiesProvider(),
                 BLOB_ID_FACTORY);
