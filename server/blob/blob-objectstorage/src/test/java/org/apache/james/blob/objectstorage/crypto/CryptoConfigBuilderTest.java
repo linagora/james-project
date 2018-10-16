@@ -32,14 +32,14 @@ class CryptoConfigBuilderTest {
     public static final String SALT = "0123456789abcdef";
 
     @Test
-    void should_not_build_crypto_config_if_salt_missing() {
+    void shouldNotBuildCryptoConfigIfSaltMissing() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.password(PASSWORD);
         assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    void should_not_build_crypto_config_if_salt_empty() {
+    void shouldNotBuildCryptoConfigIfSaltEmpty() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.password(PASSWORD);
         builder.salt("");
@@ -47,7 +47,7 @@ class CryptoConfigBuilderTest {
     }
 
     @Test
-    void should_not_build_crypto_config_if_salt_not_hex() {
+    void shouldNotBuildCryptoConfigIfSaltNotHex() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.password(PASSWORD);
         builder.salt("ghijk");
@@ -55,14 +55,14 @@ class CryptoConfigBuilderTest {
     }
 
     @Test
-    void should_not_build_crypto_config_if_password_missing() {
+    void shouldNotBuildCryptoConfigIfPasswordMissing() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.salt(SALT);
         assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    void should_not_build_crypto_config_if_password_empty() {
+    void shouldNotBuildCryptoConfigIfPasswordEmpty() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.salt(SALT);
         builder.password("".toCharArray());
@@ -70,7 +70,7 @@ class CryptoConfigBuilderTest {
     }
 
     @Test
-    void should_build_crypto_config() {
+    void shouldBuildCryptoConfig() {
         CryptoConfigBuilder builder = new CryptoConfigBuilder();
         builder.salt(SALT);
         builder.password(PASSWORD);
