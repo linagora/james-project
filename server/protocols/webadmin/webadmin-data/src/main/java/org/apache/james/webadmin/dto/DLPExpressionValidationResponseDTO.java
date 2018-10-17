@@ -17,21 +17,29 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.server;
+package org.apache.james.webadmin.dto;
 
-import org.apache.james.webadmin.Routes;
-import org.apache.james.webadmin.routes.DLPConfigurationRoutes;
-import org.apache.james.webadmin.routes.DLPExpressionRoutes;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
+public class DLPExpressionValidationResponseDTO {
+    static final boolean VALID = true;
 
-public class DLPRoutesModule extends AbstractModule {
-    @Override
-    protected void configure() {
-        Multibinder<Routes> dlpRoutesBinder = Multibinder.newSetBinder(binder(), Routes.class);
+    public static DLPExpressionValidationResponseDTO valid() {
+        return new DLPExpressionValidationResponseDTO(VALID);
+    }
 
-        dlpRoutesBinder.addBinding().to(DLPConfigurationRoutes.class);
-        dlpRoutesBinder.addBinding().to(DLPExpressionRoutes.class);
+    public static DLPExpressionValidationResponseDTO invalid() {
+        return new DLPExpressionValidationResponseDTO(!VALID);
+    }
+
+    private final boolean isValid;
+
+    private DLPExpressionValidationResponseDTO(boolean isValid) {
+        this.isValid = isValid;
+    }
+
+    @JsonProperty("isValid")
+    public boolean isValid() {
+        return isValid;
     }
 }

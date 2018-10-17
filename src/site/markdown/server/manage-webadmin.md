@@ -1811,6 +1811,11 @@ Each `senderDomain` correspond to a distinct DLP configuration.
 - [Remove DLP configuration by sender domain](Remove_dlp_configuration_by_sender_domain)
 - [Fetch a DLP configuration item by sender domain and rule id](Fetch_a_dlp_configuration_item_by_sender_domain_and_rule_id)
 
+Additionally James exposes routes for validating and testing Java regular expressions:
+
+ - [Validating a Java regular expression](Validating_a_Java_regular_expression)
+ - [Testing a Java regular expression](Testing_a_Java_regular_expression)
+
 ### List DLP configuration by sender domain
 
 Retrieve a DLP configuration for corresponding `senderDomain`, a configuration contains list of configuration items
@@ -1935,6 +1940,62 @@ This is an example of returned body.
   "targetsContent": false
 }
 ```
+
+### Validating a Java regular expression
+
+Tells weither the syntax of a Java regular expression, used as part of DLP rules, is valid or not.
+
+```
+curl -XPOST http://ip:port/dlp/expression/validate
+
+{ "expression" : "(?i:aladdin)"}
+```
+
+This is an example of the replied body:
+
+```
+{ "isValid": true}
+```
+
+Response codes:
+
+ - 200: A validation result is returned
+ - 400: Invalid payload supplied
+
+### Testing a Java regular expression
+
+Tells weither the syntax of a Java regular expression, used as part of DLP rules, is matching a sample supplied string.
+
+```
+curl -XPOST http://ip:port/dlp/expression/sampleMatch
+
+{
+  "expression" : "(?i:aladdin)",
+  "sampleValue" : "Mister Aladdin, sir, have a wish or two or three"
+}
+```
+
+This is an example of the replied body:
+
+```
+{
+  "isValid": true
+  "isMatched": true
+}
+```
+
+Note that the `isMatched` field will be ommited if the regular expression is not valid. For instance
+
+```
+{
+  "isValid": false
+}
+```
+
+Response codes:
+
+ - 200: A validation result is returned
+ - 400: Invalid payload supplied
 
 ## Administrating Sieve quotas
 

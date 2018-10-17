@@ -17,21 +17,31 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.server;
+package org.apache.james.webadmin.dto;
 
-import org.apache.james.webadmin.Routes;
-import org.apache.james.webadmin.routes.DLPConfigurationRoutes;
-import org.apache.james.webadmin.routes.DLPExpressionRoutes;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
+public class DLPExpressionSampleMatchRequestDTO {
+    private final String expression;
+    private final String sampleValue;
 
-public class DLPRoutesModule extends AbstractModule {
-    @Override
-    protected void configure() {
-        Multibinder<Routes> dlpRoutesBinder = Multibinder.newSetBinder(binder(), Routes.class);
+    @JsonCreator
+    public DLPExpressionSampleMatchRequestDTO(@JsonProperty("expression") String expression,
+                                              @JsonProperty("sampleValue") String sampleValue) {
+        Preconditions.checkNotNull(expression, "The regex expression can not be null");
+        Preconditions.checkNotNull(sampleValue, "The sample value can not be null");
 
-        dlpRoutesBinder.addBinding().to(DLPConfigurationRoutes.class);
-        dlpRoutesBinder.addBinding().to(DLPExpressionRoutes.class);
+        this.expression = expression;
+        this.sampleValue = sampleValue;
+    }
+
+    public String getExpression() {
+        return expression;
+    }
+
+    public String getSampleValue() {
+        return sampleValue;
     }
 }

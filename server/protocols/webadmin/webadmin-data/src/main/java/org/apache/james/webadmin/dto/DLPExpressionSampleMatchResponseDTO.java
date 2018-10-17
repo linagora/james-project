@@ -17,21 +17,39 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.modules.server;
+package org.apache.james.webadmin.dto;
 
-import org.apache.james.webadmin.Routes;
-import org.apache.james.webadmin.routes.DLPConfigurationRoutes;
-import org.apache.james.webadmin.routes.DLPExpressionRoutes;
+import java.util.Optional;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class DLPRoutesModule extends AbstractModule {
-    @Override
-    protected void configure() {
-        Multibinder<Routes> dlpRoutesBinder = Multibinder.newSetBinder(binder(), Routes.class);
+public class DLPExpressionSampleMatchResponseDTO {
 
-        dlpRoutesBinder.addBinding().to(DLPConfigurationRoutes.class);
-        dlpRoutesBinder.addBinding().to(DLPExpressionRoutes.class);
+    public static DLPExpressionSampleMatchResponseDTO invalid() {
+        return new DLPExpressionSampleMatchResponseDTO(!DLPExpressionValidationResponseDTO.VALID, Optional.empty());
+    }
+
+    public static DLPExpressionSampleMatchResponseDTO matches(boolean matches) {
+        return new DLPExpressionSampleMatchResponseDTO(
+            DLPExpressionValidationResponseDTO.VALID,
+            Optional.of(matches));
+    }
+
+    private final boolean isValid;
+    private final Optional<Boolean> isMatched;
+
+    private DLPExpressionSampleMatchResponseDTO(boolean isValid, Optional<Boolean> isMatched) {
+        this.isValid = isValid;
+        this.isMatched = isMatched;
+    }
+
+    @JsonProperty("isValid")
+    public boolean isValid() {
+        return isValid;
+    }
+
+    @JsonProperty("isMatched")
+    public Optional<Boolean> isMatched() {
+        return isMatched;
     }
 }
