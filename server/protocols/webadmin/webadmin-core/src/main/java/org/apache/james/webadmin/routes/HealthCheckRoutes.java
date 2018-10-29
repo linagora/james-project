@@ -29,6 +29,8 @@ import javax.ws.rs.Path;
 import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.core.healthcheck.Result;
 import org.apache.james.webadmin.PublicRoutes;
+import org.apache.james.webadmin.dto.HealthCheckDto;
+import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +41,8 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import spark.Request;
+import spark.Response;
 import spark.Service;
 
 @Api(tags = "Healthchecks")
@@ -48,14 +52,15 @@ public class HealthCheckRoutes implements PublicRoutes {
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckRoutes.class);
 
     public static final String HEALTHCHECK = "/healthcheck";
-
-
+    public static final String CHECKS = "/checks";
+    
     private final Set<HealthCheck> healthChecks;
-    private Service service;
+    private final JsonTransformer jsonTransformer;
 
     @Inject
-    public HealthCheckRoutes(Set<HealthCheck> healthChecks) {
+    public HealthCheckRoutes(Set<HealthCheck> healthChecks, JsonTransformer jsonTransformer) {
         this.healthChecks = healthChecks;
+        this.jsonTransformer = jsonTransformer;
     }
 
     @Override
@@ -65,9 +70,8 @@ public class HealthCheckRoutes implements PublicRoutes {
 
     @Override
     public void define(Service service) {
-        this.service = service;
-
-        validateHealthchecks();
+        service.get(HEALTHCHECK, this::validateHealthchecks, jsonTransformer);
+        service.get(HEALTHCHECK + CHECKS, this::getHealthChecks, jsonTransformer);
     }
 
     @GET
@@ -77,15 +81,25 @@ public class HealthCheckRoutes implements PublicRoutes {
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500,
                 message = "Internal server error - When one check has failed.")
     })
-    public void validateHealthchecks() {
-        service.get(HEALTHCHECK,
-            (request, response) -> {
-                List<Result> anyUnhealthyOrDegraded = retrieveUnhealthyOrDegradedHealthChecks();
-
-                anyUnhealthyOrDegraded.forEach(this::logFailedCheck);
-                response.status(getCorrespondingStatusCode(anyUnhealthyOrDegraded));
-                return response;
-            });
+	public Object validateHealthchecks(Request request, Response response) {
+		List<Result> anyUnhealthyOrDegraded = retrieveUnhealthyOrDegradedHealthChecks();
+		anyUnhealthyOrDegraded.forEach(this::logFailedCheck);
+		response.status(getCorrespondingStatusCode(anyUnhealthyOrDegraded));
+		return response;
+	}
+    
+    @GET
+    @Path(CHECKS)
+    @ApiOperation(value = "List all health checks")
+    @ApiResponses(value = {
+            @ApiResponse(code = HttpStatus.OK_200, message = "List of all health checks", 
+            		response = HealthCheckDto.class, responseContainer = "List"),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "No health checks found")
+    })
+    public Object getHealthChecks(Request request, Response response) {
+		List<HealthCheckDto> checks = healthChecks.stream()
+				.map(healthCheck -> new HealthCheckDto(healthCheck.componentName())).collect(Guavate.toImmutableList());
+		return checks;
     }
 
     private int getCorrespondingStatusCode(List<Result> anyUnhealthy) {
