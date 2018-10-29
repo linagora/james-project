@@ -243,7 +243,7 @@ public class HealthCheckRoutesTest {
         when()
                 .get(HealthCheckRoutes.CHECKS)
                 .then()
-                .body(emptyArray())
+                .body(is("[]"))
                 .statusCode(HttpStatus.OK_200);
     }
 
