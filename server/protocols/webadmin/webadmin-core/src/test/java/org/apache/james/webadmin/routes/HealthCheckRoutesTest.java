@@ -31,6 +31,7 @@ import org.apache.james.core.healthcheck.Result;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
@@ -65,7 +66,7 @@ public class HealthCheckRoutesTest {
         healthChecks = new HashSet<>();
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
-            new HealthCheckRoutes(healthChecks));
+            new HealthCheckRoutes(healthChecks, new JsonTransformer()));
 
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
