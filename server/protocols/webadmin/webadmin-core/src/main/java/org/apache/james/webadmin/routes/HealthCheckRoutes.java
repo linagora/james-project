@@ -60,7 +60,6 @@ public class HealthCheckRoutes implements PublicRoutes {
     public static final String CHECKS = "/checks";
 
     private static final String PARAM_COMPONENT_NAME = "componentName";
-
     private final JsonTransformer jsonTransformer;
     private final Set<HealthCheck> healthChecks;
 
@@ -79,7 +78,7 @@ public class HealthCheckRoutes implements PublicRoutes {
     public void define(Service service) {
         service.get(HEALTHCHECK, this::validateHealthchecks, jsonTransformer);
         service.get(HEALTHCHECK + "/checks/:" + PARAM_COMPONENT_NAME, this::performHealthCheckForComponent, jsonTransformer);
-        service.get(HEALTHCHECK + CHECKS, this::getHealthChecks, jsonTransformer);
+        service.get(HEALTHCHECK + CHECKS, this::getHealthchecks, jsonTransformer);
     }
 
     @GET
@@ -122,19 +121,15 @@ public class HealthCheckRoutes implements PublicRoutes {
         response.status(getCorrespondingStatusCode(result));
         return new HealthCheckExecutionResultDto(result);
 	}
-    
+
     @GET
     @Path(CHECKS)
     @ApiOperation(value = "List all health checks")
-    @ApiResponses(value = {
-            @ApiResponse(code = HttpStatus.OK_200, message = "List of all health checks", 
-            		response = HealthCheckDto.class, responseContainer = "List"),
-            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "No health checks found")
-    })
-    public Object getHealthChecks(Request request, Response response) {
-		List<HealthCheckDto> checks = healthChecks.stream()
-				.map(healthCheck -> new HealthCheckDto(healthCheck.componentName())).collect(Guavate.toImmutableList());
-		return checks;
+    @ApiResponse(code = HttpStatus.OK_200, message = "List of all health checks",
+                response = HealthCheckDto.class, responseContainer = "List")
+    public Object getHealthchecks(Request request, Response response) {
+        return healthChecks.stream()
+            .map(healthCheck -> new HealthCheckDto(healthCheck.componentName())).collect(Guavate.toImmutableList());
     }
 
     private int getCorrespondingStatusCode(List<Result> anyUnhealthy) {
