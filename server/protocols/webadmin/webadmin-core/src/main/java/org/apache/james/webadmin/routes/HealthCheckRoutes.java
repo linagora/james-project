@@ -58,8 +58,8 @@ public class HealthCheckRoutes implements PublicRoutes {
 
     public static final String HEALTHCHECK = "/healthcheck";
     public static final String CHECKS = "/checks";
-
     private static final String PARAM_COMPONENT_NAME = "componentName";
+
     private final JsonTransformer jsonTransformer;
     private final Set<HealthCheck> healthChecks;
 
@@ -88,14 +88,13 @@ public class HealthCheckRoutes implements PublicRoutes {
         @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500,
             message = "Internal server error - When one check has failed.")
     })
-    public Object validateHealthchecks(Request request, Response response) {
-        List<Result> anyUnhealthyOrDegraded = retrieveUnhealthyOrDegradedHealthChecks();
+	public Object validateHealthchecks(Request request, Response response) {
+		List<Result> anyUnhealthyOrDegraded = retrieveUnhealthyOrDegradedHealthChecks();
+		anyUnhealthyOrDegraded.forEach(this::logFailedCheck);
+		response.status(getCorrespondingStatusCode(anyUnhealthyOrDegraded));
+		return response;
+	}
 
-        anyUnhealthyOrDegraded.forEach(this::logFailedCheck);
-        response.status(getCorrespondingStatusCode(anyUnhealthyOrDegraded));
-        return response;
-    }
-    
     @GET
     @Path("/checks/{" + PARAM_COMPONENT_NAME + "}")
     @ApiOperation(value = "Perform the component's health check")
