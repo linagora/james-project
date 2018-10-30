@@ -46,6 +46,11 @@ as exposed above). To avoid information duplication, this is ommited on endpoint
 
 ## HealthCheck
 
+ - [Check all components](#Check_all_components)
+ - [List all health checks](#List_all_health_checks)
+
+### Check all components
+
 This endpoint is simple for now and is just returning the http status code corresponding to the state of checks (see below).
 The user has to check in the logs in order to have more information about failing checks.
 
@@ -57,6 +62,18 @@ Response codes:
 
  - 200: All checks have answered with a Healthy status
  - 500: At least one check have answered with a Unhealthy or Degraded status
+
+ ### List all health checks
+
+ This endpoint lists all the available health checks.
+
+```
+curl -XGET http://ip:port/healthcheck/checks
+```
+
+Response codes:
+
+ - 200: List of available health checks
 
 
 ## Administrating domains
