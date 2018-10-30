@@ -19,17 +19,7 @@
 
 package org.apache.james.webadmin.routes;
 
-import static io.restassured.RestAssured.given;
-import static io.restassured.RestAssured.when;
-import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-
-import java.net.MalformedURLException;
-import java.util.HashSet;
-import java.util.Set;
-
+import io.restassured.RestAssured;
 import org.apache.james.core.healthcheck.ComponentName;
 import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.core.healthcheck.Result;
@@ -43,7 +33,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.restassured.RestAssured;
+import java.net.MalformedURLException;
+import java.util.HashSet;
+import java.util.Set;
+
+import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.when;
+import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
+import static org.hamcrest.Matchers.*;
 
 public class HealthCheckRoutesTest {
     
@@ -144,7 +141,7 @@ public class HealthCheckRoutesTest {
         .then()
             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500);
     }
-    
+
     @Test
     public void performHealthCheckShouldReturnOkWhenHealthCheckIsHealthy() {
         healthChecks.add(healthCheck(Result.healthy(COMPONENT_NAME_1)));
@@ -226,18 +223,38 @@ public class HealthCheckRoutesTest {
     @Test
     public void performHealthCheckShouldWorkWithEscapedPathParam() throws MalformedURLException {
         healthChecks.add(healthCheck(Result.healthy(COMPONENT_NAME_3)));
-        
+
         // disable URL encoding
         RestAssured.requestSpecification.urlEncodingEnabled(false);
 
         given()
-            .pathParam("componentName", NAME_3_ESCAPED)
-        .when()
-            .get("/checks/{componentName}")
-        .then()
-            .body("componentName", equalTo(NAME_3))
-            .body("escapedComponentName", equalTo(NAME_3_ESCAPED))
-            .body("status", equalTo(ResultStatus.HEALTHY.getValue()))
-            .body("cause", is(nullValue()));
+                .pathParam("componentName", NAME_3_ESCAPED)
+                .when()
+                .get("/checks/{componentName}")
+                .then()
+                .body("componentName", equalTo(NAME_3))
+                .body("escapedComponentName", equalTo(NAME_3_ESCAPED))
+                .body("status", equalTo(ResultStatus.HEALTHY.getValue()))
+                .body("cause", is(nullValue()));
+    }
+
+    @Test
+    public void getHealthchecksShouldReturnEmptyWhenNoHealthChecks() {
+        when()
+                .get(HealthCheckRoutes.CHECKS)
+                .then()
+                .body(emptyArray())
+                .statusCode(HttpStatus.OK_200);
+    }
+
+    @Test
+    public void getHealthchecksShouldReturnHealthChecksWhenHealthChecksPresent() {
+        healthChecks.add(healthCheck(Result.healthy(COMPONENT_NAME_3)));
+        when()
+                .get(HealthCheckRoutes.CHECKS)
+                .then()
+                .body("componentName[0]", equalTo(NAME_3))
+                .body("escapedComponentName[0]", equalTo(NAME_3_ESCAPED))
+                .statusCode(HttpStatus.OK_200);
     }
 }
