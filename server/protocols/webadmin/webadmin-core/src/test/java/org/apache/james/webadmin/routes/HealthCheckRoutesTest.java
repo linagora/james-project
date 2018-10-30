@@ -19,12 +19,7 @@
 
 package org.apache.james.webadmin.routes;
 
-import static io.restassured.RestAssured.when;
-import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
-
-import java.util.HashSet;
-import java.util.Set;
-
+import io.restassured.RestAssured;
 import org.apache.james.core.healthcheck.ComponentName;
 import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.core.healthcheck.Result;
@@ -37,12 +32,24 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.restassured.RestAssured;
+import java.util.HashSet;
+import java.util.Set;
+
+import static io.restassured.RestAssured.when;
+import static org.apache.james.webadmin.WebAdminServer.NO_CONFIGURATION;
+import static org.hamcrest.Matchers.emptyArray;
+import static org.hamcrest.Matchers.equalTo;
 
 public class HealthCheckRoutesTest {
 
-    private static final ComponentName COMPONENT_NAME_1 = new ComponentName("component-1");
-    private static final ComponentName COMPONENT_NAME_2 = new ComponentName("component-2");
+    private static final String NAME_1 = "component-1";
+    private static final String NAME_2 = "component-2";
+    private static final String NAME_3 = "component 3";
+    private static final String NAME_3_ESCAPED = "component%203";
+
+    private static final ComponentName COMPONENT_NAME_1 = new ComponentName(NAME_1);
+    private static final ComponentName COMPONENT_NAME_2 = new ComponentName(NAME_2);
+    private static final ComponentName COMPONENT_NAME_3 = new ComponentName(NAME_3);
 
     private static HealthCheck healthCheck(Result result) {
         return new HealthCheck() {
@@ -131,5 +138,25 @@ public class HealthCheckRoutesTest {
             .get()
         .then()
             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR_500);
+    }
+
+    @Test
+    public void getHealthchecksShouldReturnEmptyWhenNoHealthChecks() {
+        when()
+                .get(HealthCheckRoutes.CHECKS)
+                .then()
+                .body(emptyArray())
+                .statusCode(HttpStatus.OK_200);
+    }
+
+    @Test
+    public void getHealthchecksShouldReturnHealthChecksWhenHealthChecksPresent() {
+        healthChecks.add(healthCheck(Result.healthy(COMPONENT_NAME_3)));
+        when()
+                .get(HealthCheckRoutes.CHECKS)
+                .then()
+                .body("componentName[0]", equalTo(NAME_3))
+                .body("escapedComponentName[0]", equalTo(NAME_3_ESCAPED))
+                .statusCode(HttpStatus.OK_200);
     }
 }
