@@ -19,36 +19,28 @@
 
 package org.apache.james.webadmin.routes;
 
-import java.util.List;
-import java.util.Set;
-
-import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-
+import com.github.steveash.guavate.Guavate;
+import io.swagger.annotations.*;
 import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.core.healthcheck.Result;
 import org.apache.james.webadmin.PublicRoutes;
+import org.apache.james.webadmin.dto.HealthCheckDto;
 import org.apache.james.webadmin.dto.HealthCheckExecutionResultDto;
 import org.apache.james.webadmin.utils.ErrorResponder;
-import org.apache.james.webadmin.dto.HealthCheckDto;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.github.steveash.guavate.Guavate;
-
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiImplicitParams;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
 import spark.HaltException;
 import spark.Request;
 import spark.Response;
 import spark.Service;
+
+import javax.inject.Inject;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import java.util.List;
+import java.util.Set;
 
 @Api(tags = "Healthchecks")
 @Path(HealthCheckRoutes.HEALTHCHECK)

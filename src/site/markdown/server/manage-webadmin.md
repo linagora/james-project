@@ -98,6 +98,7 @@ curl -XGET http://ip:port/healthcheck/checks
 ```
 
 Response codes:
+
  - 200: List of available health checks
 
 ## Administrating domains
