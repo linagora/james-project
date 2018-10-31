@@ -91,10 +91,21 @@ Response codes:
 
 ### List all health checks
 
- This endpoint lists all the available health checks.
+This endpoint lists all the available health checks.
 
 ```
 curl -XGET http://ip:port/healthcheck/checks
+```
+
+Will return the list of all available health checks.
+
+```
+[
+    {
+      "componentName": "Cassandra Backend",
+      "escapedComponentName": "Cassandra%20Backend"
+    }
+]
 ```
 
 Response codes:

@@ -120,7 +120,8 @@ public class HealthCheckRoutes implements PublicRoutes {
                 response = HealthCheckDto.class, responseContainer = "List")
     public Object getHealthchecks(Request request, Response response) {
         return healthChecks.stream()
-            .map(healthCheck -> new HealthCheckDto(healthCheck.componentName())).collect(Guavate.toImmutableList());
+            .map(healthCheck -> new HealthCheckDto(healthCheck.componentName()))
+                .collect(Guavate.toImmutableList());
     }
 
     private int getCorrespondingStatusCode(List<Result> anyUnhealthy) {
