@@ -67,7 +67,7 @@ public class ObjectStorageBlobsDAOBuilder {
     }
 
     @VisibleForTesting
-    Supplier<BlobStore> getSupplier() {
+    public Supplier<BlobStore> getSupplier() {
         return supplier;
     }
 }
