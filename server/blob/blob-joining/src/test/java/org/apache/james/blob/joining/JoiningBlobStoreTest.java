@@ -20,48 +20,33 @@
 package org.apache.james.blob.joining;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.blob.api.BlobStoreContract;
 import org.apache.james.blob.api.HashBlobId;
 import org.apache.james.blob.memory.MemoryBlobStore;
 import org.apache.james.util.CompletableFutureUtil;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class JoiningBlobStoreTest implements BlobStoreContract {
 
-    private static class ThrowingBlobStore implements BlobStore {
+    private static class FutureThrowingBlobStore implements BlobStore {
 
         @Override
         public CompletableFuture<BlobId> save(byte[] data) {
-            if (Arrays.equals(data, BLOB_CONTENT_CAUSES_THROWING_DIRECTLY)) {
-                throw new RuntimeException("not supported");
-            }
-
             return CompletableFutureUtil.exceptionallyFuture(new RuntimeException("not supported"));
         }
 
         @Override
         public CompletableFuture<BlobId> save(InputStream data) {
-            try {
-                if (Arrays.equals(IOUtils.toByteArray(data), BLOB_CONTENT_CAUSES_THROWING_DIRECTLY)) {
-                    throw new RuntimeException("not supported");
-                }
-
-                return CompletableFutureUtil.exceptionallyFuture(new RuntimeException("not supported"));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            return CompletableFutureUtil.exceptionallyFuture(new RuntimeException("not supported"));
         }
 
         @Override
@@ -75,23 +60,44 @@ class JoiningBlobStoreTest implements BlobStoreContract {
         }
     }
 
+    private static class ThrowingBlobStore implements BlobStore {
+
+        @Override
+        public CompletableFuture<BlobId> save(byte[] data) {
+            throw new RuntimeException("not supported");
+        }
+
+        @Override
+        public CompletableFuture<BlobId> save(InputStream data) {
+            throw new RuntimeException("not supported");
+        }
+
+        @Override
+        public CompletableFuture<byte[]> readBytes(BlobId blobId) {
+            throw new RuntimeException("not supported");
+        }
+
+        @Override
+        public InputStream read(BlobId blobId) {
+            throw new RuntimeException("not supported");
+        }
+    }
+
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
-    private static final MemoryBlobStore PRIMARY_BLOB_STORE = new MemoryBlobStore(BLOB_ID_FACTORY);
-    private static final MemoryBlobStore SECONDARY_BLOB_STORE = new MemoryBlobStore(BLOB_ID_FACTORY);
-    private static final ThrowingBlobStore THROWING_BLOB_STORE = new ThrowingBlobStore();
-
     private static final byte [] BLOB_CONTENT = "blob content".getBytes();
-    private static final byte [] BLOB_CONTENT_CAUSES_THROWING_DIRECTLY = "blob content causes throwing directly".getBytes();
 
-    @AfterEach
-    void tearDown() {
-        PRIMARY_BLOB_STORE.clear();
-        SECONDARY_BLOB_STORE.clear();
+    private JoiningBlobStore joiningBlobStore;
+
+    @BeforeEach
+    void setup() {
+        MemoryBlobStore primary = new MemoryBlobStore(BLOB_ID_FACTORY);
+        MemoryBlobStore secondary = new MemoryBlobStore(BLOB_ID_FACTORY);
+        joiningBlobStore = new JoiningBlobStore(primary, secondary);
     }
 
     @Override
     public BlobStore testee() {
-        return new JoiningBlobStore(PRIMARY_BLOB_STORE, SECONDARY_BLOB_STORE);
+        return joiningBlobStore;
     }
 
     @Override
@@ -99,19 +105,116 @@ class JoiningBlobStoreTest implements BlobStoreContract {
         return BLOB_ID_FACTORY;
     }
 
+    @Nested
+    class PrimarySaveThrowsExceptionDirectly {
+
+        @Test
+        void saveShouldFallBackToSecondaryWhenPrimaryGotException() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
+
+            assertThat(secondaryBlobStore.read(blobId))
+                .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
+        }
+
+        @Test
+        void saveInputStreamShouldFallBackToSecondaryWhenPrimaryGotException() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
+
+            assertThat(secondaryBlobStore.read(blobId))
+                .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
+        }
+    }
+
+    @Nested
+    class PrimarySaveCompletesExceptionally {
+
+        @Test
+        void saveShouldFallBackToSecondaryWhenPrimaryCompletedExceptionally() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
+
+            assertThat(secondaryBlobStore.read(blobId))
+                .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
+        }
+
+        @Test
+        void saveInputStreamShouldFallBackToSecondaryWhenPrimaryCompletedExceptionally() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
+
+            assertThat(secondaryBlobStore.read(blobId))
+                .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
+        }
+
+    }
+
+    @Nested
+    class PrimaryReadThrowsExceptionDirectly {
+
+        @Test
+        void readShouldReturnFallbackToSecondaryWhenPrimaryGotException() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+
+            assertThat(joiningBlobStore.read(blobId))
+                .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
+        }
+
+        @Test
+        void readBytesShouldReturnFallbackToSecondaryWhenPrimaryGotException() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+
+            assertThat(joiningBlobStore.readBytes(blobId).get())
+                .isEqualTo(BLOB_CONTENT);
+        }
+
+    }
+
+    @Nested
+    class PrimaryReadCompletesExceptionally {
+
+        @Test
+        void readShouldReturnFallbackToSecondaryWhenPrimaryCompletedExceptionally() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+
+            assertThat(joiningBlobStore.read(blobId))
+                .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
+        }
+
+        @Test
+        void readBytesShouldReturnFallbackToSecondaryWhenPrimaryCompletedExceptionally() throws Exception {
+            MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+            JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
+            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+
+            assertThat(joiningBlobStore.readBytes(blobId).get())
+                .isEqualTo(BLOB_CONTENT);
+        }
+    }
+
+
     @Test
     void readShouldReturnFromPrimaryWhenAvailable() throws Exception {
-        BlobId blobId = PRIMARY_BLOB_STORE.save(BLOB_CONTENT).get();
-        BlobStore joiningBlobStore = testee();
+        BlobId blobId = joiningBlobStore.getPrimaryBlobStore().save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.read(blobId))
             .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
     }
 
     @Test
-    void readShouldReturnFallbackToSecondaryWhenNotAvailable() throws Exception {
-        BlobId blobId = SECONDARY_BLOB_STORE.save(BLOB_CONTENT).get();
-        BlobStore joiningBlobStore = testee();
+    void readShouldReturnFromSecondaryWhenPrimaryNotAvailable() throws Exception {
+        BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.read(blobId))
             .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
@@ -119,17 +222,15 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void readBytesShouldReturnFromPrimaryWhenAvailable() throws Exception {
-        BlobId blobId = PRIMARY_BLOB_STORE.save(BLOB_CONTENT).get();
-        BlobStore joiningBlobStore = testee();
+        BlobId blobId = joiningBlobStore.getPrimaryBlobStore().save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
-    void readBytesShouldReturnFallbackToSecondaryWhenNotAvailable() throws Exception {
-        BlobId blobId = SECONDARY_BLOB_STORE.save(BLOB_CONTENT).get();
-        BlobStore joiningBlobStore = testee();
+    void readBytesShouldReturnFromSecondaryWhenPrimaryNotAvailable() throws Exception {
+        BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
@@ -137,77 +238,33 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void saveShouldWriteToPrimary() throws Exception {
-        BlobStore joiningBlobStore = testee();
         BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-        assertThat(PRIMARY_BLOB_STORE.readBytes(blobId).get())
+        assertThat(joiningBlobStore.getPrimaryBlobStore().readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
     void saveShouldNotWriteToSecondary() throws Exception {
-        BlobStore joiningBlobStore = testee();
         BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-        assertThat(SECONDARY_BLOB_STORE.readBytes(blobId).get())
+        assertThat(joiningBlobStore.getSecondaryBlobStore().readBytes(blobId).get())
             .isEmpty();
     }
 
     @Test
-    void saveShouldNotWriteToSecondaryEvenWhenPrimaryFails() throws Exception {
-        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
-        assertThatThrownBy(() -> joiningBlobStore.save(BLOB_CONTENT_CAUSES_THROWING_DIRECTLY))
-            .isInstanceOf(RuntimeException.class);
-
-        assertThat(SECONDARY_BLOB_STORE.size())
-            .isEqualTo(0);
-    }
-
-    @Test
-    void saveShouldNotWriteToSecondaryEvenWhenPrimaryCompleteExceptionally() throws Exception {
-        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
-        assertThat(joiningBlobStore.save(BLOB_CONTENT))
-            .isCompletedExceptionally();
-
-        assertThat(SECONDARY_BLOB_STORE.size())
-            .isEqualTo(0);
-    }
-
-    @Test
     void saveInputStreamShouldWriteToPrimary() throws Exception {
-        BlobStore joiningBlobStore = testee();
         BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-        assertThat(PRIMARY_BLOB_STORE.readBytes(blobId).get())
+        assertThat(joiningBlobStore.getPrimaryBlobStore().readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
     void saveInputStreamShouldNotWriteToSecondary() throws Exception {
-        BlobStore joiningBlobStore = testee();
         BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-        assertThat(SECONDARY_BLOB_STORE.readBytes(blobId).get())
+        assertThat(joiningBlobStore.getSecondaryBlobStore().readBytes(blobId).get())
             .isEmpty();
-    }
-
-    @Test
-    void saveInputStreamShouldNotWriteToSecondaryEvenWhenPrimaryFails() throws Exception {
-        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
-        assertThatThrownBy(() -> joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT_CAUSES_THROWING_DIRECTLY)))
-            .isInstanceOf(RuntimeException.class);
-
-        assertThat(SECONDARY_BLOB_STORE.size())
-            .isEqualTo(0);
-    }
-
-    @Test
-    void saveInputStreamShouldNotWriteToSecondaryEvenWhenPrimaryCompleteExceptionally() throws Exception {
-        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
-        assertThat(joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)))
-            .isCompletedExceptionally();
-
-        assertThat(SECONDARY_BLOB_STORE.size())
-            .isEqualTo(0);
     }
 }
