@@ -22,7 +22,7 @@ package org.apache.james.blob.joining;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
@@ -36,64 +36,6 @@ public class JoiningBlobStore implements BlobStore {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JoiningBlobStore.class);
 
-    private static class JoiningBlobStoreFallBack implements BlobStore {
-
-        private final BlobStore primaryBlobStore;
-        private final BlobStore secondaryBlobStore;
-
-        JoiningBlobStoreFallBack(BlobStore primaryBlobStore, BlobStore secondaryBlobStore) {
-            this.primaryBlobStore = primaryBlobStore;
-            this.secondaryBlobStore = secondaryBlobStore;
-        }
-
-        @Override
-        public CompletableFuture<BlobId> save(byte[] data) {
-            return this.primaryBlobStore.save(data)
-                .exceptionally(throwable -> {
-                    LOGGER.error("primary complete save bytes exceptionally, fall back to second blob store", throwable);
-                    return this.secondaryBlobStore.save(data).join();
-                });
-        }
-
-        @Override
-        public CompletableFuture<BlobId> save(InputStream data) {
-            return this.primaryBlobStore.save(data)
-                .exceptionally(throwable -> {
-                    LOGGER.error("primary complete save InputStream exceptionally, fall back to second blob store", throwable);
-                    return this.secondaryBlobStore.save(data).join();
-                });
-        }
-
-        @Override
-        public CompletableFuture<byte[]> readBytes(BlobId blobId) {
-            return this.primaryBlobStore.readBytes(blobId)
-                .exceptionally(throwable -> {
-                    LOGGER.error("primary complete readBytes exceptionally, fall back to second blob store", throwable);
-                    return this.secondaryBlobStore.readBytes(blobId).join();
-                })
-                .thenCompose(primaryResultInBytes -> readFromSecondaryIfNeeded(blobId, primaryResultInBytes));
-        }
-
-        @Override
-        public InputStream read(BlobId blobId) {
-            throw new UnsupportedOperationException("handles only futures");
-        }
-
-        private CompletionStage<byte[]> readFromSecondaryIfNeeded(BlobId blobId, byte[] primaryResultInBytes) {
-            if (isNullOrEmpty(primaryResultInBytes)) {
-                return this.secondaryBlobStore.readBytes(blobId);
-            }
-            return CompletableFuture.completedFuture(primaryResultInBytes);
-        }
-
-        private boolean isNullOrEmpty(byte [] bytes) {
-            return Optional.ofNullable(bytes)
-                .map(bytesToRead -> bytesToRead.length == 0)
-                .orElse(true);
-        }
-    }
-
-    private final JoiningBlobStoreFallBack fallBackBlobStore;
     private final BlobStore primaryBlobStore;
     private final BlobStore secondaryBlobStore;
 
@@ -101,13 +43,14 @@ public class JoiningBlobStore implements BlobStore {
     JoiningBlobStore(BlobStore primaryBlobStore, BlobStore secondaryBlobStore) {
         this.primaryBlobStore = primaryBlobStore;
         this.secondaryBlobStore = secondaryBlobStore;
-        this.fallBackBlobStore = new JoiningBlobStoreFallBack(primaryBlobStore, secondaryBlobStore);
     }
 
     @Override
     public CompletableFuture<BlobId> save(byte[] data) {
         try {
-            return fallBackBlobStore.save(data);
+            return saveToPrimaryFallbackIfFails(
+                () -> primaryBlobStore.save(data),
+                () -> secondaryBlobStore.save(data)).get();
         } catch (Exception e) {
             LOGGER.error("exception directly happens while saving bytes data, fall back to secondary blob store", e);
             return secondaryBlobStore.save(data);
@@ -117,7 +60,9 @@ public class JoiningBlobStore implements BlobStore {
     @Override
     public CompletableFuture<BlobId> save(InputStream data) {
         try {
-            return fallBackBlobStore.save(data);
+            return saveToPrimaryFallbackIfFails(
+                () -> primaryBlobStore.save(data),
+                () -> secondaryBlobStore.save(data)).get();
         } catch (Exception e) {
             LOGGER.error("exception directly happens while saving InputStream data, fall back to secondary blob store", e);
             return secondaryBlobStore.save(data);
@@ -127,7 +72,7 @@ public class JoiningBlobStore implements BlobStore {
     @Override
     public CompletableFuture<byte[]> readBytes(BlobId blobId) {
         try {
-            return fallBackBlobStore.readBytes(blobId);
+            return readBytesSupplier(blobId).get();
         } catch (Exception e) {
             LOGGER.error("exception directly happens while readBytes, fall back to secondary blob store", e);
             return secondaryBlobStore.readBytes(blobId);
@@ -146,13 +91,43 @@ public class JoiningBlobStore implements BlobStore {
         }
     }
 
-    @VisibleForTesting
-    BlobStore getPrimaryBlobStore() {
-        return primaryBlobStore;
+    private Supplier<CompletableFuture<BlobId>> saveToPrimaryFallbackIfFails(
+        Supplier<CompletableFuture<BlobId>> primarySavingOperation,
+        Supplier<CompletableFuture<BlobId>> fallbackSavingOperation) {
+
+        return () -> primarySavingOperation.get()
+            .thenApply(Optional::ofNullable)
+            .exceptionally(this::logAndReturnEmtpyOptional)
+            .thenCompose(maybeBlobId -> saveToSecondaryIfNeeded(maybeBlobId, fallbackSavingOperation));
     }
 
-    @VisibleForTesting
-    BlobStore getSecondaryBlobStore() {
-        return secondaryBlobStore;
+    private <T> Optional<T> logAndReturnEmtpyOptional(Throwable throwable) {
+        LOGGER.error("primary completed exceptionally, fall back to second blob store", throwable);
+        return Optional.empty();
+    }
+
+    private CompletableFuture<BlobId> saveToSecondaryIfNeeded(Optional<BlobId> maybeBlobId,
+                                                              Supplier<CompletableFuture<BlobId>> saveToSecondarySupplier) {
+        return maybeBlobId
+            .map(CompletableFuture::completedFuture)
+            .orElseGet(saveToSecondarySupplier);
+    }
+
+    private Supplier<CompletableFuture<byte[]>> readBytesSupplier(BlobId blobId) {
+        return () -> primaryBlobStore.readBytes(blobId)
+            .thenApply(Optional::ofNullable)
+            .exceptionally(this::logAndReturnEmtpyOptional)
+            .thenCompose(maybeBytes -> readFromSecondaryIfNeeded(maybeBytes, blobId));
+    }
+
+    private CompletableFuture<byte[]> readFromSecondaryIfNeeded(Optional<byte[]> readFromPrimaryResult, BlobId blodId) {
+        return readFromPrimaryResult
+            .filter(this::hasContent)
+            .map(CompletableFuture::completedFuture)
+            .orElseGet(() -> secondaryBlobStore.readBytes(blodId));
+    }
+
+    private boolean hasContent(byte [] bytes) {
+        return bytes.length > 0;
     }
 }

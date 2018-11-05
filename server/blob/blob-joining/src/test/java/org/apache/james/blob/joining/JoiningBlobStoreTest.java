@@ -86,13 +86,15 @@ class JoiningBlobStoreTest implements BlobStoreContract {
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
     private static final byte [] BLOB_CONTENT = "blob content".getBytes();
 
+    private MemoryBlobStore primaryBlobStore;
+    private MemoryBlobStore secondaryBlobStore;
     private JoiningBlobStore joiningBlobStore;
 
     @BeforeEach
     void setup() {
-        MemoryBlobStore primary = new MemoryBlobStore(BLOB_ID_FACTORY);
-        MemoryBlobStore secondary = new MemoryBlobStore(BLOB_ID_FACTORY);
-        joiningBlobStore = new JoiningBlobStore(primary, secondary);
+        primaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+        secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
+        joiningBlobStore = new JoiningBlobStore(primaryBlobStore, secondaryBlobStore);
     }
 
     @Override
@@ -114,7 +116,8 @@ class JoiningBlobStoreTest implements BlobStoreContract {
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
             BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-            assertThat(secondaryBlobStore.read(blobId))
+            assertThat(joiningBlobStore.read(blobId))
+                .hasSameContentAs(secondaryBlobStore.read(blobId))
                 .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
         }
 
@@ -124,7 +127,8 @@ class JoiningBlobStoreTest implements BlobStoreContract {
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
             BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-            assertThat(secondaryBlobStore.read(blobId))
+            assertThat(joiningBlobStore.read(blobId))
+                .hasSameContentAs(secondaryBlobStore.read(blobId))
                 .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
         }
     }
@@ -138,7 +142,8 @@ class JoiningBlobStoreTest implements BlobStoreContract {
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
             BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-            assertThat(secondaryBlobStore.read(blobId))
+            assertThat(joiningBlobStore.read(blobId))
+                .hasSameContentAs(secondaryBlobStore.read(blobId))
                 .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
         }
 
@@ -148,7 +153,8 @@ class JoiningBlobStoreTest implements BlobStoreContract {
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
             BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-            assertThat(secondaryBlobStore.read(blobId))
+            assertThat(joiningBlobStore.read(blobId))
+                .hasSameContentAs(secondaryBlobStore.read(blobId))
                 .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
         }
 
@@ -161,7 +167,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
         void readShouldReturnFallbackToSecondaryWhenPrimaryGotException() throws Exception {
             MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
-            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+            BlobId blobId = secondaryBlobStore.save(BLOB_CONTENT).get();
 
             assertThat(joiningBlobStore.read(blobId))
                 .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
@@ -171,7 +177,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
         void readBytesShouldReturnFallbackToSecondaryWhenPrimaryGotException() throws Exception {
             MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new ThrowingBlobStore(), secondaryBlobStore);
-            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+            BlobId blobId = secondaryBlobStore.save(BLOB_CONTENT).get();
 
             assertThat(joiningBlobStore.readBytes(blobId).get())
                 .isEqualTo(BLOB_CONTENT);
@@ -186,7 +192,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
         void readShouldReturnFallbackToSecondaryWhenPrimaryCompletedExceptionally() throws Exception {
             MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
-            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+            BlobId blobId = secondaryBlobStore.save(BLOB_CONTENT).get();
 
             assertThat(joiningBlobStore.read(blobId))
                 .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
@@ -196,7 +202,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
         void readBytesShouldReturnFallbackToSecondaryWhenPrimaryCompletedExceptionally() throws Exception {
             MemoryBlobStore secondaryBlobStore = new MemoryBlobStore(BLOB_ID_FACTORY);
             JoiningBlobStore joiningBlobStore = new JoiningBlobStore(new FutureThrowingBlobStore(), secondaryBlobStore);
-            BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+            BlobId blobId = secondaryBlobStore.save(BLOB_CONTENT).get();
 
             assertThat(joiningBlobStore.readBytes(blobId).get())
                 .isEqualTo(BLOB_CONTENT);
@@ -206,7 +212,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void readShouldReturnFromPrimaryWhenAvailable() throws Exception {
-        BlobId blobId = joiningBlobStore.getPrimaryBlobStore().save(BLOB_CONTENT).get();
+        BlobId blobId = primaryBlobStore.save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.read(blobId))
             .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
@@ -214,7 +220,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void readShouldReturnFromSecondaryWhenPrimaryNotAvailable() throws Exception {
-        BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+        BlobId blobId = secondaryBlobStore.save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.read(blobId))
             .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
@@ -222,7 +228,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void readBytesShouldReturnFromPrimaryWhenAvailable() throws Exception {
-        BlobId blobId = joiningBlobStore.getPrimaryBlobStore().save(BLOB_CONTENT).get();
+        BlobId blobId = primaryBlobStore.save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
@@ -230,7 +236,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void readBytesShouldReturnFromSecondaryWhenPrimaryNotAvailable() throws Exception {
-        BlobId blobId = joiningBlobStore.getSecondaryBlobStore().save(BLOB_CONTENT).get();
+        BlobId blobId = secondaryBlobStore.save(BLOB_CONTENT).get();
 
         assertThat(joiningBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
@@ -240,7 +246,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
     void saveShouldWriteToPrimary() throws Exception {
         BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-        assertThat(joiningBlobStore.getPrimaryBlobStore().readBytes(blobId).get())
+        assertThat(primaryBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
@@ -248,7 +254,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
     void saveShouldNotWriteToSecondary() throws Exception {
         BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-        assertThat(joiningBlobStore.getSecondaryBlobStore().readBytes(blobId).get())
+        assertThat(secondaryBlobStore.readBytes(blobId).get())
             .isEmpty();
     }
 
@@ -256,7 +262,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
     void saveInputStreamShouldWriteToPrimary() throws Exception {
         BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-        assertThat(joiningBlobStore.getPrimaryBlobStore().readBytes(blobId).get())
+        assertThat(primaryBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
@@ -264,7 +270,7 @@ class JoiningBlobStoreTest implements BlobStoreContract {
     void saveInputStreamShouldNotWriteToSecondary() throws Exception {
         BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-        assertThat(joiningBlobStore.getSecondaryBlobStore().readBytes(blobId).get())
+        assertThat(secondaryBlobStore.readBytes(blobId).get())
             .isEmpty();
     }
 }
