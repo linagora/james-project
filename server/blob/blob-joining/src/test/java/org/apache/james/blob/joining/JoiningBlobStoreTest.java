@@ -21,38 +21,22 @@ package org.apache.james.blob.joining;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.util.UUID;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.james.backends.cassandra.CassandraClusterExtension;
-import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
+import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.blob.api.BlobStoreContract;
 import org.apache.james.blob.api.HashBlobId;
-import org.apache.james.blob.cassandra.CassandraBlobModule;
-import org.apache.james.blob.cassandra.CassandraBlobsDAO;
-import org.apache.james.blob.objectstorage.ContainerName;
-import org.apache.james.blob.objectstorage.DockerSwift;
-import org.apache.james.blob.objectstorage.DockerSwiftExtension;
-import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
-import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAOBuilder;
-import org.apache.james.blob.objectstorage.swift.Credentials;
-import org.apache.james.blob.objectstorage.swift.Identity;
-import org.apache.james.blob.objectstorage.swift.PassHeaderName;
-import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
-import org.apache.james.blob.objectstorage.swift.TenantName;
-import org.apache.james.blob.objectstorage.swift.UserHeaderName;
-import org.apache.james.blob.objectstorage.swift.UserName;
+import org.apache.james.blob.memory.MemoryBlobStore;
+import org.apache.james.util.CompletableFutureUtil;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 class JoiningBlobStoreTest implements BlobStoreContract {
 
@@ -60,17 +44,29 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
         @Override
         public CompletableFuture<BlobId> save(byte[] data) {
-            throw new RuntimeException("not supported");
+            if (Arrays.equals(data, BLOB_CONTENT_CAUSES_THROWING_DIRECTLY)) {
+                throw new RuntimeException("not supported");
+            }
+
+            return CompletableFutureUtil.exceptionallyFuture(new RuntimeException("not supported"));
         }
 
         @Override
         public CompletableFuture<BlobId> save(InputStream data) {
-            throw new RuntimeException("not supported");
+            try {
+                if (Arrays.equals(IOUtils.toByteArray(data), BLOB_CONTENT_CAUSES_THROWING_DIRECTLY)) {
+                    throw new RuntimeException("not supported");
+                }
+
+                return CompletableFutureUtil.exceptionallyFuture(new RuntimeException("not supported"));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         @Override
         public CompletableFuture<byte[]> readBytes(BlobId blobId) {
-            throw new RuntimeException("not supported");
+            return CompletableFutureUtil.exceptionallyFuture(new RuntimeException("not supported"));
         }
 
         @Override
@@ -80,64 +76,22 @@ class JoiningBlobStoreTest implements BlobStoreContract {
     }
 
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
+    private static final MemoryBlobStore PRIMARY_BLOB_STORE = new MemoryBlobStore(BLOB_ID_FACTORY);
+    private static final MemoryBlobStore SECONDARY_BLOB_STORE = new MemoryBlobStore(BLOB_ID_FACTORY);
     private static final ThrowingBlobStore THROWING_BLOB_STORE = new ThrowingBlobStore();
 
     private static final byte [] BLOB_CONTENT = "blob content".getBytes();
-    private static final int CHUNK_SIZE = 10240;
-
-    private static final TenantName TENANT_NAME = TenantName.of("test");
-    private static final UserName USER_NAME = UserName.of("tester");
-    private static final Credentials PASSWORD = Credentials.of("testing");
-    private static final Identity SWIFT_IDENTITY = Identity.of(TENANT_NAME, USER_NAME);
-
-    @RegisterExtension
-    static CassandraClusterExtension cassandraExtension = new CassandraClusterExtension(CassandraBlobModule.MODULE);
-    @RegisterExtension
-    static DockerSwiftExtension swiftExtension = new DockerSwiftExtension();
-
-    private CassandraBlobsDAO cassandraBlobStore;
-    private ContainerName containerName;
-    private SwiftTempAuthObjectStorage.Configuration testConfig;
-    private org.jclouds.blobstore.BlobStore underlayerSwiftBlobStore;
-    private ObjectStorageBlobsDAO swiftBlobStore;
-
-    @BeforeEach
-    void setUp(DockerSwift dockerSwift) {
-        // Setting up cassandra blobstore
-        cassandraBlobStore = new CassandraBlobsDAO(cassandraExtension.getCassandraCluster().getConf(),
-            CassandraConfiguration.builder()
-                .blobPartSize(CHUNK_SIZE)
-                .build(),
-            new HashBlobId.Factory());
-
-        // Setting up swift blobstore
-        containerName = ContainerName.of(UUID.randomUUID().toString());
-        testConfig = SwiftTempAuthObjectStorage.configBuilder()
-            .endpoint(dockerSwift.swiftEndpoint())
-            .identity(SWIFT_IDENTITY)
-            .credentials(PASSWORD)
-            .tempAuthHeaderUserName(UserHeaderName.of("X-Storage-User"))
-            .tempAuthHeaderPassName(PassHeaderName.of("X-Storage-Pass"))
-            .build();
-        BlobId.Factory blobIdFactory = blobIdFactory();
-        ObjectStorageBlobsDAOBuilder daoBuilder = ObjectStorageBlobsDAO
-            .builder(testConfig)
-            .container(containerName)
-            .blobIdFactory(blobIdFactory);
-        underlayerSwiftBlobStore = daoBuilder.getSupplier().get();
-        swiftBlobStore = daoBuilder.build();
-        swiftBlobStore.createContainer(containerName);
-    }
+    private static final byte [] BLOB_CONTENT_CAUSES_THROWING_DIRECTLY = "blob content causes throwing directly".getBytes();
 
     @AfterEach
     void tearDown() {
-        underlayerSwiftBlobStore.deleteContainer(containerName.value());
-        underlayerSwiftBlobStore.getContext().close();
+        PRIMARY_BLOB_STORE.clear();
+        SECONDARY_BLOB_STORE.clear();
     }
 
     @Override
     public BlobStore testee() {
-        return new JoiningBlobStore(swiftBlobStore, cassandraBlobStore);
+        return new JoiningBlobStore(PRIMARY_BLOB_STORE, SECONDARY_BLOB_STORE);
     }
 
     @Override
@@ -147,85 +101,113 @@ class JoiningBlobStoreTest implements BlobStoreContract {
 
     @Test
     void readShouldReturnFromPrimaryWhenAvailable() throws Exception {
-        BlobId blobId = swiftBlobStore.save(BLOB_CONTENT).get();
+        BlobId blobId = PRIMARY_BLOB_STORE.save(BLOB_CONTENT).get();
+        BlobStore joiningBlobStore = testee();
 
-        assertThat(testee().read(blobId))
+        assertThat(joiningBlobStore.read(blobId))
             .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
     }
 
     @Test
     void readShouldReturnFallbackToSecondaryWhenNotAvailable() throws Exception {
-        BlobId blobId = cassandraBlobStore.save(BLOB_CONTENT).get();
+        BlobId blobId = SECONDARY_BLOB_STORE.save(BLOB_CONTENT).get();
+        BlobStore joiningBlobStore = testee();
 
-        assertThat(testee().read(blobId))
+        assertThat(joiningBlobStore.read(blobId))
             .hasSameContentAs(new ByteArrayInputStream(BLOB_CONTENT));
     }
 
     @Test
     void readBytesShouldReturnFromPrimaryWhenAvailable() throws Exception {
-        BlobId blobId = swiftBlobStore.save(BLOB_CONTENT).get();
+        BlobId blobId = PRIMARY_BLOB_STORE.save(BLOB_CONTENT).get();
+        BlobStore joiningBlobStore = testee();
 
-        assertThat(testee().readBytes(blobId).get())
+        assertThat(joiningBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
     void readBytesShouldReturnFallbackToSecondaryWhenNotAvailable() throws Exception {
-        BlobId blobId = cassandraBlobStore.save(BLOB_CONTENT).get();
+        BlobId blobId = SECONDARY_BLOB_STORE.save(BLOB_CONTENT).get();
+        BlobStore joiningBlobStore = testee();
 
-        assertThat(testee().readBytes(blobId).get())
+        assertThat(joiningBlobStore.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
     void saveShouldWriteToPrimary() throws Exception {
-        BlobId blobId = testee().save(BLOB_CONTENT).get();
+        BlobStore joiningBlobStore = testee();
+        BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-        assertThat(swiftBlobStore.readBytes(blobId).get())
+        assertThat(PRIMARY_BLOB_STORE.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
     void saveShouldNotWriteToSecondary() throws Exception {
-        BlobId blobId = testee().save(BLOB_CONTENT).get();
+        BlobStore joiningBlobStore = testee();
+        BlobId blobId = joiningBlobStore.save(BLOB_CONTENT).get();
 
-        assertThat(cassandraBlobStore.readBytes(blobId).get())
+        assertThat(SECONDARY_BLOB_STORE.readBytes(blobId).get())
             .isEmpty();
     }
 
     @Test
     void saveShouldNotWriteToSecondaryEvenWhenPrimaryFails() throws Exception {
-        CassandraBlobsDAO cassandraBlobStoreSpider = spy(cassandraBlobStore);
-        JoiningBlobStore testee = new JoiningBlobStore(THROWING_BLOB_STORE, cassandraBlobStoreSpider);
-        assertThatThrownBy(() -> testee.save(BLOB_CONTENT))
+        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
+        assertThatThrownBy(() -> joiningBlobStore.save(BLOB_CONTENT_CAUSES_THROWING_DIRECTLY))
             .isInstanceOf(RuntimeException.class);
 
-        verifyNoMoreInteractions(cassandraBlobStoreSpider);
+        assertThat(SECONDARY_BLOB_STORE.size())
+            .isEqualTo(0);
+    }
+
+    @Test
+    void saveShouldNotWriteToSecondaryEvenWhenPrimaryCompleteExceptionally() throws Exception {
+        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
+        assertThat(joiningBlobStore.save(BLOB_CONTENT))
+            .isCompletedExceptionally();
+
+        assertThat(SECONDARY_BLOB_STORE.size())
+            .isEqualTo(0);
     }
 
     @Test
     void saveInputStreamShouldWriteToPrimary() throws Exception {
-        BlobId blobId = testee().save(new ByteArrayInputStream(BLOB_CONTENT)).get();
+        BlobStore joiningBlobStore = testee();
+        BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-        assertThat(swiftBlobStore.readBytes(blobId).get())
+        assertThat(PRIMARY_BLOB_STORE.readBytes(blobId).get())
             .isEqualTo(BLOB_CONTENT);
     }
 
     @Test
     void saveInputStreamShouldNotWriteToSecondary() throws Exception {
-        BlobId blobId = testee().save(new ByteArrayInputStream(BLOB_CONTENT)).get();
+        BlobStore joiningBlobStore = testee();
+        BlobId blobId = joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)).get();
 
-        assertThat(cassandraBlobStore.readBytes(blobId).get())
+        assertThat(SECONDARY_BLOB_STORE.readBytes(blobId).get())
             .isEmpty();
     }
 
     @Test
     void saveInputStreamShouldNotWriteToSecondaryEvenWhenPrimaryFails() throws Exception {
-        CassandraBlobsDAO cassandraBlobStoreSpider = spy(cassandraBlobStore);
-        JoiningBlobStore testee = new JoiningBlobStore(THROWING_BLOB_STORE, cassandraBlobStoreSpider);
-        assertThatThrownBy(() -> testee.save(new ByteArrayInputStream(BLOB_CONTENT)))
+        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
+        assertThatThrownBy(() -> joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT_CAUSES_THROWING_DIRECTLY)))
             .isInstanceOf(RuntimeException.class);
 
-        verifyNoMoreInteractions(cassandraBlobStoreSpider);
+        assertThat(SECONDARY_BLOB_STORE.size())
+            .isEqualTo(0);
+    }
+
+    @Test
+    void saveInputStreamShouldNotWriteToSecondaryEvenWhenPrimaryCompleteExceptionally() throws Exception {
+        JoiningBlobStore joiningBlobStore = new JoiningBlobStore(THROWING_BLOB_STORE, SECONDARY_BLOB_STORE);
+        assertThat(joiningBlobStore.save(new ByteArrayInputStream(BLOB_CONTENT)))
+            .isCompletedExceptionally();
+
+        assertThat(SECONDARY_BLOB_STORE.size())
+            .isEqualTo(0);
     }
 }

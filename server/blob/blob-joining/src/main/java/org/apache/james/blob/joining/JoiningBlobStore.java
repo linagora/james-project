@@ -22,16 +22,13 @@ package org.apache.james.blob.joining;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
-import org.apache.james.blob.cassandra.CassandraBlobsDAO;
-import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 
 public class JoiningBlobStore implements BlobStore {
 
@@ -39,16 +36,9 @@ public class JoiningBlobStore implements BlobStore {
     private final BlobStore secondaryBlobStore;
 
     @VisibleForTesting
-    @Inject
-    JoiningBlobStore(ObjectStorageBlobsDAO swiftBlobStore, CassandraBlobsDAO cassandraBlobStore) {
-        this.primaryBlobStore = swiftBlobStore;
-        this.secondaryBlobStore = cassandraBlobStore;
-    }
-
-    @VisibleForTesting
-    JoiningBlobStore(BlobStore primaryBlobStore, CassandraBlobsDAO cassandraBlobStore) {
+    JoiningBlobStore(BlobStore primaryBlobStore, BlobStore secondaryBlobStore) {
         this.primaryBlobStore = primaryBlobStore;
-        this.secondaryBlobStore = cassandraBlobStore;
+        this.secondaryBlobStore = secondaryBlobStore;
     }
 
     @Override
@@ -63,8 +53,8 @@ public class JoiningBlobStore implements BlobStore {
 
     @Override
     public CompletableFuture<byte[]> readBytes(BlobId blobId) {
-        return CompletableFuture
-            .supplyAsync(Throwing.supplier(() -> IOUtils.toByteArray(read(blobId))).sneakyThrow());
+        return primaryBlobStore.readBytes(blobId)
+            .thenCompose(primaryResultInBytes -> readFromSecondaryIfNeeded(blobId, primaryResultInBytes));
     }
 
     @Override
@@ -72,5 +62,16 @@ public class JoiningBlobStore implements BlobStore {
         return Optional.ofNullable(primaryBlobStore.read(blobId))
             .filter(Throwing.<InputStream>predicate(inputStream -> inputStream.available() > 0).sneakyThrow())
             .orElseGet(() -> secondaryBlobStore.read(blobId));
+    }
+
+    private CompletionStage<byte[]> readFromSecondaryIfNeeded(BlobId blobId, byte[] primaryResultInBytes) {
+        if (isNullOrEmpty(primaryResultInBytes)) {
+            return secondaryBlobStore.readBytes(blobId);
+        }
+        return CompletableFuture.completedFuture(primaryResultInBytes);
+    }
+
+    private boolean isNullOrEmpty(byte [] bytes) {
+        return bytes == null || bytes.length == 0;
     }
 }

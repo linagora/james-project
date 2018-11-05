@@ -29,6 +29,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 public class MemoryBlobStore implements BlobStore {
@@ -69,6 +70,16 @@ public class MemoryBlobStore implements BlobStore {
     @Override
     public InputStream read(BlobId blobId) {
         return new ByteArrayInputStream(retrieveStoredValue(blobId));
+    }
+
+    @VisibleForTesting
+    public void clear() {
+        blobs.clear();
+    }
+
+    @VisibleForTesting
+    public int size() {
+        return blobs.size();
     }
 
     private byte[] retrieveStoredValue(BlobId blobId) {
