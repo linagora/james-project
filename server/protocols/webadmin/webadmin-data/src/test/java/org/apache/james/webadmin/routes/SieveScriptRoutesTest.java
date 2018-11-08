@@ -42,7 +42,6 @@ import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
-import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +66,7 @@ public class SieveScriptRoutesTest {
 
         webAdminServer = WebAdminUtils.createWebAdminServer(
             new DefaultMetricFactory(),
-            new SieveScriptRoutes(sieveRepository, usersRepository, new JsonTransformer()));
+            new SieveScriptRoutes(sieveRepository, usersRepository));
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
 
