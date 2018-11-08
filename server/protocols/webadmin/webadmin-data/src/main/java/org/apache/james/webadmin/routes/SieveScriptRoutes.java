@@ -60,12 +60,12 @@ import spark.Service;
 public class SieveScriptRoutes implements Routes {
 
     public static final String ROOT_PATH = "/sieve";
-    public static final String SCRIPT = "scripts";
+    public static final String SCRIPTS = "scripts";
     private static final String USER_NAME = "userName";
     private static final String SCRIPT_NAME = "scriptName";
     private static final String ACTIVATE_PARAMS = "activate";
     private static final String USER_SCRIPT_PATH = Joiner.on(SEPARATOR)
-        .join(ROOT_PATH, ":" + USER_NAME, SCRIPT, ":" + SCRIPT_NAME);
+        .join(ROOT_PATH, ":" + USER_NAME, SCRIPTS, ":" + SCRIPT_NAME);
 
     private final SieveRepository sieveRepository;
     private final UsersRepository usersRepository;
@@ -88,7 +88,7 @@ public class SieveScriptRoutes implements Routes {
 
     @PUT
     @ApiOperation(value = "Upload a new Sieve Script")
-    @Path(value = ROOT_PATH + "/{" + USER_NAME + "}/" + SCRIPT + "/{" + SCRIPT_NAME + "}")
+    @Path(value = ROOT_PATH + "/{" + USER_NAME + "}/" + SCRIPTS + "/{" + SCRIPT_NAME + "}")
     @ApiResponses(value = {
         @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "OK"),
         @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Invalid username"),
@@ -102,22 +102,20 @@ public class SieveScriptRoutes implements Routes {
             required = true,
             paramType = "path",
             dataType = "String",
-            defaultValue = "None",
-            example = "/sieve/userNameA/scripts/scriptName1",
+            example = ROOT_PATH + "/userNameA/" + SCRIPTS + "/scriptName1",
             value = "Username"),
         @ApiImplicitParam(
             name = SCRIPT_NAME,
             required = true,
             paramType = "path",
             dataType = "String",
-            defaultValue = "None",
-            example = "/sieve/userNameA/scripts/scriptName1",
+            example = ROOT_PATH + "/userNameA/" + SCRIPTS + "/scriptName1",
             value = "Script name"),
         @ApiImplicitParam(
             required = false,
             paramType = "query parameter",
             dataType = "Boolean",
-            defaultValue = "None",
+            defaultValue = "False",
             example = "?activate=true",
             value = "If present, automatically activating the script.")
     })
