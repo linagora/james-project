@@ -41,7 +41,6 @@ import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.eclipse.jetty.http.HttpStatus;
 
-import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 
@@ -92,9 +91,10 @@ public class SieveScriptRoutes implements Routes {
     @Path(value = ROOT_PATH + "/{" + USER_NAME + "}/" + SCRIPT + "/{" + SCRIPT_NAME + "}")
     @ApiResponses(value = {
         @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "OK"),
-        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Invalid or non existent user"),
-        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Invalid Sieve script name"),
-        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Empty script is not accepted")
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Invalid username"),
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Invalid Sieve script name"),
+        @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Empty script is not accepted"),
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "User not exist")
     })
     @ApiImplicitParams({
         @ApiImplicitParam(
@@ -129,17 +129,23 @@ public class SieveScriptRoutes implements Routes {
         User user = extractUser(request);
         ScriptName script = extractScriptName(request);
         sieveRepository.putScript(user, script, extractSieveScriptFromRequest(request));
-        if (isActivate(request.queryParams(ACTIVATE_PARAMS))) {
+        if (isActivated(request.queryParams(ACTIVATE_PARAMS))) {
             sieveRepository.setActive(user, script);
         }
         return halt(HttpStatus.NO_CONTENT_204);
     }
 
     private User extractUser(Request request) throws UsersRepositoryException {
-        return Optional.ofNullable(request.params(USER_NAME))
-            .filter(Throwing.predicate(userName -> !Strings.isNullOrEmpty(userName) && usersRepository.contains(userName)))
-            .map(User::fromUsername)
-            .orElseThrow(() -> throw404withInvalidArgument("Invalid or non existent user"));
+        Optional<String> userName = Optional.ofNullable(request.params(USER_NAME));
+        if (!userName.isPresent() || Strings.isNullOrEmpty(userName.get().trim())) {
+            throw400withInvalidArgument("Invalid username");
+        }
+
+        if (!usersRepository.contains(userName.get())) {
+            throw404("User not exist");
+        }
+
+        return User.fromUsername(userName.get());
     }
 
     private ScriptName extractScriptName(Request request) {
@@ -147,26 +153,36 @@ public class SieveScriptRoutes implements Routes {
             .map(String::trim)
             .filter(scriptName -> !Strings.isNullOrEmpty(scriptName))
             .map(ScriptName::new)
-            .orElseThrow(() -> throw404withInvalidArgument("Invalid Sieve script name"));
+            .orElseThrow(() -> throw400withInvalidArgument("Invalid Sieve script name"));
     }
 
     private ScriptContent extractSieveScriptFromRequest(Request request) {
-        return Optional.ofNullable(request.body())
-            .filter(script -> !Strings.isNullOrEmpty(script))
-            .map(ScriptContent::new)
-            .orElseThrow(() -> throw404withInvalidArgument("Empty script is not accepted"));
+        return new ScriptContent(request.body());
     }
 
-    private boolean isActivate(String activateParam) {
-        return Optional.ofNullable(activateParam)
+    private boolean isActivated(String activateParam) {
+        Optional<String> activated = Optional.ofNullable(activateParam);
+        if (!activated.isPresent()) {
+            return false;
+        }
+        return activated
+            .filter(value -> value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false"))
             .map(Boolean::parseBoolean)
-            .orElse(false);
+            .orElseThrow(() -> throw400withInvalidArgument("Invalid activate query parameter"));
     }
 
-    private HaltException throw404withInvalidArgument(String message) {
+    private HaltException throw400withInvalidArgument(String message) {
+        throw ErrorResponder.builder()
+            .statusCode(HttpStatus.BAD_REQUEST_400)
+            .type(ErrorResponder.ErrorType.INVALID_ARGUMENT)
+            .message(message)
+            .haltError();
+    }
+
+    private HaltException throw404(String message) {
         throw ErrorResponder.builder()
             .statusCode(HttpStatus.NOT_FOUND_404)
-            .type(ErrorResponder.ErrorType.INVALID_ARGUMENT)
+            .type(ErrorResponder.ErrorType.NOT_FOUND)
             .message(message)
             .haltError();
     }
