@@ -54,6 +54,7 @@ import io.restassured.RestAssured;
 public class SieveScriptRoutesTest {
 
     private WebAdminServer webAdminServer;
+
     @Mock
     SieveRepository sieveRepository;
 
@@ -106,7 +107,7 @@ public class SieveScriptRoutesTest {
             .extract()
             .body().asString();
 
-        assertThatJson(errorBody).isEqualTo(body);
+        assertThatJson(body).isEqualTo(errorBody);
     }
 
     @Test
@@ -115,7 +116,7 @@ public class SieveScriptRoutesTest {
         String errorBody =
             "{\"statusCode\": 404," +
             " \"type\":\"InvalidArgument\"," +
-            " \"message\":\"Invalid put Sieve script for non existent user\"," +
+            " \"message\":\"Invalid or non existent user\"," +
             " \"details\":null" +
             "}";
         String body = given()
@@ -128,7 +129,29 @@ public class SieveScriptRoutesTest {
             .extract()
             .body().asString();
 
-        assertThatJson(errorBody).isEqualTo(body);
+        assertThatJson(body).isEqualTo(errorBody);
+    }
+
+    @Test
+    public void defineAddActiveSieveScriptReturnNotFoundWhenScriptIsNotSet() throws UsersRepositoryException {
+        when(usersRepository.contains("userA")).thenReturn(true);
+        String errorBody =
+            "{\"statusCode\": 404," +
+            " \"type\":\"InvalidArgument\"," +
+            " \"message\":\"Empty script is not accepted\"," +
+            " \"details\":null" +
+            "}";
+        String body = given()
+            .pathParam("userName", "userA")
+            .pathParam("scriptName", "scriptA")
+        .when()
+            .put("sieve/{userName}/scripts/{scriptName}")
+        .then()
+            .statusCode(HttpStatus.NOT_FOUND_404)
+            .extract()
+            .body().asString();
+
+        assertThatJson(body).isEqualTo(errorBody);
     }
 
     @Test

@@ -20,6 +20,7 @@
 package org.apache.james.webadmin.routes;
 
 import static org.apache.james.webadmin.Constants.SEPARATOR;
+import static spark.Spark.halt;
 
 import java.util.Optional;
 
@@ -36,7 +37,6 @@ import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
-import org.apache.james.webadmin.Constants;
 import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.apache.james.webadmin.utils.JsonTransformer;
@@ -44,7 +44,6 @@ import org.eclipse.jetty.http.HttpStatus;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 import io.swagger.annotations.Api;
@@ -59,6 +58,7 @@ import spark.Response;
 import spark.Service;
 
 @Api(tags = "SieveScript")
+@Path(value = "/sieve")
 public class SieveScriptRoutes implements Routes {
 
     public static final String ROOT_PATH = "/sieve";
@@ -95,10 +95,27 @@ public class SieveScriptRoutes implements Routes {
     @Path(value = ROOT_PATH + "/{" + USER_NAME + "}/" + SCRIPT + "/{" + SCRIPT_NAME + "}")
     @ApiResponses(value = {
         @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "OK"),
-        @ApiResponse(code = HttpStatus.NOT_FOUND_404,
-            message = "Invalid put Sieve script for non existent user")
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Invalid or non existent user"),
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Invalid Sieve script name"),
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "Empty script is not accepted")
     })
     @ApiImplicitParams({
+        @ApiImplicitParam(
+            name = USER_NAME,
+            required = true,
+            paramType = "path",
+            dataType = "String",
+            defaultValue = "None",
+            example = "/sieve/userNameA/scripts/scriptName1",
+            value = "Username"),
+        @ApiImplicitParam(
+            name = SCRIPT_NAME,
+            required = true,
+            paramType = "path",
+            dataType = "String",
+            defaultValue = "None",
+            example = "/sieve/userNameA/scripts/scriptName1",
+            value = "Script name"),
         @ApiImplicitParam(
             required = false,
             paramType = "query parameter",
@@ -108,29 +125,28 @@ public class SieveScriptRoutes implements Routes {
             value = "If present, automatically activating the script.")
     })
     public void defineAddActiveSieveScript(Service service) {
-        service.put(USER_SCRIPT_PATH, this::addActiveSieveScript, jsonTransformer);
+        service.put(USER_SCRIPT_PATH, this::addActiveSieveScript);
     }
 
-    private Object addActiveSieveScript(Request request, Response response) throws UsersRepositoryException, QuotaExceededException, StorageException, ScriptNotFoundException {
+    private HaltException addActiveSieveScript(Request request, Response response) throws UsersRepositoryException, QuotaExceededException, StorageException, ScriptNotFoundException {
         User user = extractUser(request);
         ScriptName script = extractScriptName(request);
         sieveRepository.putScript(user, script, extractSieveScriptFromRequest(request));
         if (isActivate(request.queryParams(ACTIVATE_PARAMS))) {
             sieveRepository.setActive(user, script);
         }
-        response.status(HttpStatus.NO_CONTENT_204);
-        return Constants.EMPTY_BODY;
+        return halt(HttpStatus.NO_CONTENT_204);
     }
 
     private User extractUser(Request request) throws UsersRepositoryException {
-        return Optional.ofNullable(request.params(":" + USER_NAME))
+        return Optional.ofNullable(request.params(USER_NAME))
             .filter(Throwing.predicate(userName -> !Strings.isNullOrEmpty(userName) && usersRepository.contains(userName)))
             .map(User::fromUsername)
-            .orElseThrow(() -> throw404withInvalidArgument("Invalid put Sieve script for non existent user"));
+            .orElseThrow(() -> throw404withInvalidArgument("Invalid or non existent user"));
     }
 
     private ScriptName extractScriptName(Request request) {
-        return Optional.ofNullable(request.params(":" + SCRIPT_NAME))
+        return Optional.ofNullable(request.params(SCRIPT_NAME))
             .map(String::trim)
             .filter(scriptName -> !Strings.isNullOrEmpty(scriptName))
             .map(ScriptName::new)
@@ -138,9 +154,10 @@ public class SieveScriptRoutes implements Routes {
     }
 
     private ScriptContent extractSieveScriptFromRequest(Request request) {
-        String script = request.body();
-        Preconditions.checkNotNull(script);
-        return new ScriptContent(script);
+        return Optional.ofNullable(request.body())
+            .filter(script -> !Strings.isNullOrEmpty(script))
+            .map(ScriptContent::new)
+            .orElseThrow(() -> throw404withInvalidArgument("Empty script is not accepted"));
     }
 
     private boolean isActivate(String activateParam) {
