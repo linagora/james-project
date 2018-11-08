@@ -39,7 +39,6 @@ import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.utils.ErrorResponder;
-import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 
 import com.github.fge.lambdas.Throwing;
@@ -71,13 +70,11 @@ public class SieveScriptRoutes implements Routes {
 
     private final SieveRepository sieveRepository;
     private final UsersRepository usersRepository;
-    private final JsonTransformer jsonTransformer;
 
     @Inject
-    public SieveScriptRoutes(SieveRepository sieveRepository, UsersRepository usersRepository, JsonTransformer jsonTransformer) {
+    public SieveScriptRoutes(SieveRepository sieveRepository, UsersRepository usersRepository) {
         this.sieveRepository = sieveRepository;
         this.usersRepository = usersRepository;
-        this.jsonTransformer = jsonTransformer;
     }
 
     @Override
