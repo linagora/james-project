@@ -159,12 +159,19 @@ public class SieveScriptRoutes implements Routes {
     }
 
     private boolean isActivated(String activateParam) {
-        return Optional.of(Optional.ofNullable(activateParam)
-                .map(String::trim)
-                .orElse("false"))
-            .filter(value -> value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false"))
-            .map(Boolean::parseBoolean)
-            .orElseThrow(() -> throw400withInvalidArgument("Invalid activate query parameter"));
+        return Optional.ofNullable(activateParam)
+            .map(String::trim)
+            .map(this::parseActivateParam)
+            .orElse(false);
+    }
+
+    private boolean parseActivateParam(String activateParam) {
+        if (activateParam.equalsIgnoreCase(Boolean.TRUE.toString())
+            || activateParam.equalsIgnoreCase(Boolean.FALSE.toString())) {
+            return Boolean.parseBoolean(activateParam);
+        }
+
+        throw throw400withInvalidArgument("Invalid activate query parameter");
     }
 
     private HaltException throw400withInvalidArgument(String message) {
