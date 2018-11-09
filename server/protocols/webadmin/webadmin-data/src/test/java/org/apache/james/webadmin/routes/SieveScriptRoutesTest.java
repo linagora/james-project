@@ -28,17 +28,16 @@ import static org.hamcrest.Matchers.equalTo;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.core.User;
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.junit.TemporaryFolderExtension;
 import org.apache.james.metrics.logger.DefaultMetricFactory;
 import org.apache.james.sieverepository.api.ScriptContent;
 import org.apache.james.sieverepository.api.ScriptName;
@@ -55,26 +54,25 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.restassured.RestAssured;
 
+@ExtendWith(TemporaryFolderExtension.class)
 public class SieveScriptRoutesTest {
 
-    private static final String SIEVE_ROOT = FileSystem.FILE_PROTOCOL + "sieve";
-
     private FileSystem fileSystem;
-
     private WebAdminServer webAdminServer;
     private SieveRepository sieveRepository;
     private UsersRepository usersRepository;
     private String sieveContent;
 
     @BeforeEach
-    public void setUp() throws ConfigurationException, IOException, UsersRepositoryException {
+    public void setUp(TemporaryFolderExtension.TemporaryFolder temporaryFolder) throws ConfigurationException, IOException, UsersRepositoryException {
         this.fileSystem = new FileSystem() {
             @Override
-            public File getBasedir() throws FileNotFoundException {
-                return new File(System.getProperty("java.io.tmpdir"));
+            public File getBasedir() {
+                return temporaryFolder.getTempDir();
             }
 
             @Override
@@ -83,7 +81,7 @@ public class SieveScriptRoutesTest {
             }
 
             @Override
-            public File getFile(String fileURL) throws FileNotFoundException {
+            public File getFile(String fileURL) {
                 return new File(getBasedir(), fileURL.substring(FileSystem.FILE_PROTOCOL.length()));
             }
         };
@@ -101,22 +99,18 @@ public class SieveScriptRoutesTest {
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
 
-        RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminServer)
+        RestAssured.requestSpecification = WebAdminUtils
+            .buildRequestSpecification(webAdminServer)
             .build();
     }
 
     @AfterEach
-    public void tearDown() throws IOException {
-        File root = fileSystem.getFile(SIEVE_ROOT);
-        // Remove files from the previous test, if any
-        if (root.exists()) {
-            FileUtils.forceDelete(root);
-        }
+    public void tearDown() {
         webAdminServer.destroy();
     }
 
     @Test
-    public void defineAddActiveSieveScriptReturnNotFoundWhenUserNotExisted() throws IOException {
+    public void defineAddActiveSieveScriptShouldReturnNotFoundWhenUserNotExisted() throws IOException {
         given()
             .pathParam("userName", "unknown")
             .pathParam("scriptName", "scriptA")
@@ -128,7 +122,7 @@ public class SieveScriptRoutesTest {
     }
 
     @Test
-    public void defineAddActiveSieveScriptReturnNotFoundWhenScriptNameIsWhiteSpace() throws IOException {
+    public void defineAddActiveSieveScriptShouldReturnNotFoundWhenScriptNameIsWhiteSpace() throws IOException {
         String errorBody =
             "{\"statusCode\": 400," +
             " \"type\":\"InvalidArgument\"," +
@@ -150,7 +144,7 @@ public class SieveScriptRoutesTest {
     }
 
     @Test
-    public void defineAddActiveSieveScriptReturnNotFoundWhenUserNameWhiteSpace() {
+    public void defineAddActiveSieveScriptShouldReturnNotFoundWhenUserNameWhiteSpace() {
         String errorBody =
             "{\"statusCode\": 400," +
             " \"type\":\"InvalidArgument\"," +
@@ -172,7 +166,7 @@ public class SieveScriptRoutesTest {
     }
 
     @Test
-    public void defineAddActiveSieveScriptReturnInternalErrorWhenScriptIsNotSet() {
+    public void defineAddActiveSieveScriptShouldReturnInternalErrorWhenScriptIsNotSet() {
         given()
             .pathParam("userName", "userA")
             .pathParam("scriptName", "scriptA")
@@ -183,7 +177,7 @@ public class SieveScriptRoutesTest {
     }
 
     @Test
-    public void defineAddActiveSieveScriptReturnSucceededWhenScriptIsWhiteSpace() throws ScriptNotFoundException, StorageException, IOException {
+    public void defineAddActiveSieveScriptShouldReturnSucceededWhenScriptIsWhiteSpace() throws ScriptNotFoundException, StorageException, IOException {
         given()
             .pathParam("userName", "userA")
             .pathParam("scriptName", "scriptA")
@@ -232,7 +226,7 @@ public class SieveScriptRoutesTest {
     }
 
     @Test
-    public void defineAddActiveSieveScriptInvokeSieveRepositoryOneWhenAddActivateParamFalse() throws Exception {
+    public void defineAddActiveSieveScriptGetActiveShouldThrowsExceptionWhenAddActivateParamFalse() {
         given()
             .pathParam("userName", "userA")
             .pathParam("scriptName", "scriptA")
@@ -248,7 +242,7 @@ public class SieveScriptRoutesTest {
     }
 
     @Test
-    public void defineAddActiveSieveScriptInvokeSieveRepositoryOneWhenAddActivateParamWithNotBooleanValue() throws Exception {
+    public void defineAddActiveSieveScriptInvokeShouldReturnBadRequestWhenAddActivateParamWithNotBooleanValue() {
         given()
             .pathParam("userName", "userA")
             .pathParam("scriptName", "scriptA")

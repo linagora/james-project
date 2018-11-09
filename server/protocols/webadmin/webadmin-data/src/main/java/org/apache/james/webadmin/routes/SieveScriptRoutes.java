@@ -41,8 +41,8 @@ import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.eclipse.jetty.http.HttpStatus;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -54,6 +54,7 @@ import spark.HaltException;
 import spark.Request;
 import spark.Response;
 import spark.Service;
+import spark.utils.StringUtils;
 
 @Api(tags = "SieveScript")
 @Path(value = "/sieve")
@@ -94,7 +95,7 @@ public class SieveScriptRoutes implements Routes {
         @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Invalid username"),
         @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Invalid Sieve script name"),
         @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Empty script is not accepted"),
-        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "User not exist")
+        @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "User not found")
     })
     @ApiImplicitParams({
         @ApiImplicitParam(
@@ -126,30 +127,29 @@ public class SieveScriptRoutes implements Routes {
     private HaltException addActiveSieveScript(Request request, Response response) throws UsersRepositoryException, QuotaExceededException, StorageException, ScriptNotFoundException {
         User user = extractUser(request);
         ScriptName script = extractScriptName(request);
+        boolean isActivated = isActivated(request.queryParams(ACTIVATE_PARAMS));
         sieveRepository.putScript(user, script, extractSieveScriptFromRequest(request));
-        if (isActivated(request.queryParams(ACTIVATE_PARAMS))) {
+        if (isActivated) {
             sieveRepository.setActive(user, script);
         }
         return halt(HttpStatus.NO_CONTENT_204);
     }
 
-    private User extractUser(Request request) throws UsersRepositoryException {
+    private User extractUser(Request request) {
         Optional<String> userName = Optional.ofNullable(request.params(USER_NAME));
-        if (!userName.isPresent() || Strings.isNullOrEmpty(userName.get().trim())) {
-            throw400withInvalidArgument("Invalid username");
-        }
-
-        if (!usersRepository.contains(userName.get())) {
-            throw404("User not exist");
-        }
-
-        return User.fromUsername(userName.get());
+        userName.map(String::trim)
+            .filter(StringUtils::isNotEmpty)
+            .orElseThrow(() -> throw400withInvalidArgument("Invalid username"));
+        return userName.map(String::trim)
+            .filter(Throwing.predicate(name -> usersRepository.contains(name)))
+            .map(User::fromUsername)
+            .orElseThrow(() -> throw404("User not found"));
     }
 
     private ScriptName extractScriptName(Request request) {
         return Optional.ofNullable(request.params(SCRIPT_NAME))
             .map(String::trim)
-            .filter(scriptName -> !Strings.isNullOrEmpty(scriptName))
+            .filter(StringUtils::isNotEmpty)
             .map(ScriptName::new)
             .orElseThrow(() -> throw400withInvalidArgument("Invalid Sieve script name"));
     }
@@ -159,11 +159,9 @@ public class SieveScriptRoutes implements Routes {
     }
 
     private boolean isActivated(String activateParam) {
-        Optional<String> activated = Optional.ofNullable(activateParam);
-        if (!activated.isPresent()) {
-            return false;
-        }
-        return activated
+        return Optional.of(Optional.ofNullable(activateParam)
+                .map(String::trim)
+                .orElse("false"))
             .filter(value -> value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false"))
             .map(Boolean::parseBoolean)
             .orElseThrow(() -> throw400withInvalidArgument("Invalid activate query parameter"));
