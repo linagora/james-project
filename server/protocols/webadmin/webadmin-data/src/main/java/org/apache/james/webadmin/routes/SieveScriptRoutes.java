@@ -41,7 +41,6 @@ import org.apache.james.webadmin.Routes;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.eclipse.jetty.http.HttpStatus;
 
-import com.github.fge.lambdas.Throwing;
 import com.google.common.base.Joiner;
 
 import io.swagger.annotations.Api;
@@ -135,15 +134,16 @@ public class SieveScriptRoutes implements Routes {
         return halt(HttpStatus.NO_CONTENT_204);
     }
 
-    private User extractUser(Request request) {
-        Optional<String> userName = Optional.ofNullable(request.params(USER_NAME));
-        userName.map(String::trim)
+    private User extractUser(Request request) throws UsersRepositoryException {
+        String userName = Optional.ofNullable(request.params(USER_NAME))
+            .map(String::trim)
             .filter(StringUtils::isNotEmpty)
             .orElseThrow(() -> throw400withInvalidArgument("Invalid username"));
-        return userName.map(String::trim)
-            .filter(Throwing.predicate(name -> usersRepository.contains(name)))
-            .map(User::fromUsername)
-            .orElseThrow(() -> throw404("User not found"));
+
+        if (!usersRepository.contains(userName)) {
+            throw404("User not found");
+        }
+        return User.fromUsername(userName);
     }
 
     private ScriptName extractScriptName(Request request) {
