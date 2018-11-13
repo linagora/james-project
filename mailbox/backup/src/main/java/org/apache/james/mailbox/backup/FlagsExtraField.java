@@ -46,7 +46,7 @@ public class FlagsExtraField extends StringExtraField {
     }
 
     public FlagsExtraField(Flags flags) {
-        super (serializeFlags(flags));
+        super(serializeFlags(flags));
     }
 
     @Override
@@ -54,7 +54,7 @@ public class FlagsExtraField extends StringExtraField {
         return ID;
     }
 
-    private static String systemFlagToString(Flags.Flag flag) {
+    private static String systemFlagToString(Flags.Flag flag) throws RuntimeException {
         if (flag == Flags.Flag.ANSWERED) {
             return "\\ANSWERED";
         } else if (flag == Flags.Flag.DELETED) {
@@ -67,8 +67,7 @@ public class FlagsExtraField extends StringExtraField {
             return "\\RECENT";
         } else if (flag == Flags.Flag.SEEN) {
             return "\\SEEN";
-        } else {
-            return "";
         }
+        throw new RuntimeException("Unknown system flag");
     }
 }

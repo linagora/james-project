@@ -174,20 +174,18 @@ public class FlagExtraFieldTest {
             Flags flags = new Flags();
             flags.add(Flags.Flag.SEEN);
             FlagsExtraField testee = new FlagsExtraField(flags);
-            byte[] expectedData = new byte[]{92, 83, 69, 69, 78};
 
             assertThat(testee.getLocalFileDataData())
-                .isEqualTo(expectedData);
+                .isEqualTo("\\SEEN".getBytes(Charsets.UTF_8));
         }
 
         @Test
         void getLocalFileDataDataShouldReturnByteArrayOfUserFlagSet() {
             Flags flags = new Flags("myFlags");
             FlagsExtraField testee = new FlagsExtraField(flags);
-            byte[] expectedData = new byte[]{109, 121, 70, 108, 97, 103, 115};
 
             assertThat(testee.getLocalFileDataData())
-                .isEqualTo(expectedData);
+                .isEqualTo("myFlags".getBytes(Charsets.UTF_8));
         }
 
         @Test
@@ -196,11 +194,9 @@ public class FlagExtraFieldTest {
             flags.add(Flags.Flag.ANSWERED);
             flags.add(Flags.Flag.SEEN);
             FlagsExtraField testee = new FlagsExtraField(flags);
-            byte[] expectedData = new byte[]{92, 65, 78, 83, 87, 69, 82, 69, 68, 44, 92,
-                83, 69, 69, 78, 44, 109, 121, 70, 108, 97, 103, 115};
 
             assertThat(testee.getLocalFileDataData())
-                .isEqualTo(expectedData);
+                .isEqualTo("\\ANSWERED,\\SEEN,myFlags".getBytes(Charsets.UTF_8));
         }
     }
 
@@ -220,20 +216,18 @@ public class FlagExtraFieldTest {
             Flags flags = new Flags();
             flags.add(Flags.Flag.SEEN);
             FlagsExtraField testee = new FlagsExtraField(flags);
-            byte[] expectedData = new byte[]{92, 83, 69, 69, 78};
 
             assertThat(testee.getCentralDirectoryData())
-                .isEqualTo(expectedData);
+                .isEqualTo("\\SEEN".getBytes(Charsets.UTF_8));
         }
 
         @Test
         void getCentralDirectoryDataShouldReturnByteArrayOfUserFlagSet() {
             Flags flags = new Flags("myFlags");
             FlagsExtraField testee = new FlagsExtraField(flags);
-            byte[] expectedData = new byte[]{109, 121, 70, 108, 97, 103, 115};
 
             assertThat(testee.getCentralDirectoryData())
-                .isEqualTo(expectedData);
+                .isEqualTo("myFlags".getBytes(Charsets.UTF_8));
         }
 
         @Test
@@ -242,11 +236,9 @@ public class FlagExtraFieldTest {
             flags.add(Flags.Flag.ANSWERED);
             flags.add(Flags.Flag.SEEN);
             FlagsExtraField testee = new FlagsExtraField(flags);
-            byte[] expectedData = new byte[]{92, 65, 78, 83, 87, 69, 82, 69, 68, 44, 92,
-                83, 69, 69, 78, 44, 109, 121, 70, 108, 97, 103, 115};
 
             assertThat(testee.getCentralDirectoryData())
-                .isEqualTo(expectedData);
+                .isEqualTo("\\ANSWERED,\\SEEN,myFlags".getBytes(Charsets.UTF_8));
         }
     }
 
