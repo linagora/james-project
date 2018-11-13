@@ -30,6 +30,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
+import org.apache.james.util.SerializationUtil;
 
 import com.github.fge.lambdas.Throwing;
 
@@ -41,6 +42,7 @@ public class Zipper implements Backup {
         ExtraFieldUtils.register(MailboxIdExtraField.class);
         ExtraFieldUtils.register(InternalDateExtraField.class);
         ExtraFieldUtils.register(UidValidityExtraField.class);
+        ExtraFieldUtils.register(FlagsExtraField.class);
     }
 
     @Override
@@ -84,6 +86,7 @@ public class Zipper implements Backup {
         archiveEntry.addExtraField(new MessageIdExtraField(message.getMessageId().serialize()));
         archiveEntry.addExtraField(new MailboxIdExtraField(message.getMailboxId().serialize()));
         archiveEntry.addExtraField(new InternalDateExtraField(message.getInternalDate()));
+        archiveEntry.addExtraField(new FlagsExtraField(message.createFlags()));
 
         archiveOutputStream.putArchiveEntry(archiveEntry);
         IOUtils.copy(message.getFullContent(), archiveOutputStream);
