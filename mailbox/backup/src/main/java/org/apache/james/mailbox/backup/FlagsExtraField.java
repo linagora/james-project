@@ -37,7 +37,7 @@ public class FlagsExtraField extends StringExtraField {
                 StreamUtils.ofNullable(flags.getSystemFlags())
                     .map(FlagsExtraField::systemFlagToString),
                 StreamUtils.ofNullable(flags.getUserFlags()))
-            .collect(Collectors.joining(","));
+            .collect(Collectors.joining("%"));
     }
 
     public FlagsExtraField() {
