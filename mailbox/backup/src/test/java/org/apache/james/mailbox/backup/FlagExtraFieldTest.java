@@ -247,26 +247,26 @@ public class FlagExtraFieldTest {
 
         @Test
         void parseFromLocalFileDataShouldParseByteData() {
-            byte[] buffer = new byte[]{92, 65, 78, 83, 87, 69, 82, 69, 68, 44, 92,
-                            83, 69, 69, 78, 44, 109, 121, 70, 108, 97, 103, 115};
+            String bufferContent = "\\ANSWERED,\\SEEN,myFlags";
             Flags flags = new Flags("myFlags");
             flags.add(Flags.Flag.ANSWERED);
             flags.add(Flags.Flag.SEEN);
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
-            testee.parseFromLocalFileData(buffer, 0, 23);
-            assertThat(testee.getValue()).contains("\\ANSWERED,\\SEEN,myFlags");
+            testee.parseFromLocalFileData(bufferContent
+                .getBytes(Charsets.UTF_8), 0, 23);
+            assertThat(testee.getValue()).contains(bufferContent);
         }
 
         @Test
         void parseFromLocalFileDataShouldParseByteDataWhenOffsetSet() {
-            byte[] buffer = new byte[]{92, 65, 78, 83, 87, 69, 82, 69, 68, 44, 92,
-                            83, 69, 69, 78, 44, 109, 121, 70, 108, 97, 103, 115};
+            String bufferContent = "\\ANSWERED,\\SEEN,myFlags";
             Flags flags = new Flags("myFlags");
             flags.add(Flags.Flag.SEEN);
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
-            testee.parseFromLocalFileData(buffer, 10, 13);
+            testee.parseFromLocalFileData(bufferContent
+                .getBytes(Charsets.UTF_8), 10, 13);
             assertThat(testee.getValue()).contains("\\SEEN,myFlags");
         }
     }
@@ -276,26 +276,26 @@ public class FlagExtraFieldTest {
 
         @Test
         void parseFromCentralDirectoryDataShouldParseByteData() {
-            byte[] buffer = new byte[]{92, 65, 78, 83, 87, 69, 82, 69, 68, 44, 92,
-                            83, 69, 69, 78, 44, 109, 121, 70, 108, 97, 103, 115};
+            String bufferContent = "\\ANSWERED,\\SEEN,myFlags";
             Flags flags = new Flags("myFlags");
             flags.add(Flags.Flag.ANSWERED);
             flags.add(Flags.Flag.SEEN);
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
-            testee.parseFromCentralDirectoryData(buffer, 0, 23);
-            assertThat(testee.getValue()).contains("\\ANSWERED,\\SEEN,myFlags");
+            testee.parseFromCentralDirectoryData(bufferContent
+                .getBytes(Charsets.UTF_8), 0, 23);
+            assertThat(testee.getValue()).contains(bufferContent);
         }
 
         @Test
         void parseFromCentralDirectoryDataShouldParseByteDataWhenOffsetSet() {
-            byte[] buffer = new byte[]{92, 65, 78, 83, 87, 69, 82, 69, 68, 44, 92,
-                            83, 69, 69, 78, 44, 109, 121, 70, 108, 97, 103, 115};
+            String bufferContent = "\\ANSWERED,\\SEEN,myFlags";
             Flags flags = new Flags("myFlags");
             flags.add(Flags.Flag.SEEN);
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
-            testee.parseFromCentralDirectoryData(buffer, 10, 13);
+            testee.parseFromCentralDirectoryData(bufferContent
+                .getBytes(Charsets.UTF_8), 10, 13);
             assertThat(testee.getValue()).contains("\\SEEN,myFlags");
         }
     }
