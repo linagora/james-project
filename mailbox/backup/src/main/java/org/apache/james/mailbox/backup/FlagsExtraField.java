@@ -26,19 +26,21 @@ import java.util.stream.Stream;
 import javax.mail.Flags;
 
 import org.apache.commons.compress.archivers.zip.ZipShort;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.james.util.StreamUtils;
 
 public class FlagsExtraField extends StringExtraField {
 
     public static final ZipShort ID = new ZipShort(0x7061); // "ap" in little-endian
 
-    public static Optional<String> serializeFlags(Flags flags) {
+    private static Optional<String> serializeFlags(Flags flags) {
         return Optional.of(
             Stream.concat(
                 StreamUtils.ofNullable(flags.getSystemFlags())
                     .map(FlagsExtraField::systemFlagToString),
                 StreamUtils.ofNullable(flags.getUserFlags()))
-            .collect(Collectors.joining(",")));
+                .collect(Collectors.joining(",")))
+            .filter(StringUtils::isNotEmpty);
     }
 
     public FlagsExtraField() {

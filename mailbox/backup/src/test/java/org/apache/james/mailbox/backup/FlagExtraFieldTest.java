@@ -70,11 +70,11 @@ public class FlagExtraFieldTest {
         }
 
         @Test
-        void getLocalFileDataLengthShouldReturnIntegerSize() {
+        void getLocalFileDataLengthShouldThrowWhenNoFlag() {
             FlagsExtraField testee = new FlagsExtraField(new Flags());
 
-            assertThat(testee.getLocalFileDataLength().getValue())
-                .isEqualTo(0);
+            assertThatThrownBy(() -> testee.getLocalFileDataLength().getValue())
+                .isInstanceOf(RuntimeException.class);
         }
 
         @Test
@@ -119,11 +119,11 @@ public class FlagExtraFieldTest {
         }
 
         @Test
-        void getCentralDirectoryLengthShouldReturnIntegerSize() {
+        void getCentralDirectoryLengthShouldThrowWhenNoFlag() {
             FlagsExtraField testee = new FlagsExtraField(new Flags());
 
-            assertThat(testee.getCentralDirectoryLength().getValue())
-                .isEqualTo(0);
+            assertThatThrownBy(() -> testee.getCentralDirectoryLength().getValue())
+                .isInstanceOf(RuntimeException.class);
         }
 
         @Test
