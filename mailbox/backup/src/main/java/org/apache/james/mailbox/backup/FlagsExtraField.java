@@ -26,21 +26,18 @@ import java.util.stream.Stream;
 import javax.mail.Flags;
 
 import org.apache.commons.compress.archivers.zip.ZipShort;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.james.util.StreamUtils;
 
 public class FlagsExtraField extends StringExtraField {
 
-    public static final ZipShort ID = new ZipShort(0x7061); // "ap" in little-endian
+    public static final ZipShort ID_AP = new ZipShort(0x7061); // "ap" in little-endian
 
-    private static Optional<String> serializeFlags(Flags flags) {
-        return Optional.of(
-            Stream.concat(
+    private static String serializeFlags(Flags flags) {
+        return Stream.concat(
                 StreamUtils.ofNullable(flags.getSystemFlags())
                     .map(FlagsExtraField::systemFlagToString),
                 StreamUtils.ofNullable(flags.getUserFlags()))
-                .collect(Collectors.joining(",")))
-            .filter(StringUtils::isNotEmpty);
+            .collect(Collectors.joining(","));
     }
 
     public FlagsExtraField() {
@@ -48,12 +45,12 @@ public class FlagsExtraField extends StringExtraField {
     }
 
     public FlagsExtraField(Flags flags) {
-        super(serializeFlags(flags));
+        super(Optional.of(serializeFlags(flags)));
     }
 
     @Override
     public ZipShort getHeaderId() {
-        return ID;
+        return ID_AP;
     }
 
     private static String systemFlagToString(Flags.Flag flag) throws RuntimeException {
