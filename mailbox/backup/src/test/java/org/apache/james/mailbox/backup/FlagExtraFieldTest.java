@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 
 import javax.mail.Flags;
 
@@ -176,7 +177,7 @@ public class FlagExtraFieldTest {
             FlagsExtraField testee = new FlagsExtraField(flags);
 
             assertThat(testee.getLocalFileDataData())
-                .isEqualTo("\\SEEN".getBytes(Charsets.UTF_8));
+                .isEqualTo("\\SEEN".getBytes(StandardCharsets.UTF_8));
         }
 
         @Test
@@ -185,7 +186,7 @@ public class FlagExtraFieldTest {
             FlagsExtraField testee = new FlagsExtraField(flags);
 
             assertThat(testee.getLocalFileDataData())
-                .isEqualTo("myFlags".getBytes(Charsets.UTF_8));
+                .isEqualTo("myFlags".getBytes(StandardCharsets.UTF_8));
         }
 
         @Test
@@ -196,7 +197,7 @@ public class FlagExtraFieldTest {
             FlagsExtraField testee = new FlagsExtraField(flags);
 
             assertThat(testee.getLocalFileDataData())
-                .isEqualTo("\\ANSWERED%\\SEEN%myFlags".getBytes(Charsets.UTF_8));
+                .isEqualTo("\\ANSWERED%\\SEEN%myFlags".getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -218,7 +219,7 @@ public class FlagExtraFieldTest {
             FlagsExtraField testee = new FlagsExtraField(flags);
 
             assertThat(testee.getCentralDirectoryData())
-                .isEqualTo("\\SEEN".getBytes(Charsets.UTF_8));
+                .isEqualTo("\\SEEN".getBytes(StandardCharsets.UTF_8));
         }
 
         @Test
@@ -227,7 +228,7 @@ public class FlagExtraFieldTest {
             FlagsExtraField testee = new FlagsExtraField(flags);
 
             assertThat(testee.getCentralDirectoryData())
-                .isEqualTo("myFlags".getBytes(Charsets.UTF_8));
+                .isEqualTo("myFlags".getBytes(StandardCharsets.UTF_8));
         }
 
         @Test
@@ -238,7 +239,7 @@ public class FlagExtraFieldTest {
             FlagsExtraField testee = new FlagsExtraField(flags);
 
             assertThat(testee.getCentralDirectoryData())
-                .isEqualTo("\\ANSWERED%\\SEEN%myFlags".getBytes(Charsets.UTF_8));
+                .isEqualTo("\\ANSWERED%\\SEEN%myFlags".getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -254,7 +255,7 @@ public class FlagExtraFieldTest {
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
             testee.parseFromLocalFileData(bufferContent
-                .getBytes(Charsets.UTF_8), 0, 23);
+                .getBytes(StandardCharsets.UTF_8), 0, 23);
             assertThat(testee.getValue()).contains(bufferContent);
         }
 
@@ -266,7 +267,7 @@ public class FlagExtraFieldTest {
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
             testee.parseFromLocalFileData(bufferContent
-                .getBytes(Charsets.UTF_8), 10, 13);
+                .getBytes(StandardCharsets.UTF_8), 10, 13);
             assertThat(testee.getValue()).contains("\\SEEN%myFlags");
         }
     }
@@ -283,7 +284,7 @@ public class FlagExtraFieldTest {
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
             testee.parseFromCentralDirectoryData(bufferContent
-                .getBytes(Charsets.UTF_8), 0, 23);
+                .getBytes(StandardCharsets.UTF_8), 0, 23);
             assertThat(testee.getValue()).contains(bufferContent);
         }
 
@@ -295,7 +296,7 @@ public class FlagExtraFieldTest {
 
             FlagsExtraField testee = new FlagsExtraField(new Flags());
             testee.parseFromCentralDirectoryData(bufferContent
-                .getBytes(Charsets.UTF_8), 10, 13);
+                .getBytes(StandardCharsets.UTF_8), 10, 13);
             assertThat(testee.getValue()).contains("\\SEEN%myFlags");
         }
     }
