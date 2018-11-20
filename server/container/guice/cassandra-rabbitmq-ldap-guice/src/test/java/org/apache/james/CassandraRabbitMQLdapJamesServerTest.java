@@ -19,6 +19,7 @@
 
 package org.apache.james;
 
+import static org.apache.james.JmapJamesServerContract.JAMES_SERVER_HOST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Duration.ONE_HUNDRED_MILLISECONDS;
 
@@ -37,54 +38,84 @@ import org.apache.james.utils.SpoolerProbe;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionFactory;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class CassandraRabbitMQLdapJamesServerTest implements JmapJamesServerContract {
+class CassandraRabbitMQLdapJamesServerTest {
     private static final int LIMIT_TO_10_MESSAGES = 10;
     private static final String JAMES_USER = "james-user";
     private static final String PASSWORD = "secret";
     private static Duration slowPacedPollInterval = ONE_HUNDRED_MILLISECONDS;
+
     private static ConditionFactory calmlyAwait = Awaitility
         .with().pollInterval(slowPacedPollInterval)
         .and().with().pollDelay(slowPacedPollInterval)
         .await();
-    private IMAPClient imapClient = new IMAPClient();
 
-    @RegisterExtension
-    IMAPMessageReader imapMessageReader = new IMAPMessageReader();
-    SMTPMessageSender messageSender = new SMTPMessageSender(Domain.LOCALHOST.asString());
+    interface MailsShouldBeWellReceived {
+        @RegisterExtension
+        IMAPMessageReader imapMessageReader = new IMAPMessageReader();
+        SMTPMessageSender messageSender = new SMTPMessageSender(Domain.LOCALHOST.asString());
 
-    @RegisterExtension
-    static JamesServerExtension testExtension = new JamesServerExtensionBuilder()
-        .extension(new EmbeddedElasticSearchExtension())
-        .extension(new CassandraExtension())
-        .extension(new RabbitMQExtension())
-        .extension(new LdapTestExtention())
-        .extension(new SwiftBlobStoreExtension())
-        .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
-            .combineWith(CassandraRabbitMQLdapJamesServerMain.MODULES)
-            .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))
-            .overrideWith(DOMAIN_LIST_CONFIGURATION_MODULE))
-        .build();
+        @Test
+        default void mailsShouldBeWellReceived(GuiceJamesServer server) throws Exception {
+            messageSender.connect(JAMES_SERVER_HOST, server.getProbe(SmtpGuiceProbe.class).getSmtpPort())
+                .sendMessage("bob@any.com", JAMES_USER + "@localhost");
 
-    @Test
-    void userFromLdapShouldLoginViaImapProtocol(GuiceJamesServer server) throws IOException {
-        imapClient.connect(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort());
+            calmlyAwait.until(() -> server.getProbe(SpoolerProbe.class).processingFinished());
 
-        assertThat(imapClient.login(JAMES_USER, PASSWORD)).isTrue();
+            imapMessageReader.connect(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort())
+                .login(JAMES_USER, PASSWORD)
+                .select("INBOX")
+                .awaitMessage(calmlyAwait);
+        }
     }
 
-    @Test
-    void mailsShouldBeWellReceivedBeforeFirstUserConnectionWithLdap(GuiceJamesServer server) throws Exception {
-        messageSender.connect(JAMES_SERVER_HOST, server.getProbe(SmtpGuiceProbe.class).getSmtpPort())
-            .sendMessage("bob@any.com", JAMES_USER + "@localhost");
+    interface UserFromLdapShouldLogin {
 
-        calmlyAwait.until(() -> server.getProbe(SpoolerProbe.class).processingFinished());
+        @Test
+        default void userFromLdapShouldLoginViaImapProtocol(GuiceJamesServer server) throws IOException {
+            IMAPClient imapClient = new IMAPClient();
+            imapClient.connect(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort());
 
-        imapMessageReader.connect(JAMES_SERVER_HOST, server.getProbe(ImapGuiceProbe.class).getImapPort())
-            .login(JAMES_USER, PASSWORD)
-            .select("INBOX")
-            .awaitMessage(calmlyAwait);
+            assertThat(imapClient.login(JAMES_USER, PASSWORD)).isTrue();
+        }
+    }
+
+    interface ContratSuite extends JmapJamesServerContract, MailsShouldBeWellReceived, UserFromLdapShouldLogin {}
+
+    @Nested
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+    class WithSwift implements ContratSuite {
+        @RegisterExtension
+        JamesServerExtension testExtension = new JamesServerExtensionBuilder()
+            .extension(new EmbeddedElasticSearchExtension())
+            .extension(new CassandraExtension())
+            .extension(new RabbitMQExtension())
+            .extension(new LdapTestExtention())
+            .extension(new SwiftBlobStoreExtension())
+            .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
+                .combineWith(CassandraRabbitMQLdapJamesServerMain.MODULES)
+                .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))
+                .overrideWith(JmapJamesServerContract.DOMAIN_LIST_CONFIGURATION_MODULE))
+            .build();
+    }
+
+    @Nested
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+    class WithoutSwift implements ContratSuite {
+        @RegisterExtension
+        JamesServerExtension testExtension = new JamesServerExtensionBuilder()
+            .extension(new EmbeddedElasticSearchExtension())
+            .extension(new CassandraExtension())
+            .extension(new RabbitMQExtension())
+            .extension(new LdapTestExtention())
+            .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
+                .combineWith(CassandraRabbitMQLdapJamesServerMain.MODULES)
+                .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))
+                .overrideWith(JmapJamesServerContract.DOMAIN_LIST_CONFIGURATION_MODULE))
+            .build();
     }
 }
