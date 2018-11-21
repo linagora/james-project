@@ -19,7 +19,6 @@
 
 package org.apache.james;
 
-import org.apache.james.user.ldap.DockerLdapRule;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.google.inject.Module;
