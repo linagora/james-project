@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-class CassandraRabbitMQLdapJamesServerTest {
+class CassandraRabbitMQLdapJmapJamesServerTest {
     private static final int LIMIT_TO_10_MESSAGES = 10;
     private static final String JAMES_USER = "james-user";
     private static final String PASSWORD = "secret";
