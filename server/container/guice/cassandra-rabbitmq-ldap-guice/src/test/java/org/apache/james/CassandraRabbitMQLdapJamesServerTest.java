@@ -30,6 +30,7 @@ import org.apache.james.core.Domain;
 import org.apache.james.modules.RabbitMQExtension;
 import org.apache.james.modules.SwiftBlobStoreExtension;
 import org.apache.james.modules.TestJMAPServerModule;
+import org.apache.james.modules.blobstore.BlobStoreChoosingConfiguration;
 import org.apache.james.modules.protocols.ImapGuiceProbe;
 import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.apache.james.utils.IMAPMessageReader;
@@ -84,11 +85,11 @@ class CassandraRabbitMQLdapJamesServerTest {
         }
     }
 
-    interface ContratSuite extends JmapJamesServerContract, MailsShouldBeWellReceived, UserFromLdapShouldLogin {}
+    interface ContractSuite extends JmapJamesServerContract, MailsShouldBeWellReceived, UserFromLdapShouldLogin {}
 
     @Nested
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    class WithSwift implements ContratSuite {
+    class WithSwift implements ContractSuite {
         @RegisterExtension
         JamesServerExtension testExtension = new JamesServerExtensionBuilder()
             .extension(new EmbeddedElasticSearchExtension())
@@ -98,6 +99,8 @@ class CassandraRabbitMQLdapJamesServerTest {
             .extension(new SwiftBlobStoreExtension())
             .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
                 .combineWith(CassandraRabbitMQLdapJamesServerMain.MODULES)
+                .overrideWith(binder -> binder.bind(BlobStoreChoosingConfiguration.class)
+                    .toInstance(BlobStoreChoosingConfiguration.objectStorage()))
                 .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))
                 .overrideWith(JmapJamesServerContract.DOMAIN_LIST_CONFIGURATION_MODULE))
             .build();
@@ -105,7 +108,7 @@ class CassandraRabbitMQLdapJamesServerTest {
 
     @Nested
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    class WithoutSwift implements ContratSuite {
+    class WithoutSwift implements ContractSuite {
         @RegisterExtension
         JamesServerExtension testExtension = new JamesServerExtensionBuilder()
             .extension(new EmbeddedElasticSearchExtension())
@@ -114,6 +117,8 @@ class CassandraRabbitMQLdapJamesServerTest {
             .extension(new LdapTestExtention())
             .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
                 .combineWith(CassandraRabbitMQLdapJamesServerMain.MODULES)
+                .overrideWith(binder -> binder.bind(BlobStoreChoosingConfiguration.class)
+                    .toInstance(BlobStoreChoosingConfiguration.cassandra()))
                 .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))
                 .overrideWith(JmapJamesServerContract.DOMAIN_LIST_CONFIGURATION_MODULE))
             .build();
