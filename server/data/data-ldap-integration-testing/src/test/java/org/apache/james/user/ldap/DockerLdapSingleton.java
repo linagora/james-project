@@ -20,8 +20,11 @@
 package org.apache.james.user.ldap;
 
 public class DockerLdapSingleton {
-    private static final String DOMAIN = "james.org";
-    private static final String ADMIN_PASSWORD = "mysecretpassword";
+    public static final int LIMIT_TO_10_MESSAGES = 10;
+    public static final String JAMES_USER = "james-user";
+    public static final String PASSWORD = "secret";
+    public static final String DOMAIN = "james.org";
+    public static final String ADMIN_PASSWORD = "mysecretpassword";
 
     public static final LdapGenericContainer ldapContainer = LdapGenericContainer.builder()
         .domain(DOMAIN)

@@ -19,6 +19,9 @@
 
 package org.apache.james;
 
+import static org.apache.james.user.ldap.DockerLdapSingleton.JAMES_USER;
+import static org.apache.james.user.ldap.DockerLdapSingleton.LIMIT_TO_10_MESSAGES;
+import static org.apache.james.user.ldap.DockerLdapSingleton.PASSWORD;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Duration.ONE_HUNDRED_MILLISECONDS;
 
@@ -37,9 +40,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 class CassandraLdapJamesServerTest implements JamesServerContract {
-    private static final int LIMIT_TO_10_MESSAGES = 10;
-    private static final String JAMES_USER = "james-user";
-    private static final String PASSWORD = "secret";
     private static Duration slowPacedPollInterval = ONE_HUNDRED_MILLISECONDS;
     private static ConditionFactory calmlyAwait = Awaitility.with()
         .pollInterval(slowPacedPollInterval)
