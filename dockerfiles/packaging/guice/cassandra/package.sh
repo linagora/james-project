@@ -23,7 +23,7 @@ DIRECTORY=$4
 # Build Compiler environment
 docker build -t james/project dockerfiles/compilation/java-8
 
-# Compile James with Cassandra
+# Compile James
 docker run \
    --rm \
    --volume $PWD/.m2:/root/.m2 \
