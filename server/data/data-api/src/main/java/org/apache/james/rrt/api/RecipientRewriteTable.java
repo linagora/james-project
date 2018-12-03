@@ -26,6 +26,7 @@ import org.apache.james.rrt.lib.Mapping;
 import org.apache.james.rrt.lib.MappingSource;
 import org.apache.james.rrt.lib.Mappings;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -110,9 +111,9 @@ public interface RecipientRewriteTable {
     Map<MappingSource, Mappings> getAllMappings() throws RecipientRewriteTableException;
 
     default List<MappingSource> listSources(Mapping mapping) throws RecipientRewriteTableException {
-        if (!isSupportedListSources(mapping)) {
-            return ImmutableList.of();
-        }
+        Preconditions.checkArgument(listSourcesSupportedType.stream()
+                .anyMatch(type -> type.equals(mapping.getType())),
+            String.format("Not supported mapping of type {}", mapping.getType()));
 
         return getAllMappings().entrySet().stream()
             .filter(entry -> filterMapping(entry, mapping))
@@ -123,12 +124,7 @@ public interface RecipientRewriteTable {
     default boolean filterMapping(Map.Entry<MappingSource, Mappings> entry, Mapping mapping) {
         return entry.getValue()
             .asStream()
-            .anyMatch(map -> map.equals(mapping));
-    }
-
-    default boolean isSupportedListSources(Mapping mapping) {
-        return listSourcesSupportedType.stream()
-            .anyMatch(type -> type.equals(mapping.getType()));
+            .anyMatch(mapping::equals);
     }
 
     List<Mapping.Type> listSourcesSupportedType = ImmutableList

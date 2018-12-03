@@ -385,13 +385,50 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldReturnEmptyWhenHasRegexMapping() throws RecipientRewriteTableException {
+    public void listSourcesShouldThrowExceptionWhenHasRegexMapping() throws RecipientRewriteTableException {
         Domain domain = Domain.LOCALHOST;
         MappingSource source = MappingSource.fromUser(USER, domain);
         Mapping mapping = Mapping.regex("regex");
 
         virtualUserTable.addMapping(source, mapping);
 
-        assertThat(virtualUserTable.listSources(mapping)).isEmpty();
+        assertThatThrownBy(() -> virtualUserTable.listSources(mapping))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void listSourcesShouldThrowExceptionWhenHasDomainMapping() throws RecipientRewriteTableException {
+        Domain domain = Domain.LOCALHOST;
+        MappingSource source = MappingSource.fromUser(USER, domain);
+        Mapping mapping = Mapping.domain(Domain.of("domain"));
+
+        virtualUserTable.addMapping(source, mapping);
+
+        assertThatThrownBy(() -> virtualUserTable.listSources(mapping))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void listSourcesShouldThrowExceptionWhenHasErrorMapping() throws RecipientRewriteTableException {
+        Domain domain = Domain.LOCALHOST;
+        MappingSource source = MappingSource.fromUser(USER, domain);
+        Mapping mapping = Mapping.error("error");
+
+        virtualUserTable.addMapping(source, mapping);
+
+        assertThatThrownBy(() -> virtualUserTable.listSources(mapping))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void listSourcesShouldReturnEmptyWhenMappingNotExisted() throws RecipientRewriteTableException {
+        Domain domain = Domain.LOCALHOST;
+        MappingSource source = MappingSource.fromUser(USER, domain);
+        Mapping domainMapping = Mapping.domain(Domain.of("domain"));
+        Mapping groupMapping = Mapping.group("group");
+
+        virtualUserTable.addMapping(source, domainMapping);
+
+        assertThat(virtualUserTable.listSources(groupMapping)).isEmpty();
     }
 }
