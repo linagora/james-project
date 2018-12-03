@@ -111,8 +111,7 @@ public interface RecipientRewriteTable {
     Map<MappingSource, Mappings> getAllMappings() throws RecipientRewriteTableException;
 
     default List<MappingSource> listSources(Mapping mapping) throws RecipientRewriteTableException {
-        Preconditions.checkArgument(listSourcesSupportedType.stream()
-                .anyMatch(type -> type.equals(mapping.getType())),
+        Preconditions.checkArgument(supportsSourceListing(mapping),
             String.format("Not supported mapping of type {}", mapping.getType()));
 
         return getAllMappings().entrySet().stream()
@@ -129,6 +128,11 @@ public interface RecipientRewriteTable {
 
     List<Mapping.Type> listSourcesSupportedType = ImmutableList
         .of(Mapping.Type.Group, Mapping.Type.Forward, Mapping.Type.Address);
+
+    default boolean supportsSourceListing(Mapping mapping) {
+        return listSourcesSupportedType.stream()
+            .anyMatch(mapping.getType()::equals);
+    }
 
     class ErrorMappingException extends Exception {
 

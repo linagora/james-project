@@ -71,14 +71,14 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void testStoreAndGetMappings() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testStoreAndGetMappings() throws Exception {
         Domain domain = Domain.of("test");
         virtualUserTable.addMapping(MappingSource.fromDomain(domain), Mapping.regex("prefix_.*:admin@test"));
         assertThat(virtualUserTable.getMappings("prefix_abc", domain)).isNotEmpty();
     }
 
     @Test
-    public void testStoreAndRetrieveRegexMapping() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testStoreAndRetrieveRegexMapping() throws Exception {
         Domain domain = Domain.LOCALHOST;
         MappingSource source = MappingSource.fromUser(USER, domain);
         // String regex = "(.*):{$1}@localhost";
@@ -135,7 +135,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void testStoreAndRetrieveAddressMapping() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testStoreAndRetrieveAddressMapping() throws Exception {
         Domain domain = Domain.LOCALHOST;
         MappingSource source = MappingSource.fromUser(USER, domain);
         String address2 = "test@james";
@@ -158,7 +158,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void testStoreAndRetrieveErrorMapping() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testStoreAndRetrieveErrorMapping() throws Exception {
         Domain domain = Domain.LOCALHOST;
         MappingSource source = MappingSource.fromUser(USER, domain);
         String error = "bounce!";
@@ -182,7 +182,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void testStoreAndRetrieveWildCardAddressMapping() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testStoreAndRetrieveWildCardAddressMapping() throws Exception {
         String user2 = "test2";
         Domain domain = Domain.LOCALHOST;
         String address2 = "test@james";
@@ -207,7 +207,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void testRecursiveMapping() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testRecursiveMapping() throws Exception {
         String user1 = "user1";
         String user2 = "user2";
         String user3 = "user3";
@@ -238,7 +238,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void testAliasDomainMapping() throws ErrorMappingException, RecipientRewriteTableException {
+    public void testAliasDomainMapping() throws Exception {
         String domain = "realdomain";
         Domain aliasDomain = Domain.of("aliasdomain");
         String user = "user";
@@ -283,7 +283,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void addForwardMappingShouldStore() throws ErrorMappingException, RecipientRewriteTableException {
+    public void addForwardMappingShouldStore() throws Exception {
         Domain domain = Domain.LOCALHOST;
         String address2 = "test@james";
         MappingSource source = MappingSource.fromUser(USER, domain);
@@ -295,7 +295,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void removeForwardMappingShouldDelete() throws ErrorMappingException, RecipientRewriteTableException {
+    public void removeForwardMappingShouldDelete() throws Exception {
         Domain domain = Domain.LOCALHOST;
         String address2 = "test@james";
         MappingSource source = MappingSource.fromUser(USER, domain);
@@ -311,7 +311,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void addGroupMappingShouldStore() throws ErrorMappingException, RecipientRewriteTableException {
+    public void addGroupMappingShouldStore() throws Exception {
         Domain domain = Domain.LOCALHOST;
         String address2 = "test@james";
         MappingSource source = MappingSource.fromUser(USER, domain);
@@ -323,7 +323,7 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void removeGroupMappingShouldDelete() throws ErrorMappingException, RecipientRewriteTableException {
+    public void removeGroupMappingShouldDelete() throws Exception {
         Domain domain = Domain.LOCALHOST;
         String address2 = "test@james";
         MappingSource source = MappingSource.fromUser(USER, domain);
@@ -339,9 +339,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldReturnWhenHasMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldReturnWhenHasMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping mapping = Mapping.group(ADDRESS);
         virtualUserTable.addMapping(source, mapping);
 
@@ -349,10 +348,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldReturnWhenMultipleSourceMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.of("james");
-
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldReturnWhenMultipleSourceMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.of("james"));
         MappingSource source2 = MappingSource.fromDomain(Domain.LOCALHOST);
         Mapping mapping = Mapping.group(ADDRESS);
 
@@ -363,9 +360,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldReturnWhenHasForwardMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldReturnWhenHasForwardMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping mapping = Mapping.forward("forward");
 
         virtualUserTable.addMapping(source, mapping);
@@ -374,9 +370,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldReturnWhenHasAddressMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldReturnWhenHasAddressMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping mapping = Mapping.address("address");
 
         virtualUserTable.addMapping(source, mapping);
@@ -385,9 +380,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldThrowExceptionWhenHasRegexMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldThrowExceptionWhenHasRegexMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping mapping = Mapping.regex("regex");
 
         virtualUserTable.addMapping(source, mapping);
@@ -397,9 +391,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldThrowExceptionWhenHasDomainMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldThrowExceptionWhenHasDomainMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping mapping = Mapping.domain(Domain.of("domain"));
 
         virtualUserTable.addMapping(source, mapping);
@@ -409,9 +402,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldThrowExceptionWhenHasErrorMapping() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldThrowExceptionWhenHasErrorMapping() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping mapping = Mapping.error("error");
 
         virtualUserTable.addMapping(source, mapping);
@@ -421,9 +413,8 @@ public abstract class AbstractRecipientRewriteTableTest {
     }
 
     @Test
-    public void listSourcesShouldReturnEmptyWhenMappingNotExisted() throws RecipientRewriteTableException {
-        Domain domain = Domain.LOCALHOST;
-        MappingSource source = MappingSource.fromUser(USER, domain);
+    public void listSourcesShouldReturnEmptyWhenMappingDoesNotExist() throws Exception {
+        MappingSource source = MappingSource.fromUser(USER, Domain.LOCALHOST);
         Mapping domainMapping = Mapping.domain(Domain.of("domain"));
         Mapping groupMapping = Mapping.group("group");
 
