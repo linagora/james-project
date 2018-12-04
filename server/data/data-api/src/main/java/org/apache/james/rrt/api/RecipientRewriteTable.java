@@ -127,7 +127,8 @@ public interface RecipientRewriteTable {
         Mapping.Type.Address);
 
     default boolean supportsSourceListing(Mapping mapping) {
-        return listSourcesSupportedType.contains(mapping.getType());
+        return listSourcesSupportedType.contains(
+            mapping.getType());
     }
 
     class ErrorMappingException extends Exception {
