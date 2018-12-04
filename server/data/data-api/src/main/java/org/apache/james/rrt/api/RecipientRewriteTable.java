@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.rrt.api;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -26,8 +27,8 @@ import org.apache.james.rrt.lib.Mapping;
 import org.apache.james.rrt.lib.MappingSource;
 import org.apache.james.rrt.lib.Mappings;
 
+import com.github.steveash.guavate.Guavate;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 
 /**
  * Interface which should be implemented of classes which map recipients.
@@ -112,26 +113,27 @@ public interface RecipientRewriteTable {
 
     default List<MappingSource> listSources(Mapping mapping) throws RecipientRewriteTableException {
         Preconditions.checkArgument(supportsSourceListing(mapping),
-            String.format("Not supported mapping of type {}", mapping.getType()));
+            String.format("Not supported mapping of type %s", mapping.getType()));
 
         return getAllMappings().entrySet().stream()
-            .filter(entry -> filterMapping(entry, mapping))
+            .filter(entry -> entryContainsMapping(entry, mapping))
             .map(Map.Entry::getKey)
-            .collect(ImmutableList.toImmutableList());
+            .collect(Guavate.toImmutableList());
     }
 
-    default boolean filterMapping(Map.Entry<MappingSource, Mappings> entry, Mapping mapping) {
+    default boolean entryContainsMapping(Map.Entry<MappingSource, Mappings> entry, Mapping mapping) {
         return entry.getValue()
             .asStream()
             .anyMatch(mapping::equals);
     }
 
-    List<Mapping.Type> listSourcesSupportedType = ImmutableList
-        .of(Mapping.Type.Group, Mapping.Type.Forward, Mapping.Type.Address);
+    EnumSet<Mapping.Type> listSourcesSupportedType = EnumSet.of(
+        Mapping.Type.Group,
+        Mapping.Type.Forward,
+        Mapping.Type.Address);
 
     default boolean supportsSourceListing(Mapping mapping) {
-        return listSourcesSupportedType.stream()
-            .anyMatch(mapping.getType()::equals);
+        return listSourcesSupportedType.contains(mapping.getType());
     }
 
     class ErrorMappingException extends Exception {
