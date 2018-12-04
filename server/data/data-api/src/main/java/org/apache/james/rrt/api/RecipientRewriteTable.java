@@ -116,15 +116,9 @@ public interface RecipientRewriteTable {
             String.format("Not supported mapping of type %s", mapping.getType()));
 
         return getAllMappings().entrySet().stream()
-            .filter(entry -> entryContainsMapping(entry, mapping))
+            .filter(entry -> entry.getValue().contains(mapping))
             .map(Map.Entry::getKey)
             .collect(Guavate.toImmutableList());
-    }
-
-    default boolean entryContainsMapping(Map.Entry<MappingSource, Mappings> entry, Mapping mapping) {
-        return entry.getValue()
-            .asStream()
-            .anyMatch(mapping::equals);
     }
 
     EnumSet<Mapping.Type> listSourcesSupportedType = EnumSet.of(
