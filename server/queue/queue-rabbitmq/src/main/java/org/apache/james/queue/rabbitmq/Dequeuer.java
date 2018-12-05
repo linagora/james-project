@@ -24,6 +24,7 @@ import static org.apache.james.queue.api.MailQueue.DEQUEUED_METRIC_NAME_PREFIX;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -71,10 +72,12 @@ class Dequeuer {
     private final Metric dequeueMetric;
     private final MailReferenceSerializer mailReferenceSerializer;
     private final MailQueueView mailQueueView;
+    private final ThreadLocal<ScheduledExecutorService> localExecutor;
 
     Dequeuer(MailQueueName name, RabbitClient rabbitClient, Function<MailReferenceDTO, Mail> mailLoader,
              MailReferenceSerializer serializer, MetricFactory metricFactory,
              MailQueueView mailQueueView) {
+        this.localExecutor = ThreadLocal.withInitial(Executors::newSingleThreadScheduledExecutor);
         this.name = name;
         this.rabbitClient = rabbitClient;
         this.mailLoader = mailLoader;
@@ -125,7 +128,7 @@ class Dequeuer {
     }
 
     private CompletableFuture<GetResponse> pollChannel() {
-        return new AsyncRetryExecutor(Executors.newSingleThreadScheduledExecutor())
+        return new AsyncRetryExecutor(localExecutor.get())
             .withFixedRate()
             .withMinDelay(TEN_MS)
             .retryOn(NoMailYetException.class)
