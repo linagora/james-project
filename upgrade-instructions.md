@@ -190,7 +190,7 @@ JIRA: https://issues.apache.org/jira/projects/MAILBOX/issues/MAILBOX-356
  
 Required: Yes
 
-Concerned products: JPA Guice products
+Concerned products: all JPA related products
 
 #### Upgrade procedure
 
