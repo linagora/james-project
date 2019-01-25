@@ -139,7 +139,7 @@ public class CassandraACLMapper {
 
     private Mono<ACLDiff> updateAcl(CassandraId cassandraId, Function<ACLWithVersion, ACLWithVersion> aclTransformation, MailboxACL replacement) throws MailboxException {
         return Mono.fromRunnable(() -> codeInjector.inject())
-            .then(Mono.defer(() -> getAclWithVersion(cassandraId)))
+            .then(getAclWithVersion(cassandraId))
             .flatMap(aclWithVersion ->
                     updateStoredACL(cassandraId, aclTransformation.apply(aclWithVersion))
                             .map(newACL -> ACLDiff.computeDiff(aclWithVersion.mailboxACL, newACL)))
@@ -167,10 +167,10 @@ public class CassandraACLMapper {
     }
 
     private Mono<MailboxACL> insertACL(CassandraId cassandraId, MailboxACL acl) {
-        return Mono.defer(() -> executor.executeReturnApplied(
+        return executor.executeReturnApplied(
             conditionalInsertStatement.bind()
                     .setUUID(CassandraACLTable.ID, cassandraId.asUuid())
-                    .setString(CassandraACLTable.ACL, convertAclToJson(acl))))
+                    .setString(CassandraACLTable.ACL, convertAclToJson(acl)))
             .filter(FunctionalUtils.toPredicate(Function.identity()))
             .map(any -> acl);
     }

@@ -192,9 +192,9 @@ public class CassandraModSeqProvider implements ModSeqProvider {
     }
 
     private Mono<ModSeq> tryFindThenUpdateOnce(CassandraId mailboxId) {
-        return Mono.defer(() -> findHighestModSeq(mailboxId)
+        return findHighestModSeq(mailboxId)
             .flatMap(Mono::justOrEmpty)
-            .flatMap(highestModSeq -> tryUpdateModSeq(mailboxId, highestModSeq)));
+            .flatMap(highestModSeq -> tryUpdateModSeq(mailboxId, highestModSeq));
     }
 
     private static class ModSeq {

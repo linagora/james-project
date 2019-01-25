@@ -116,27 +116,27 @@ public class CassandraUidProvider implements UidProvider {
     }
 
     private Mono<MessageUid> findHighestUid(CassandraId mailboxId) {
-        return Mono.defer(() -> executor.executeSingleRowReactor(
+        return executor.executeSingleRowReactor(
             selectStatement.bind()
                 .setUUID(MAILBOX_ID, mailboxId.asUuid()))
-            .map(row -> MessageUid.of(row.getLong(NEXT_UID))));
+            .map(row -> MessageUid.of(row.getLong(NEXT_UID)));
     }
 
     private Mono<MessageUid> tryUpdateUid(CassandraId mailboxId, MessageUid uid) {
         MessageUid nextUid = uid.next();
-        return Mono.defer(() -> executor.executeReturnApplied(
+        return executor.executeReturnApplied(
                 updateStatement.bind()
                         .setUUID(MAILBOX_ID, mailboxId.asUuid())
                         .setLong(CONDITION, uid.asLong())
                         .setLong(NEXT_UID, nextUid.asLong()))
-                .flatMap(success -> successToUid(nextUid, success)));
+                .flatMap(success -> successToUid(nextUid, success));
     }
 
     private Mono<MessageUid> tryInsert(CassandraId mailboxId) {
-        return Mono.defer(() -> executor.executeReturnApplied(
+        return executor.executeReturnApplied(
             insertStatement.bind()
                 .setUUID(MAILBOX_ID, mailboxId.asUuid()))
-            .flatMap(success -> successToUid(MessageUid.MIN_VALUE, success)));
+            .flatMap(success -> successToUid(MessageUid.MIN_VALUE, success));
     }
 
     private Mono<MessageUid> successToUid(MessageUid uid, Boolean success) {

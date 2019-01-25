@@ -236,7 +236,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
 
     private Mono<Pair<MailboxId, UpdatedFlags>> flagsUpdateWithRetry(Flags newState, MessageManager.FlagsUpdateMode updateMode, MailboxId mailboxId, MessageId messageId) {
         try {
-            return Mono.defer(() -> tryFlagsUpdate(newState, updateMode, mailboxId, messageId))
+            return tryFlagsUpdate(newState, updateMode, mailboxId, messageId)
                 .single()
                 .retry(cassandraConfiguration.getFlagsUpdateMessageIdMaxRetry())
                 .map(pair -> buildUpdatedFlags(pair.getRight(), pair.getLeft()));
