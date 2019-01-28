@@ -36,7 +36,7 @@ public interface CassandraMailRepositoryMailDaoAPI {
 
     Mono<Void> remove(MailRepositoryUrl url, MailKey key);
 
-    CompletableFuture<Optional<MailDTO>> read(MailRepositoryUrl url, MailKey key);
+    Mono<Optional<MailDTO>> read(MailRepositoryUrl url, MailKey key);
 
     class MailDTO {
         private final MailImpl.Builder mailBuilder;
