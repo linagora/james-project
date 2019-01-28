@@ -147,10 +147,8 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
             }
 
             @Override
-            public CompletableFuture<Void> store(MailRepositoryUrl url, Mail mail, BlobId headerId, BlobId bodyId) {
-                return CompletableFuture.supplyAsync(() -> {
-                    throw new RuntimeException("Expected failure while storing mail parts");
-                });
+            public Mono<Void> store(MailRepositoryUrl url, Mail mail, BlobId headerId, BlobId bodyId) {
+                return Mono.error(new RuntimeException("Expected failure while storing mail parts"));
             }
 
             @Override
