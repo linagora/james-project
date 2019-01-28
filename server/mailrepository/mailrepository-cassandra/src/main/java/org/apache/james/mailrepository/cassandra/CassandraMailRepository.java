@@ -21,7 +21,7 @@ package org.apache.james.mailrepository.cassandra;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
@@ -85,22 +85,22 @@ public class CassandraMailRepository implements MailRepository {
 
     @Override
     public Mail retrieve(MailKey key) {
-        return CompletableFutureUtil
-            .unwrap(mailDAO.read(url, key)
-                .thenApply(optional -> optional.map(this::toMail)))
-            .join()
-            .orElse(null);
+        return mailDAO.read(url, key)
+            .map(optional -> optional.map(this::toMail))
+            .flatMap(Mono::justOrEmpty)
+            .flatMap(Function.identity())
+            .defaultIfEmpty(null)
+            .block();
     }
 
-    private CompletableFuture<Mail> toMail(CassandraMailRepositoryMailDAO.MailDTO mailDTO) {
+    private Mono<Mail> toMail(CassandraMailRepositoryMailDAO.MailDTO mailDTO) {
         MimeMessagePartsId parts = MimeMessagePartsId.builder()
             .headerBlobId(mailDTO.getHeaderBlobId())
             .bodyBlobId(mailDTO.getBodyBlobId())
             .build();
 
         return mimeMessageStore.read(parts)
-            .toFuture()
-            .thenApply(mimeMessage -> mailDTO.getMailBuilder()
+            .map(mimeMessage -> mailDTO.getMailBuilder()
                 .mimeMessage(mimeMessage)
                 .build());
     }
