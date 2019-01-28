@@ -64,7 +64,7 @@ public class AttachmentV2Migration implements Migration {
             return blobStore.save(attachment.getBytes())
                 .map(blobId -> CassandraAttachmentDAOV2.from(attachment, blobId))
                 .flatMap(attachmentDAOV2::storeAttachment)
-                .then(Mono.defer(() -> Mono.fromFuture(attachmentDAOV1.deleteAttachment(attachment.getAttachmentId()))))
+                .then(attachmentDAOV1.deleteAttachment(attachment.getAttachmentId()))
                 .thenReturn(Result.COMPLETED)
                 .block();
         } catch (Exception e) {

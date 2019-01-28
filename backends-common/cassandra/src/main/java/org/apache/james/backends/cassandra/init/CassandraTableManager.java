@@ -67,12 +67,12 @@ public class CassandraTableManager {
     }
 
     private Mono<?> truncate(CassandraAsyncExecutor executor, String name) {
-        return Mono.fromFuture(executor.execute(
+        return executor.executeReactor(
                 QueryBuilder.select()
                         .from(name)
                         .limit(1)
-                        .setFetchSize(1)))
+                        .setFetchSize(1))
                 .filter(resultSet -> !resultSet.isExhausted())
-                .flatMap(ignored -> Mono.fromFuture(executor.execute(QueryBuilder.truncate(name))));
+                .thenEmpty(executor.executeVoidReactor(QueryBuilder.truncate(name)));
     }
 }
