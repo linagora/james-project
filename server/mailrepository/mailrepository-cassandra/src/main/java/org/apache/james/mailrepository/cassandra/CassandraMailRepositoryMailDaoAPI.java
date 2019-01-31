@@ -21,7 +21,6 @@ package org.apache.james.mailrepository.cassandra;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.mailrepository.api.MailKey;

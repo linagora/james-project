@@ -31,7 +31,6 @@ import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
-import org.apache.james.util.CompletableFutureUtil;
 import org.apache.mailet.Mail;
 
 import reactor.core.publisher.Flux;
