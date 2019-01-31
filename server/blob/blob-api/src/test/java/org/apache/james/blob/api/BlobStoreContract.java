@@ -89,7 +89,7 @@ public interface BlobStoreContract {
     @Test
     default void readBytesShouldThrowWhenNoExisting() {
         assertThatThrownBy(() -> testee().readBytes(blobIdFactory().from("unknown")).block())
-            .isExactlyInstanceOf(ObjectStoreException.class);
+            .isInstanceOf(ObjectStoreException.class);
     }
 
     @Test
