@@ -66,7 +66,7 @@ public class CassandraTableManager {
                 .block();
     }
 
-    private Mono<?> truncate(CassandraAsyncExecutor executor, String name) {
+    private Mono<Void> truncate(CassandraAsyncExecutor executor, String name) {
         return executor.executeReactor(
                 QueryBuilder.select()
                         .from(name)
