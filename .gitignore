@@ -1,5 +1,6 @@
 target/
 dependency-reduced-pom.xml
-*.iml
-*.idea
-
+dockerfiles/run/**/*.lib
+dockerfiles/run/**/*.jar
+dockerfiles/run/**/keystore
+.m2

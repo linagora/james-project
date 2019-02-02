@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
@@ -38,16 +37,13 @@ import org.apache.james.cli.type.CmdType;
 import org.apache.james.core.quota.QuotaCount;
 import org.apache.james.core.quota.QuotaSize;
 import org.apache.james.mailbox.model.MailboxId;
-import org.apache.james.mailbox.store.mail.model.SerializableQuota;
-import org.apache.james.mailbox.store.mail.model.SerializableQuotaValue;
-import org.apache.james.mailbox.store.probe.MailReprocessingProbe;
-import org.apache.james.mailbox.store.probe.MailboxProbe;
-import org.apache.james.mailbox.store.probe.QuotaProbe;
-import org.apache.james.mailbox.store.probe.SieveProbe;
+import org.apache.james.mailbox.model.SerializableQuota;
+import org.apache.james.mailbox.model.SerializableQuotaValue;
+import org.apache.james.mailbox.probe.MailboxProbe;
+import org.apache.james.mailbox.probe.QuotaProbe;
 import org.apache.james.probe.DataProbe;
+import org.apache.james.probe.SieveProbe;
 import org.apache.james.rrt.lib.MappingsImpl;
-import org.apache.mailet.Mail;
-import org.apache.mailet.base.test.FakeMail;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,7 +57,6 @@ public class ServerCmdTest {
     private MailboxProbe mailboxProbe;
     private QuotaProbe quotaProbe;
     private SieveProbe sieveProbe;
-    private MailReprocessingProbe mailReprocessingProbe;
 
     private ServerCmd testee;
 
@@ -71,8 +66,7 @@ public class ServerCmdTest {
         mailboxProbe = mock(MailboxProbe.class);
         quotaProbe = mock(QuotaProbe.class);
         sieveProbe = mock(SieveProbe.class);
-        mailReprocessingProbe = mock(MailReprocessingProbe.class);
-        testee = new ServerCmd(dataProbe, mailboxProbe, quotaProbe, sieveProbe, mailReprocessingProbe);
+        testee = new ServerCmd(dataProbe, mailboxProbe, quotaProbe, sieveProbe);
     }
 
     @Test
@@ -286,7 +280,7 @@ public class ServerCmdTest {
 
         verify(mailboxProbe).deleteMailbox(namespace, user, name);
     }
-    
+
     @Test
     public void importEmlFileToMailboxCommandShouldWork() throws Exception {
         String user = "user@domain";
@@ -371,7 +365,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -400,7 +394,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -432,7 +426,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -464,7 +458,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -476,221 +470,6 @@ public class ServerCmdTest {
         when(quotaProbe.getMaxMessageCount(quotaroot)).thenReturn(new SerializableQuotaValue<>(QuotaCount.unlimited()));
 
         testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void listMailRepositoriesCommandShouldWork() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.LISTMAILREPOSITORIES.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-        List<String> mailRepositoryPaths = new ArrayList<>();
-        mailRepositoryPaths.add("mailRepositoryPath1");
-        mailRepositoryPaths.add("mailRepositoryPath2");
-        when(mailReprocessingProbe.listMailRepositories()).thenReturn(mailRepositoryPaths);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void listMailRepositoriesCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.LISTMAILREPOSITORIES.getCommand(), ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void listMailsInRepositoryCommandShouldWork() throws Exception {
-        String repositoryPath = "repository_path";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.LISTMAILSINREPOSITORY.getCommand(), repositoryPath};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        FakeMail fakeMail1 = FakeMail.defaultFakeMail();
-        FakeMail fakeMail2 = FakeMail.defaultFakeMail();
-        List<Mail> mailList = new ArrayList<>();
-        mailList.add(fakeMail1);
-        mailList.add(fakeMail2);
-
-        when(mailReprocessingProbe.listMailsInRepository(repositoryPath)).thenReturn(mailList);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void listMailsInRepositoryCommandShouldThrowOnMissingArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.LISTMAILSINREPOSITORY.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void listMailsInRepositoryCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String repositoryPath = "repository_path";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.LISTMAILSINREPOSITORY.getCommand(), repositoryPath, ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void getMailInRepositoryCommandShouldWork() throws Exception {
-        String repositoryPath = "repository_path";
-        String emailKey = "email_key";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.GETMAILINREPOSITORY.getCommand(), repositoryPath, emailKey};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        FakeMail fakeMail1 = FakeMail.defaultFakeMail();
-
-        when(mailReprocessingProbe.getMailInRepository(repositoryPath, emailKey)).thenReturn(fakeMail1);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void getMailInRepositoryCommandShouldThrowOnMissingArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.GETMAILINREPOSITORY.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void getMailInRepositoryCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String repositoryPath = "repository_path";
-        String emailKey = "email_key";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.GETMAILINREPOSITORY.getCommand(), repositoryPath, emailKey, ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void deleteMailInRepositoryCommandShouldWork() throws Exception {
-        String repositoryPath = "repository_path";
-        String emailKey = "email_key";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.DELETEMAILINREPOSITORY.getCommand(), repositoryPath, emailKey};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-        //TODO: assertion true for deleted email
-//        when(mailReprocessingProbe.deleteMailInRepository(repositoryPath, emailKey)).thenReturn(fakeMail1);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void deleteMailInRepositoryCommandShouldThrowOnMissingArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.DELETEMAILINREPOSITORY.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void deleteMailInRepositoryCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String repositoryPath = "repository_path";
-        String emailKey = "email_key";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.DELETEMAILINREPOSITORY.getCommand(), repositoryPath, emailKey, ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void deleteMailsInRepositoryCommandShouldWork() throws Exception {
-        String repositoryPath = "repository_path";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.DELETEMAILSINREPOSITORY.getCommand(), repositoryPath};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-        //TODO: assertion true for deleted emails
-//        when(mailReprocessingProbe.deleteMailsInRepository(repositoryPath, emailKey)).thenReturn(fakeMail1);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void deleteMailsInRepositoryCommandShouldThrowOnMissingArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.DELETEMAILSINREPOSITORY.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void deleteMailsInRepositoryCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String repositoryPath = "repository_path";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.DELETEMAILSINREPOSITORY.getCommand(), repositoryPath, ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void reprocessAllMailsCommandShouldWork() throws Exception {
-        String repositoryPath = "repository_path";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REPROCESSALLMAILS.getCommand(), repositoryPath};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-        //TODO: assertion true for deleted emails
-//        when(mailReprocessingProbe.reprocessAllMails(repositoryPath)).thenReturn(fakeMail1);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void reprocessAllMailsCommandShouldThrowOnMissingArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REPROCESSALLMAILS.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void reprocessAllMailsCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String repositoryPath = "repository_path";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REPROCESSALLMAILS.getCommand(), repositoryPath, ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void reprocessMailCommandShouldWork() throws Exception {
-        String repositoryPath = "repository_path";
-        String emailKey = "email_key";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REPROCESSMAIL.getCommand(), repositoryPath, emailKey};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-        //TODO: assertion true for deleted emails
-//        when(mailReprocessingProbe.reprocessMail(repositoryPath, emailKey)).thenReturn(fakeMail1);
-
-        testee.executeCommandLine(commandLine);
-    }
-
-    @Test
-    public void reprocessMailCommandShouldThrowOnMissingArguments() throws Exception {
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REPROCESSMAIL.getCommand()};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
-    }
-
-    @Test
-    public void reprocessMailCommandShouldThrowOnAdditionalArguments() throws Exception {
-        String repositoryPath = "repository_path";
-        String emailKey = "email_key";
-        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REPROCESSMAIL.getCommand(), repositoryPath, emailKey, ADDITIONAL_ARGUMENT};
-        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-
-        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -822,16 +601,16 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
     public void removeDomainCommandShouldThrowOnMissingArguments() throws Exception {
         String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.REMOVEDOMAIN.getCommand()};
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
-        
+
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -840,7 +619,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -850,7 +629,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -859,7 +638,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -869,7 +648,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -880,7 +659,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -891,7 +670,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -902,7 +681,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -913,7 +692,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -923,7 +702,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -933,7 +712,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -942,7 +721,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -953,7 +732,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -964,7 +743,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
 
@@ -977,7 +756,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -986,7 +765,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -996,7 +775,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1006,7 +785,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1016,7 +795,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1025,7 +804,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1036,7 +815,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1046,7 +825,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1055,7 +834,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1064,7 +843,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1075,7 +854,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1087,7 +866,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1099,7 +878,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1111,7 +890,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1123,7 +902,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1134,7 +913,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1145,7 +924,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1155,7 +934,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1167,7 +946,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1179,7 +958,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1192,7 +971,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1202,7 +981,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1211,7 +990,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1223,7 +1002,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1232,7 +1011,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1242,7 +1021,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1251,7 +1030,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1260,7 +1039,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1270,7 +1049,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1280,7 +1059,20 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(InvalidArgumentNumberException.class);
+                .isInstanceOf(InvalidArgumentNumberException.class);
+    }
+
+    @Test
+    public void addActiveSieveScriptCommandShouldThrowOnAdditionalArguments() throws Exception {
+        String user = "user@domain";
+        String scriptName = "sieve_script";
+        String scriptPath = "./src/test/resources/sieve/sieve_script";
+
+        String[] arguments = { "-h", "127.0.0.1", "-p", "9999", CmdType.ADDACTIVESIEVESCRIPT.getCommand(), user, scriptName, scriptPath, ADDITIONAL_ARGUMENT };
+        CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
+
+        assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
+                .isInstanceOf(InvalidArgumentNumberException.class);
     }
 
     @Test
@@ -1289,7 +1081,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> testee.executeCommandLine(commandLine))
-            .isInstanceOf(UnrecognizedCommandException.class);
+                .isInstanceOf(UnrecognizedCommandException.class);
     }
 
     @Test
@@ -1297,7 +1089,7 @@ public class ServerCmdTest {
         String[] arguments = { "-h", "127.0.0.1", "-p", "9999" };
 
         assertThatThrownBy(() -> ServerCmd.parseCommandLine(arguments))
-            .isInstanceOf(MissingCommandException.class);
+                .isInstanceOf(MissingCommandException.class);
     }
 
     @Test
@@ -1305,7 +1097,7 @@ public class ServerCmdTest {
         String[] arguments = { "-v", "-h", "127.0.0.1", "-p", "9999" };
 
         assertThatThrownBy(() -> ServerCmd.parseCommandLine(arguments))
-            .isInstanceOf(ParseException.class);
+                .isInstanceOf(ParseException.class);
     }
 
     @Test
@@ -1313,7 +1105,7 @@ public class ServerCmdTest {
         String[] arguments = { "-v", "-h", "127.0.0.1", "-p", "9999" };
 
         assertThatThrownBy(() -> ServerCmd.parseCommandLine(arguments))
-            .isInstanceOf(ParseException.class);
+                .isInstanceOf(ParseException.class);
     }
 
     @Test
@@ -1385,7 +1177,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> ServerCmd.getPort(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -1394,7 +1186,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> ServerCmd.getPort(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -1403,7 +1195,7 @@ public class ServerCmdTest {
         CommandLine commandLine = ServerCmd.parseCommandLine(arguments);
 
         assertThatThrownBy(() -> ServerCmd.getPort(commandLine))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
 }

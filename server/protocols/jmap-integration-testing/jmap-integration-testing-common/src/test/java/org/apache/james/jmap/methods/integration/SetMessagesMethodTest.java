@@ -35,12 +35,10 @@ import static org.apache.james.jmap.TestingConstants.ARGUMENTS;
 import static org.apache.james.jmap.TestingConstants.BOB;
 import static org.apache.james.jmap.TestingConstants.BOB_PASSWORD;
 import static org.apache.james.jmap.TestingConstants.DOMAIN;
-import static org.apache.james.jmap.TestingConstants.IMAP_PORT;
 import static org.apache.james.jmap.TestingConstants.LOCALHOST_IP;
 import static org.apache.james.jmap.TestingConstants.NAME;
 import static org.apache.james.jmap.TestingConstants.SECOND_ARGUMENTS;
 import static org.apache.james.jmap.TestingConstants.SECOND_NAME;
-import static org.apache.james.jmap.TestingConstants.SMTP_PORT;
 import static org.apache.james.jmap.TestingConstants.calmlyAwait;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -79,11 +77,12 @@ import org.apache.james.core.quota.QuotaSize;
 import org.apache.james.jmap.HttpJmapAuthentication;
 import org.apache.james.jmap.MessageAppender;
 import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.jmap.categories.BasicFeature;
 import org.apache.james.mailbox.DefaultMailboxes;
-import org.apache.james.mailbox.Event;
 import org.apache.james.mailbox.FlagsBuilder;
-import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.Role;
+import org.apache.james.mailbox.events.Event;
+import org.apache.james.mailbox.events.MailboxListener;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Attachment;
 import org.apache.james.mailbox.model.ComposedMessageId;
@@ -93,14 +92,16 @@ import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageResult;
-import org.apache.james.mailbox.store.event.EventFactory;
-import org.apache.james.mailbox.store.mail.model.SerializableQuotaValue;
-import org.apache.james.mailbox.store.probe.ACLProbe;
-import org.apache.james.mailbox.store.probe.MailboxProbe;
-import org.apache.james.mailbox.store.probe.QuotaProbe;
+import org.apache.james.mailbox.model.SerializableQuotaValue;
+import org.apache.james.mailbox.probe.ACLProbe;
+import org.apache.james.mailbox.probe.MailboxProbe;
+import org.apache.james.mailbox.probe.QuotaProbe;
+import org.apache.james.mailbox.util.EventCollector;
 import org.apache.james.modules.ACLProbeImpl;
 import org.apache.james.modules.MailboxProbeImpl;
 import org.apache.james.modules.QuotaProbesImpl;
+import org.apache.james.modules.protocols.ImapGuiceProbe;
+import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.util.ClassLoaderUtils;
 import org.apache.james.util.MimeMessageUtil;
@@ -119,13 +120,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
 import io.restassured.parsing.Parser;
 
@@ -136,6 +139,7 @@ public abstract class SetMessagesMethodTest {
     private static final String PASSWORD = "password";
     private static final MailboxPath USER_MAILBOX = MailboxPath.forUser(USERNAME, "mailbox");
     private static final String NOT_UPDATED = ARGUMENTS + ".notUpdated";
+    private static final int BIG_MESSAGE_SIZE = 20 * 1024 * 1024;
 
     private AccessToken bobAccessToken;
 
@@ -279,6 +283,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".destroyed", contains(message.getMessageId().serialize()));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldDeleteMessageWhenMatchingMessage() throws Exception {
         // Given
@@ -433,6 +438,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".updated", hasSize(0));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldUpdateKeywordsWhenKeywordsArePassed() throws MailboxException {
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "mailbox");
@@ -981,6 +987,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".updated", hasSize(0));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldReturnCreatedMessageWhenSendingMessage() {
         String messageCreationId = "creationId1337";
@@ -1278,6 +1285,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".created[\"" + messageCreationId + "\"].keywords.$Flagged", equalTo(true));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldAllowDraftCreation() {
         String messageCreationId = "creationId1337";
@@ -1312,6 +1320,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".created", hasKey(messageCreationId));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldNotAllowDraftCreationWhenOverQuota() throws MailboxException {
         QuotaProbe quotaProbe = jmapServer.getProbe(QuotaProbesImpl.class);
@@ -1352,6 +1361,83 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notCreated[\"" + messageCreationId + "\"].type", equalTo("maxQuotaReached"));
     }
 
+    @Category(BasicFeature.class)
+    @Test
+    public void setMessagesWithABigBodyShouldReturnCreatedMessageWhenSendingMessage() {
+        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails(LogDetail.HEADERS);
+
+        String messageCreationId = "creationId1337";
+        String fromAddress = USERNAME;
+        String body = Strings.repeat("d", BIG_MESSAGE_SIZE);
+        {
+            String requestBody = new StringBuilder(BIG_MESSAGE_SIZE + 10 * 1024)
+                .append("[" +
+                "  [" +
+                "    \"setMessages\"," +
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}," +
+                "        \"to\": [{ \"name\": \"Me\", \"email\": \"" + fromAddress + "\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"")
+                .append(body)
+                .append("\"," +
+                "        \"mailboxIds\": [\"" + getOutboxId(accessToken) + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]")
+                .toString();
+
+            given()
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+            .when()
+                .post("/jmap")
+            .then()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+                .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
+                .body(ARGUMENTS + ".created", aMapWithSize(1))
+                .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), hasEntry(equalTo("textBody"), equalTo(body))));
+        }
+
+        calmlyAwait
+            .pollDelay(Duration.FIVE_HUNDRED_MILLISECONDS)
+            .atMost(30, TimeUnit.SECONDS).until(() -> hasANewMailWithBody(accessToken, body));
+    }
+
+    private boolean hasANewMailWithBody(AccessToken recipientToken, String body) {
+        try {
+            String inboxId = getMailboxId(accessToken, Role.INBOX);
+            String receivedMessageId =
+                with()
+                    .header("Authorization", accessToken.serialize())
+                    .body("[[\"getMessageList\", {\"filter\":{\"inMailboxes\":[\"" + inboxId + "\"]}}, \"#0\"]]")
+                    .post("/jmap")
+                .then()
+                    .extract()
+                    .path(ARGUMENTS + ".messageIds[0]");
+
+            given()
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMessages\", {\"ids\": [\"" + receivedMessageId + "\"]}, \"#0\"]]")
+            .when()
+                .post("/jmap")
+            .then()
+                .statusCode(200)
+                .body(NAME, equalTo("messages"))
+                .body(ARGUMENTS + ".list", hasSize(1))
+                .body(ARGUMENTS + ".list[0].textBody", equalTo(body));
+            return true;
+
+        } catch (AssertionError e) {
+            return false;
+        }
+    }
+
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldNotAllowCopyWhenOverQuota() throws MailboxException {
         QuotaProbe quotaProbe = jmapServer.getProbe(QuotaProbesImpl.class);
@@ -2018,6 +2104,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notCreated[\"" + messageCreationId + "\"].description", endsWith("MailboxId invalid"));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldSendMessageByMovingDraftToOutbox() {
         String draftCreationId = "creationId1337";
@@ -2220,18 +2307,8 @@ public abstract class SetMessagesMethodTest {
             "  ]" +
             "]";
 
-        List<Event> events = Lists.newArrayList();
-        jmapServer.getProbe(JmapGuiceProbe.class).addMailboxListener(new MailboxListener() {
-            @Override
-            public ListenerType getType() {
-                return ListenerType.ONCE;
-            }
-
-            @Override
-            public void event(Event event) {
-                events.add(event);
-            }
-        });
+        EventCollector eventCollector = new EventCollector();
+        jmapServer.getProbe(JmapGuiceProbe.class).addMailboxListener(eventCollector);
 
         String messageId = with()
             .header("Authorization", accessToken.serialize())
@@ -2245,20 +2322,21 @@ public abstract class SetMessagesMethodTest {
 
 
 
-        calmlyAwait.atMost(5, TimeUnit.SECONDS).until(() -> events.stream()
-            .anyMatch(event -> isAddedToOutboxEvent(messageId, event)));
+        calmlyAwait.atMost(5, TimeUnit.SECONDS).until(() -> eventCollector.getEvents().stream()
+            .anyMatch(event -> isAddedToOutboxEvent(messageId, event, outboxId)));
     }
 
-    private boolean isAddedToOutboxEvent(String messageId, Event event) {
-        if (!(event instanceof EventFactory.AddedImpl)) {
+    private boolean isAddedToOutboxEvent(String messageId, Event event, String outboxId) {
+        if (!(event instanceof MailboxListener.Added)) {
             return false;
         }
-        EventFactory.AddedImpl added = (EventFactory.AddedImpl) event;
-        return added.getMailboxPath().equals(MailboxPath.forUser(USERNAME, DefaultMailboxes.OUTBOX))
+        MailboxListener.Added added = (MailboxListener.Added) event;
+        return added.getMailboxId().serialize().equals(outboxId)
             && added.getUids().size() == 1
-            && added.getMetaData(added.getUids().get(0)).getMessageId().serialize().equals(messageId);
+            && added.getMetaData(added.getUids().iterator().next()).getMessageId().serialize().equals(messageId);
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldMoveMessageInSentWhenMessageIsSent() {
         // Given
@@ -2646,6 +2724,7 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".created", aMapWithSize(0));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldDeliverMessageToRecipient() throws Exception {
         // Sender
@@ -2688,6 +2767,7 @@ public abstract class SetMessagesMethodTest {
         calmlyAwait.atMost(30, TimeUnit.SECONDS).until(() -> isAnyMessageFoundInRecipientsMailboxes(recipientToken));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldTriggerMaxQuotaReachedWhenTryingToSendMessageAndQuotaReached() throws Exception {
         QuotaProbe quotaProbe = jmapServer.getProbe(QuotaProbesImpl.class);
@@ -3160,6 +3240,7 @@ public abstract class SetMessagesMethodTest {
             .spec(getSetMessagesUpdateOKResponseAssertions(messageToMoveId));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void mailboxIdsShouldBeInDestinationWhenUsingForMove() throws Exception {
         String newMailboxName = "heartFolder";
@@ -3202,6 +3283,7 @@ public abstract class SetMessagesMethodTest {
             .body(firstMessage + ".mailboxIds", contains(heartFolderId));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void mailboxIdsShouldNotBeAnymoreInSourceWhenUsingForMove() throws Exception {
         String newMailboxName = "heartFolder";
@@ -3245,6 +3327,7 @@ public abstract class SetMessagesMethodTest {
             .body(firstMessage + ".mailboxIds", not(contains(inboxId)));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void mailboxIdsShouldBeInBothMailboxWhenUsingForCopy() throws Exception {
         String newMailboxName = "heartFolder";
@@ -3335,8 +3418,7 @@ public abstract class SetMessagesMethodTest {
             new ByteArrayInputStream("Subject: my test subject\r\n\r\ntestmail".getBytes(StandardCharsets.UTF_8)), Date.from(dateTime.toInstant()), false, new Flags());
 
         mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any");
-        String mailboxId = mailboxProbe.getMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any")
-            .getMailboxId()
+        String mailboxId = mailboxProbe.getMailboxId(MailboxConstants.USER_NAMESPACE, USERNAME, "any")
             .serialize();
         mailboxProbe.deleteMailbox(MailboxConstants.USER_NAMESPACE, USERNAME, "any");
 
@@ -3967,6 +4049,7 @@ public abstract class SetMessagesMethodTest {
         checkBlobContent(blobId, rawBytes);
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void attachmentsShouldBeRetrievedWhenChainingSetMessagesAndGetMessagesTextAttachment() throws Exception {
         byte[] rawBytes = ByteStreams.toByteArray(new ZeroedInputStream(_1MB));
@@ -4522,6 +4605,7 @@ public abstract class SetMessagesMethodTest {
                 hasEntry("X-Forwarded-Message-Id", "forward value")));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldUpdateIsAnsweredWhenInReplyToHeaderSentViaOutbox() throws Exception {
         OriginalMessage firstMessage = receiveFirstMessage();
@@ -4568,6 +4652,7 @@ public abstract class SetMessagesMethodTest {
             .body(message + ".isAnswered", equalTo(true));
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void setMessagesShouldUpdateIsForwardedWhenXForwardedHeaderSentViaOutbox() throws Exception {
         OriginalMessage firstMessage = receiveFirstMessage();
@@ -4932,7 +5017,7 @@ public abstract class SetMessagesMethodTest {
         calmlyAwait.atMost(30, TimeUnit.SECONDS).until(() -> isAnyMessageFoundInInbox(accessToken));
 
         try (IMAPMessageReader imapMessageReader = new IMAPMessageReader()) {
-            imapMessageReader.connect(LOCALHOST_IP, IMAP_PORT)
+            imapMessageReader.connect(LOCALHOST_IP, jmapServer.getProbe(ImapGuiceProbe.class).getImapPort())
                 .login(USERNAME, PASSWORD)
                 .select(MailboxConstants.INBOX);
             assertThat(imapMessageReader.readFirstMessage())
@@ -5325,7 +5410,7 @@ public abstract class SetMessagesMethodTest {
             .sender(fromAddress)
             .recipient(fromAddress)
             .build();
-        try (SMTPMessageSender messageSender = SMTPMessageSender.noAuthentication(LOCALHOST_IP, SMTP_PORT, DOMAIN)) {
+        try (SMTPMessageSender messageSender = SMTPMessageSender.noAuthentication(LOCALHOST_IP, jmapServer.getProbe(SmtpGuiceProbe.class).getSmtpPort(), DOMAIN)) {
             messageSender.sendMessage(mail);
         }
 

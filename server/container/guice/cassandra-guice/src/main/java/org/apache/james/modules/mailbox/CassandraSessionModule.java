@@ -23,21 +23,24 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.init.CassandraZonedDateTimeModule;
 import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
 import org.apache.james.backends.cassandra.init.configuration.ClusterConfiguration;
+import org.apache.james.backends.cassandra.utils.CassandraHealthCheck;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionDAO;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager.SchemaState;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionModule;
+import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.lifecycle.api.Configurable;
 import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.server.CassandraProbe;
+import org.apache.james.util.Host;
 import org.apache.james.utils.ConfigurationPerformer;
 import org.apache.james.utils.GuiceProbe;
 import org.apache.james.utils.PropertiesProvider;
@@ -62,7 +65,8 @@ public class CassandraSessionModule extends AbstractModule {
 
     private static final String LOCALHOST = "127.0.0.1";
     private static final String BATCHSIZES_FILE_NAME = "batchsizes";
-    private static final String CASSANDRA_NODES = "cassandra.nodes";
+    private static final String CASSANDRA_FILE_NAME = "cassandra";
+    private static final int CASSANDRA_PORT = 9042;
 
     @Override
     protected void configure() {
@@ -81,6 +85,8 @@ public class CassandraSessionModule extends AbstractModule {
         Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(CassandraSchemaChecker.class);
 
         Multibinder.newSetBinder(binder(), GuiceProbe.class).addBinding().to(CassandraProbe.class);
+
+        Multibinder.newSetBinder(binder(), HealthCheck.class).addBinding().to(CassandraHealthCheck.class);
     }
 
     @Provides
@@ -93,7 +99,7 @@ public class CassandraSessionModule extends AbstractModule {
     @Singleton
     BatchSizes getBatchSizesConfiguration(PropertiesProvider propertiesProvider) {
         try {
-            PropertiesConfiguration configuration = propertiesProvider.getConfiguration(BATCHSIZES_FILE_NAME);
+            Configuration configuration = propertiesProvider.getConfiguration(BATCHSIZES_FILE_NAME);
             BatchSizes batchSizes = BatchSizes.builder()
                     .fetchMetadata(configuration.getInt("fetch.metadata", BatchSizes.DEFAULT_BATCH_SIZE))
                     .fetchHeaders(configuration.getInt("fetch.headers", BatchSizes.DEFAULT_BATCH_SIZE))
@@ -105,7 +111,7 @@ public class CassandraSessionModule extends AbstractModule {
             LOGGER.debug("BatchSize configuration: {}", batchSizes);
             return batchSizes;
         } catch (FileNotFoundException | ConfigurationException e) {
-            LOGGER.warn("Could not locate batchsizes configuration file. Using default values.");
+            LOGGER.info("Could not locate batchsizes configuration file. Using default values.");
             return BatchSizes.defaultValues();
         }
     }
@@ -120,23 +126,23 @@ public class CassandraSessionModule extends AbstractModule {
     @Provides
     @Singleton
     CassandraConfiguration provideCassandraConfiguration(PropertiesProvider propertiesProvider) throws ConfigurationException {
-        return CassandraConfiguration.from(getConfiguration(propertiesProvider));
+        try {
+            return CassandraConfiguration.from(propertiesProvider.getConfiguration(CASSANDRA_FILE_NAME));
+        } catch (FileNotFoundException e) {
+            return CassandraConfiguration.DEFAULT_CONFIGURATION;
+        }
     }
 
     @Provides
     @Singleton
     ClusterConfiguration provideClusterConfiguration(PropertiesProvider propertiesProvider) throws ConfigurationException {
-        return ClusterConfiguration.from(getConfiguration(propertiesProvider));
-    }
-
-    private PropertiesConfiguration getConfiguration(PropertiesProvider propertiesProvider) throws ConfigurationException {
         try {
-            return propertiesProvider.getConfiguration("cassandra");
+            return ClusterConfiguration.from(propertiesProvider.getConfiguration(CASSANDRA_FILE_NAME));
         } catch (FileNotFoundException e) {
-            LOGGER.warn("Could not locate cassandra configuration file. Defaulting to node " + LOCALHOST + ":9042");
-            PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration();
-            propertiesConfiguration.addProperty(CASSANDRA_NODES, LOCALHOST);
-            return propertiesConfiguration;
+            LOGGER.warn("Could not locate cassandra configuration file. Defaulting to node " + LOCALHOST + ":" + CASSANDRA_PORT);
+            return ClusterConfiguration.builder()
+                .host(Host.from(LOCALHOST, CASSANDRA_PORT))
+                .build();
         }
     }
 

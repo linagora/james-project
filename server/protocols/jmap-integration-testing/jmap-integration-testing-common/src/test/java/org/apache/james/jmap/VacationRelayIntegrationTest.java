@@ -21,7 +21,6 @@ package org.apache.james.jmap;
 
 import static org.apache.james.jmap.TestingConstants.DOMAIN;
 import static org.apache.james.jmap.TestingConstants.LOCALHOST_IP;
-import static org.apache.james.jmap.TestingConstants.SMTP_PORT;
 import static org.apache.james.jmap.TestingConstants.calmlyAwait;
 import static org.awaitility.Duration.ONE_MINUTE;
 import static org.hamcrest.Matchers.equalTo;
@@ -34,10 +33,12 @@ import org.apache.james.GuiceJamesServer;
 import org.apache.james.dnsservice.api.InMemoryDNSService;
 import org.apache.james.jmap.api.vacation.AccountId;
 import org.apache.james.jmap.api.vacation.VacationPatch;
+import org.apache.james.jmap.categories.BasicFeature;
 import org.apache.james.mailbox.DefaultMailboxes;
 import org.apache.james.mailbox.model.MailboxConstants;
-import org.apache.james.mailbox.store.probe.MailboxProbe;
+import org.apache.james.mailbox.probe.MailboxProbe;
 import org.apache.james.modules.MailboxProbeImpl;
+import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.FakeSmtp;
@@ -47,6 +48,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 public abstract class VacationRelayIntegrationTest {
 
@@ -97,6 +99,7 @@ public abstract class VacationRelayIntegrationTest {
         guiceJamesServer.stop();
     }
 
+    @Category(BasicFeature.class)
     @Test
     public void forwardingAnEmailShouldWork() throws Exception {
         jmapGuiceProbe.modifyVacation(AccountId.fromString(USER_WITH_DOMAIN), VacationPatch
@@ -108,15 +111,15 @@ public abstract class VacationRelayIntegrationTest {
         String externalMail = "ray@yopmail.com";
 
         SMTPClient smtpClient = new SMTPClient();
-        smtpClient.connect(LOCALHOST_IP, SMTP_PORT);
+        smtpClient.connect(LOCALHOST_IP, guiceJamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort());
         smtpClient.helo(DOMAIN);
         smtpClient.setSender(externalMail);
         smtpClient.rcpt("<" + USER_WITH_DOMAIN + ">");
         smtpClient.sendShortMessageData("content");
 
         calmlyAwait.atMost(1, TimeUnit.MINUTES)
-            .until(() ->
-                fakeSmtp.isReceived(response -> response
+            .untilAsserted(() ->
+                fakeSmtp.assertEmailReceived(response -> response
                     .body("[0].from", equalTo(USER_WITH_DOMAIN))
                     .body("[0].to[0]", equalTo(externalMail))
                     .body("[0].text", equalTo(REASON))));

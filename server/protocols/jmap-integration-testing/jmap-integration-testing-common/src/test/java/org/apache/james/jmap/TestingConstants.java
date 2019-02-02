@@ -22,15 +22,15 @@ package org.apache.james.jmap;
 import static io.restassured.config.EncoderConfig.encoderConfig;
 import static io.restassured.config.RestAssuredConfig.newConfig;
 
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.http.ContentType;
-
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionFactory;
+
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.http.ContentType;
 
 public interface TestingConstants {
     Duration slowPacedPollInterval = Duration.ONE_HUNDRED_MILLISECONDS;
@@ -64,8 +64,4 @@ public interface TestingConstants {
 
 
     String LOCALHOST_IP = "127.0.0.1";
-    int SMTP_PORT = 1025;
-    int IMAP_PORT = 1143;
-
-
 }

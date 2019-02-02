@@ -25,20 +25,15 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.OutputFrame;
-import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
 import com.github.dockerjava.api.DockerClient;
+import com.google.common.collect.ImmutableMap;
 
 public class DockerCassandra {
 
     private static final Logger logger = LoggerFactory.getLogger(DockerCassandra.class);
 
     private static final int CASSANDRA_PORT = 9042;
-    private static final String CASSANDRA_CONFIG_DIR = "$CASSANDRA_CONFIG";
-    private static final String CASSANDRA_YAML = CASSANDRA_CONFIG_DIR + "/cassandra.yaml";
-    private static final String CASSANDRA_ENV = CASSANDRA_CONFIG_DIR + "/cassandra-env.sh";
-    private static final String JVM_OPTIONS = CASSANDRA_CONFIG_DIR + "/jvm.options";
 
     private final GenericContainer<?> cassandraContainer;
     private final DockerClient client;
@@ -46,20 +41,8 @@ public class DockerCassandra {
     @SuppressWarnings("resource")
     public DockerCassandra() {
         client = DockerClientFactory.instance().client();
-        boolean deleteOnExit = false;
-        int cassandraMemory = 1000;
-        long cassandraContainerMemory = Float.valueOf(cassandraMemory * 1.2f * 1024 * 1024L).longValue();
-        cassandraContainer = new GenericContainer<>(
-            new ImageFromDockerfile("cassandra_3_11_3", deleteOnExit)
-                .withDockerfileFromBuilder(builder ->
-                    builder
-                        .from("cassandra:3.11.3")
-                        .env("ENV CASSANDRA_CONFIG", "/etc/cassandra")
-                        .run("echo \"-Xms" + cassandraMemory + "M\" >> " + JVM_OPTIONS)
-                        .run("echo \"-Xmx" + cassandraMemory + "M\" >> " + JVM_OPTIONS)
-                        .build()))
+        cassandraContainer = new GenericContainer<>("cassandra:3.11.3")
             .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withTmpFs(ImmutableMap.of("/var/lib/cassandra", "rw,noexec,nosuid,size=200m")))
-            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(cassandraContainerMemory))
             .withExposedPorts(CASSANDRA_PORT)
             .withLogConsumer(DockerCassandra::displayDockerLog);
         cassandraContainer
@@ -71,11 +54,15 @@ public class DockerCassandra {
     }
 
     public void start() {
-        cassandraContainer.start();
+        if (!cassandraContainer.isRunning()) {
+            cassandraContainer.start();
+        }
     }
 
     public void stop() {
-        cassandraContainer.stop();
+        if (cassandraContainer.isRunning()) {
+            cassandraContainer.stop();
+        }
     }
 
     public Host getHost() {
@@ -97,11 +84,11 @@ public class DockerCassandra {
     }
 
     public void pause() {
-        client.pauseContainerCmd(cassandraContainer.getContainerId());
+        client.pauseContainerCmd(cassandraContainer.getContainerId()).exec();
     }
 
     public void unpause() {
-        client.unpauseContainerCmd(cassandraContainer.getContainerId());
+        client.unpauseContainerCmd(cassandraContainer.getContainerId()).exec();
     }
 
 }

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="FrameworkDetectionExcludesConfiguration">
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/caching" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/jcr" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/jpa" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/lucene" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/maildir" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/memory" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/spring" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/store" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/tool" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailbox/zoo-seq-provider" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailet/ai" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailet/api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailet/base" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailet/crypto" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailet/standard" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/mailet/test" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/imap" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/lmtp" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/managesieve" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/netty" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/pop3" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/protocols/smtp" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/app" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/cli-components-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/core" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/filesystem-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/lifecycle-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/mailbox-adapter" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/spring" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/container/util" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-file" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-hbase" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-jcr" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-jdbc" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-jpa" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-ldap" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-ldap-integration-testing" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-library" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/data/data-memory" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/dns-service/dnsservice-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/dns-service/dnsservice-dnsjava" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/dns-service/dnsservice-library" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/dns-service/dnsservice-test" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/mailet/integration-testing" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/mailet/mailetcontainer-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/mailet/mailetcontainer-camel" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/mailet/mailets" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/mailrepository/mailrepository-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/protocols/fetchmail" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/protocols/protocols-imap4" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/protocols/protocols-library" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/protocols/protocols-lmtp" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/protocols/protocols-pop3" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/protocols/protocols-smtp" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/queue/queue-activemq" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/queue/queue-api" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/queue/queue-file" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/queue/queue-jms" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/server/queue/queue-rabbitmq" />
+  </component>
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/classes" />
+  </component>
+</project>

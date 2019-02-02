@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="apache-james-backends-cassandra" />
+        <module name="apache-james-backends-es" />
+        <module name="apache-james-backends-jpa" />
+        <module name="apache-james-mailbox-api" />
+        <module name="apache-james-mailbox-caching" />
+        <module name="apache-james-mailbox-cassandra" />
+        <module name="apache-james-mailbox-elasticsearch" />
+        <module name="apache-james-mailbox-hbase" />
+        <module name="apache-james-mailbox-jcr" />
+        <module name="apache-james-mailbox-jpa" />
+        <module name="apache-james-mailbox-lucene" />
+        <module name="apache-james-mailbox-maildir" />
+        <module name="apache-james-mailbox-memory" />
+        <module name="apache-james-mailbox-quota-mailing" />
+        <module name="apache-james-mailbox-quota-search" />
+        <module name="apache-james-mailbox-quota-search-elasticsearch" />
+        <module name="apache-james-mailbox-quota-search-scanning" />
+        <module name="apache-james-mailbox-scanning-search" />
+        <module name="apache-james-mailbox-spamassassin" />
+        <module name="apache-james-mailbox-spring" />
+        <module name="apache-james-mailbox-store" />
+        <module name="apache-james-mailbox-tika" />
+        <module name="apache-james-mailbox-tool" />
+        <module name="apache-james-mpt-antlib" />
+        <module name="apache-james-mpt-app" />
+        <module name="apache-james-mpt-core" />
+        <module name="apache-james-mpt-external-james" />
+        <module name="apache-james-mpt-imapmailbox-cassandra" />
+        <module name="apache-james-mpt-imapmailbox-core" />
+        <module name="apache-james-mpt-imapmailbox-cyrus" />
+        <module name="apache-james-mpt-imapmailbox-elasticsearch" />
+        <module name="apache-james-mpt-imapmailbox-hbase" />
+        <module name="apache-james-mpt-imapmailbox-inmemory" />
+        <module name="apache-james-mpt-imapmailbox-jcr" />
+        <module name="apache-james-mpt-imapmailbox-jpa" />
+        <module name="apache-james-mpt-imapmailbox-jpa-lucene" />
+        <module name="apache-james-mpt-imapmailbox-maildir" />
+        <module name="apache-james-mpt-managesieve-cassandra" />
+        <module name="apache-james-mpt-managesieve-core" />
+        <module name="apache-james-mpt-managesieve-file" />
+        <module name="apache-james-mpt-smtp-cassandra" />
+        <module name="apache-james-mpt-smtp-core" />
+        <module name="apache-james-spamassassin" />
+        <module name="apache-mailet-ai" />
+        <module name="apache-mailet-api" />
+        <module name="apache-mailet-base" />
+        <module name="apache-mailet-crypto" />
+        <module name="apache-mailet-icalendar" />
+        <module name="apache-mailet-standard" />
+        <module name="apache-mailet-test" />
+        <module name="backup" />
+        <module name="blob-api" />
+        <module name="blob-cassandra" />
+        <module name="cassandra-jmap-integration-testing" />
+        <module name="cli-components" />
+        <module name="cli-components-api" />
+        <module name="custom-mailets" />
+        <module name="event-sourcing-core" />
+        <module name="event-sourcing-event-store-api" />
+        <module name="event-sourcing-event-store-cassandra" />
+        <module name="event-sourcing-event-store-memory" />
+        <module name="event-sourcing-pojo" />
+        <module name="james-core" />
+        <module name="james-mdn" />
+        <module name="james-server-app" />
+        <module name="james-server-cassandra-guice" />
+        <module name="james-server-cassandra-ldap-guice" />
+        <module name="james-server-cli" />
+        <module name="james-server-cli-integration" />
+        <module name="james-server-core" />
+        <module name="james-server-data-api" />
+        <module name="james-server-data-cassandra" />
+        <module name="james-server-data-file" />
+        <module name="james-server-data-hbase" />
+        <module name="james-server-data-jcr" />
+        <module name="james-server-data-jdbc" />
+        <module name="james-server-data-jmap" />
+        <module name="james-server-data-jmap-cassandra" />
+        <module name="james-server-data-jpa" />
+        <module name="james-server-data-ldap" />
+        <module name="james-server-data-ldap-integration-testing" />
+        <module name="james-server-data-library" />
+        <module name="james-server-data-memory" />
+        <module name="james-server-dnsservice-api" />
+        <module name="james-server-dnsservice-dnsjava" />
+        <module name="james-server-dnsservice-library" />
+        <module name="james-server-dnsservice-test" />
+        <module name="james-server-fetchmail" />
+        <module name="james-server-filesystem-api" />
+        <module name="james-server-guice-common" />
+        <module name="james-server-guice-configuration" />
+        <module name="james-server-guice-custom-mailets" />
+        <module name="james-server-guice-es-resporter" />
+        <module name="james-server-guice-imap" />
+        <module name="james-server-guice-jmap" />
+        <module name="james-server-guice-jmx" />
+        <module name="james-server-guice-lmtp" />
+        <module name="james-server-guice-mailbox" />
+        <module name="james-server-guice-mailbox-plugin-spamassassin" />
+        <module name="james-server-guice-mailet" />
+        <module name="james-server-guice-managedsieve" />
+        <module name="james-server-guice-netty" />
+        <module name="james-server-guice-pop" />
+        <module name="james-server-guice-smtp" />
+        <module name="james-server-guice-utils" />
+        <module name="james-server-guice-webadmin" />
+        <module name="james-server-guice-webadmin-cassandra" />
+        <module name="james-server-guice-webadmin-data" />
+        <module name="james-server-guice-webadmin-mailbox" />
+        <module name="james-server-guice-webadmin-mailqueue" />
+        <module name="james-server-guice-webadmin-mailrepository" />
+        <module name="james-server-guice-webadmin-swagger" />
+        <module name="james-server-jetty" />
+        <module name="james-server-jmap" />
+        <module name="james-server-jmap-integration-testing" />
+        <module name="james-server-jpa-common-guice" />
+        <module name="james-server-jpa-guice" />
+        <module name="james-server-jpa-smtp-common-guice" />
+        <module name="james-server-jpa-smtp-guice" />
+        <module name="james-server-jpa-smtp-mariadb-guice" />
+        <module name="james-server-jwt" />
+        <module name="james-server-lifecycle-api" />
+        <module name="james-server-mailbox-adapter" />
+        <module name="james-server-mailetcontainer-api" />
+        <module name="james-server-mailetcontainer-camel" />
+        <module name="james-server-mailets" />
+        <module name="james-server-mailets-integration-testing" />
+        <module name="james-server-mailrepository-api" />
+        <module name="james-server-mailrepository-cassandra" />
+        <module name="james-server-mailrepository-memory" />
+        <module name="james-server-memory-guice" />
+        <module name="james-server-onami" />
+        <module name="james-server-protocols-imap4" />
+        <module name="james-server-protocols-library" />
+        <module name="james-server-protocols-lmtp" />
+        <module name="james-server-protocols-managesieve" />
+        <module name="james-server-protocols-pop3" />
+        <module name="james-server-protocols-smtp" />
+        <module name="james-server-queue-activemq" />
+        <module name="james-server-queue-api" />
+        <module name="james-server-queue-file" />
+        <module name="james-server-queue-jms" />
+        <module name="james-server-queue-memory" />
+        <module name="james-server-queue-rabbitmq" />
+        <module name="james-server-spring" />
+        <module name="james-server-task" />
+        <module name="james-server-testing" />
+        <module name="james-server-util" />
+        <module name="james-server-webadmin-cassandra" />
+        <module name="james-server-webadmin-core" />
+        <module name="james-server-webadmin-data" />
+        <module name="james-server-webadmin-integration-test" />
+        <module name="james-server-webadmin-mailbox" />
+        <module name="james-server-webadmin-mailqueue" />
+        <module name="james-server-webadmin-mailrepository" />
+        <module name="james-server-webadmin-swagger" />
+        <module name="javax-mail-extension" />
+        <module name="mailetdocs-maven-plugin" />
+        <module name="memory-jmap-integration-testing" />
+        <module name="metrics-api" />
+        <module name="metrics-dropwizard" />
+        <module name="metrics-es-reporter" />
+        <module name="metrics-logger" />
+        <module name="mpt-maven-plugin" />
+        <module name="protocols-api" />
+        <module name="protocols-imap" />
+        <module name="protocols-lmtp" />
+        <module name="protocols-managesieve" />
+        <module name="protocols-netty" />
+        <module name="protocols-pop3" />
+        <module name="protocols-smtp" />
+        <module name="quota-mailing-cassandra" />
+        <module name="quota-mailing-memory" />
+        <module name="zookeeper-sequence-provider" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="apache-james-backends-cassandra" target="1.8" />
+      <module name="apache-james-backends-es" target="1.8" />
+      <module name="apache-james-backends-jpa" target="1.8" />
+      <module name="apache-james-mailbox" target="1.6" />
+      <module name="apache-james-mailbox-api" target="1.8" />
+      <module name="apache-james-mailbox-caching" target="1.8" />
+      <module name="apache-james-mailbox-cassandra" target="1.8" />
+      <module name="apache-james-mailbox-elasticsearch" target="1.8" />
+      <module name="apache-james-mailbox-hbase" target="1.8" />
+      <module name="apache-james-mailbox-jcr" target="1.8" />
+      <module name="apache-james-mailbox-jpa" target="1.8" />
+      <module name="apache-james-mailbox-lucene" target="1.8" />
+      <module name="apache-james-mailbox-maildir" target="1.8" />
+      <module name="apache-james-mailbox-memory" target="1.8" />
+      <module name="apache-james-mailbox-quota-mailing" target="1.8" />
+      <module name="apache-james-mailbox-quota-search" target="1.8" />
+      <module name="apache-james-mailbox-quota-search-elasticsearch" target="1.8" />
+      <module name="apache-james-mailbox-quota-search-scanning" target="1.8" />
+      <module name="apache-james-mailbox-scanning-search" target="1.8" />
+      <module name="apache-james-mailbox-spamassassin" target="1.8" />
+      <module name="apache-james-mailbox-spring" target="1.8" />
+      <module name="apache-james-mailbox-store" target="1.8" />
+      <module name="apache-james-mailbox-tika" target="1.8" />
+      <module name="apache-james-mailbox-tool" target="1.8" />
+      <module name="apache-james-mpt" target="1.6" />
+      <module name="apache-james-mpt-all" target="1.6" />
+      <module name="apache-james-mpt-antlib" target="1.8" />
+      <module name="apache-james-mpt-app" target="1.8" />
+      <module name="apache-james-mpt-core" target="1.8" />
+      <module name="apache-james-mpt-external-james" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox" target="1.6" />
+      <module name="apache-james-mpt-imapmailbox-cassandra" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-core" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-cyrus" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-elasticsearch" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-hbase" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-inmemory" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-jcr" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-jpa" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-jpa-lucene" target="1.8" />
+      <module name="apache-james-mpt-imapmailbox-maildir" target="1.8" />
+      <module name="apache-james-mpt-managesieve" target="1.6" />
+      <module name="apache-james-mpt-managesieve-cassandra" target="1.8" />
+      <module name="apache-james-mpt-managesieve-core" target="1.8" />
+      <module name="apache-james-mpt-managesieve-file" target="1.8" />
+      <module name="apache-james-mpt-smtp" target="1.6" />
+      <module name="apache-james-mpt-smtp-cassandra" target="1.8" />
+      <module name="apache-james-mpt-smtp-core" target="1.8" />
+      <module name="apache-james-spamassassin" target="1.8" />
+      <module name="apache-mailet" target="1.6" />
+      <module name="apache-mailet-ai" target="1.8" />
+      <module name="apache-mailet-api" target="1.8" />
+      <module name="apache-mailet-base" target="1.8" />
+      <module name="apache-mailet-crypto" target="1.8" />
+      <module name="apache-mailet-icalendar" target="1.8" />
+      <module name="apache-mailet-standard" target="1.8" />
+      <module name="apache-mailet-test" target="1.8" />
+      <module name="backup" target="1.8" />
+      <module name="blob-api" target="1.8" />
+      <module name="blob-cassandra" target="1.8" />
+      <module name="cassandra-jmap-integration-testing" target="1.8" />
+      <module name="cli-components" target="1.8" />
+      <module name="cli-components-api" target="1.8" />
+      <module name="custom-mailets" target="1.8" />
+      <module name="event-sourcing" target="1.6" />
+      <module name="event-sourcing-core" target="1.8" />
+      <module name="event-sourcing-event-store-api" target="1.8" />
+      <module name="event-sourcing-event-store-cassandra" target="1.8" />
+      <module name="event-sourcing-event-store-memory" target="1.8" />
+      <module name="event-sourcing-pojo" target="1.8" />
+      <module name="examples" target="1.6" />
+      <module name="james-backends-common" target="1.6" />
+      <module name="james-core" target="1.8" />
+      <module name="james-mdn" target="1.8" />
+      <module name="james-project" target="1.6" />
+      <module name="james-server" target="1.6" />
+      <module name="james-server-app" target="1.8" />
+      <module name="james-server-blob" target="1.6" />
+      <module name="james-server-cassandra-guice" target="1.8" />
+      <module name="james-server-cassandra-ldap-guice" target="1.8" />
+      <module name="james-server-cli" target="1.8" />
+      <module name="james-server-cli-integration" target="1.8" />
+      <module name="james-server-core" target="1.8" />
+      <module name="james-server-data-api" target="1.8" />
+      <module name="james-server-data-cassandra" target="1.8" />
+      <module name="james-server-data-file" target="1.8" />
+      <module name="james-server-data-hbase" target="1.8" />
+      <module name="james-server-data-jcr" target="1.8" />
+      <module name="james-server-data-jdbc" target="1.8" />
+      <module name="james-server-data-jmap" target="1.8" />
+      <module name="james-server-data-jmap-cassandra" target="1.8" />
+      <module name="james-server-data-jpa" target="1.8" />
+      <module name="james-server-data-ldap" target="1.8" />
+      <module name="james-server-data-ldap-integration-testing" target="1.8" />
+      <module name="james-server-data-library" target="1.8" />
+      <module name="james-server-data-memory" target="1.8" />
+      <module name="james-server-dnsservice-api" target="1.8" />
+      <module name="james-server-dnsservice-dnsjava" target="1.8" />
+      <module name="james-server-dnsservice-library" target="1.8" />
+      <module name="james-server-dnsservice-test" target="1.8" />
+      <module name="james-server-fetchmail" target="1.8" />
+      <module name="james-server-filesystem-api" target="1.8" />
+      <module name="james-server-guice" target="1.6" />
+      <module name="james-server-guice-common" target="1.8" />
+      <module name="james-server-guice-configuration" target="1.8" />
+      <module name="james-server-guice-custom-mailets" target="1.8" />
+      <module name="james-server-guice-es-resporter" target="1.8" />
+      <module name="james-server-guice-imap" target="1.8" />
+      <module name="james-server-guice-jmap" target="1.8" />
+      <module name="james-server-guice-jmx" target="1.8" />
+      <module name="james-server-guice-lmtp" target="1.8" />
+      <module name="james-server-guice-mailbox" target="1.8" />
+      <module name="james-server-guice-mailbox-plugin-spamassassin" target="1.8" />
+      <module name="james-server-guice-mailet" target="1.8" />
+      <module name="james-server-guice-managedsieve" target="1.8" />
+      <module name="james-server-guice-netty" target="1.8" />
+      <module name="james-server-guice-pop" target="1.8" />
+      <module name="james-server-guice-smtp" target="1.8" />
+      <module name="james-server-guice-utils" target="1.8" />
+      <module name="james-server-guice-webadmin" target="1.8" />
+      <module name="james-server-guice-webadmin-cassandra" target="1.8" />
+      <module name="james-server-guice-webadmin-data" target="1.8" />
+      <module name="james-server-guice-webadmin-mailbox" target="1.8" />
+      <module name="james-server-guice-webadmin-mailqueue" target="1.8" />
+      <module name="james-server-guice-webadmin-mailrepository" target="1.8" />
+      <module name="james-server-guice-webadmin-swagger" target="1.8" />
+      <module name="james-server-jetty" target="1.8" />
+      <module name="james-server-jmap" target="1.8" />
+      <module name="james-server-jmap-integration-testing" target="1.8" />
+      <module name="james-server-jpa-common-guice" target="1.8" />
+      <module name="james-server-jpa-guice" target="1.8" />
+      <module name="james-server-jpa-smtp-common-guice" target="1.8" />
+      <module name="james-server-jpa-smtp-guice" target="1.8" />
+      <module name="james-server-jpa-smtp-mariadb-guice" target="1.8" />
+      <module name="james-server-jwt" target="1.8" />
+      <module name="james-server-lifecycle-api" target="1.8" />
+      <module name="james-server-mailbox-adapter" target="1.8" />
+      <module name="james-server-mailetcontainer-api" target="1.8" />
+      <module name="james-server-mailetcontainer-camel" target="1.8" />
+      <module name="james-server-mailets" target="1.8" />
+      <module name="james-server-mailets-integration-testing" target="1.8" />
+      <module name="james-server-mailrepository-api" target="1.8" />
+      <module name="james-server-mailrepository-cassandra" target="1.8" />
+      <module name="james-server-mailrepository-memory" target="1.8" />
+      <module name="james-server-memory-guice" target="1.8" />
+      <module name="james-server-onami" target="1.8" />
+      <module name="james-server-protocols-imap4" target="1.8" />
+      <module name="james-server-protocols-library" target="1.8" />
+      <module name="james-server-protocols-lmtp" target="1.8" />
+      <module name="james-server-protocols-managesieve" target="1.8" />
+      <module name="james-server-protocols-pop3" target="1.8" />
+      <module name="james-server-protocols-smtp" target="1.8" />
+      <module name="james-server-queue-activemq" target="1.8" />
+      <module name="james-server-queue-api" target="1.8" />
+      <module name="james-server-queue-file" target="1.8" />
+      <module name="james-server-queue-jms" target="1.8" />
+      <module name="james-server-queue-memory" target="1.8" />
+      <module name="james-server-queue-rabbitmq" target="1.8" />
+      <module name="james-server-spring" target="1.8" />
+      <module name="james-server-task" target="1.8" />
+      <module name="james-server-testing" target="1.8" />
+      <module name="james-server-util" target="1.8" />
+      <module name="james-server-webadmin" target="1.6" />
+      <module name="james-server-webadmin-cassandra" target="1.8" />
+      <module name="james-server-webadmin-core" target="1.8" />
+      <module name="james-server-webadmin-data" target="1.8" />
+      <module name="james-server-webadmin-integration-test" target="1.8" />
+      <module name="james-server-webadmin-mailbox" target="1.8" />
+      <module name="james-server-webadmin-mailqueue" target="1.8" />
+      <module name="james-server-webadmin-mailrepository" target="1.8" />
+      <module name="james-server-webadmin-swagger" target="1.8" />
+      <module name="javax-mail-extension" target="1.8" />
+      <module name="jmap-integration-testing" target="1.6" />
+      <module name="mailetdocs-maven-plugin" target="1.8" />
+      <module name="memory-jmap-integration-testing" target="1.8" />
+      <module name="metrics" target="1.6" />
+      <module name="metrics-api" target="1.8" />
+      <module name="metrics-dropwizard" target="1.8" />
+      <module name="metrics-es-reporter" target="1.8" />
+      <module name="metrics-logger" target="1.8" />
+      <module name="mpt-maven-plugin" target="1.8" />
+      <module name="protocols" target="1.6" />
+      <module name="protocols-api" target="1.8" />
+      <module name="protocols-imap" target="1.8" />
+      <module name="protocols-lmtp" target="1.8" />
+      <module name="protocols-managesieve" target="1.8" />
+      <module name="protocols-netty" target="1.8" />
+      <module name="protocols-pop3" target="1.8" />
+      <module name="protocols-smtp" target="1.8" />
+      <module name="quota-mailing-cassandra" target="1.8" />
+      <module name="quota-mailing-memory" target="1.8" />
+      <module name="third-party" target="1.6" />
+      <module name="zookeeper-sequence-provider" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

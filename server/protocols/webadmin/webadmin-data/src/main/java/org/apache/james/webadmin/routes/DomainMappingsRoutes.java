@@ -64,7 +64,7 @@ import spark.Service;
 @Path(DOMAIN_MAPPINGS)
 @Produces("application/json")
 public class DomainMappingsRoutes implements Routes {
-    static final String DOMAIN_MAPPINGS = "/domainMappings";
+    public static final String DOMAIN_MAPPINGS = "/domainMappings";
     private static final String FROM_DOMAIN = "fromDomain";
     private static final String SPECIFIC_MAPPING_PATH = SEPARATOR + "/{" + FROM_DOMAIN + "}";
     private static final String SPECIFIC_MAPPING = DOMAIN_MAPPINGS + SEPARATOR + ":" + FROM_DOMAIN;
@@ -76,6 +76,11 @@ public class DomainMappingsRoutes implements Routes {
     public DomainMappingsRoutes(final RecipientRewriteTable recipientRewriteTable, final JsonTransformer jsonTransformer) {
         this.recipientRewriteTable = recipientRewriteTable;
         this.jsonTransformer = jsonTransformer;
+    }
+
+    @Override
+    public String getBasePath() {
+        return DOMAIN_MAPPINGS;
     }
 
     @Override
@@ -155,7 +160,7 @@ public class DomainMappingsRoutes implements Routes {
     public List<String> getMapping(Request request, Response response) throws RecipientRewriteTableException {
         MappingSource mappingSource = mappingSourceFrom(request);
 
-        return Optional.ofNullable(recipientRewriteTable.getUserDomainMappings(mappingSource).select(Mapping.Type.Domain))
+        return Optional.of(recipientRewriteTable.getStoredMappings(mappingSource).select(Mapping.Type.Domain))
                 .filter(mappings -> !mappings.isEmpty())
                 .filter(mappings -> mappings.contains(Mapping.Type.Domain))
                 .map(this::toDomainList)

@@ -25,24 +25,22 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.jmap.event.PropagateLookupRightListener;
 import org.apache.james.jmap.mailet.VacationMailet;
+import org.apache.james.jmap.mailet.filter.JMAPFiltering;
 import org.apache.james.jmap.methods.RequestHandler;
 import org.apache.james.jmap.send.PostDequeueDecoratorFactory;
 import org.apache.james.jmap.utils.HtmlTextExtractor;
 import org.apache.james.jmap.utils.JsoupHtmlTextExtractor;
-import org.apache.james.jmap.utils.SystemMailboxesProvider;
-import org.apache.james.jmap.utils.SystemMailboxesProviderImpl;
 import org.apache.james.jwt.JwtConfiguration;
 import org.apache.james.lifecycle.api.Configurable;
-import org.apache.james.mailbox.MailboxListener;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxManager.SearchCapabilities;
-import org.apache.james.mailetcontainer.impl.MatcherMailetPair;
+import org.apache.james.mailbox.events.MailboxListener;
 import org.apache.james.modules.server.CamelMailetContainerModule;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.server.core.configuration.FileConfigurationProvider;
@@ -73,6 +71,14 @@ public class JMAPModule extends AbstractModule {
                 throw new RuntimeException(e);
             }
         };
+    public static final CamelMailetContainerModule.TransportProcessorCheck VACATION_MAILET_CHECK =
+        new CamelMailetContainerModule.TransportProcessorCheck.Impl(
+            RecipientIsLocal.class,
+            VacationMailet.class);
+    public static final CamelMailetContainerModule.TransportProcessorCheck FILTERING_MAILET_CHECK =
+        new CamelMailetContainerModule.TransportProcessorCheck.Impl(
+            RecipientIsLocal.class,
+            JMAPFiltering.class);
 
     @Override
     protected void configure() {
@@ -86,25 +92,24 @@ public class JMAPModule extends AbstractModule {
         bind(RequestHandler.class).in(Scopes.SINGLETON);
         bind(UploadHandler.class).in(Scopes.SINGLETON);
         bind(JsoupHtmlTextExtractor.class).in(Scopes.SINGLETON);
-        bind(SystemMailboxesProviderImpl.class).in(Scopes.SINGLETON);
 
         bind(HtmlTextExtractor.class).to(JsoupHtmlTextExtractor.class);
         Multibinder.newSetBinder(binder(), ConfigurationPerformer.class).addBinding().to(RequiredCapabilitiesPrecondition.class);
 
         Multibinder<CamelMailetContainerModule.TransportProcessorCheck> transportProcessorChecks = Multibinder.newSetBinder(binder(), CamelMailetContainerModule.TransportProcessorCheck.class);
-        transportProcessorChecks.addBinding().to(VacationMailetCheck.class);
-        
-        bind(SystemMailboxesProvider.class).to(SystemMailboxesProviderImpl.class);
+        transportProcessorChecks.addBinding().toInstance(VACATION_MAILET_CHECK);
+        transportProcessorChecks.addBinding().toInstance(FILTERING_MAILET_CHECK);
+
         bind(MailQueueItemDecoratorFactory.class).to(PostDequeueDecoratorFactory.class).in(Scopes.SINGLETON);
 
-        Multibinder.newSetBinder(binder(), MailboxListener.class).addBinding().to(PropagateLookupRightListener.class);
+        Multibinder.newSetBinder(binder(), MailboxListener.GroupMailboxListener.class).addBinding().to(PropagateLookupRightListener.class);
     }
 
     @Provides
     @Singleton
     JMAPConfiguration provideConfiguration(PropertiesProvider propertiesProvider, FileSystem fileSystem) throws ConfigurationException, IOException {
         try {
-            PropertiesConfiguration configuration = propertiesProvider.getConfiguration("jmap");
+            Configuration configuration = propertiesProvider.getConfiguration("jmap");
             return JMAPConfiguration.builder()
                 .enabled(configuration.getBoolean("enabled", true))
                 .keystore(configuration.getString("tls.keystoreURL"))
@@ -163,18 +168,6 @@ public class JMAPModule extends AbstractModule {
         @Override
         public List<Class<? extends Configurable>> forClasses() {
             return ImmutableList.of();
-        }
-    }
-
-    public static class VacationMailetCheck implements CamelMailetContainerModule.TransportProcessorCheck {
-        @Override
-        public void check(List<MatcherMailetPair> pairs) throws ConfigurationException {
-            Preconditions.checkNotNull(pairs);
-            pairs.stream()
-                .filter(pair -> pair.getMailet().getClass().equals(VacationMailet.class))
-                .filter(pair -> pair.getMatcher().getClass().equals(RecipientIsLocal.class))
-                .findAny()
-                .orElseThrow(() -> new ConfigurationException("Missing " + VacationMailet.class.getName() + " in mailets configuration (mailetcontainer -> processors -> transport)"));
         }
     }
 

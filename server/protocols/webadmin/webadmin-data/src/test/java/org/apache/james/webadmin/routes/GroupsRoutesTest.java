@@ -50,6 +50,7 @@ import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
+import org.apache.james.webadmin.dto.MappingSourceModule;
 import org.apache.james.webadmin.utils.JsonTransformer;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -109,7 +110,8 @@ class GroupsRoutesTest {
             domainList.addDomain(DOMAIN);
             usersRepository = MemoryUsersRepository.withVirtualHosting();
             usersRepository.setDomainList(domainList);
-            createServer(new GroupsRoutes(memoryRecipientRewriteTable, usersRepository, domainList, new JsonTransformer()));
+            MappingSourceModule mappingSourceModule = new MappingSourceModule();
+            createServer(new GroupsRoutes(memoryRecipientRewriteTable, usersRepository, domainList, new JsonTransformer(mappingSourceModule)));
         }
 
         @Test
@@ -121,7 +123,6 @@ class GroupsRoutesTest {
                 .statusCode(HttpStatus.OK_200)
                 .body(is("[]"));
         }
-
 
         @Test
         void getShouldNotResolveRecurseGroups() throws Exception {
@@ -370,7 +371,6 @@ class GroupsRoutesTest {
                 .containsEntry("type", "InvalidArgument")
                 .containsEntry("message", "Server doesn't own the domain: unregisteredDomain");
         }
-
 
         @Test
         void putUserInGroupShouldNotAllowUserShadowing() throws UsersRepositoryException {
@@ -624,7 +624,7 @@ class GroupsRoutesTest {
         void getAllShouldReturnErrorWhenRecipientRewriteTableExceptionIsThrown() throws Exception {
             doThrow(RecipientRewriteTableException.class)
                 .when(memoryRecipientRewriteTable)
-                .getAllMappings();
+                .getSourcesForType(any());
 
             when()
                 .get()
@@ -636,7 +636,7 @@ class GroupsRoutesTest {
         void getAllShouldReturnErrorWhenRuntimeExceptionIsThrown() throws Exception {
             doThrow(RuntimeException.class)
                 .when(memoryRecipientRewriteTable)
-                .getAllMappings();
+                .getSourcesForType(any());
 
             when()
                 .get()
@@ -672,7 +672,7 @@ class GroupsRoutesTest {
         void getShouldReturnErrorWhenRecipientRewriteTableExceptionIsThrown() throws Exception {
             doThrow(RecipientRewriteTableException.class)
                 .when(memoryRecipientRewriteTable)
-                .getUserDomainMappings(any());
+                .getStoredMappings(any());
 
             when()
                 .get(GROUP1)
@@ -684,7 +684,7 @@ class GroupsRoutesTest {
         void getShouldReturnErrorWhenRuntimeExceptionIsThrown() throws Exception {
             doThrow(RuntimeException.class)
                 .when(memoryRecipientRewriteTable)
-                .getUserDomainMappings(any());
+                .getStoredMappings(any());
 
             when()
                 .get(GROUP1)

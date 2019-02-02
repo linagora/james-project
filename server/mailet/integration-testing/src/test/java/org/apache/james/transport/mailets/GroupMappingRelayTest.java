@@ -23,7 +23,6 @@ import static io.restassured.RestAssured.given;
 import static org.apache.james.mailets.configuration.Constants.DEFAULT_DOMAIN;
 import static org.apache.james.mailets.configuration.Constants.LOCALHOST_IP;
 import static org.apache.james.mailets.configuration.Constants.PASSWORD;
-import static org.apache.james.mailets.configuration.Constants.SMTP_PORT;
 import static org.apache.james.mailets.configuration.Constants.awaitAtMostOneMinute;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -31,12 +30,14 @@ import javax.mail.internet.MimeMessage;
 
 import org.apache.james.core.builder.MimeMessageBuilder;
 import org.apache.james.jmap.mailet.VacationMailet;
+import org.apache.james.jmap.mailet.filter.JMAPFiltering;
 import org.apache.james.mailets.TemporaryJamesServer;
 import org.apache.james.mailets.configuration.CommonProcessors;
 import org.apache.james.mailets.configuration.MailetConfiguration;
 import org.apache.james.mailets.configuration.MailetContainer;
 import org.apache.james.mailets.configuration.ProcessorConfiguration;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
+import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.transport.matchers.All;
 import org.apache.james.transport.matchers.IsSenderInRRTLoop;
@@ -49,7 +50,6 @@ import org.apache.james.utils.WebAdminGuiceProbe;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.routes.GroupsRoutes;
 import org.apache.mailet.base.test.FakeMail;
-import org.awaitility.Duration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -100,6 +100,9 @@ public class GroupMappingRelayTest {
                 .addMailet(MailetConfiguration.builder()
                     .matcher(RecipientIsLocal.class)
                     .mailet(VacationMailet.class))
+                .addMailet(MailetConfiguration.builder()
+                    .matcher(RecipientIsLocal.class)
+                    .mailet(JMAPFiltering.class))
                 .addMailetsFrom(CommonProcessors.deliverOnlyTransport())
                 .addMailet(MailetConfiguration.remoteDeliveryBuilder()
                     .matcher(All.class)
@@ -149,15 +152,14 @@ public class GroupMappingRelayTest {
         String externalMail = "ray@yopmail.com";
         webAdminApi.put(GroupsRoutes.ROOT_PATH + "/" + GROUP_ON_DOMAIN1 + "/" + externalMail);
 
-        messageSender.connect(LOCALHOST_IP, SMTP_PORT)
+        messageSender.connect(LOCALHOST_IP, jamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort())
             .sendMessage(FakeMail.builder()
                 .mimeMessage(message)
                 .sender(SENDER)
                 .recipient(GROUP_ON_DOMAIN1));
 
         awaitAtMostOneMinute
-            .pollDelay(Duration.ONE_HUNDRED_MILLISECONDS)
-            .until(() -> fakeSmtp.isReceived(response -> response
+            .untilAsserted(() -> fakeSmtp.assertEmailReceived(response -> response
                 .body("[0].from", equalTo(SENDER))
                 .body("[0].to[0]", equalTo(externalMail))
                 .body("[0].text", equalTo(MESSAGE_CONTENT))));

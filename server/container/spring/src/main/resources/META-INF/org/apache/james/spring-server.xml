@@ -7,15 +7,13 @@
   to you under the Apache License, Version 2.0 (the
   "License"); you may not use this file except in compliance
   with the License.  You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
   Unless required by applicable law or agreed to in writing,
   software distributed under the License is distributed on an
   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
   KIND, either express or implied.  See the License for the
   specific language governing permissions and limitations
-  under the License.    
+  under the License.
 -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -28,13 +26,13 @@
           http://www.springframework.org/schema/context
           http://www.springframework.org/schema/context/spring-context-2.5.xsd">
 
-    <!-- 
+    <!--
     ===========================================================================
        Spring Wiring for James Server: Annotation, Bean Post-Processors...
     ===========================================================================
     -->
 
-    
+
     <context:component-scan base-package="org.apache.james" />
 
     <!-- Enable Java Annotations processing. -->
@@ -47,7 +45,7 @@
 
     <import resource="classpath:META-INF/spring/loaders-context.xml"/>
 
-    <!-- 
+    <!--
     ===========================================================================
        Authenticator
     ===========================================================================
@@ -55,7 +53,7 @@
 
     <import resource="classpath:META-INF/org/apache/james/spring-mailbox-authenticator.xml"/>
 
-    <!-- 
+    <!--
     ===========================================================================
        Authorizator
     ===========================================================================
@@ -63,14 +61,14 @@
 
     <import resource="classpath:META-INF/org/apache/james/spring-mailbox-authorizator.xml"/>
 
-    <!-- 
+    <!--
     ===========================================================================
        Queues
     ===========================================================================
     -->
 
 
-    <!-- 
+    <!--
       Default Mail Queue Factory is the ActiveMQMailQueueFactory.
       Alternative queue is FileMailQueueFactory - Can be used instead of the default one.
       To use FileMailQueueFactory, replace the import of activemq-queue-context.xml with:
@@ -149,14 +147,10 @@
     </bean>
 
     <!-- Event system -->
-    <bean id="dispatcher" class="org.apache.james.mailbox.store.event.MailboxEventDispatcher">
-        <constructor-arg index="0" ref="delegating-listener"/>
-    </bean>
-
     <import resource="classpath:META-INF/spring/event-system.xml"/>
 
     <!-- Mailbox Copier -->
-    <bean id="mailboxcopier" class="org.apache.james.mailbox.copier.MailboxCopierImpl"/>
+    <bean id="mailboxcopier" class="org.apache.james.mailbox.tools.copier.MailboxCopierImpl"/>
 
     <bean id="mailboxmanagerresolver" class="org.apache.james.container.spring.mailbox.SpringResolver" />
 
@@ -164,7 +158,7 @@
     <!--
        <bean id="james23importer" class="org.apache.james.container.spring.tool.James23Importer"/>
     -->
-    <!-- 
+    <!--
     ===========================================================================
        Database DataSource
     ===========================================================================
@@ -211,7 +205,7 @@
         <property name="showSql" value="false"/>
     </bean>
 
-    <!-- 
+    <!--
     ===========================================================================
        JMX
     ===========================================================================
@@ -267,7 +261,6 @@
                 <entry key="org.apache.james:type=component,name=quotamanagerbean" value-ref="quotamanagermanagement"/>
                 <entry key="org.apache.james:type=component,name=reindexerbean" value-ref="reindexermanagement"/>
                 <entry key="org.apache.james:type=component,name=sievemanagerbean" value-ref="sievemanagerbean"/>
-                <entry key="org.apache.james:type=component,name=mailreprocessingmanagerbean" value-ref="mailreprocessingmanagement"/>
             </map>
         </property>
         <property name="assembler">
@@ -288,11 +281,9 @@
     <bean id="quotamanagermanagement" class="org.apache.james.adapter.mailbox.QuotaManagement"/>
     <bean id="reindexermanagement" class="org.apache.james.adapter.mailbox.ReIndexerManagement"/>
     <bean id="sievemanagerbean" class="org.apache.james.sieverepository.lib.SieveRepositoryManagement"/>
-    <bean id="mailreprocessingmanagement" class="org.apache.james.cli.components.MailReprocessingManagement">
-        <constructor-arg index="0" ref="mailrepositorystore"/>
-        <constructor-arg index="1" ref="mailqueuefactory"/>
-    </bean>
 
+
+    <bean id="taskManager" class="org.apache.james.task.MemoryTaskManager"/>
     <!--
         <bean id="james23importermanagement" class="org.apache.james.container.spring.tool.James23ImporterManagement" />
     -->
@@ -309,6 +300,10 @@
     -->
 
     <bean id="metricFactory" class="org.apache.james.metrics.dropwizard.DropWizardMetricFactory">
+        <constructor-arg index="0" ref="metricRegistry"/>
+    </bean>
+
+    <bean id="gaugeRegistry" class="org.apache.james.metrics.dropwizard.DropWizardGaugeRegistry">
         <constructor-arg index="0" ref="metricRegistry"/>
     </bean>
 
