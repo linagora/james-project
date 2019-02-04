@@ -118,7 +118,7 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
 
             assertThatThrownBy(() -> cassandraMailRepository.store(mail))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("java.lang.RuntimeException: Expected failure while saving");
+                    .hasMessage("Expected failure while saving");
 
             assertThat(keysDAO.list(URL).collectList().block()).isEmpty();
         }
@@ -178,7 +178,7 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
 
             assertThatThrownBy(() -> cassandraMailRepository.store(mail))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("java.lang.RuntimeException: Expected failure while storing mail parts");
+                    .hasMessage("Expected failure while storing mail parts");
 
             assertThat(keysDAO.list(URL).collectList().block()).isEmpty();
         }
@@ -197,7 +197,7 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
 
             assertThatThrownBy(() -> cassandraMailRepository.store(mail))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("java.lang.RuntimeException: Expected failure while storing mail parts");
+                    .hasMessage("Expected failure while storing mail parts");
 
             ResultSet resultSet = cassandra.getConf().execute(select()
                     .from(BlobTable.TABLE_NAME));
