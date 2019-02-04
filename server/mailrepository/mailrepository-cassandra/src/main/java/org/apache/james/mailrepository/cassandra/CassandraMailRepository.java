@@ -21,7 +21,6 @@ package org.apache.james.mailrepository.cassandra;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.function.Function;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
