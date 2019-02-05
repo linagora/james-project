@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import javax.mail.internet.MimeMessage;
 
@@ -118,7 +119,7 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
 
             assertThatThrownBy(() -> cassandraMailRepository.store(mail))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Expected failure while saving");
+                    .hasMessage("java.lang.RuntimeException: Expected failure while saving");
 
             assertThat(keysDAO.list(URL).collectList().block()).isEmpty();
         }
@@ -159,8 +160,10 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
             }
 
             @Override
-            public Mono<Optional<CassandraMailRepositoryMailDAO.MailDTO>> read(MailRepositoryUrl url, MailKey key) {
-                return Mono.error(new RuntimeException("Expected failure while reading mail parts"));
+            public CompletableFuture<Optional<CassandraMailRepositoryMailDAO.MailDTO>> read(MailRepositoryUrl url, MailKey key) {
+                return CompletableFuture.supplyAsync(() -> {
+                    throw new RuntimeException("Expected failure while reading mail parts");
+                });
             }
         }
 
@@ -178,7 +181,7 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
 
             assertThatThrownBy(() -> cassandraMailRepository.store(mail))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Expected failure while storing mail parts");
+                    .hasMessage("java.lang.RuntimeException: Expected failure while storing mail parts");
 
             assertThat(keysDAO.list(URL).collectList().block()).isEmpty();
         }
@@ -197,7 +200,7 @@ class CassandraMailRepositoryWithFakeImplementationsTest {
 
             assertThatThrownBy(() -> cassandraMailRepository.store(mail))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Expected failure while storing mail parts");
+                    .hasMessage("java.lang.RuntimeException: Expected failure while storing mail parts");
 
             ResultSet resultSet = cassandra.getConf().execute(select()
                     .from(BlobTable.TABLE_NAME));
