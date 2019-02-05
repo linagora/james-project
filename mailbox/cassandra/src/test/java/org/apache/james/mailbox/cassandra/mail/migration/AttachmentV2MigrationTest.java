@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
@@ -212,7 +213,7 @@ class AttachmentV2MigrationTest {
         when(blobsDAO.save(attachment2.getBytes()))
             .thenThrow(new RuntimeException());
         when(attachmentDAOV2.storeAttachment(any())).thenReturn(Mono.empty());
-        when(attachmentDAO.deleteAttachment(any())).thenReturn(Mono.empty());
+        when(attachmentDAO.deleteAttachment(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         assertThat(migration.run()).isEqualTo(Migration.Result.PARTIAL);
     }
