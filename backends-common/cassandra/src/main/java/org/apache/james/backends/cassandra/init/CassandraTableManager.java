@@ -73,6 +73,6 @@ public class CassandraTableManager {
                         .limit(1)
                         .setFetchSize(1))
                 .filter(resultSet -> !resultSet.isExhausted())
-                .thenEmpty(executor.executeVoidReactor(QueryBuilder.truncate(name)));
+                .flatMap(ignored -> executor.executeVoidReactor(QueryBuilder.truncate(name)));
     }
 }
