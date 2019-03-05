@@ -27,7 +27,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.compress.archivers.zip.ExtraFieldUtils;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -49,7 +52,8 @@ public class ZipAssertTest {
     public static final byte[] ENTRY_CONTENT_2 = STRING_ENTRY_CONTENT_2.getBytes(StandardCharsets.UTF_8);
     public static final SizeExtraField EXTRA_FIELD = new SizeExtraField(42);
 
-
+    public static final SimpleImmutableEntry<String, byte[]> ENTRY = new SimpleImmutableEntry<>(ENTRY_NAME, ENTRY_CONTENT);
+    public static final SimpleImmutableEntry<String, byte[]> ENTRY_2 = new SimpleImmutableEntry<>(ENTRY_NAME_2, ENTRY_CONTENT_2);
     private File destination;
 
     @BeforeEach
@@ -59,30 +63,21 @@ public class ZipAssertTest {
         ExtraFieldUtils.register(SizeExtraField.class);
     }
 
-    @Test
-    public void hasNoEntryShouldNotThrowWhenEmpty() throws Exception {
+    private void buildZipFile(List<SimpleImmutableEntry<String, byte[]>> entries) throws Exception {
         try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
+           for (SimpleImmutableEntry<String, byte[]> entry : entries) {
+                    ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), entry.getKey());
+                    archiveOutputStream.putArchiveEntry(archiveEntry);
+                    IOUtils.copy(new ByteArrayInputStream(entry.getValue()), archiveOutputStream);
+                    archiveOutputStream.closeArchiveEntry();
+            }
             archiveOutputStream.finish();
-        }
-
-        try (ZipFile zipFile = new ZipFile(destination)) {
-            assertThatCode(() -> assertThatZip(zipFile)
-                    .hasNoEntry())
-                .doesNotThrowAnyException();
         }
     }
 
     @Test
     public void hasNoEntryShouldThrowWhenNotEmpty() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
@@ -93,9 +88,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyEntriesMatchingShouldNotThrowWhenBothEmpty() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of());
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatCode(() -> assertThatZip(zipFile)
@@ -106,20 +99,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyEntriesMatchingShouldNotThrowWhenRightOrder() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            ZipArchiveEntry archiveEntry2 = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME_2);
-            archiveOutputStream.putArchiveEntry(archiveEntry2);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT_2), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY, ENTRY_2));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatCode(() -> assertThatZip(zipFile)
@@ -132,14 +112,7 @@ public class ZipAssertTest {
 
     @Test
     public void hasNameShouldThrowWhenWrongName() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
@@ -151,14 +124,7 @@ public class ZipAssertTest {
 
     @Test
     public void isDirectoryShouldThrowWhenNotADirectory() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
@@ -190,20 +156,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyEntriesMatchingShouldNotThrowWhenWrongOrder() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            ZipArchiveEntry archiveEntry2 = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME_2);
-            archiveOutputStream.putArchiveEntry(archiveEntry2);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT_2), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY, ENTRY_2));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatCode(() -> assertThatZip(zipFile)
@@ -216,20 +169,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyEntriesMatchingShouldThrowWhenExpectingMoreEntries() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            ZipArchiveEntry archiveEntry2 = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME_2);
-            archiveOutputStream.putArchiveEntry(archiveEntry2);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT_2), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY, ENTRY_2));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
@@ -243,20 +183,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyEntriesMatchingShouldThrowWhenExpectingLessEntries() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            ZipArchiveEntry archiveEntry2 = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME_2);
-            archiveOutputStream.putArchiveEntry(archiveEntry2);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT_2), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY, ENTRY_2));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
@@ -268,15 +195,7 @@ public class ZipAssertTest {
 
     @Test
     public void hasStringContentShouldNotThrowWhenIdentical() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatCode(() -> assertThatZip(zipFile)
@@ -289,15 +208,7 @@ public class ZipAssertTest {
 
     @Test
     public void hasStringContentShouldThrowWhenDifferent() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
@@ -310,15 +221,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyExtraFieldsShouldNotThrowWhenBothEmpty() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatCode(() -> assertThatZip(zipFile)
@@ -331,15 +234,7 @@ public class ZipAssertTest {
 
     @Test
     public void containsExactlyExtraFieldsShouldThrowWhenMissingExpectedField() throws Exception {
-        try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
-
-            ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new File("any"), ENTRY_NAME);
-            archiveOutputStream.putArchiveEntry(archiveEntry);
-            IOUtils.copy(new ByteArrayInputStream(ENTRY_CONTENT), archiveOutputStream);
-            archiveOutputStream.closeArchiveEntry();
-
-            archiveOutputStream.finish();
-        }
+        buildZipFile(ImmutableList.of(ENTRY));
 
         try (ZipFile zipFile = new ZipFile(destination)) {
             assertThatThrownBy(() -> assertThatZip(zipFile)
