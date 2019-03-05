@@ -21,8 +21,10 @@ package org.apache.james.mailbox.backup;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
+import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
@@ -33,5 +35,5 @@ public interface Backup {
      * @param messages a stream of MailboxMessages that will be consumed
      * @param destination an OutputStream in which the zip will be written
      */
-    void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException;
+    public void archive(Map<Mailbox, List<MailboxAnnotation>> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException ;
 }

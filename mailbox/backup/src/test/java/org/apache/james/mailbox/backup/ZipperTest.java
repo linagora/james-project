@@ -18,35 +18,33 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MAILBOX_1;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MAILBOX_1_SUB_1;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MAILBOX_2;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MAILBOX_ID_1;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_1;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_2;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_CONTENT_1;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_CONTENT_2;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_ID_1;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_ID_2;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.MESSAGE_UID_1_VALUE;
-import static org.apache.james.mailbox.backup.MailboxMessageFixture.SIZE_1;
+import static org.apache.james.mailbox.backup.MailboxMessageFixture.*;
 import static org.apache.james.mailbox.backup.ZipAssert.EntryChecks.hasName;
 import static org.apache.james.mailbox.backup.ZipAssert.assertThatZip;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.collect.ContiguousSet;
+import com.google.common.collect.DiscreteDomain;
+import com.google.common.collect.Range;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
+
+import org.apache.james.mailbox.model.MailboxAnnotation;
+import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 class ZipperTest {
-    private static final List<Mailbox> NO_MAILBOXES = ImmutableList.of();
+    private static final Map<Mailbox, List<MailboxAnnotation>> NO_MAILBOXES = ImmutableMap.of();
     private Zipper testee;
     private ByteArrayOutputStream output;
 
@@ -109,7 +107,7 @@ class ZipperTest {
 
     @Test
     void archiveShouldWriteOneMailboxWhenPresent() throws Exception {
-        testee.archive(ImmutableList.of(MAILBOX_1), Stream.of(), output);
+        testee.archive(ImmutableMap.of(MAILBOX_1, NO_ANNOTATION), Stream.of(), output);
 
         try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
             assertThatZip(zipFile)
@@ -121,7 +119,7 @@ class ZipperTest {
 
     @Test
     void archiveShouldWriteMailboxesWhenPresent() throws Exception {
-        testee.archive(ImmutableList.of(MAILBOX_1, MAILBOX_2), Stream.of(), output);
+        testee.archive(ImmutableMap.of(MAILBOX_1, NO_ANNOTATION, MAILBOX_2, NO_ANNOTATION), Stream.of(), output);
 
         try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
             assertThatZip(zipFile)
@@ -135,7 +133,7 @@ class ZipperTest {
 
     @Test
     void archiveShouldWriteMailboxHierarchyWhenPresent() throws Exception {
-        testee.archive(ImmutableList.of(MAILBOX_1, MAILBOX_1_SUB_1, MAILBOX_2), Stream.of(), output);
+        testee.archive(ImmutableMap.of(MAILBOX_1, NO_ANNOTATION, MAILBOX_1_SUB_1, NO_ANNOTATION, MAILBOX_2, NO_ANNOTATION), Stream.of(), output);
 
         try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
             assertThatZip(zipFile)
@@ -151,7 +149,7 @@ class ZipperTest {
 
     @Test
     void archiveShouldWriteMailboxHierarchyWhenMissingParent() throws Exception {
-        testee.archive(ImmutableList.of(MAILBOX_1_SUB_1, MAILBOX_2), Stream.of(), output);
+        testee.archive(ImmutableMap.of(MAILBOX_1_SUB_1, NO_ANNOTATION, MAILBOX_2, NO_ANNOTATION), Stream.of(), output);
 
         try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
             assertThatZip(zipFile)
@@ -165,7 +163,7 @@ class ZipperTest {
 
     @Test
     void archiveShouldWriteMailboxMetadataWhenPresent() throws Exception {
-        testee.archive(ImmutableList.of(MAILBOX_1), Stream.of(), output);
+        testee.archive(ImmutableMap.of(MAILBOX_1, NO_ANNOTATION), Stream.of(), output);
 
         try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
             assertThatZip(zipFile)
@@ -176,6 +174,53 @@ class ZipperTest {
                             new UidValidityExtraField(MAILBOX_1.getUidValidity())));
         }
     }
+
+    @Test
+    void archiveShouldWriteMailboxAnnotationsMetadataWhenPresent() throws Exception {
+        testee.archive(ImmutableMap.of(MAILBOX_1, WITH_ANNOTATION_1), Stream.of(), output);
+
+        try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
+            assertThatZip(zipFile)
+                .containsOnlyEntriesMatching(
+                    hasName(MAILBOX_1.getName() + "/")
+                        .containsExtraFields(
+                            new MailBoxAnnotationsExtraField(WITH_ANNOTATION_1)));
+        }
+    }
+
+    @Test
+    void archiveShouldWriteMailboxAnnotationsMetadataWhenTwoPresent() throws Exception {
+        testee.archive(ImmutableMap.of(MAILBOX_1, WITH_ANNOTATION_1_AND_2), Stream.of(), output);
+
+        try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
+            assertThatZip(zipFile)
+                .containsOnlyEntriesMatching(
+                    hasName(MAILBOX_1.getName() + "/")
+                        .containsExtraFields(
+                            new MailBoxAnnotationsExtraField(WITH_ANNOTATION_1_AND_2)));
+        }
+    }
+
+    private MailboxAnnotation getAnnotationForIndex(int i) {
+      return MailboxAnnotation.newInstance(new MailboxAnnotationKey("/annotation" + i + "/test"), "annotation " + i + " content");
+    }
+
+    private final List<MailboxAnnotation> oneThousandAnnotations =   ContiguousSet.create(Range.closed(0, 999), DiscreteDomain.integers()).stream()
+            .map(this::getAnnotationForIndex).collect(Collectors.toList());
+
+    @Test
+    void archiveShouldWriteMailboxAnnotationsMetadataWhenOneThousandPresent() throws Exception {
+        testee.archive(ImmutableMap.of(MAILBOX_1, oneThousandAnnotations), Stream.of(), output);
+
+        try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
+            assertThatZip(zipFile)
+                .containsOnlyEntriesMatching(
+                    hasName(MAILBOX_1.getName() + "/")
+                        .containsExtraFields(
+                            new MailBoxAnnotationsExtraField(oneThousandAnnotations)));
+        }
+    }
+
 
     private SeekableInMemoryByteChannel toSeekableByteChannel(ByteArrayOutputStream output) {
         return new SeekableInMemoryByteChannel(output.toByteArray());

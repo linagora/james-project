@@ -22,12 +22,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.compress.archivers.zip.ExtraFieldUtils;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 
@@ -42,10 +46,11 @@ public class Zipper implements Backup {
         ExtraFieldUtils.register(InternalDateExtraField.class);
         ExtraFieldUtils.register(UidValidityExtraField.class);
         ExtraFieldUtils.register(FlagsExtraField.class);
+        ExtraFieldUtils.register(MailBoxAnnotationsExtraField.class);
     }
 
     @Override
-    public void archive(List<Mailbox> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException {
+    public void archive(Map<Mailbox, List<MailboxAnnotation>> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException {
         try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
             storeMailboxes(mailboxes, archiveOutputStream);
             storeMessages(messages, archiveOutputStream);
@@ -53,9 +58,10 @@ public class Zipper implements Backup {
         }
     }
 
-    private void storeMailboxes(List<Mailbox> mailboxes, ZipArchiveOutputStream archiveOutputStream) throws IOException {
-        for (Mailbox mailbox: mailboxes) {
-            storeInArchive(mailbox, archiveOutputStream);
+    private void storeMailboxes(Map<Mailbox, List<MailboxAnnotation>> mailboxes, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+        for (Mailbox mailbox: mailboxes.keySet()) {
+            List<MailboxAnnotation> annotations = mailboxes.getOrDefault(mailbox, ImmutableList.of());
+            storeInArchive(mailbox, annotations, archiveOutputStream);
         }
     }
 
@@ -65,12 +71,15 @@ public class Zipper implements Backup {
             }).sneakyThrow());
     }
 
-    private void storeInArchive(Mailbox mailbox, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+    private void storeInArchive(Mailbox mailbox, List<MailboxAnnotation> annotations, ZipArchiveOutputStream archiveOutputStream) throws IOException {
         String name = mailbox.getName();
         ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new Directory(name), name);
 
         archiveEntry.addExtraField(new MailboxIdExtraField(mailbox.getMailboxId().serialize()));
         archiveEntry.addExtraField(new UidValidityExtraField(mailbox.getUidValidity()));
+        if (!annotations.isEmpty()) {
+            archiveEntry.addExtraField(new MailBoxAnnotationsExtraField(annotations));
+        }
 
         archiveOutputStream.putArchiveEntry(archiveEntry);
         archiveOutputStream.closeArchiveEntry();
