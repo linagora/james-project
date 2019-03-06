@@ -18,28 +18,31 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.util.Optional;
+import org.assertj.core.api.Assertions;
+import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
-import org.apache.commons.compress.archivers.zip.ZipShort;
+public class WithZipHeaderTest {
+    private static final short al = 0x6C61;
+    private static final short aq = 0x7161;
 
-public class SizeExtraField extends LongExtraField implements WithZipHeader {
-
-    public static final ZipShort ID_AJ = new ZipShort(WithZipHeader.toLittleEndian("aj"));
-
-    public SizeExtraField() {
-        super();
+    @Test
+    void toLittleEndianShouldReturnLittleEndianRepresentationOfStringAl() {
+        Assert.assertEquals(WithZipHeader.toLittleEndian("al"), (al));
     }
 
-    public SizeExtraField(long value) {
-        super(value);
+    @Test
+    void toLittleEndianShouldReturnLittleEndianRepresentationOfStringAq() {
+        Assert.assertEquals(WithZipHeader.toLittleEndian("aq"), (aq));
     }
 
-    public SizeExtraField(Optional<Long> value) {
-        super(value);
+    @Test
+    void toLittleEndianShouldThrowIfHeaderTooLong() {
+        Assertions.assertThatThrownBy(() -> WithZipHeader.toLittleEndian("aqa"));
     }
 
-    @Override
-    public ZipShort getHeaderId() {
-        return ID_AJ;
+    @Test
+    void toLittleEndianShouldThrowIfHeaderTooShort() {
+        Assertions.assertThatThrownBy(() -> WithZipHeader.toLittleEndian("a"));
     }
 }

@@ -18,28 +18,18 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.util.Optional;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-import org.apache.commons.compress.archivers.zip.ZipShort;
+import org.apache.james.mime4j.Charsets;
 
-public class SizeExtraField extends LongExtraField implements WithZipHeader {
+public interface WithZipHeader {
 
-    public static final ZipShort ID_AJ = new ZipShort(WithZipHeader.toLittleEndian("aj"));
-
-    public SizeExtraField() {
-        super();
-    }
-
-    public SizeExtraField(long value) {
-        super(value);
-    }
-
-    public SizeExtraField(Optional<Long> value) {
-        super(value);
-    }
-
-    @Override
-    public ZipShort getHeaderId() {
-        return ID_AJ;
+    static int toLittleEndian(String s) {
+        if (s.length() == 2) {
+            return ByteBuffer.wrap(s.getBytes(Charsets.US_ASCII)).order(ByteOrder.LITTLE_ENDIAN).getShort();
+        } else {
+            throw new IllegalArgumentException("The zip header should be 2 characters long.");
+        }
     }
 }

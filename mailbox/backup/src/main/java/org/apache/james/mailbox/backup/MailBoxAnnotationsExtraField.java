@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 import org.apache.commons.compress.archivers.zip.ZipShort;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 
-public class MailBoxAnnotationsExtraField extends StringExtraField implements WithValueSeparator {
+public class MailBoxAnnotationsExtraField extends StringExtraField implements WithValueSeparator, WithZipHeader {
 
-    public static final ZipShort ID_AQ = new ZipShort(0x7161); // "aq" in little-endian
+    public static final ZipShort ID_AQ = new ZipShort(WithZipHeader.toLittleEndian("aq"));
 
     private static String serializeAnnotations(List<MailboxAnnotation> annotations) {
         return annotations.stream().map(MailBoxAnnotationsExtraField::serializeAnnotation)
