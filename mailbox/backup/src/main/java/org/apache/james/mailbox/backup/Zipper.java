@@ -22,11 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.commons.compress.archivers.zip.ExtraFieldUtils;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -50,7 +47,7 @@ public class Zipper implements Backup {
     }
 
     @Override
-    public void archive(Map<Mailbox, List<MailboxAnnotation>> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException {
+    public void archive(List<MailboxWithAnnotations> mailboxes, Stream<MailboxMessage> messages, OutputStream destination) throws IOException {
         try (ZipArchiveOutputStream archiveOutputStream = new ZipArchiveOutputStream(destination)) {
             storeMailboxes(mailboxes, archiveOutputStream);
             storeMessages(messages, archiveOutputStream);
@@ -58,20 +55,22 @@ public class Zipper implements Backup {
         }
     }
 
-    private void storeMailboxes(Map<Mailbox, List<MailboxAnnotation>> mailboxes, ZipArchiveOutputStream archiveOutputStream) throws IOException {
-        for (Mailbox mailbox: mailboxes.keySet()) {
-            List<MailboxAnnotation> annotations = mailboxes.getOrDefault(mailbox, ImmutableList.of());
-            storeInArchive(mailbox, annotations, archiveOutputStream);
-        }
+    private void storeMailboxes(List<MailboxWithAnnotations> mailboxes, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+        mailboxes.forEach(Throwing.<MailboxWithAnnotations>consumer(mailbox ->
+            storeInArchive(mailbox, archiveOutputStream)
+        ).sneakyThrow());
     }
 
-    private void storeMessages(Stream<MailboxMessage> messages, ZipArchiveOutputStream archiveOutputStream) {
+    private void storeMessages(Stream<MailboxMessage> messages, ZipArchiveOutputStream archiveOutputStream) throws IOException {
         messages.forEach(Throwing.<MailboxMessage>consumer(message -> {
                 storeInArchive(message, archiveOutputStream);
             }).sneakyThrow());
     }
 
-    private void storeInArchive(Mailbox mailbox, List<MailboxAnnotation> annotations, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+    private void storeInArchive(MailboxWithAnnotations mailboxWithAnnotations, ZipArchiveOutputStream archiveOutputStream) throws IOException {
+        Mailbox mailbox = mailboxWithAnnotations.mailbox;
+        List<MailboxAnnotation> annotations = mailboxWithAnnotations.annotations;
+
         String name = mailbox.getName();
         ZipArchiveEntry archiveEntry = (ZipArchiveEntry) archiveOutputStream.createArchiveEntry(new Directory(name), name);
 
