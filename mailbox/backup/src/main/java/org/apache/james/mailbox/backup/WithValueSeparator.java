@@ -16,39 +16,8 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
 package org.apache.james.mailbox.backup;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.apache.commons.compress.archivers.zip.ZipShort;
-import org.apache.james.mailbox.model.MailboxAnnotation;
-
-public class MailBoxAnnotationsExtraField extends StringExtraField implements WithValueSeparator {
-
-    public static final ZipShort ID_AQ = new ZipShort(0x7161); // "aq" in little-endian
-
-    private static String serializeAnnotations(List<MailboxAnnotation> annotations) {
-        return annotations.stream().map(MailBoxAnnotationsExtraField::serializeAnnotation)
-            .collect(Collectors.joining(SEPARATOR));
-    }
-
-    public MailBoxAnnotationsExtraField() {
-        super();
-    }
-
-    public MailBoxAnnotationsExtraField(List<MailboxAnnotation> annotation) {
-        super(Optional.of(serializeAnnotations(annotation)));
-    }
-
-    @Override
-    public ZipShort getHeaderId() {
-        return ID_AQ;
-    }
-
-    private static String serializeAnnotation(MailboxAnnotation annotation) throws RuntimeException {
-          return  annotation.getKey().asString() + ":" + annotation.getValue().orElse("");
-    }
+public interface WithValueSeparator {
+    String SEPARATOR = "%";
 }

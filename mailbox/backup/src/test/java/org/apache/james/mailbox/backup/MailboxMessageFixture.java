@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.Date;
+import java.util.List;
 
 import javax.mail.Flags;
 import javax.mail.util.SharedByteArrayInputStream;
@@ -30,6 +31,8 @@ import javax.mail.util.SharedByteArrayInputStream;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MailboxSessionUtil;
 import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.model.MailboxAnnotation;
+import org.apache.james.mailbox.model.MailboxAnnotationKey;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
@@ -39,6 +42,8 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
+
+import com.google.common.collect.ImmutableList;
 
 public interface MailboxMessageFixture {
 
@@ -65,10 +70,18 @@ public interface MailboxMessageFixture {
     Flags flags1 = new Flags("myFlags");
 
     MailboxSession MAILBOX_SESSION = MailboxSessionUtil.create("user");
-    
+
     Mailbox MAILBOX_1 = new SimpleMailbox(MailboxPath.forUser("user", "mailbox1"), 42, TestId.of(1L));
     Mailbox MAILBOX_1_SUB_1 = new SimpleMailbox(MailboxPath.forUser("user", "mailbox1" + MAILBOX_SESSION.getPathDelimiter() + "sub1"), 420, TestId.of(11L));
     Mailbox MAILBOX_2 = new SimpleMailbox(MailboxPath.forUser("user", "mailbox2"), 43, TestId.of(2L));
+
+    List<MailboxAnnotation> NO_ANNOTATION = ImmutableList.of();
+
+    MailboxAnnotation ANNOTATION_1 = MailboxAnnotation.newInstance(new MailboxAnnotationKey("/annotation1/test"), "annotation1 content");
+    List<MailboxAnnotation> WITH_ANNOTATION_1 = ImmutableList.of(ANNOTATION_1);
+
+    MailboxAnnotation ANNOTATION_2 = MailboxAnnotation.newInstance(new MailboxAnnotationKey("/annotation2/void"), "annotation2 content");
+    List<MailboxAnnotation> WITH_ANNOTATION_1_AND_2 = ImmutableList.of(ANNOTATION_1, ANNOTATION_2);
 
     SimpleMailboxMessage MESSAGE_1 = SimpleMailboxMessage.builder()
         .messageId(MESSAGE_ID_1)
@@ -92,5 +105,4 @@ public interface MailboxMessageFixture {
         .propertyBuilder(new PropertyBuilder())
         .mailboxId(MAILBOX_ID_1)
         .build();
-
 }

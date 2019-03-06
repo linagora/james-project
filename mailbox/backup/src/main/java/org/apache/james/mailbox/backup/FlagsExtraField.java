@@ -28,7 +28,7 @@ import javax.mail.Flags;
 import org.apache.commons.compress.archivers.zip.ZipShort;
 import org.apache.james.util.StreamUtils;
 
-public class FlagsExtraField extends StringExtraField {
+public class FlagsExtraField extends StringExtraField implements WithValueSeparator {
 
     public static final ZipShort ID_AP = new ZipShort(0x7061); // "ap" in little-endian
 
@@ -37,7 +37,7 @@ public class FlagsExtraField extends StringExtraField {
                 StreamUtils.ofNullable(flags.getSystemFlags())
                     .map(FlagsExtraField::systemFlagToString),
                 StreamUtils.ofNullable(flags.getUserFlags()))
-            .collect(Collectors.joining("%"));
+            .collect(Collectors.joining(SEPARATOR));
     }
 
     public FlagsExtraField() {

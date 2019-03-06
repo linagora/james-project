@@ -19,41 +19,38 @@
 
 package org.apache.james.mailbox.backup;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ContiguousSet;
-import com.google.common.collect.DiscreteDomain;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import nl.jqno.equalsverifier.EqualsVerifier;
-import nl.jqno.equalsverifier.Warning;
-import org.apache.james.mailbox.model.MailboxAnnotation;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.apache.james.mailbox.model.MailboxAnnotation;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 
 public class MailBoxAnnotationsExtraFieldTest {
 
     private String annotation1Serialized = MailboxMessageFixture.ANNOTATION_1.getKey().asString() + ":" + MailboxMessageFixture.ANNOTATION_1.getValue().orElse("");
+    private String annotation2Serialized = MailboxMessageFixture.ANNOTATION_2.getKey().asString() + ":" + MailboxMessageFixture.ANNOTATION_2.getValue().orElse("");
 
-    private int sizeAnnotation1 = 1 + MailboxMessageFixture.ANNOTATION_1.getKey().asString().length() + MailboxMessageFixture.ANNOTATION_1.getValue().orElse("").length();
-    private int sizeAnnotation2 = 1 + MailboxMessageFixture.ANNOTATION_2.getKey().asString().length() + MailboxMessageFixture.ANNOTATION_2.getValue().orElse("").length();
+    private int sizeAnnotation1 = annotation1Serialized.length();
+    private int sizeAnnotation2 = annotation2Serialized.length();
     private int sizeSeparator = 1;
 
-    private List<MailboxAnnotation> oneThousandTimes =   ContiguousSet.create(Range.closed(0, 999), DiscreteDomain.integers()).stream()
-            .map(i -> MailboxMessageFixture.ANNOTATION_1).collect(Collectors.toList());
+    private List<MailboxAnnotation> oneThousandTimes = IntStream.range(0, 1000)
+            .mapToObj(i -> MailboxMessageFixture.ANNOTATION_1).collect(Collectors.toList());
 
-    private String bufferContentForOneThousand = oneThousandTimes.stream().reduce("", (acc, e) ->  {
-        String res = acc + e.getKey().asString() + ":" + e.getValue().orElse("");
-        return acc.isEmpty() ? res : res + "%";
-    }, (a,b) -> a + b);
+    private String bufferContentForOneThousand = oneThousandTimes.stream().map(a ->  a.getKey().asString() + ":" + a.getValue().orElse("")).collect(Collectors.joining("%"));
 
     @Test
     public void shouldMatchBeanContract() {
@@ -235,7 +232,7 @@ public class MailBoxAnnotationsExtraFieldTest {
             MailBoxAnnotationsExtraField testee = new MailBoxAnnotationsExtraField(MailboxMessageFixture.WITH_ANNOTATION_1);
             testee.parseFromLocalFileData(bufferContent
                     .getBytes(StandardCharsets.UTF_8), offset, sizeAnnotation1 - offset);
-            assertThat(testee.getValue()).contains(MailboxMessageFixture.ANNOTATION_1.getValue().orElse(""));
+            assertThat(testee.getValue()).isEqualTo(MailboxMessageFixture.ANNOTATION_1.getValue());
         }
 
         @Test
@@ -267,7 +264,7 @@ public class MailBoxAnnotationsExtraFieldTest {
             MailBoxAnnotationsExtraField testee = new MailBoxAnnotationsExtraField(MailboxMessageFixture.WITH_ANNOTATION_1);
             testee.parseFromCentralDirectoryData(bufferContent
                     .getBytes(StandardCharsets.UTF_8), offset, sizeAnnotation1 - offset);
-            assertThat(testee.getValue()).contains(MailboxMessageFixture.ANNOTATION_1.getValue().orElse(""));
+            assertThat(testee.getValue()).isEqualTo(MailboxMessageFixture.ANNOTATION_1.getValue());
         }
 
         @Test
