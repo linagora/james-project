@@ -239,17 +239,9 @@ class ZipperTest {
 
     @Test
     void archiveShouldThrowWhenAnnotationExtraFieldLengthTooLarge() throws Exception {
-        testee.archive(ImmutableList.of(new MailboxWithAnnotations(MAILBOX_1, tenThousandAnnotations)), Stream.of(), output);
-
-        try (ZipFile zipFile = new ZipFile(toSeekableByteChannel(output))) {
-            assertThatThrownBy(() -> assertThatZip(zipFile)
-                .containsOnlyEntriesMatching(
-                    hasName(MAILBOX_1.getName() + "/")
-                        .containsExtraFields(new MailBoxAnnotationsExtraField(tenThousandAnnotations)))
-            ).isInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> testee.archive(ImmutableList.of(new MailboxWithAnnotations(MAILBOX_1, tenThousandAnnotations)), Stream.of(), output))
+            .isInstanceOf(IllegalArgumentException.class);
     }
-
 
     private SeekableInMemoryByteChannel toSeekableByteChannel(ByteArrayOutputStream output) {
         return new SeekableInMemoryByteChannel(output.toByteArray());
