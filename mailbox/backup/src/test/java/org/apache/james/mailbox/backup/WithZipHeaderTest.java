@@ -18,8 +18,9 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 public class WithZipHeaderTest {
@@ -28,12 +29,12 @@ public class WithZipHeaderTest {
 
     @Test
     void toLittleEndianShouldReturnLittleEndianRepresentationOfStringAl() {
-        Assert.assertEquals(WithZipHeader.toLittleEndian("al"), (al));
+        assertThat(WithZipHeader.toLittleEndian("al")).isEqualTo(al);
     }
 
     @Test
     void toLittleEndianShouldReturnLittleEndianRepresentationOfStringAq() {
-        Assert.assertEquals(WithZipHeader.toLittleEndian("aq"), (aq));
+        assertThat(WithZipHeader.toLittleEndian("aq")).isEqualTo(aq);
     }
 
     @Test
