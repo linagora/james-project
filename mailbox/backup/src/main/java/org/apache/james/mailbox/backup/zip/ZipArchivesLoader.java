@@ -16,28 +16,20 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.backup;
+package org.apache.james.mailbox.backup.zip;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.util.zip.ZipInputStream;
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.reactivestreams.Publisher;
+import org.apache.james.mailbox.backup.MailArchiveIterator;
+import org.apache.james.mailbox.backup.MailArchivesLoader;
 
-public interface MailboxBackup {
-
-    /**
-     * @param user the user account to export
-     */
-    void backupAccount(User user, OutputStream destination) throws IOException, MailboxException;
-
-    /**
-     * @param user the user in which account the restored elements will be stored.
-     * @param source the input stream to the archive containing the account elements.
-     * @return a Publisher indicating when the action is completed
-     */
-    Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException;
-
+public class ZipArchivesLoader implements MailArchivesLoader {
+    @Override
+    public MailArchiveIterator load(InputStream inputStream) throws IOException {
+        ZipInputStream zipInputStream = new ZipInputStream(inputStream);
+        ZipEntryIterator zipEntryIterator = new ZipEntryIterator(zipInputStream);
+        return new MailAccountZipIterator(zipEntryIterator);
+    }
 }

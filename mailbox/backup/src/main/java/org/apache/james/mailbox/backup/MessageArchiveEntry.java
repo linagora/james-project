@@ -18,26 +18,55 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.util.Date;
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.reactivestreams.Publisher;
+import javax.mail.Flags;
 
-public interface MailboxBackup {
+public class MessageArchiveEntry implements MailArchiveEntry {
 
-    /**
-     * @param user the user account to export
-     */
-    void backupAccount(User user, OutputStream destination) throws IOException, MailboxException;
+    private final SerializedMessageId messageId;
+    private final SerializedMailboxId mailboxId;
+    private final long size;
+    private final Date internalDate;
+    private final Flags flags;
+    private final InputStream content;
 
-    /**
-     * @param user the user in which account the restored elements will be stored.
-     * @param source the input stream to the archive containing the account elements.
-     * @return a Publisher indicating when the action is completed
-     */
-    Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException;
+    public MessageArchiveEntry(SerializedMessageId messageId, SerializedMailboxId mailboxId, long size, Date internalDate, Flags flags, InputStream content) {
+        this.messageId = messageId;
+        this.mailboxId = mailboxId;
+        this.size = size;
+        this.internalDate = internalDate;
+        this.flags = flags;
+        this.content = content;
+    }
 
+    public SerializedMessageId getMessageId() {
+        return messageId;
+    }
+
+    public SerializedMailboxId getMailboxId() {
+        return mailboxId;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public Date getInternalDate() {
+        return internalDate;
+    }
+
+    public Flags getFlags() {
+        return flags;
+    }
+
+    public InputStream getContent() {
+        return content;
+    }
+
+    @Override
+    public ArchiveEntryType getType() {
+        return ArchiveEntryType.MESSAGE;
+    }
 }

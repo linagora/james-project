@@ -18,9 +18,10 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup.zip;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import com.google.common.collect.ImmutableMap;
 
 public enum ZipEntryType {
 
@@ -29,7 +30,7 @@ public enum ZipEntryType {
     MAILBOX_ANNOTATION(ZipEntryType.MAILBOX_ANNOTATION_VALUE),
     MESSAGE(ZipEntryType.MESSAGE_VALUE);
 
-    final long value;
+    private final long value;
 
     ZipEntryType(long value) {
         this.value = value;
@@ -40,16 +41,15 @@ public enum ZipEntryType {
     private static final long MAILBOX_ANNOTATION_VALUE = 3L;
     private static final long MESSAGE_VALUE = 4L;
 
+    private static final Map<Long, ZipEntryType> entryByValue = ImmutableMap.of(MAILBOX_VALUE, MAILBOX,
+        MAILBOX_ANNOTATION_DIR_VALUE, MAILBOX_ANNOTATION_DIR,
+        MAILBOX_ANNOTATION_VALUE, MAILBOX_ANNOTATION,
+        MESSAGE_VALUE, MESSAGE
+    );
 
-    private static final Map<Long, ZipEntryType> entryByValue = new HashMap<>();
-
-    static {
-        entryByValue.put(MAILBOX_VALUE, MAILBOX);
-        entryByValue.put(MAILBOX_ANNOTATION_DIR_VALUE, MAILBOX_ANNOTATION_DIR);
-        entryByValue.put(MAILBOX_ANNOTATION_VALUE, MAILBOX_ANNOTATION);
-        entryByValue.put(MESSAGE_VALUE, MESSAGE);
+    public long getValue() {
+        return value;
     }
-
 
     public static Optional<ZipEntryType> getFromValue(long value) {
         return Optional.ofNullable(entryByValue.get(value));

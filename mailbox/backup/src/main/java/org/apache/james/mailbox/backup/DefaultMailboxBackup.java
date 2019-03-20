@@ -19,10 +19,12 @@
 package org.apache.james.mailbox.backup;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.core.User;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
@@ -37,16 +39,19 @@ import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.util.streams.Iterators;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.steveash.guavate.Guavate;
+import com.google.common.annotations.VisibleForTesting;
 
 public class DefaultMailboxBackup implements MailboxBackup {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultMailboxBackup.class);
 
-    private static class MailAccountContent {
+    @VisibleForTesting
+    static class MailAccountContent {
         private final MailboxWithAnnotations mailboxWithAnnotations;
         private final Stream<MessageResult> messages;
 
@@ -64,9 +69,14 @@ public class DefaultMailboxBackup implements MailboxBackup {
         }
     }
 
-    public DefaultMailboxBackup(MailboxManager mailboxManager, ArchiveService archiveService) {
+    private final MailboxManager mailboxManager;
+    private final ArchiveService archiveService;
+    private final MailArchivesLoader archiveLoader;
+
+    public DefaultMailboxBackup(MailboxManager mailboxManager, ArchiveService archiveService, MailArchivesLoader archiveLoader) {
         this.mailboxManager = mailboxManager;
         this.archiveService = archiveService;
+        this.archiveLoader = archiveLoader;
     }
 
     @Override
@@ -81,8 +91,13 @@ public class DefaultMailboxBackup implements MailboxBackup {
         archive(mailboxes, messages, destination);
     }
 
-    private final MailboxManager mailboxManager;
-    private final ArchiveService archiveService;
+    @Override
+    public Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException {
+        MailboxSession session = mailboxManager.createSystemSession(user.asString());
+
+        MailArchiveIterator archiveIterator = archiveLoader.load(source);
+        throw new NotImplementedException("TODO");
+    }
 
     private Stream<MailAccountContent> getMailboxWithAnnotationsFromPath(MailboxSession session, MailboxPath path) {
         try {
@@ -98,8 +113,9 @@ public class DefaultMailboxBackup implements MailboxBackup {
         }
     }
 
-    private List<MailAccountContent> getAccountContentForUser(MailboxSession session) throws MailboxException {
-        MailboxQuery queryUser = MailboxQuery.builder().username(session.getUser().asString()).build();
+    @VisibleForTesting
+    List<MailAccountContent> getAccountContentForUser(MailboxSession session) throws MailboxException {
+        MailboxQuery queryUser = MailboxQuery.builder().user(session.getUser()).build();
         Stream<MailboxPath> paths = mailboxManager.search(queryUser, session).stream()
             .map(MailboxMetaData::getPath);
         List<MailAccountContent> mailboxes = paths
@@ -109,7 +125,8 @@ public class DefaultMailboxBackup implements MailboxBackup {
         return mailboxes;
     }
 
-    private void archive(List<MailboxWithAnnotations> mailboxes, Stream<MessageResult> messages, OutputStream destination) throws IOException {
+    private void archive(List<MailboxWithAnnotations> mailboxes, Stream<MessageResult> messages, OutputStream
+        destination) throws IOException {
         archiveService.archive(mailboxes, messages, destination);
     }
 

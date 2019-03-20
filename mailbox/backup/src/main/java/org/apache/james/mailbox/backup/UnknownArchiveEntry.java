@@ -18,26 +18,21 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+public class UnknownArchiveEntry implements MailArchiveEntry {
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.reactivestreams.Publisher;
+    private final String entryName;
 
-public interface MailboxBackup {
+    public UnknownArchiveEntry(String entryName) {
+        this.entryName = entryName;
+    }
 
-    /**
-     * @param user the user account to export
-     */
-    void backupAccount(User user, OutputStream destination) throws IOException, MailboxException;
+    public String getEntryName() {
+        return entryName;
+    }
 
-    /**
-     * @param user the user in which account the restored elements will be stored.
-     * @param source the input stream to the archive containing the account elements.
-     * @return a Publisher indicating when the action is completed
-     */
-    Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException;
+    @Override
+    public ArchiveEntryType getType() {
+        return ArchiveEntryType.UNKNOWN;
+    }
 
 }

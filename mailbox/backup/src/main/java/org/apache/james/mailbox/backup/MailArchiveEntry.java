@@ -18,26 +18,13 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+public interface MailArchiveEntry {
+    enum ArchiveEntryType {
+        MAILBOX,
+        MESSAGE,
+        UNKNOWN
+    }
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.reactivestreams.Publisher;
-
-public interface MailboxBackup {
-
-    /**
-     * @param user the user account to export
-     */
-    void backupAccount(User user, OutputStream destination) throws IOException, MailboxException;
-
-    /**
-     * @param user the user in which account the restored elements will be stored.
-     * @param source the input stream to the archive containing the account elements.
-     * @return a Publisher indicating when the action is completed
-     */
-    Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException;
+    ArchiveEntryType getType();
 
 }

@@ -38,7 +38,7 @@ public class EntryTypeExtraField extends LongExtraField implements WithZipHeader
     }
 
     public EntryTypeExtraField(ZipEntryType entryType) {
-        super(entryType.value);
+        super(entryType.getValue());
     }
 
     public Optional<ZipEntryType> getEnumValue() throws IllegalArgumentException {

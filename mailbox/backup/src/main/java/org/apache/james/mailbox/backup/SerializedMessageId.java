@@ -18,26 +18,38 @@
  ****************************************************************/
 package org.apache.james.mailbox.backup;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.apache.james.mailbox.model.MessageId;
 
-import org.apache.james.core.User;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.reactivestreams.Publisher;
+import com.google.common.base.Objects;
 
-public interface MailboxBackup {
+public class SerializedMessageId {
+    private final String value;
 
-    /**
-     * @param user the user account to export
-     */
-    void backupAccount(User user, OutputStream destination) throws IOException, MailboxException;
+    public SerializedMessageId(String value) {
+        this.value = value;
+    }
 
-    /**
-     * @param user the user in which account the restored elements will be stored.
-     * @param source the input stream to the archive containing the account elements.
-     * @return a Publisher indicating when the action is completed
-     */
-    Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException;
+    public SerializedMessageId(MessageId messageId) {
+        this.value = messageId.serialize();
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof SerializedMessageId) {
+            SerializedMessageId that = (SerializedMessageId) o;
+            return Objects.equal(value, that.value);
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(value);
+    }
 
 }
