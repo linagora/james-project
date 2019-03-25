@@ -16,31 +16,30 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-
-package org.apache.james.mailbox.backup;
+package org.apache.james.mailbox.backup.zip;
 
 import java.util.Optional;
 
 import org.apache.commons.compress.archivers.zip.ZipShort;
 
-public class UidExtraField extends LongExtraField implements WithZipHeader {
+public class UidValidityExtraField extends LongExtraField implements WithZipHeader {
 
-    public static final ZipShort ID_AK = new ZipShort(WithZipHeader.toLittleEndian('a', 'k'));
+    public static final ZipShort ID_AN = new ZipShort(WithZipHeader.toLittleEndian('a', 'n'));
 
-    public UidExtraField() {
+    public UidValidityExtraField() {
         super();
     }
 
-    public UidExtraField(long value) {
+    public UidValidityExtraField(long value) {
         super(value);
     }
 
-    public UidExtraField(Optional<Long> value) {
+    public UidValidityExtraField(Optional<Long> value) {
         super(value);
     }
 
     @Override
     public ZipShort getHeaderId() {
-        return ID_AK;
+        return ID_AN;
     }
 }

@@ -20,20 +20,32 @@ package org.apache.james.mailbox.backup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.mailbox.backup.zip.WithZipHeader;
+import org.apache.james.mailbox.backup.zip.ZipEntryType;
 import org.junit.jupiter.api.Test;
 
-class WithZipHeaderTest {
-    private static final short al = 0x6C61;
-    private static final short aq = 0x7161;
+class ZipEntryTypeContract {
 
-    @Test
-    void toLittleEndianShouldReturnLittleEndianRepresentationOfStringAl() {
-        assertThat(WithZipHeader.toLittleEndian('a', 'l')).isEqualTo(al);
+    private void assertZipEntryTypeDeserializedFromValue(long value, ZipEntryType expectedType) {
+        assertThat(ZipEntryType.getFromValue(value)).contains(expectedType);
     }
 
     @Test
-    void toLittleEndianShouldReturnLittleEndianRepresentationOfStringAq() {
-        assertThat(WithZipHeader.toLittleEndian('a', 'q')).isEqualTo(aq);
+    void mailboxShouldBeDeserializedFromOne() {
+        assertZipEntryTypeDeserializedFromValue(1L, ZipEntryType.MAILBOX);
+    }
+
+    @Test
+    void mailboxAnnotationDirShouldBeDeserializedFromTwo() {
+        assertZipEntryTypeDeserializedFromValue(2L, ZipEntryType.MAILBOX_ANNOTATION_DIR);
+    }
+
+    @Test
+    void mailboxAnnotationShouldBeDeserializedFromThree() {
+        assertZipEntryTypeDeserializedFromValue(3L, ZipEntryType.MAILBOX_ANNOTATION);
+    }
+
+    @Test
+    void messageShouldBeDeserializedFromFour() {
+        assertZipEntryTypeDeserializedFromValue(4L, ZipEntryType.MESSAGE);
     }
 }

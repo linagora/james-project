@@ -16,30 +16,42 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.backup;
+package org.apache.james.mailbox.backup.zip;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.compress.archivers.zip.ZipShort;
+public enum ZipEntryType {
 
-public class SizeExtraField extends LongExtraField implements WithZipHeader {
+    MAILBOX(ZipEntryType.MAILBOX_VALUE),
+    MAILBOX_ANNOTATION_DIR(ZipEntryType.MAILBOX_ANNOTATION_DIR_VALUE),
+    MAILBOX_ANNOTATION(ZipEntryType.MAILBOX_ANNOTATION_VALUE),
+    MESSAGE(ZipEntryType.MESSAGE_VALUE);
 
-    public static final ZipShort ID_AJ = new ZipShort(WithZipHeader.toLittleEndian('a', 'j'));
+    final long value;
 
-    public SizeExtraField() {
-        super();
+    ZipEntryType(long value) {
+        this.value = value;
     }
 
-    public SizeExtraField(long value) {
-        super(value);
+    private static final long MAILBOX_VALUE = 1L;
+    private static final long MAILBOX_ANNOTATION_DIR_VALUE = 2L;
+    private static final long MAILBOX_ANNOTATION_VALUE = 3L;
+    private static final long MESSAGE_VALUE = 4L;
+
+
+    private static final Map<Long, ZipEntryType> entryByValue = new HashMap<>();
+
+    static {
+        entryByValue.put(MAILBOX_VALUE, MAILBOX);
+        entryByValue.put(MAILBOX_ANNOTATION_DIR_VALUE, MAILBOX_ANNOTATION_DIR);
+        entryByValue.put(MAILBOX_ANNOTATION_VALUE, MAILBOX_ANNOTATION);
+        entryByValue.put(MESSAGE_VALUE, MESSAGE);
     }
 
-    public SizeExtraField(Optional<Long> value) {
-        super(value);
-    }
 
-    @Override
-    public ZipShort getHeaderId() {
-        return ID_AJ;
+    public static Optional<ZipEntryType> getFromValue(long value) {
+        return Optional.ofNullable(entryByValue.get(value));
     }
 }
