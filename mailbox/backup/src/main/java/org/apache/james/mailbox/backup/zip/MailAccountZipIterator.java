@@ -74,27 +74,29 @@ public class MailAccountZipIterator implements MailArchiveIterator {
 
     @Override
     public MailArchiveEntry next() {
-        Optional<ZipEntryWithContent> current = next;
-        if (!current.isPresent()) {
+        if (!hasNext()) {
             return null;
         }
+        Optional<ZipEntryWithContent> current = next;
         ZipEntryWithContent currentElement = current.get();
-        return readNextEntry(currentElement);
-    }
-
-    private MailArchiveEntry readNextEntry(ZipEntryWithContent currentElement) {
-        Optional<ZipEntryType> entryType = getEntryType(currentElement.getEntry());
+        next = Optional.ofNullable(zipEntryIterator.next());
         try {
-            next = Optional.ofNullable(zipEntryIterator.next());
-            if (!entryType.isPresent()) {
-                return new UnknownArchiveEntry(currentElement.getEntry().getName());
-            }
-            return from(currentElement, entryType.get(), next.map(ZipEntryWithContent::getEntry));
+            Optional<ZipEntry> nextZipEntry = next.map(ZipEntryWithContent::getEntry);
+            return getMailArchiveEntry(currentElement, nextZipEntry);
         } catch (Exception e) {
             LOGGER.error("Error when reading archive", e);
             next = Optional.empty();
-            return new UnknownArchiveEntry(currentElement.getEntry().getName());
+            return new UnknownArchiveEntry(currentElement.getEntryName());
         }
+    }
+
+    private MailArchiveEntry getMailArchiveEntry(ZipEntryWithContent currentElement, Optional<ZipEntry> nextZipEntry) throws Exception {
+        Optional<ZipEntryType> entryType = getEntryType(currentElement.getEntry());
+        return entryType
+            .map(Throwing.<ZipEntryType, MailArchiveEntry>function(type ->
+                from(currentElement, type, nextZipEntry)).sneakyThrow()
+            )
+            .orElseGet(() -> new UnknownArchiveEntry(currentElement.getEntryName()));
     }
 
     private Optional<Long> getLongExtraField(ZipShort id, ZipEntry entry) throws ZipException {
