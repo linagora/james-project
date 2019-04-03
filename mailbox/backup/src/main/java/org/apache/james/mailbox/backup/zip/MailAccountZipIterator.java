@@ -102,7 +102,8 @@ public class MailAccountZipIterator implements MailArchiveIterator {
         return Arrays.stream(extraFields)
             .filter(field -> field.getHeaderId().equals(id))
             .map(extraField -> ((LongExtraField) extraField).getValue())
-            .findFirst().flatMap(Function.identity());
+            .findFirst()
+            .flatMap(Function.identity());
     }
 
     private Optional<String> getStringExtraField(ZipShort id, ZipEntry entry) throws ZipException {
@@ -110,7 +111,8 @@ public class MailAccountZipIterator implements MailArchiveIterator {
         return Arrays.stream(extraFields)
             .filter(field -> field.getHeaderId().equals(id))
             .map(extraField -> ((StringExtraField) extraField).getValue())
-            .findFirst().flatMap(Function.identity());
+            .findFirst()
+            .flatMap(Function.identity());
     }
 
     private Optional<ZipEntryType> getEntryType(ZipEntry entry) {
