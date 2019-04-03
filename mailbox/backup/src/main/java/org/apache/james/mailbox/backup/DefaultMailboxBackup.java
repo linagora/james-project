@@ -102,8 +102,9 @@ public class DefaultMailboxBackup implements MailboxBackup {
 
     @Override
     public Publisher<Void> restore(User user, InputStream source) {
-        return Mono.fromRunnable(Throwing.runnable(() -> doRestore(user, source)).sneakyThrow())
+        return Mono.fromRunnable(Throwing.runnable(() -> doRestore(user, source)))
             .subscribeOn(Schedulers.elastic())
+            .doOnError(e -> LOGGER.error("Error during account restoration", e))
             .doOnTerminate(Throwing.runnable(source::close))
             .then();
     }
