@@ -21,7 +21,6 @@ package org.apache.james.mailbox.backup;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -118,7 +117,7 @@ public class DefaultMailboxBackup implements MailboxBackup {
         try (MailArchiveIterator archiveIterator = archiveLoader.load(source)) {
             ImmutablePair<List<MailboxWithAnnotationsArchiveEntry>, Optional<MessageArchiveEntry>> mailboxesAndFirstMessage = readMailboxes(archiveIterator);
 
-            Map<SerializedMailboxId, MessageManager> oldToNewMailbox = restoreMailboxes(session, mailboxesAndFirstMessage);
+            Map<SerializedMailboxId, MessageManager> oldToNewMailbox = restoreMailboxes(session, mailboxesAndFirstMessage.left);
             Optional<MessageArchiveEntry> firstMessage = mailboxesAndFirstMessage.right;
 
             firstMessage.ifPresent(message -> restoreNonMailboxEntry(session, oldToNewMailbox, message));
@@ -152,10 +151,8 @@ public class DefaultMailboxBackup implements MailboxBackup {
     private void restoreMessageEntryWithErrorHandling(MailboxSession session, Map<SerializedMailboxId, MessageManager> oldToNewMailbox, MessageArchiveEntry messageArchiveEntry) {
         try {
             restoreMessageEntry(session, oldToNewMailbox, messageArchiveEntry);
-        } catch (IOException ioException) {
-            LOGGER.error("IO error when restoring message :" + messageArchiveEntry.getMessageId());
-        } catch (MailboxException mailboxException) {
-            LOGGER.error("Mailbox error when restoring message :" + messageArchiveEntry.getMessageId());
+        } catch (IOException | MailboxException e) {
+            LOGGER.error("Error when restoring message :" + messageArchiveEntry.getMessageId(), e);
         }
     }
 
@@ -171,16 +168,15 @@ public class DefaultMailboxBackup implements MailboxBackup {
         }
     }
 
-    private Map<SerializedMailboxId, MessageManager> restoreMailboxes(MailboxSession session,
-                                                                      ImmutablePair<List<MailboxWithAnnotationsArchiveEntry>, Optional<MessageArchiveEntry>> mailboxesAndFirstMessage) {
-        return mailboxesAndFirstMessage.left.stream()
+    private Map<SerializedMailboxId, MessageManager> restoreMailboxes(MailboxSession session, List<MailboxWithAnnotationsArchiveEntry> mailboxes) {
+        return mailboxes.stream()
             .flatMap(Throwing.function(mailboxEntry ->
                 OptionalUtils.toStream(restoreMailboxEntry(session, mailboxEntry))))
             .collect(Guavate.entriesToImmutableMap());
     }
 
     private ImmutablePair<List<MailboxWithAnnotationsArchiveEntry>, Optional<MessageArchiveEntry>> readMailboxes(MailArchiveIterator iterator) {
-        List<MailboxWithAnnotationsArchiveEntry> mailboxes = new ArrayList<>();
+        ImmutableList.Builder<MailboxWithAnnotationsArchiveEntry> mailboxes = ImmutableList.builder();
         while (iterator.hasNext()) {
             MailArchiveEntry entry = iterator.next();
             switch (entry.getType()) {
@@ -188,14 +184,14 @@ public class DefaultMailboxBackup implements MailboxBackup {
                     mailboxes.add((MailboxWithAnnotationsArchiveEntry) entry);
                     break;
                 case MESSAGE:
-                    return ImmutablePair.of(ImmutableList.copyOf(mailboxes), Optional.of((MessageArchiveEntry) entry));
+                    return ImmutablePair.of(mailboxes.build(), Optional.of((MessageArchiveEntry) entry));
                 case UNKNOWN:
                     String entryName = ((UnknownArchiveEntry) entry).getEntryName();
-                    LOGGER.error("unknow entry found in zip :" + entryName);
+                    LOGGER.error("unknown entry found in zip :" + entryName);
                     break;
             }
         }
-        return ImmutablePair.of(ImmutableList.copyOf(mailboxes), Optional.empty());
+        return ImmutablePair.of(mailboxes.build(), Optional.empty());
     }
 
     private Optional<ImmutablePair<SerializedMailboxId, MessageManager>> restoreMailboxEntry(MailboxSession session,
