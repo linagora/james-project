@@ -197,7 +197,7 @@ public class MailAccountZipIterator implements MailArchiveIterator {
         }
     }
 
-    private Optional<MessageArchiveEntry> fromMessageEntry(ZipEntryWithContent entryWithContent) throws ZipException {
+    private Optional<MailArchiveEntry> fromMessageEntry(ZipEntryWithContent entryWithContent) throws ZipException {
         ZipEntry entry = entryWithContent.getEntry();
         Optional<SerializedMessageId> messageIdO = getMessageId(entry);
         Optional<SerializedMailboxId> mailboxIdO = getMailBoxId(entry);
@@ -272,11 +272,10 @@ public class MailAccountZipIterator implements MailArchiveIterator {
             case MAILBOX_ANNOTATION:
                 return fromMailboxAnnotationEntry(current, nextZipEntry);
             case MESSAGE:
-                Optional<MessageArchiveEntry> messageEntry = fromMessageEntry(current);
-                if (messageEntry.isPresent()) {
-                    return messageEntry.get();
-                }
+                return fromMessageEntry(current)
+                    .orElseGet(() -> new UnknownArchiveEntry(current.getEntryName()));
+            default:
+                return new UnknownArchiveEntry(current.getEntryName());
         }
-        return new UnknownArchiveEntry(current.getEntryName());
     }
 }
