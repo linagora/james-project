@@ -74,17 +74,16 @@ public class MailAccountZipIterator implements MailArchiveIterator {
 
     @Override
     public MailArchiveEntry next() {
-        if (!hasNext()) {
-            return null;
-        }
-        Optional<ZipEntryWithContent> current = next;
-        ZipEntryWithContent currentElement = current.get();
+        return next.map(this::doNext).orElse(null);
+    }
+
+    private MailArchiveEntry doNext(ZipEntryWithContent currentElement) {
         next = Optional.ofNullable(zipEntryIterator.next());
+        Optional<ZipEntry> nextZipEntry = next.map(ZipEntryWithContent::getEntry);
         try {
-            Optional<ZipEntry> nextZipEntry = next.map(ZipEntryWithContent::getEntry);
             return getMailArchiveEntry(currentElement, nextZipEntry);
         } catch (Exception e) {
-            LOGGER.error("Error when reading archive", e);
+            LOGGER.error("Error when reading archive on entry : " + currentElement.getEntryName(), e);
             next = Optional.empty();
             return new UnknownArchiveEntry(currentElement.getEntryName());
         }
@@ -159,9 +158,9 @@ public class MailAccountZipIterator implements MailArchiveIterator {
         return current.getName().substring(0, current.getName().length() - 1);
     }
 
-    private MailArchiveEntry fromMailboxEntry(ZipEntryWithContent current, Optional<ZipEntry> next) throws ZipException {
+    private MailArchiveEntry fromMailboxEntry(ZipEntryWithContent current, Optional<ZipEntry> nextZipEntry) throws ZipException {
         ZipEntry entry = current.getEntry();
-        if (isLastEntryOrHasNoAnnotationsDirectory(next)) {
+        if (isLastEntryOrHasNoAnnotationsDirectory(nextZipEntry)) {
             //no annotation directory or end of iterator => get Mailbox
             currentMailBox = Optional.empty();
             return new MailboxWithAnnotationsArchiveEntry(getMailboxName(entry), getMailBoxId(entry).get(), NO_ANNOTATION);
@@ -172,16 +171,16 @@ public class MailAccountZipIterator implements MailArchiveIterator {
         }
     }
 
-    private boolean isLastEntryOrNextEntryIsNotOfType(Optional<ZipEntry> next, ZipEntryType mailboxAnnotationDir) throws ZipException {
-        return !next.isPresent() || !getEntryType(next.get()).equals(Optional.of(mailboxAnnotationDir));
+    private boolean isLastEntryOrNextEntryIsNotOfType(Optional<ZipEntry> nextZipEntry, ZipEntryType mailboxAnnotationDir) throws ZipException {
+        return !nextZipEntry.isPresent() || !getEntryType(nextZipEntry.get()).equals(Optional.of(mailboxAnnotationDir));
     }
 
-    private boolean isLastEntryOrHasNoAnnotationsDirectory(Optional<ZipEntry> next) throws ZipException {
-        return isLastEntryOrNextEntryIsNotOfType(next, ZipEntryType.MAILBOX_ANNOTATION_DIR);
+    private boolean isLastEntryOrHasNoAnnotationsDirectory(Optional<ZipEntry> nextZipEntry) throws ZipException {
+        return isLastEntryOrNextEntryIsNotOfType(nextZipEntry, ZipEntryType.MAILBOX_ANNOTATION_DIR);
     }
 
-    private boolean isLastEntryOrNextEntryIsNotOfType(Optional<ZipEntry> next) throws ZipException {
-        return isLastEntryOrNextEntryIsNotOfType(next, ZipEntryType.MAILBOX_ANNOTATION);
+    private boolean isLastEntryOrNextEntryIsNotOfType(Optional<ZipEntry> nextZipEntry) throws ZipException {
+        return isLastEntryOrNextEntryIsNotOfType(nextZipEntry, ZipEntryType.MAILBOX_ANNOTATION);
     }
 
     private MailArchiveEntry fromMailboxAnnotationEntry(ZipEntryWithContent current, Optional<ZipEntry> next) throws ZipException {
@@ -264,14 +263,14 @@ public class MailAccountZipIterator implements MailArchiveIterator {
         return new MailboxAnnotationKey(key);
     }
 
-    private MailArchiveEntry from(ZipEntryWithContent current, ZipEntryType currentEntryType, Optional<ZipEntry> next) throws ZipException {
+    private MailArchiveEntry from(ZipEntryWithContent current, ZipEntryType currentEntryType, Optional<ZipEntry> nextZipEntry) throws ZipException {
         switch (currentEntryType) {
             case MAILBOX:
-                return fromMailboxEntry(current, next);
+                return fromMailboxEntry(current, nextZipEntry);
             case MAILBOX_ANNOTATION_DIR:
                 return next();
             case MAILBOX_ANNOTATION:
-                return fromMailboxAnnotationEntry(current, next);
+                return fromMailboxAnnotationEntry(current, nextZipEntry);
             case MESSAGE:
                 Optional<MessageArchiveEntry> messageEntry = fromMessageEntry(current);
                 if (messageEntry.isPresent()) {
