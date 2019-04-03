@@ -156,6 +156,21 @@ public class ZipAssert extends AbstractAssert<ZipAssert, ZipFile> implements Aut
         }
         return myself;
     }
+    public ZipAssert containsExactlyEntriesMatching(EntryChecks... entryChecks) throws Exception {
+        isNotNull();
+        List<EntryChecks> sortedEntryChecks = Arrays.stream(entryChecks)
+            .collect(Guavate.toImmutableList());
+        List<ZipArchiveEntry> entries = Collections.list(zipFile.getEntries())
+            .stream()
+            .collect(Guavate.toImmutableList());
+        if (entries.size() != entryChecks.length) {
+            throwAssertionError(shouldHaveSize(zipFile, entryChecks.length, entries.size()));
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            sortedEntryChecks.get(i).check.test(assertThatZipEntry(zipFile, entries.get(i)));
+        }
+        return myself;
+    }
 
     public ZipAssert hasNoEntry() {
         isNotNull();
