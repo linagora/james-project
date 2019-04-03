@@ -104,7 +104,7 @@ public class DefaultMailboxBackup implements MailboxBackup {
     public Publisher<Void> restore(User user, InputStream source) {
         return Mono.fromRunnable(Throwing.runnable(() -> doRestore(user, source)))
             .subscribeOn(Schedulers.elastic())
-            .doOnError(e -> LOGGER.error("Error during account restoration", e))
+            .doOnError(e -> LOGGER.error("Error during account restoration for user : " + user, e))
             .doOnTerminate(Throwing.runnable(source::close))
             .then();
     }
