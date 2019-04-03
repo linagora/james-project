@@ -21,10 +21,13 @@ package org.apache.james.mailbox.backup;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.james.core.User;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
@@ -33,18 +36,24 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.FetchGroupImpl;
 import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxAnnotation;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.util.OptionalUtils;
 import org.apache.james.util.streams.Iterators;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.fge.lambdas.Throwing;
 import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 public class DefaultMailboxBackup implements MailboxBackup {
 
@@ -92,11 +101,109 @@ public class DefaultMailboxBackup implements MailboxBackup {
     }
 
     @Override
-    public Publisher<Void> restore(User user, InputStream source) throws IOException, MailboxException {
-        MailboxSession session = mailboxManager.createSystemSession(user.asString());
+    public Publisher<Void> restore(User user, InputStream source) {
+        return Mono.fromRunnable(Throwing.runnable(() -> doRestore(user, source)).sneakyThrow())
+            .subscribeOn(Schedulers.elastic())
+            .doOnTerminate(Throwing.runnable(source::close))
+            .then();
+    }
 
-        MailArchiveIterator archiveIterator = archiveLoader.load(source);
-        throw new NotImplementedException("TODO");
+    private void doRestore(User user, InputStream source) throws MailboxException, IOException {
+        MailboxSession session = mailboxManager.createSystemSession(user.asString());
+        restoreEntries(source, session);
+    }
+
+    private void restoreEntries(InputStream source, MailboxSession session) throws IOException {
+        try (MailArchiveIterator archiveIterator = archiveLoader.load(source)) {
+            ImmutablePair<List<MailboxWithAnnotationsArchiveEntry>, Optional<MessageArchiveEntry>> mailboxesAndFirstMessage = readMailboxes(archiveIterator);
+
+            Map<SerializedMailboxId, MessageManager> oldToNewMailbox = restoreMailboxes(session, mailboxesAndFirstMessage);
+            Optional<MessageArchiveEntry> firstMessage = mailboxesAndFirstMessage.right;
+
+            firstMessage.ifPresent(message -> restoreNonMailboxEntry(session, oldToNewMailbox, message));
+            archiveIterator.forEachRemaining(entry -> restoreNonMailboxEntry(session, oldToNewMailbox, entry));
+        }
+    }
+
+    private void restoreNonMailboxEntry(MailboxSession session, Map<SerializedMailboxId, MessageManager> oldToNewMailbox, MailArchiveEntry entry) {
+        switch (entry.getType()) {
+            case MESSAGE:
+                MessageArchiveEntry messageArchiveEntry = (MessageArchiveEntry) entry;
+                restoreMessageEntryWithErrorHandling(session, oldToNewMailbox, messageArchiveEntry);
+                break;
+            case MAILBOX:
+                MailboxWithAnnotationsArchiveEntry mailboxArchiveEntry = ((MailboxWithAnnotationsArchiveEntry) entry);
+                LOGGER.error(getMailboxEntryInWrongPositionErrorMessage(mailboxArchiveEntry));
+                break;
+            case UNKNOWN:
+                String entryName = ((UnknownArchiveEntry) entry).getEntryName();
+                LOGGER.error("unknow entry found in zip :" + entryName);
+                break;
+        }
+    }
+
+    private String getMailboxEntryInWrongPositionErrorMessage(MailboxWithAnnotationsArchiveEntry mailboxArchiveEntry) {
+        return "mailbox entry found in wrong position in zip, should be before messages." + " id :"
+            + mailboxArchiveEntry.getMailboxId().getValue()
+            + " - name : " + mailboxArchiveEntry.getMailboxName();
+    }
+
+    private void restoreMessageEntryWithErrorHandling(MailboxSession session, Map<SerializedMailboxId, MessageManager> oldToNewMailbox, MessageArchiveEntry messageArchiveEntry) {
+        try {
+            restoreMessageEntry(session, oldToNewMailbox, messageArchiveEntry);
+        } catch (IOException ioException) {
+            LOGGER.error("IO error when restoring message :" + messageArchiveEntry.getMessageId());
+        } catch (MailboxException mailboxException) {
+            LOGGER.error("Mailbox error when restoring message :" + messageArchiveEntry.getMessageId());
+        }
+    }
+
+    private void restoreMessageEntry(MailboxSession session, Map<SerializedMailboxId, MessageManager> oldToNewMailbox,
+                                     MessageArchiveEntry messageArchiveEntry) throws IOException, MailboxException {
+        try (InputStream content = messageArchiveEntry.getContent()) {
+            MessageManager mailbox = oldToNewMailbox.get(messageArchiveEntry.getMailboxId());
+            MessageManager.AppendCommand appendCommand = MessageManager.AppendCommand.builder()
+                .withFlags(messageArchiveEntry.getFlags())
+                .withInternalDate(messageArchiveEntry.getInternalDate())
+                .build(content);
+            mailbox.appendMessage(appendCommand, session);
+        }
+    }
+
+    private Map<SerializedMailboxId, MessageManager> restoreMailboxes(MailboxSession session,
+                                                                      ImmutablePair<List<MailboxWithAnnotationsArchiveEntry>, Optional<MessageArchiveEntry>> mailboxesAndFirstMessage) {
+        return mailboxesAndFirstMessage.left.stream()
+            .flatMap(Throwing.function(mailboxEntry ->
+                OptionalUtils.toStream(restoreMailboxEntry(session, mailboxEntry))))
+            .collect(Guavate.entriesToImmutableMap());
+    }
+
+    private ImmutablePair<List<MailboxWithAnnotationsArchiveEntry>, Optional<MessageArchiveEntry>> readMailboxes(MailArchiveIterator iterator) {
+        List<MailboxWithAnnotationsArchiveEntry> mailboxes = new ArrayList<>();
+        while (iterator.hasNext()) {
+            MailArchiveEntry entry = iterator.next();
+            switch (entry.getType()) {
+                case MAILBOX:
+                    mailboxes.add((MailboxWithAnnotationsArchiveEntry) entry);
+                    break;
+                case MESSAGE:
+                    return ImmutablePair.of(ImmutableList.copyOf(mailboxes), Optional.of((MessageArchiveEntry) entry));
+                case UNKNOWN:
+                    String entryName = ((UnknownArchiveEntry) entry).getEntryName();
+                    LOGGER.error("unknow entry found in zip :" + entryName);
+                    break;
+            }
+        }
+        return ImmutablePair.of(ImmutableList.copyOf(mailboxes), Optional.empty());
+    }
+
+    private Optional<ImmutablePair<SerializedMailboxId, MessageManager>> restoreMailboxEntry(MailboxSession session,
+                                                                                             MailboxWithAnnotationsArchiveEntry mailboxWithAnnotationsArchiveEntry) throws MailboxException {
+        MailboxPath mailboxPath = MailboxPath.forUser(session.getUser().asString(), mailboxWithAnnotationsArchiveEntry.getMailboxName());
+        Optional<MailboxId> newMailboxId = mailboxManager.createMailbox(mailboxPath, session);
+        mailboxManager.updateAnnotations(mailboxPath, session, mailboxWithAnnotationsArchiveEntry.getAnnotations());
+        return newMailboxId.map(Throwing.function(newId ->
+            ImmutablePair.of(mailboxWithAnnotationsArchiveEntry.getMailboxId(), mailboxManager.getMailbox(newId, session))));
     }
 
     private Stream<MailAccountContent> getMailboxWithAnnotationsFromPath(MailboxSession session, MailboxPath path) {
