@@ -23,8 +23,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.blob.api.ObjectStoreException;
@@ -35,6 +40,7 @@ import org.apache.james.blob.objectstorage.swift.SwiftKeystone3ObjectStorage;
 import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
 import org.jclouds.blobstore.domain.Blob;
 import org.jclouds.blobstore.options.CopyOptions;
+import org.jclouds.blobstore.options.PutOptions;
 import org.jclouds.domain.Location;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,13 +59,17 @@ public class ObjectStorageBlobsDAO implements BlobStore {
 
     private final ContainerName containerName;
     private final org.jclouds.blobstore.BlobStore blobStore;
+    private final Function<Blob, String> putBlob;
     private final PayloadCodec payloadCodec;
 
     ObjectStorageBlobsDAO(ContainerName containerName, BlobId.Factory blobIdFactory,
-                          org.jclouds.blobstore.BlobStore blobStore, PayloadCodec payloadCodec) {
+                          org.jclouds.blobstore.BlobStore blobStore,
+                          Function<Blob, String> putBlob,
+                          PayloadCodec payloadCodec) {
         this.blobIdFactory = blobIdFactory;
         this.containerName = containerName;
         this.blobStore = blobStore;
+        this.putBlob = putBlob;
         this.payloadCodec = payloadCodec;
     }
 
@@ -88,15 +98,15 @@ public class ObjectStorageBlobsDAO implements BlobStore {
 
     @Override
     public Mono<BlobId> save(byte[] data) {
-        return save(new ByteArrayInputStream(data), data.length);
+        return save(new ByteArrayInputStream(data));
     }
 
     @Override
-    public Mono<BlobId> save(InputStream data, long contentLength) {
+    public Mono<BlobId> save(InputStream data) {
         Preconditions.checkNotNull(data);
 
         BlobId tmpId = blobIdFactory.randomId();
-        return save(data, contentLength, tmpId)
+        return save(data, tmpId)
             .flatMap(id -> updateBlobId(tmpId, id));
     }
 
@@ -108,16 +118,15 @@ public class ObjectStorageBlobsDAO implements BlobStore {
             .thenReturn(to);
     }
 
-    private Mono<BlobId> save(InputStream data, long contentLength, BlobId id) {
+    private Mono<BlobId> save(InputStream data, BlobId id) {
         String containerName = this.containerName.value();
         HashingInputStream hashingInputStream = new HashingInputStream(Hashing.sha256(), data);
         Payload payload = payloadCodec.write(hashingInputStream);
         Blob blob = blobStore.blobBuilder(id.asString())
                             .payload(payload.getPayload())
-                            .contentLength(payload.getLength().orElse(contentLength))
                             .build();
 
-        return Mono.fromCallable(() -> blobStore.putBlob(containerName, blob))
+        return Mono.fromCallable(() -> putBlob.apply(blob))
             .then(Mono.fromCallable(() -> blobIdFactory.from(hashingInputStream.hash().toString())));
     }
 

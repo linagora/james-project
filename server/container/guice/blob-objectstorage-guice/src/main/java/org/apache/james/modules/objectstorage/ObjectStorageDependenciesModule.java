@@ -21,13 +21,16 @@ package org.apache.james.modules.objectstorage;
 
 import java.io.FileNotFoundException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 import javax.inject.Singleton;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.HashBlobId;
 import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
@@ -37,6 +40,7 @@ import org.apache.james.blob.objectstorage.aws.AwsS3ObjectStorage;
 import org.apache.james.modules.mailbox.ConfigurationComponent;
 import org.apache.james.modules.objectstorage.swift.SwiftObjectStorage;
 import org.apache.james.utils.PropertiesProvider;
+import org.jclouds.blobstore.domain.Blob;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -67,6 +71,7 @@ public class ObjectStorageDependenciesModule extends AbstractModule {
             .container(configuration.getNamespace())
             .blobIdFactory(blobIdFactory)
             .payloadCodec(configuration.getPayloadCodec())
+            .putBlob(putBlob(configuration))
             .build();
         dao.createContainer(configuration.getNamespace()).block(Duration.ofMinutes(1));
         return dao;
@@ -80,6 +85,17 @@ public class ObjectStorageDependenciesModule extends AbstractModule {
                 return AwsS3ObjectStorage.daoBuilder((AwsS3AuthConfiguration) configuration.getSpecificAuthConfiguration());
         }
         throw new IllegalArgumentException("unknown provider " + configuration.getProvider());
+    }
+
+    private Optional<Function<Blob, String>> putBlob(ObjectStorageBlobConfiguration configuration) {
+        switch (configuration.getProvider()) {
+            case SWIFT:
+                return Optional.empty();
+            case AWSS3:
+                return AwsS3ObjectStorage.putBlob(configuration.getNamespace(), (AwsS3AuthConfiguration) configuration.getSpecificAuthConfiguration());
+        }
+        throw new IllegalArgumentException("unknown provider " + configuration.getProvider());
+
     }
 
 }
