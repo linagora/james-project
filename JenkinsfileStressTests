@@ -86,6 +86,7 @@ pipeline {
                 script {
                     docker.withTool('docker') {
                         sh "docker rm -f cassandra rabbitmq elasticsearch tika swift james_run"
+                        sh "btrfs subvolume delete bench-running-docker"
                     }
                 }
             }
