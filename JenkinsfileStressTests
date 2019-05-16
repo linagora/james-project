@@ -31,8 +31,10 @@ pipeline {
         stage('Compile') {
             steps {
                 node('target') {
-                    docker.withTool('docker') {
-                        sh "docker run -v $HOME/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination --env MVN_ADDITIONAL_ARG_LINE=-T1C -t james/project -s HEAD"
+                    script {
+                        docker.withTool('docker') {
+                            sh "docker run -v $HOME/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination --env MVN_ADDITIONAL_ARG_LINE=-T1C -t james/project -s HEAD"
+                        }
                     }
                 }
             }
@@ -74,8 +76,8 @@ pipeline {
             }
         }
         stage('Run Gatling test') {
-            node('injector') {
-                steps {
+            steps {
+                node('injector') {
                     build job: 'Gatling job', parameters: [[$class: 'StringParameterValue', name: 'SBT_ACTION', value: "gatling:testOnly ${params.SIMULATION}"], [$class: 'StringParameterValue', name: 'GITHUB', value: "gatling:testOnly ${params.GITHUB_SIMULATIONS}"]]
                 }
             }
