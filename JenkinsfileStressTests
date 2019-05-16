@@ -30,8 +30,10 @@ pipeline {
     stages {
         stage('Compile') {
             steps {
-                docker.withTool('docker') {
-                    sh "docker run -v $HOME/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination -t james/project -s HEAD"
+                node('target') {
+                    docker.withTool('docker') {
+                        sh "docker run -v $HOME/.m2:/root/.m2 -v $PWD:/origin -v $PWD/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination -t james/project -s HEAD"
+                    }
                 }
             }
         }
