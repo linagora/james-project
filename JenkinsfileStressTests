@@ -76,7 +76,7 @@ pipeline {
         stage('Run Gatling test') {
             node('injector') {
                 steps {
-                    build job: 'Gatling job', parameters: [[$class: 'StringParameterValue', name: 'SBT_ACTION', value: "gatling:testOnly  ${params.SCENARIO}"]]
+                    build job: 'Gatling job', parameters: [[$class: 'StringParameterValue', name: 'SBT_ACTION', value: "gatling:testOnly ${params.SIMULATION}"], [$class: 'StringParameterValue', name: 'GITHUB', value: "gatling:testOnly ${params.GITHUB_SIMULATIONS}"]]
                 }
             }
         }
