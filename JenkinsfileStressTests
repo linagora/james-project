@@ -25,6 +25,8 @@ def waitForCommandSuccess(command, maxRetries) {
 }
 
 pipeline {
+    agent { label 'target' }
+
     stages {
         stage('Compile') {
             steps {
