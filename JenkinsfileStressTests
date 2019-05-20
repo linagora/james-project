@@ -40,6 +40,8 @@ pipeline {
                         script {
                             sh 'pwd'
                             sh 'ls .git'
+                            sh 'export DIR=`mktemp -d`'
+                            sh 'cp -r . "$DIR"'
                             sh 'docker build -t james/project dockerfiles/compilation/java-8'
                             sh 'docker run -v $HOME/.m2:/root/.m2 -v "`pwd`:/origin" -v "`pwd`/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination" --env MVN_ADDITIONAL_ARG_LINE=-T1C -t james/project -s HEAD'
                         }
@@ -98,6 +100,7 @@ pipeline {
                     docker.withTool('docker') {
                         sh 'docker rm -f cassandra rabbitmq elasticsearch tika swift james_run'
                         sh 'btrfs subvolume delete bench-running-docker'
+                        sh 'rm -Rf "$DIR"'
                     }
                 }
             }
