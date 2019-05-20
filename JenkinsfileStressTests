@@ -35,6 +35,13 @@ pipeline {
                 }
             }
             stages {
+                stage('Clone repository') {
+                    steps {
+                        script {
+                            git url: params.REPOSITORY_URL, branch: params.BRANCH
+                        }
+                    }
+                }
                 stage('Compile') {
                     steps {
                         script {
