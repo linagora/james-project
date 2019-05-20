@@ -35,17 +35,6 @@ pipeline {
                 }
             }
             stages {
-                stage('Clone repository') {
-                    steps {
-                        script {
-                            sh 'pwd'
-                            sh 'ls .git'
-                            git url: params.REPOSITORY_URL, branch: params.BRANCH
-                            sh 'pwd'
-                            sh 'ls .git'
-                        }
-                    }
-                }
                 stage('Compile') {
                     steps {
                         script {
