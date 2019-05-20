@@ -48,6 +48,8 @@ if [ -z "$SHA1" ]; then
 fi
 
 # Sources retrieval
+ls $ORIGIN/.
+ls $ORIGIN/.git
 git clone $ORIGIN/.
 git checkout $SHA1
 
