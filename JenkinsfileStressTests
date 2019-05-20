@@ -38,10 +38,6 @@ pipeline {
                 stage('Compile') {
                     steps {
                         script {
-                            sh 'pwd'
-                            sh 'ls .git'
-                            sh 'export DIR=`mktemp -d`'
-                            sh 'cp -r . "$DIR"'
                             sh 'docker build -t james/project dockerfiles/compilation/java-8'
                             sh 'docker run -v $HOME/.m2:/root/.m2 -v "`pwd`:/origin" -v "`pwd`/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination" --env MVN_ADDITIONAL_ARG_LINE=-T1C -t james/project -s HEAD'
                         }
@@ -86,7 +82,7 @@ pipeline {
             stages {
                 stage('Run Gatling test') {
                     steps {
-                        build job: 'Gatling job', parameters: [[$class: 'StringParameterValue', name: 'SBT_ACTION', value: "gatling:testOnly ${params.SIMULATION}"], [$class: 'StringParameterValue', name: 'GITHUB', value: "gatling:testOnly ${params.GITHUB_SIMULATIONS}"]]
+                        build job: 'Gatling-job', parameters: [[$class: 'StringParameterValue', name: 'SBT_ACTION', value: "gatling:testOnly ${params.SIMULATION}"], [$class: 'StringParameterValue', name: 'GITHUB', value: "gatling:testOnly ${params.GITHUB_SIMULATIONS}"]]
                     }
                 }
             }
@@ -100,7 +96,6 @@ pipeline {
                     docker.withTool('docker') {
                         sh 'docker rm -f cassandra rabbitmq elasticsearch tika swift james_run'
                         sh 'btrfs subvolume delete bench-running-docker'
-                        sh 'rm -Rf "$DIR"'
                     }
                 }
             }
