@@ -38,7 +38,11 @@ pipeline {
                 stage('Clone repository') {
                     steps {
                         script {
+                            sh 'pwd'
+                            sh 'ls'
                             git url: params.REPOSITORY_URL, branch: params.BRANCH
+                            sh 'pwd'
+                            sh 'ls'
                         }
                     }
                 }
@@ -46,6 +50,8 @@ pipeline {
                     steps {
                         script {
                             docker.withTool('docker') {
+                                sh 'pwd'
+                                sh 'ls'
                                 sh 'docker build -t james/project dockerfiles/compilation/java-8'
                                 sh 'docker run -v $HOME/.m2:/root/.m2 -v "`pwd`:/origin" -v "`pwd`/dockerfiles/run/guice/cassandra-rabbitmq/destination:/cassandra-rabbitmq/destination" --env MVN_ADDITIONAL_ARG_LINE=-T1C -t james/project -s HEAD'
                             }
