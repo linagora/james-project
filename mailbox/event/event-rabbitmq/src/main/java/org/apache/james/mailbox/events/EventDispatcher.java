@@ -26,17 +26,18 @@ import static org.apache.james.mailbox.events.RabbitMQEventBus.MAILBOX_EVENT_EXC
 
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.stream.Stream;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.event.json.EventSerializer;
+import org.apache.james.mailbox.events.RoutingKeyConverter.RoutingKey;
 import org.apache.james.util.MDCBuilder;
 import org.apache.james.util.MDCStructuredLogger;
 import org.apache.james.util.StructuredLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.rabbitmq.client.AMQP;
 
 import reactor.core.publisher.Flux;
@@ -46,20 +47,21 @@ import reactor.core.scheduler.Schedulers;
 import reactor.rabbitmq.ExchangeSpecification;
 import reactor.rabbitmq.OutboundMessage;
 import reactor.rabbitmq.Sender;
+import reactor.util.function.Tuples;
 
 class EventDispatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventDispatcher.class);
 
     private final EventSerializer eventSerializer;
     private final Sender sender;
-    private final MailboxListenerRegistry mailboxListenerRegistry;
+    private final LocalListenerRegistry localListenerRegistry;
     private final AMQP.BasicProperties basicProperties;
     private final MailboxListenerExecutor mailboxListenerExecutor;
 
-    EventDispatcher(EventBusId eventBusId, EventSerializer eventSerializer, Sender sender, MailboxListenerRegistry mailboxListenerRegistry, MailboxListenerExecutor mailboxListenerExecutor) {
+    EventDispatcher(EventBusId eventBusId, EventSerializer eventSerializer, Sender sender, LocalListenerRegistry localListenerRegistry, MailboxListenerExecutor mailboxListenerExecutor) {
         this.eventSerializer = eventSerializer;
         this.sender = sender;
-        this.mailboxListenerRegistry = mailboxListenerRegistry;
+        this.localListenerRegistry = localListenerRegistry;
         this.basicProperties = new AMQP.BasicProperties.Builder()
             .headers(ImmutableMap.of(EVENT_BUS_ID, eventBusId.asString()))
             .build();
@@ -74,36 +76,38 @@ class EventDispatcher {
     }
 
     Mono<Void> dispatch(Event event, Set<RegistrationKey> keys) {
-        Mono<byte[]> serializedEvent = Mono.just(event)
-            .publishOn(Schedulers.parallel())
-            .map(this::serializeEvent)
-            .cache();
-
-        Mono<Void> distantDispatchMono = doDispatch(serializedEvent, keys).cache()
-            .subscribeWith(MonoProcessor.create());
-
-        Mono<Void> localListenerDelivery = Flux.fromIterable(keys)
-            .subscribeOn(Schedulers.elastic())
-            .flatMap(key -> mailboxListenerRegistry.getLocalMailboxListeners(key)
-                .map(listener -> Pair.of(key, listener)))
-            .filter(pair -> pair.getRight().getExecutionMode().equals(MailboxListener.ExecutionMode.SYNCHRONOUS))
-            .flatMap(pair -> Mono.fromRunnable(Throwing.runnable(() -> executeListener(event, pair.getRight(), pair.getLeft())))
-                .doOnError(e -> structuredLogger(event, keys)
-                    .log(logger -> logger.error("Exception happens when dispatching event", e)))
-                .onErrorResume(e -> Mono.empty()))
-            .cache()
+        return Flux
+            .concat(
+                dispatchToLocalListeners(event, keys),
+                dispatchToRemoteListeners(serializeEvent(event), keys))
             .then()
             .subscribeWith(MonoProcessor.create());
+    }
 
-        return Flux.concat(localListenerDelivery, distantDispatchMono)
+    private Mono<Void> dispatchToLocalListeners(Event event, Set<RegistrationKey> keys) {
+        return Flux.fromIterable(keys)
+            .subscribeOn(Schedulers.elastic())
+            .flatMap(key -> localListenerRegistry.getLocalMailboxListeners(key)
+                .map(listener -> Tuples.of(key, listener)))
+            .filter(pair -> pair.getT2().getExecutionMode().equals(MailboxListener.ExecutionMode.SYNCHRONOUS))
+            .flatMap(pair -> executeListener(event, pair.getT2(), pair.getT1()))
             .then();
     }
 
-    private void executeListener(Event event, MailboxListener mailboxListener, RegistrationKey registrationKey) throws Exception {
-        mailboxListenerExecutor.execute(mailboxListener,
-            MDCBuilder.create()
-                .addContext(EventBus.StructuredLoggingFields.REGISTRATION_KEY, registrationKey),
-            event);
+    private Mono<Void> executeListener(Event event, MailboxListener mailboxListener, RegistrationKey registrationKey) {
+        return Mono.from((sink) -> {
+            try {
+                mailboxListenerExecutor.execute(mailboxListener,
+                    MDCBuilder.create()
+                        .addContext(EventBus.StructuredLoggingFields.REGISTRATION_KEY, registrationKey),
+                    event);
+            } catch (Exception e) {
+                structuredLogger(event, ImmutableSet.of(registrationKey))
+                    .log(logger -> logger.error("Exception happens when dispatching event", e));
+            }
+            sink.onComplete();
+        });
+
     }
 
     private StructuredLogger structuredLogger(Event event, Set<RegistrationKey> keys) {
@@ -114,17 +118,13 @@ class EventDispatcher {
             .addField(EventBus.StructuredLoggingFields.REGISTRATION_KEYS, keys);
     }
 
-    private Mono<Void> doDispatch(Mono<byte[]> serializedEvent, Set<RegistrationKey> keys) {
-        Flux<RoutingKeyConverter.RoutingKey> routingKeys = Flux.concat(
-            Mono.just(RoutingKeyConverter.RoutingKey.empty()),
-            Flux.fromIterable(keys)
-                .map(RoutingKeyConverter.RoutingKey::of));
+    private Mono<Void> dispatchToRemoteListeners(byte[] serializedEvent, Set<RegistrationKey> keys) {
+        Stream<RoutingKey> routingKeys = Stream.concat(Stream.of(RoutingKey.empty()), keys.stream().map(RoutingKey::of));
 
-        Flux<OutboundMessage> outboundMessages = routingKeys
-            .flatMap(routingKey -> serializedEvent
-                .map(payload -> new OutboundMessage(MAILBOX_EVENT_EXCHANGE_NAME, routingKey.asString(), basicProperties, payload)));
+        Stream<OutboundMessage> outboundMessages = routingKeys
+            .map(routingKey -> new OutboundMessage(MAILBOX_EVENT_EXCHANGE_NAME, routingKey.asString(), basicProperties, serializedEvent));
 
-        return sender.send(outboundMessages);
+        return sender.send(Flux.fromStream(outboundMessages));
     }
 
     private byte[] serializeEvent(Event event) {

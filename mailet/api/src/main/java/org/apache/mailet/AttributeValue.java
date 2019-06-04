@@ -28,7 +28,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.james.mailbox.model.MessageIdDto;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
@@ -175,8 +173,7 @@ public class AttributeValue<T> {
         }
     }
 
-    @VisibleForTesting
-    static AttributeValue<?> fromJson(JsonNode input) {
+    public static AttributeValue<?> fromJson(JsonNode input) {
         return Optional.ofNullable(input)
                 .filter(ObjectNode.class::isInstance)
                 .map(ObjectNode.class::cast)
@@ -209,6 +206,18 @@ public class AttributeValue<T> {
 
     public T value() {
         return value;
+    }
+
+    public <U> Optional<U> valueAs(Class<U> type) {
+        return tryToCast(type, value);
+    }
+
+    private static <U> Optional<U> tryToCast(Class<U> type, Object value) {
+        if (type.isInstance(value)) {
+            return Optional.of(type.cast(value));
+        } else {
+            return Optional.empty();
+        }
     }
 
     //FIXME : poor performance

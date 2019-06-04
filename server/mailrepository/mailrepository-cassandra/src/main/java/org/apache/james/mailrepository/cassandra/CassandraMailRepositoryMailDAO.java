@@ -56,10 +56,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import javax.inject.Inject;
-import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -71,7 +69,9 @@ import org.apache.james.core.MaybeSender;
 import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
 import org.apache.james.server.core.MailImpl;
-import org.apache.james.util.streams.Iterators;
+import org.apache.mailet.Attribute;
+import org.apache.mailet.AttributeName;
+import org.apache.mailet.AttributeValue;
 import org.apache.mailet.Mail;
 import org.apache.mailet.PerRecipientHeaders;
 
@@ -142,38 +142,38 @@ public class CassandraMailRepositoryMailDAO implements CassandraMailRepositoryMa
     }
 
     @Override
-    public CompletableFuture<Void> store(MailRepositoryUrl url, Mail mail, BlobId headerId, BlobId bodyId) throws MessagingException {
-        return executor.executeVoid(insertMail.bind()
-            .setString(REPOSITORY_NAME, url.asString())
-            .setString(MAIL_KEY, mail.getName())
-            .setString(HEADER_BLOB_ID, headerId.asString())
-            .setString(BODY_BLOB_ID, bodyId.asString())
-            .setString(STATE, mail.getState())
-            .setString(SENDER, mail.getMaybeSender().asString(null))
-            .setList(RECIPIENTS, asStringList(mail.getRecipients()))
-            .setString(ERROR_MESSAGE, mail.getErrorMessage())
-            .setString(REMOTE_ADDR, mail.getRemoteAddr())
-            .setString(REMOTE_HOST, mail.getRemoteHost())
-            .setLong(MESSAGE_SIZE, mail.getMessageSize())
-            .setTimestamp(LAST_UPDATED, mail.getLastUpdated())
-            .setMap(ATTRIBUTES, toRawAttributeMap(mail))
-            .setMap(PER_RECIPIENT_SPECIFIC_HEADERS, toHeaderMap(mail.getPerRecipientSpecificHeaders()))
-        );
+    public Mono<Void> store(MailRepositoryUrl url, Mail mail, BlobId headerId, BlobId bodyId) {
+        return Mono.fromCallable(() -> insertMail.bind()
+                .setString(REPOSITORY_NAME, url.asString())
+                .setString(MAIL_KEY, mail.getName())
+                .setString(HEADER_BLOB_ID, headerId.asString())
+                .setString(BODY_BLOB_ID, bodyId.asString())
+                .setString(STATE, mail.getState())
+                .setString(SENDER, mail.getMaybeSender().asString(null))
+                .setList(RECIPIENTS, asStringList(mail.getRecipients()))
+                .setString(ERROR_MESSAGE, mail.getErrorMessage())
+                .setString(REMOTE_ADDR, mail.getRemoteAddr())
+                .setString(REMOTE_HOST, mail.getRemoteHost())
+                .setLong(MESSAGE_SIZE, mail.getMessageSize())
+                .setTimestamp(LAST_UPDATED, mail.getLastUpdated())
+                .setMap(ATTRIBUTES, toRawAttributeMap(mail))
+                .setMap(PER_RECIPIENT_SPECIFIC_HEADERS, toHeaderMap(mail.getPerRecipientSpecificHeaders())))
+            .flatMap(executor::executeVoid);
     }
 
     @Override
     public Mono<Void> remove(MailRepositoryUrl url, MailKey key) {
-        return executor.executeVoidReactor(deleteMail.bind()
+        return executor.executeVoid(deleteMail.bind()
             .setString(REPOSITORY_NAME, url.asString())
             .setString(MAIL_KEY, key.asString()));
     }
 
     @Override
-    public CompletableFuture<Optional<MailDTO>> read(MailRepositoryUrl url, MailKey key) {
-        return executor.executeSingleRow(selectMail.bind()
-            .setString(REPOSITORY_NAME, url.asString())
-            .setString(MAIL_KEY, key.asString()))
-            .thenApply(rowOptional -> rowOptional.map(this::toMail));
+    public Mono<Optional<MailDTO>> read(MailRepositoryUrl url, MailKey key) {
+        return executor.executeSingleRowOptional(selectMail.bind()
+                .setString(REPOSITORY_NAME, url.asString())
+                .setString(MAIL_KEY, key.asString()))
+            .map(rowOptional -> rowOptional.map(this::toMail));
     }
 
     private MailDTO toMail(Row row) {
@@ -196,25 +196,25 @@ public class CassandraMailRepositoryMailDAO implements CassandraMailRepositoryMa
         MailImpl.Builder mailBuilder = MailImpl.builder()
             .name(name)
             .sender(sender)
-            .recipients(recipients)
+            .addRecipients(recipients)
             .lastUpdated(lastUpdated)
             .errorMessage(errorMessage)
             .remoteHost(remoteHost)
             .remoteAddr(remoteAddr)
             .state(state)
             .addAllHeadersForRecipients(perRecipientHeaders)
-            .attributes(toAttributes(rawAttributes));
+            .addAttributes(toAttributes(rawAttributes));
 
         return new MailDTO(mailBuilder,
             blobIdFactory.from(row.getString(HEADER_BLOB_ID)),
             blobIdFactory.from(row.getString(BODY_BLOB_ID)));
     }
 
-    private Map<String, Serializable> toAttributes(Map<String, ByteBuffer> rowAttributes) {
+    private ImmutableList<Attribute> toAttributes(Map<String, ByteBuffer> rowAttributes) {
         return rowAttributes.entrySet()
             .stream()
-            .map(entry -> Pair.of(entry.getKey(), fromByteBuffer(entry.getValue())))
-            .collect(Guavate.toImmutableMap(Pair::getLeft, Pair::getRight));
+            .map(entry -> new Attribute(AttributeName.of(entry.getKey()), fromByteBuffer(entry.getValue())))
+            .collect(Guavate.toImmutableList());
     }
 
     private ImmutableList<String> asStringList(Collection<MailAddress> mailAddresses) {
@@ -222,10 +222,11 @@ public class CassandraMailRepositoryMailDAO implements CassandraMailRepositoryMa
     }
 
     private ImmutableMap<String, ByteBuffer> toRawAttributeMap(Mail mail) {
-        return Iterators.toStream(mail.getAttributeNames())
-            .map(name -> Pair.of(name, mail.getAttribute(name)))
-            .map(pair -> Pair.of(pair.getLeft(), toByteBuffer(pair.getRight())))
-            .collect(Guavate.toImmutableMap(Pair::getLeft, Pair::getRight));
+        return mail.attributes()
+            .map(attribute -> Pair.of(attribute.getName(), attribute.getValue()))
+            .collect(Guavate.toImmutableMap(
+                pair -> pair.getLeft().asString(),
+                pair -> toByteBuffer((Serializable) pair.getRight().value())));
     }
 
     private ImmutableMap<String, UDTValue> toHeaderMap(PerRecipientHeaders perRecipientHeaders) {
@@ -263,12 +264,12 @@ public class CassandraMailRepositoryMailDAO implements CassandraMailRepositoryMa
         }
     }
 
-    private Serializable fromByteBuffer(ByteBuffer byteBuffer) {
+    private AttributeValue<?> fromByteBuffer(ByteBuffer byteBuffer) {
         try {
             byte[] data = new byte[byteBuffer.remaining()];
             byteBuffer.get(data);
             ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(data));
-            return (Serializable) objectInputStream.readObject();
+            return AttributeValue.ofAny(objectInputStream.readObject());
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

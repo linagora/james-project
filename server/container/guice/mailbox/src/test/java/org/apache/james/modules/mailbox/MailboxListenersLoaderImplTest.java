@@ -39,19 +39,19 @@ import org.apache.james.mailbox.events.MailboxListener;
 import org.apache.james.mailbox.events.delivery.InVmEventDelivery;
 import org.apache.james.metrics.api.NoopMetricFactory;
 import org.apache.james.utils.ExtendedClassLoader;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 
-public class MailboxListenersLoaderImplTest {
+class MailboxListenersLoaderImplTest {
 
     private InVMEventBus eventBus;
     private MailboxListenersLoaderImpl testee;
 
-    @Before
-    public void setup() throws Exception {
+    @BeforeEach
+    void setup() throws Exception {
         FileSystem fileSystem = mock(FileSystem.class);
         when(fileSystem.getFile(anyString()))
             .thenThrow(new FileNotFoundException());
@@ -62,7 +62,13 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void createListenerShouldThrowWhenClassCantBeLoaded() {
+    void deserializeNoopMailboxListenerGroup() throws Exception {
+        assertThat(Group.deserialize("org.apache.james.modules.mailbox.NoopMailboxListener$NoopMailboxListenerGroup"))
+            .isEqualTo(new NoopMailboxListener.NoopMailboxListenerGroup());
+    }
+
+    @Test
+    void createListenerShouldThrowWhenClassCantBeLoaded() {
         ListenerConfiguration configuration = ListenerConfiguration.forClass("MyUnknownClass");
 
         assertThatThrownBy(() -> testee.createListener(configuration))
@@ -70,7 +76,7 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void createListenerShouldThrowWhenClassCantBeCastToMailboxListener() {
+    void createListenerShouldThrowWhenClassCantBeCastToMailboxListener() {
         ListenerConfiguration configuration = ListenerConfiguration.forClass("java.lang.String");
 
         assertThatThrownBy(() -> testee.createListener(configuration))
@@ -78,7 +84,7 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void createListenerShouldThrowWhenNotFullClassName() {
+    void createListenerShouldThrowWhenNotFullClassName() {
         ListenerConfiguration configuration = ListenerConfiguration.forClass("NoopMailboxListener");
 
         assertThatThrownBy(() -> testee.createListener(configuration))
@@ -86,7 +92,7 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void createListenerShouldReturnMailboxListenerWhenConfigurationIsGood() {
+    void createListenerShouldReturnMailboxListenerWhenConfigurationIsGood() {
         ListenerConfiguration configuration = ListenerConfiguration.forClass("org.apache.james.modules.mailbox.NoopMailboxListener");
 
         Pair<Group, MailboxListener> listener = testee.createListener(configuration);
@@ -95,7 +101,7 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void configureShouldAddMailboxListenersWhenConfigurationIsGood() throws ConfigurationException {
+    void configureShouldAddMailboxListenersWhenConfigurationIsGood() throws ConfigurationException {
         DefaultConfigurationBuilder configuration = toConfigutation("<listeners>" +
                     "<listener>" +
                         "<class>org.apache.james.modules.mailbox.NoopMailboxListener</class>" +
@@ -108,7 +114,7 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void customGroupCanBePassed() throws ConfigurationException {
+    void customGroupCanBePassed() throws ConfigurationException {
         DefaultConfigurationBuilder configuration = toConfigutation("<listeners>" +
                     "<listener>" +
                         "<class>org.apache.james.modules.mailbox.NoopMailboxListener</class>" +
@@ -122,7 +128,7 @@ public class MailboxListenersLoaderImplTest {
     }
 
     @Test
-    public void aListenerCanBeRegisteredOnSeveralGroups() throws ConfigurationException {
+    void aListenerCanBeRegisteredOnSeveralGroups() throws ConfigurationException {
         DefaultConfigurationBuilder configuration = toConfigutation("<listeners>" +
                     "<listener>" +
                         "<class>org.apache.james.modules.mailbox.NoopMailboxListener</class>" +

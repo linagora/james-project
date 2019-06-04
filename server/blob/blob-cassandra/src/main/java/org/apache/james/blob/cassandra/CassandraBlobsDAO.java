@@ -51,6 +51,7 @@ import com.datastax.driver.core.Session;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -145,7 +146,7 @@ public class CassandraBlobsDAO implements BlobStore {
     }
 
     private Mono<Integer> writePart(ByteBuffer data, BlobId blobId, int position) {
-        return cassandraAsyncExecutor.executeVoidReactor(
+        return cassandraAsyncExecutor.executeVoid(
             insertPart.bind()
                 .setString(BlobTable.ID, blobId.asString())
                 .setInt(BlobParts.CHUNK_NUMBER, position)
@@ -154,7 +155,7 @@ public class CassandraBlobsDAO implements BlobStore {
     }
 
     private Mono<BlobId> saveBlobPartsReferences(BlobId blobId, int numberOfChunk) {
-        return cassandraAsyncExecutor.executeVoidReactor(
+        return cassandraAsyncExecutor.executeVoid(
             insert.bind()
                 .setString(BlobTable.ID, blobId.asString())
                 .setInt(BlobTable.NUMBER_OF_CHUNK, numberOfChunk))
@@ -169,7 +170,7 @@ public class CassandraBlobsDAO implements BlobStore {
     }
 
     private Mono<Integer> selectRowCount(BlobId blobId) {
-        return cassandraAsyncExecutor.executeSingleRowReactor(
+        return cassandraAsyncExecutor.executeSingleRow(
                 select.bind()
                     .setString(BlobTable.ID, blobId.asString()))
             .map(row -> row.getInt(BlobTable.NUMBER_OF_CHUNK));
@@ -182,7 +183,7 @@ public class CassandraBlobsDAO implements BlobStore {
     }
 
     private Mono<byte[]> readPart(BlobId blobId, int position) {
-        return cassandraAsyncExecutor.executeSingleRowReactor(
+        return cassandraAsyncExecutor.executeSingleRow(
             selectPart.bind()
                 .setString(BlobTable.ID, blobId.asString())
                 .setInt(BlobParts.CHUNK_NUMBER, position))

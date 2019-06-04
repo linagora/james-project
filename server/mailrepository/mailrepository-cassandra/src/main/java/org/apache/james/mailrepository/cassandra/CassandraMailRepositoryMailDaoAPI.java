@@ -21,9 +21,6 @@ package org.apache.james.mailrepository.cassandra;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import javax.mail.MessagingException;
 
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.mailrepository.api.MailKey;
@@ -34,11 +31,11 @@ import org.apache.mailet.Mail;
 import reactor.core.publisher.Mono;
 
 public interface CassandraMailRepositoryMailDaoAPI {
-    CompletableFuture<Void> store(MailRepositoryUrl url, Mail mail, BlobId headerId, BlobId bodyId) throws MessagingException;
+    Mono<Void> store(MailRepositoryUrl url, Mail mail, BlobId headerId, BlobId bodyId);
 
     Mono<Void> remove(MailRepositoryUrl url, MailKey key);
 
-    CompletableFuture<Optional<MailDTO>> read(MailRepositoryUrl url, MailKey key);
+    Mono<Optional<MailDTO>> read(MailRepositoryUrl url, MailKey key);
 
     class MailDTO {
         private final MailImpl.Builder mailBuilder;

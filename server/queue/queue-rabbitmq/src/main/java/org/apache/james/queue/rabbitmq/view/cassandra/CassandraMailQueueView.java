@@ -19,8 +19,6 @@
 
 package org.apache.james.queue.rabbitmq.view.cassandra;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.inject.Inject;
 
 import org.apache.james.queue.api.ManageableMailQueue;
@@ -84,8 +82,8 @@ public class CassandraMailQueueView implements MailQueueView {
     }
 
     @Override
-    public CompletableFuture<Void> storeMail(EnqueuedItem enqueuedItem) {
-        return storeHelper.storeMail(enqueuedItem).toFuture();
+    public Mono<Void> storeMail(EnqueuedItem enqueuedItem) {
+        return storeHelper.storeMail(enqueuedItem);
     }
 
     @Override
@@ -115,7 +113,7 @@ public class CassandraMailQueueView implements MailQueueView {
         return cassandraMailQueueBrowser.browseReferences(mailQueueName)
             .map(EnqueuedItemWithSlicingContext::getEnqueuedItem)
             .filter(mailReference -> deleteCondition.shouldBeDeleted(mailReference.getMail()))
-            .map(mailReference -> cassandraMailQueueMailDelete.considerDeleted(mailReference.getMail(), mailQueueName))
+            .flatMap(mailReference -> cassandraMailQueueMailDelete.considerDeleted(mailReference.getMail(), mailQueueName))
             .count()
             .doOnNext(ignored -> cassandraMailQueueMailDelete.updateBrowseStart(mailQueueName))
             .block();
@@ -126,9 +124,8 @@ public class CassandraMailQueueView implements MailQueueView {
     }
 
     @Override
-    public CompletableFuture<Boolean> isPresent(Mail mail) {
+    public Mono<Boolean> isPresent(Mail mail) {
         return cassandraMailQueueMailDelete.isDeleted(mail, mailQueueName)
-                .map(bool -> !bool)
-                .toFuture();
+                .map(bool -> !bool);
     }
 }

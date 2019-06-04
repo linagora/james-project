@@ -22,6 +22,7 @@ package org.apache.james.jmap.methods.integration;
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.with;
 import static org.apache.james.jmap.HttpJmapAuthentication.authenticateJamesUser;
+import static org.apache.james.jmap.JmapCommonRequests.concatMessageIds;
 import static org.apache.james.jmap.JmapCommonRequests.getOutboxId;
 import static org.apache.james.jmap.JmapCommonRequests.listMessageIdsForAccount;
 import static org.apache.james.jmap.JmapURIBuilder.baseUri;
@@ -34,8 +35,6 @@ import static org.hamcrest.Matchers.hasItem;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.core.quota.QuotaSize;
@@ -50,6 +49,8 @@ import org.apache.james.modules.QuotaProbesImpl;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.JmapGuiceProbe;
+import org.awaitility.Duration;
+import org.awaitility.core.ConditionFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,6 +66,7 @@ public abstract class QuotaMailingTest {
     private static final String BART = "bart@" + DOMAIN;
     private static final String PASSWORD = "password";
     private static final String BOB_PASSWORD = "bobPassword";
+    private static final ConditionFactory WAIT_TWO_MINUTES = calmlyAwait.atMost(Duration.TWO_MINUTES);
 
     protected abstract GuiceJamesServer createJmapServer() throws IOException;
 
@@ -107,13 +109,10 @@ public abstract class QuotaMailingTest {
         bartSendMessageToHomer();
         // Homer receives a mail big enough to trigger a configured threshold
 
-        calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> listMessageIdsForAccount(homerAccessToken).size() == 2);
+        WAIT_TWO_MINUTES.until(() -> listMessageIdsForAccount(homerAccessToken).size() == 2);
 
         List<String> ids = listMessageIdsForAccount(homerAccessToken);
-        String idString = ids.stream()
-            .map(id -> "\"" + id + "\"")
-            .collect(Collectors.joining(","));
+        String idString = concatMessageIds(ids);
 
         given()
             .header("Authorization", homerAccessToken.serialize())
@@ -135,18 +134,14 @@ public abstract class QuotaMailingTest {
 
         bartSendMessageToHomer();
         // Homer receives a mail big enough to trigger a 10% configured threshold
-        calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> listMessageIdsForAccount(homerAccessToken).size() == 2);
+        WAIT_TWO_MINUTES.until(() -> listMessageIdsForAccount(homerAccessToken).size() == 2);
 
         bartSendMessageToHomer();
         // Homer receives a mail big enough to trigger a 20% configured threshold
-        calmlyAwait.atMost(30, TimeUnit.SECONDS)
-            .until(() -> listMessageIdsForAccount(homerAccessToken).size() == 4);
+        WAIT_TWO_MINUTES.until(() -> listMessageIdsForAccount(homerAccessToken).size() == 4);
 
         List<String> ids = listMessageIdsForAccount(homerAccessToken);
-        String idString = ids.stream()
-            .map(id -> "\"" + id + "\"")
-            .collect(Collectors.joining(","));
+        String idString = concatMessageIds(ids);
 
         given()
             .header("Authorization", homerAccessToken.serialize())

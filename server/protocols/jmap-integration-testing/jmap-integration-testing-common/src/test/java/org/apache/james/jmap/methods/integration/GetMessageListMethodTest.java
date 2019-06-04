@@ -20,7 +20,9 @@
 package org.apache.james.jmap.methods.integration;
 
 import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.with;
 import static org.apache.james.jmap.HttpJmapAuthentication.authenticateJamesUser;
+import static org.apache.james.jmap.JmapCommonRequests.getOutboxId;
 import static org.apache.james.jmap.JmapURIBuilder.baseUri;
 import static org.apache.james.jmap.TestingConstants.ALICE;
 import static org.apache.james.jmap.TestingConstants.ALICE_PASSWORD;
@@ -29,7 +31,10 @@ import static org.apache.james.jmap.TestingConstants.BOB;
 import static org.apache.james.jmap.TestingConstants.BOB_PASSWORD;
 import static org.apache.james.jmap.TestingConstants.DOMAIN;
 import static org.apache.james.jmap.TestingConstants.NAME;
+import static org.apache.james.jmap.TestingConstants.calmlyAwait;
 import static org.apache.james.jmap.TestingConstants.jmapRequestSpecBuilder;
+import static org.apache.james.transport.mailets.remote.delivery.HeloNameProvider.LOCALHOST;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -45,6 +50,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import javax.mail.Flags;
 
@@ -53,6 +59,7 @@ import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.categories.BasicFeature;
 import org.apache.james.jmap.categories.CassandraAndElasticSearchCategory;
 import org.apache.james.jmap.model.Number;
+import org.apache.james.mailbox.DefaultMailboxes;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.model.ComposedMessageId;
@@ -69,11 +76,15 @@ import org.apache.james.mime4j.message.MultipartBuilder;
 import org.apache.james.mime4j.message.SingleBodyBuilder;
 import org.apache.james.modules.ACLProbeImpl;
 import org.apache.james.modules.MailboxProbeImpl;
+import org.apache.james.modules.protocols.ImapGuiceProbe;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.util.ClassLoaderUtils;
 import org.apache.james.util.date.ImapDateTimeFormatter;
 import org.apache.james.utils.DataProbeImpl;
+import org.apache.james.utils.IMAPMessageReader;
 import org.apache.james.utils.JmapGuiceProbe;
+import org.awaitility.Duration;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -198,6 +209,79 @@ public abstract class GetMessageListMethodTest {
         .then()
             .statusCode(200)
             .body(ARGUMENTS + ".messageIds", contains(messageId));
+    }
+
+    @Category(BasicFeature.class)
+    @Test
+    public void searchByFromFieldShouldSupportUTF8FromName() throws Exception {
+        String toUsername = "username1@" + DOMAIN;
+        String password = "password";
+        dataProbe.addUser(toUsername, password);
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, toUsername, DefaultMailboxes.INBOX);
+
+        String messageCreationId = "creationId1337";
+        String fromName = "Üsteliğhan Maşrapa";
+        String fromAddress = ALICE;
+        String requestBody = "[" +
+            "  [" +
+            "    \"setMessages\"," +
+            "    {" +
+            "      \"create\": { \"" + messageCreationId  + "\" : {" +
+            "        \"from\": { \"name\": \"" + fromName + "\", \"email\": \"" + fromAddress + "\"}," +
+            "        \"to\": [{ \"name\": \"BOB\", \"email\": \"" + BOB + "\"}]," +
+            "        \"subject\": \"Thank you for joining example.com!\"," +
+            "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+            "        \"mailboxIds\": [\"" + getOutboxId(aliceAccessToken) + "\"]" +
+            "      }}" +
+            "    }," +
+            "    \"#0\"" +
+            "  ]" +
+            "]";
+
+        String messageId = with()
+            .header("Authorization", aliceAccessToken.serialize())
+            .body(requestBody)
+            .post("/jmap")
+        .then()
+            .extract()
+            .body()
+            .path(ARGUMENTS + ".created." + messageCreationId + ".id");
+
+        String searchedMessageId = calmlyAwait.atMost(Duration.TEN_SECONDS)
+            .until(() -> searchFirstMessageByFromField(fromName), Matchers.notNullValue());
+
+        assertThat(searchedMessageId)
+            .isEqualTo(messageId);
+    }
+
+    private String searchFirstMessageByFromField(String from) {
+        String searchRequest = "[" +
+            "  [" +
+            "    \"getMessageList\"," +
+            "    {" +
+            "      \"filter\": {" +
+            "        \"from\": \"" + from + "\"" +
+            "      }," +
+            "      \"sort\": [" +
+            "        \"date desc\"" +
+            "      ]," +
+            "      \"collapseThreads\": false," +
+            "      \"fetchMessages\": false," +
+            "      \"position\": 0," +
+            "      \"limit\": 1" +
+            "    }," +
+            "    \"#0\"" +
+            "  ]" +
+            "]";
+
+        return with()
+            .header("Authorization", aliceAccessToken.serialize())
+            .body(searchRequest)
+            .post("/jmap")
+        .then()
+            .statusCode(200)
+            .extract()
+            .path(ARGUMENTS + ".messageIds[0]");
     }
 
     @Test
@@ -2168,5 +2252,53 @@ public abstract class GetMessageListMethodTest {
             .body(NAME, equalTo("error"))
             .body(ARGUMENTS + ".type", equalTo("invalidArguments"))
             .body(ARGUMENTS + ".description", containsString("value should be positive and less than 2^53"));
+    }
+
+    @Test
+    public void getMessageListShouldReturnTwoMessagesWhenCopiedAtOnceViaIMAP() throws Exception {
+        mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "mailbox");
+        MailboxId otherMailboxId = mailboxProbe.createMailbox(MailboxConstants.USER_NAMESPACE, ALICE, "otherMailbox");
+
+        mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
+            MessageManager.AppendCommand.builder()
+            .build(Message.Builder.of()
+                    .setSubject("test 1")
+                    .setBody("content 1", StandardCharsets.UTF_8)));
+
+        mailboxProbe.appendMessage(ALICE, MailboxPath.forUser(ALICE, "mailbox"),
+                MessageManager.AppendCommand.builder()
+                .build(Message.Builder.of()
+                        .setSubject("test 2")
+                        .setBody("content 2", StandardCharsets.UTF_8)));
+
+        try (IMAPMessageReader imap = new IMAPMessageReader()) {
+            imap.connect(LOCALHOST, jmapServer.getProbe(ImapGuiceProbe.class).getImapPort())
+            .login(ALICE, ALICE_PASSWORD)
+            .select("mailbox")
+            .copyAllMessagesInMailboxTo("otherMailbox");
+        }
+
+        await();
+
+        calmlyAwait
+            .atMost(30, TimeUnit.SECONDS)
+            .until(() -> twoMessagesFoundInMailbox(otherMailboxId));
+    }
+
+    private boolean twoMessagesFoundInMailbox(MailboxId mailboxId) {
+        try {
+            with()
+                .header("Authorization", aliceAccessToken.serialize())
+                .body("[[\"getMessageList\", {\"filter\":{\"inMailboxes\":[\"" + mailboxId.serialize() + "\"]}}, \"#0\"]]")
+            .when()
+                .post("/jmap")
+            .then()
+                .statusCode(200)
+                .body(NAME, equalTo("messageList"))
+                .body(ARGUMENTS + ".messageIds", hasSize(2));
+            return true;
+        } catch (AssertionError e) {
+            return false;
+        }
     }
 }

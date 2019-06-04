@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
-import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.lifecycle.api.Startable;
 import org.apache.james.mailbox.extractor.TextExtractor;
 import org.apache.james.mailbox.store.search.PDFTextExtractor;
 import org.apache.james.modules.TestJMAPServerModule;
@@ -27,7 +27,7 @@ class GuiceJamesServerTest {
     @Nested
     class NormalBehaviour {
         @RegisterExtension
-        JamesServerExtension jamesServerExtension = new JamesServerExtensionBuilder()
+        JamesServerExtension jamesServerExtension = new JamesServerBuilder()
             .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
                 .combineWith(MemoryJamesServerMain.IN_MEMORY_SERVER_AGGREGATE_MODULE)
                 .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))
@@ -66,13 +66,13 @@ class GuiceJamesServerTest {
             }
 
             @Override
-            public List<Class<? extends Configurable>> forClasses() {
+            public List<Class<? extends Startable>> forClasses() {
                 return ImmutableList.of();
             }
         };
 
         @RegisterExtension
-        JamesServerExtension jamesServerExtension = new JamesServerExtensionBuilder()
+        JamesServerExtension jamesServerExtension = new JamesServerBuilder()
             .server(configuration -> GuiceJamesServer.forConfiguration(configuration)
                 .combineWith(MemoryJamesServerMain.IN_MEMORY_SERVER_AGGREGATE_MODULE)
                 .overrideWith(new TestJMAPServerModule(LIMIT_TO_10_MESSAGES))

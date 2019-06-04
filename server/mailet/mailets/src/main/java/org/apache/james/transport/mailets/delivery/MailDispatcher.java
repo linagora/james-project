@@ -98,8 +98,9 @@ public class MailDispatcher {
             // regarding the details of the failure(s).
             // In the future we may wish to address this.
             Mail newMail = MailImpl.builder()
+                .name("error-" + mail.getName())
                 .sender(mail.getMaybeSender())
-                .recipients(errors)
+                .addRecipients(errors)
                 .mimeMessage(mail.getMessage())
                 .state(Mail.ERROR)
                 .build();

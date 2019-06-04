@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.mailbox.elasticsearch.events;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,11 +43,12 @@ import org.apache.james.mailbox.MailboxSessionUtil;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.elasticsearch.json.MessageToElasticSearchJson;
 import org.apache.james.mailbox.elasticsearch.search.ElasticSearchSearcher;
+import org.apache.james.mailbox.events.Group;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.TestId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.SessionProvider;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -91,6 +94,12 @@ public class ElasticSearchListeningMessageSearchIndexTest {
 
         mailbox = mock(Mailbox.class);
         when(mailbox.getMailboxId()).thenReturn(MAILBOX_ID);
+    }
+
+    @Test
+    public void deserializeElasticSearchListeningMessageSearchIndexGroup() throws Exception {
+        assertThat(Group.deserialize("org.apache.james.mailbox.elasticsearch.events.ElasticSearchListeningMessageSearchIndex$ElasticSearchListeningMessageSearchIndexGroup"))
+            .isEqualTo(new ElasticSearchListeningMessageSearchIndex.ElasticSearchListeningMessageSearchIndexGroup());
     }
     
     @Test
@@ -151,7 +160,7 @@ public class ElasticSearchListeningMessageSearchIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void deleteShouldWork() {
+    public void deleteShouldWork() throws IOException {
         //Given
         BulkResponse expectedBulkResponse = mock(BulkResponse.class);
         when(elasticSearchIndexer.delete(any(List.class)))
@@ -166,7 +175,7 @@ public class ElasticSearchListeningMessageSearchIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void deleteShouldWorkWhenMultipleMessageIds() {
+    public void deleteShouldWorkWhenMultipleMessageIds() throws IOException {
         //Given
         MessageUid messageId2 = MessageUid.of(2);
         MessageUid messageId3 = MessageUid.of(3);
@@ -186,7 +195,7 @@ public class ElasticSearchListeningMessageSearchIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void deleteShouldPropagateExceptionWhenExceptionOccurs() {
+    public void deleteShouldPropagateExceptionWhenExceptionOccurs() throws IOException {
         //Given
         when(elasticSearchIndexer.delete(any(List.class)))
             .thenThrow(new ElasticsearchException(""));

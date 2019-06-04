@@ -19,12 +19,8 @@
 
 package org.apache.james.server.core;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -68,7 +64,6 @@ import com.github.steveash.guavate.Guavate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Chars;
@@ -100,24 +95,50 @@ public class MailImpl implements Disposable, Mail {
      * @throws MessagingException when the message is not clonable
      */
     public static MailImpl duplicate(Mail mail) throws MessagingException {
-        return new MailImpl(mail, deriveNewName(mail.getName()));
+        return MailImpl.builder()
+            .name(deriveNewName(mail.getName()))
+            .sender(mail.getMaybeSender())
+            .addRecipients(mail.getRecipients())
+            .mimeMessage(new MimeMessageCopyOnWriteProxy(mail.getMessage()))
+            .remoteHost(mail.getRemoteHost())
+            .remoteAddr(mail.getRemoteAddr())
+            .lastUpdated(mail.getLastUpdated())
+            .errorMessage(mail.getErrorMessage())
+            .addAttributes(duplicateAttributes(mail))
+            .build();
+    }
+
+    private static ImmutableList<Attribute> duplicateAttributes(Mail mail) {
+        try {
+            return mail.attributes().map(Attribute::duplicate).collect(Guavate.toImmutableList());
+        } catch (IllegalStateException e) {
+            LOGGER.error("Error while cloning Mail attributes", e);
+            return ImmutableList.of();
+        }
     }
 
     public static MailImpl fromMimeMessage(String name, MimeMessage mimeMessage) throws MessagingException {
-        MailAddress sender = getSender(mimeMessage);
-        ImmutableList<MailAddress> recipients = getRecipients(mimeMessage);
-        return new MailImpl(name, sender, recipients, mimeMessage);
+        return MailImpl.builder()
+            .name(name)
+            .sender(getSender(mimeMessage))
+            .addRecipients(getRecipients(mimeMessage))
+            .mimeMessage(mimeMessage)
+            .build();
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public static RequireName builder() {
+        return Builder::new;
+    }
+
+    public interface RequireName {
+        Builder name(String name);
     }
 
     public static class Builder {
 
+        private final String name;
         private Optional<MimeMessage> mimeMessage;
         private List<MailAddress> recipients;
-        private Optional<String> name;
         private Optional<MailAddress> sender;
         private Optional<String> state;
         private Optional<String> errorMessage;
@@ -127,10 +148,12 @@ public class MailImpl implements Disposable, Mail {
         private Optional<String> remoteHost;
         private PerRecipientHeaders perRecipientHeaders;
 
-        private Builder() {
+        private Builder(String name) {
+            Preconditions.checkNotNull(name);
+            Preconditions.checkArgument(!name.isEmpty(), "name must not be empty");
+            this.name = name;
             mimeMessage = Optional.empty();
             recipients = Lists.newArrayList();
-            name = Optional.empty();
             sender = Optional.empty();
             state = Optional.empty();
             errorMessage = Optional.empty();
@@ -151,36 +174,27 @@ public class MailImpl implements Disposable, Mail {
             return this;
         }
 
-        public Builder recipients() {
-            return this;
-        }
-
-        public Builder recipients(List<MailAddress> recipients) {
+        public Builder addRecipients(Collection<MailAddress> recipients) {
             this.recipients.addAll(recipients);
             return this;
         }
 
-        public Builder recipients(MailAddress... recipients) {
-            return recipients(ImmutableList.copyOf(recipients));
+        public Builder addRecipients(MailAddress... recipients) {
+            return addRecipients(ImmutableList.copyOf(recipients));
         }
 
-        public Builder recipients(String... recipients) {
-            return recipients(Arrays.stream(recipients)
+        public Builder addRecipients(String... recipients) {
+            return addRecipients(Arrays.stream(recipients)
                 .map(Throwing.function(MailAddress::new))
-                .collect(ImmutableList.toImmutableList()));
+                .collect(Guavate.toImmutableList()));
         }
 
-        public Builder recipient(MailAddress recipient) {
-            return recipients(recipient);
+        public Builder addRecipient(MailAddress recipient) {
+            return addRecipients(recipient);
         }
 
-        public Builder recipient(String recipient) throws AddressException {
-            return recipients(recipient);
-        }
-
-        public Builder name(String name) {
-            this.name = Optional.ofNullable(name);
-            return this;
+        public Builder addRecipient(String recipient) throws AddressException {
+            return addRecipients(recipient);
         }
 
         public Builder sender(MailAddress sender) {
@@ -217,27 +231,17 @@ public class MailImpl implements Disposable, Mail {
         }
 
         @Deprecated
-        public Builder attribute(String name, Serializable object) {
-            attribute(Attribute.convertToAttribute(name, object));
-            return this;
+        public Builder addAttribute(String name, Serializable object) {
+            return addAttribute(Attribute.convertToAttribute(name, object));
         }
 
-        @Deprecated
-        public Builder attributes(Map<String, Serializable> attributes) {
-            this.attributes(toAttributeMap(attributes).values());
-            return this;
-        }
-
-        public Builder attribute(Attribute attribute) {
+        public Builder addAttribute(Attribute attribute) {
             this.attributes.put(attribute.getName(), attribute);
             return this;
         }
 
-        public Builder attributes(Collection<Attribute> attributes) {
-            this.attributes.putAll(attributes.stream()
-                .collect(ImmutableMap.toImmutableMap(
-                    Attribute::getName,
-                    Function.identity())));
+        public Builder addAttributes(Collection<Attribute> attributes) {
+            attributes.forEach(this::addAttribute);
             return this;
         }
 
@@ -262,18 +266,14 @@ public class MailImpl implements Disposable, Mail {
         }
 
         public MailImpl build() {
-            MailImpl mail = new MailImpl();
+            MailImpl mail = new MailImpl(name, state.orElse(DEFAULT), attributes, recipients, perRecipientHeaders);
+
             mimeMessage.ifPresent(Throwing.consumer(mail::setMessage).sneakyThrow());
-            name.ifPresent(mail::setName);
             sender.ifPresent(mail::setSender);
-            mail.setRecipients(recipients);
-            state.ifPresent(mail::setState);
             errorMessage.ifPresent(mail::setErrorMessage);
             lastUpdated.ifPresent(mail::setLastUpdated);
-            mail.setAttributes(attributes);
             remoteAddr.ifPresent(mail::setRemoteAddr);
             remoteHost.ifPresent(mail::setRemoteHost);
-            mail.perRecipientSpecificHeaders.addAll(perRecipientHeaders);
             return mail;
         }
     }
@@ -290,7 +290,7 @@ public class MailImpl implements Disposable, Mail {
     private static ImmutableList<MailAddress> getRecipients(MimeMessage mimeMessage) throws MessagingException {
         return Arrays.stream(mimeMessage.getAllRecipients())
             .map(Throwing.function(MailImpl::castToMailAddress).sneakyThrow())
-            .collect(ImmutableList.toImmutableList());
+            .collect(Guavate.toImmutableList());
     }
 
     private static MailAddress getSender(MimeMessage mimeMessage) throws MessagingException {
@@ -399,108 +399,16 @@ public class MailImpl implements Disposable, Mail {
      */
     private PerRecipientHeaders perRecipientSpecificHeaders;
 
-    /**
-     * A constructor that creates a new, uninitialized MailImpl
-     */
-    public MailImpl() {
-        setState(Mail.DEFAULT);
-        attributes = new HashMap<>();
-        perRecipientSpecificHeaders = new PerRecipientHeaders();
-        this.recipients = null;
-    }
-
-    /**
-     * A constructor that creates a MailImpl with the specified name, sender,
-     * and recipients.
-     *
-     * @param name       the name of the MailImpl
-     * @param sender     the sender for this MailImpl
-     * @param recipients the collection of recipients of this MailImpl
-     */
-    public MailImpl(String name, MailAddress sender, Collection<MailAddress> recipients) {
-        this(name, Optional.ofNullable(sender), recipients);
-    }
-
-    public MailImpl(String name, Optional<MailAddress> sender, Collection<MailAddress> recipients) {
-        this();
+    private MailImpl(String name,
+                     String state,
+                     Map<AttributeName, Attribute> attributes,
+                     List<MailAddress> recipients,
+                     PerRecipientHeaders perRecipientHeaders) {
         setName(name);
-        sender.ifPresent(this::setSender);
-
-        // Copy the recipient list
-        if (recipients != null) {
-            setRecipients(recipients);
-        }
-    }
-
-    @SuppressWarnings({"unchecked", "deprecation"})
-    private MailImpl(Mail mail, String newName) throws MessagingException {
-        this(newName, mail.getSender(), mail.getRecipients(), mail.getMessage());
-        setRemoteHost(mail.getRemoteHost());
-        setRemoteAddr(mail.getRemoteAddr());
-        setLastUpdated(mail.getLastUpdated());
-        setErrorMessage(mail.getErrorMessage());
-        try {
-            if (mail instanceof MailImpl) {
-                setAttributesRaw((Map<String, Object>) cloneSerializableObject(((MailImpl) mail).getAttributesRaw()));
-            } else {
-                ImmutableMap<String, Object> attributesMap = mail.attributes()
-                    .collect(Guavate.toImmutableMap(
-                            attribute -> attribute.getName().asString(),
-                            Throwing.function(attribute -> cloneSerializableObject(attribute.getValue().getValue()))));
-
-                setAttributesRaw(attributesMap);
-            }
-        } catch (IOException | ClassNotFoundException e) {
-            LOGGER.error("Error while deserializing attributes", e);
-            setAttributesRaw(new HashMap<>());
-        }
-    }
-
-    /**
-     * A constructor that creates a MailImpl with the specified name, sender,
-     * recipients, and message data.
-     *
-     * @param name       the name of the MailImpl
-     * @param sender     the sender for this MailImpl
-     * @param recipients the collection of recipients of this MailImpl
-     * @param messageIn  a stream containing the message source
-     */
-    public MailImpl(String name, MailAddress sender, Collection<MailAddress> recipients, InputStream messageIn) throws MessagingException {
-        this(name, sender, recipients);
-        MimeMessageSource source = new MimeMessageInputStreamSource(name, messageIn);
-        // if MimeMessageCopyOnWriteProxy throws an error in the constructor we
-        // have to manually care disposing our source.
-        try {
-            this.setMessage(new MimeMessageCopyOnWriteProxy(source));
-        } catch (MessagingException e) {
-            LifecycleUtil.dispose(source);
-            throw e;
-        }
-    }
-
-    /**
-     * A constructor that creates a MailImpl with the specified name, sender,
-     * recipients, and MimeMessage.
-     */
-    public MailImpl(String name, MailAddress sender, Collection<MailAddress> recipients, MimeMessage message) throws MessagingException {
-        this(name, sender, recipients);
-        this.setMessage(new MimeMessageCopyOnWriteProxy(message));
-    }
-
-    /**
-     * Duplicate the MailImpl, replacing the mail name with the one passed in as
-     * an argument.
-     *
-     * @param newName the name for the duplicated mail
-     * @return a MailImpl that is a duplicate of this one with a different name
-     */
-    @VisibleForTesting Mail duplicate(String newName) {
-        try {
-            return new MailImpl(this, newName);
-        } catch (MessagingException me) {
-            // Ignored. Return null in the case of an error.
-        }
-        return null;
+        setState(state);
+        setAttributes(attributes);
+        setRecipients(recipients);
+        perRecipientSpecificHeaders = perRecipientHeaders;
     }
 
     @Override
@@ -515,6 +423,8 @@ public class MailImpl implements Disposable, Mail {
 
     @Override
     public void setName(String name) {
+        Preconditions.checkNotNull(name);
+        Preconditions.checkArgument(!name.isEmpty(), "name must not be empty");
         this.name = name;
     }
 
@@ -684,6 +594,38 @@ public class MailImpl implements Disposable, Mail {
         remoteHost = (String) in.readObject();
         remoteAddr = (String) in.readObject();
         setLastUpdated((Date) in.readObject());
+        try {
+            setAttributesUsingJsonable(in);
+        } catch (Exception e) {
+            setAttributesUsingJavaSerializable(in);
+        }
+        perRecipientSpecificHeaders = (PerRecipientHeaders) in.readObject();
+    }
+
+    /**
+     * Newest mailet API introduced {@link AttributeValue} which can encapsulate any class, possible not serializable.
+     *
+     * As such, algorithm relying on out of the box serialization can not handle non serializable attribute values as well as
+     * nested AttributeValue.
+     *
+     * Thus, rather than Java deserializing attributes we deserialize them as Json using AttributeValue capabilities.
+     */
+    private void setAttributesUsingJsonable(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        @SuppressWarnings("unchecked")
+        Map<String, String> attributesAsJson = (Map<String, String>) in.readObject();
+
+        this.attributes = attributesAsJson.entrySet().stream()
+            .map(Throwing.function(entry -> new Attribute(AttributeName.of(entry.getKey()), AttributeValue.fromJsonString(entry.getValue()))))
+            .collect(Collectors.toMap(
+                Attribute::getName,
+                Function.identity()));
+    }
+
+    /**
+     * Fallback to Java deserialization if {@link MailImpl#setAttributesUsingJsonable(ObjectInputStream)} fails.
+     */
+    @SuppressWarnings("unchecked")
+    private void setAttributesUsingJavaSerializable(ObjectInputStream in) throws IOException, ClassNotFoundException {
         // the following is under try/catch to be backwards compatible
         // with messages created with James version <= 2.2.0a8
         try {
@@ -695,7 +637,6 @@ public class MailImpl implements Disposable, Mail {
                 throw ode;
             }
         }
-        perRecipientSpecificHeaders = (PerRecipientHeaders) in.readObject();
     }
 
     /**
@@ -713,7 +654,7 @@ public class MailImpl implements Disposable, Mail {
         out.writeObject(remoteHost);
         out.writeObject(remoteAddr);
         out.writeObject(lastUpdated);
-        out.writeObject(getAttributesRaw());
+        out.writeObject(getAttributesAsJson());
         out.writeObject(perRecipientSpecificHeaders);
     }
 
@@ -742,6 +683,19 @@ public class MailImpl implements Disposable, Mail {
             .collect(Collectors.toMap(
                 attribute -> attribute.getName().asString(),
                 attribute -> attribute.getValue().value()));
+    }
+
+    /**
+     * Newly serialized emails are serialized using {@link AttributeValue}.
+     *
+     * Upon deserialization, fallback to Java deserialization is handled to not introduce retro-compatibility issues.
+     */
+    private Map<String, String> getAttributesAsJson() {
+        return attributes.values()
+            .stream()
+            .collect(Collectors.toMap(
+                attribute -> attribute.getName().asString(),
+                attribute -> attribute.getValue().toJson().toString()));
     }
 
     /**
@@ -834,27 +788,6 @@ public class MailImpl implements Disposable, Mail {
     @Override
     public boolean hasAttributes() {
         return !attributes.isEmpty();
-    }
-
-    /**
-     * This methods provide cloning for serializable objects. Mail Attributes
-     * are Serializable but not Clonable so we need a deep copy
-     *
-     * @param o Object to be cloned
-     * @return the cloned Object
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    private static Object cloneSerializableObject(Object o) throws IOException, ClassNotFoundException {
-        ByteArrayOutputStream b = new ByteArrayOutputStream();
-        try (ObjectOutputStream out = new ObjectOutputStream(b)) {
-            out.writeObject(o);
-            out.flush();
-        }
-        ByteArrayInputStream bi = new ByteArrayInputStream(b.toByteArray());
-        try (ObjectInputStream in = new ObjectInputStream(bi)) {
-            return in.readObject();
-        }
     }
 
     /**

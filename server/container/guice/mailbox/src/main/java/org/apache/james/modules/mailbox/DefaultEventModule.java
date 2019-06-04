@@ -24,7 +24,7 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.lifecycle.api.Startable;
 import org.apache.james.mailbox.events.EventBus;
 import org.apache.james.mailbox.events.EventDeadLetters;
 import org.apache.james.mailbox.events.InVMEventBus;
@@ -38,6 +38,7 @@ import org.apache.james.utils.ConfigurationPerformer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
@@ -63,29 +64,30 @@ public class DefaultEventModule extends AbstractModule {
         Multibinder.newSetBinder(binder(), MailboxListener.GroupMailboxListener.class);
     }
 
+    @Provides
+    ListenersConfiguration providesConfiguration(ConfigurationProvider configurationProvider) throws ConfigurationException {
+        return ListenersConfiguration.from(configurationProvider.getConfiguration("listeners"));
+    }
+
     @Singleton
     public static class ListenerRegistrationPerformer implements ConfigurationPerformer {
-        private final ConfigurationProvider configurationProvider;
         private final MailboxListenersLoaderImpl listeners;
+        private final ListenersConfiguration configuration;
 
         @Inject
-        public ListenerRegistrationPerformer(ConfigurationProvider configurationProvider, MailboxListenersLoaderImpl listeners) {
-            this.configurationProvider = configurationProvider;
+        public ListenerRegistrationPerformer(MailboxListenersLoaderImpl listeners, ListenersConfiguration configuration) {
             this.listeners = listeners;
+            this.configuration = configuration;
         }
 
         @Override
         public void initModule() {
-            try {
-                listeners.configure(configurationProvider.getConfiguration("listeners"));
-            } catch (ConfigurationException e) {
-                throw new RuntimeException(e);
-            }
+            listeners.configure(configuration);
         }
 
         @Override
-        public List<Class<? extends Configurable>> forClasses() {
-            return ImmutableList.of();
+        public List<Class<? extends Startable>> forClasses() {
+            return ImmutableList.of(MailboxListenersLoaderImpl.class);
         }
     }
 }

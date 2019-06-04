@@ -32,12 +32,12 @@ import org.apache.james.mailbox.events.Event;
 import org.apache.james.mailbox.events.Group;
 import org.apache.james.mailbox.events.MessageMoveEvent;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.event.SpamEventListener;
 import org.apache.james.mailbox.store.mail.MessageMapper;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.util.streams.Iterators;
@@ -50,7 +50,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 public class SpamAssassinListener implements SpamEventListener {
-    private static class SpamAssassinListenerGroup extends Group {}
+    public static class SpamAssassinListenerGroup extends Group {}
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SpamAssassinListener.class);
     private static final int LIMIT = 1;
@@ -82,12 +82,18 @@ public class SpamAssassinListener implements SpamEventListener {
     }
 
     @Override
+    public boolean isHandling(Event event) {
+        return event instanceof MessageMoveEvent || event instanceof Added;
+    }
+
+    @Override
     public void event(Event event) throws MailboxException {
-        MailboxSession session = mailboxManager.createSystemSession(getClass().getCanonicalName());
         if (event instanceof MessageMoveEvent) {
+            MailboxSession session = mailboxManager.createSystemSession(getClass().getCanonicalName());
             handleMessageMove(event, session, (MessageMoveEvent) event);
         }
         if (event instanceof Added) {
+            MailboxSession session = mailboxManager.createSystemSession(getClass().getCanonicalName());
             handleAdded(event, session, (Added) event);
         }
     }

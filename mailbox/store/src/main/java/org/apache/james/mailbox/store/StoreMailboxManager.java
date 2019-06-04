@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.store;
 
+import static org.apache.james.mailbox.store.mail.AbstractMessageMapper.UNLIMITED;
+
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -37,6 +39,7 @@ import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxPathLocker.LockAwareExecution;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
+import org.apache.james.mailbox.MetadataWithMailboxId;
 import org.apache.james.mailbox.StandardMailboxMetaDataComparator;
 import org.apache.james.mailbox.events.EventBus;
 import org.apache.james.mailbox.events.MailboxIdRegistrationKey;
@@ -44,6 +47,8 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.exception.TooLongMailboxNameException;
+import org.apache.james.mailbox.extension.PreDeletionHook;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxACL.Right;
@@ -56,6 +61,7 @@ import org.apache.james.mailbox.model.MailboxMetaData.Selectability;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageId.Factory;
+import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MultimailboxesSearchQuery;
 import org.apache.james.mailbox.model.QuotaRoot;
@@ -66,10 +72,7 @@ import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.event.EventFactory;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.Message;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.quota.QuotaComponents;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.store.transaction.Mapper;
@@ -110,6 +113,7 @@ public class StoreMailboxManager implements MailboxManager {
     private final QuotaRootResolver quotaRootResolver;
     private final QuotaComponents quotaComponents;
     private final MessageSearchIndex index;
+    private final PreDeletionHooks preDeletionHooks;
     protected final MailboxManagerConfiguration configuration;
 
     @Inject
@@ -117,7 +121,8 @@ public class StoreMailboxManager implements MailboxManager {
                                MailboxPathLocker locker, MessageParser messageParser,
                                MessageId.Factory messageIdFactory, MailboxAnnotationManager annotationManager,
                                EventBus eventBus, StoreRightManager storeRightManager,
-                               QuotaComponents quotaComponents, MessageSearchIndex searchIndex, MailboxManagerConfiguration configuration) {
+                               QuotaComponents quotaComponents, MessageSearchIndex searchIndex, MailboxManagerConfiguration configuration,
+                               PreDeletionHooks preDeletionHooks) {
         Preconditions.checkNotNull(eventBus);
         Preconditions.checkNotNull(mailboxSessionMapperFactory);
 
@@ -134,6 +139,7 @@ public class StoreMailboxManager implements MailboxManager {
         this.quotaComponents = quotaComponents;
         this.index = searchIndex;
         this.configuration = configuration;
+        this.preDeletionHooks = preDeletionHooks;
     }
 
     public QuotaComponents getQuotaComponents() {
@@ -202,6 +208,10 @@ public class StoreMailboxManager implements MailboxManager {
         return messageParser;
     }
 
+    public PreDeletionHooks getPreDeletionHooks() {
+        return preDeletionHooks;
+    }
+
     /**
      * Generate an return the next uid validity
      *
@@ -251,20 +261,11 @@ public class StoreMailboxManager implements MailboxManager {
         return new StoreMessageManager(DEFAULT_NO_MESSAGE_CAPABILITIES, getMapperFactory(), getMessageSearchIndex(), getEventBus(),
                 getLocker(), mailbox, quotaManager,
             getQuotaComponents().getQuotaRootResolver(), getMessageParser(), getMessageIdFactory(), configuration.getBatchSizes(),
-            getStoreRightManager());
+            getStoreRightManager(), preDeletionHooks);
     }
 
-    /**
-     * Create a Mailbox for the given mailbox path. This will by default return a {@link SimpleMailbox}.
-     * <p/>
-     * If you need to return something more special just override this method
-     *
-     * @param mailboxPath
-     * @param session
-     * @throws MailboxException
-     */
-    protected org.apache.james.mailbox.store.mail.model.Mailbox doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) throws MailboxException {
-        return new SimpleMailbox(mailboxPath, randomUidValidity());
+    private Mailbox doCreateMailbox(MailboxPath mailboxPath) {
+        return new Mailbox(mailboxPath, randomUidValidity());
     }
 
     @Override
@@ -338,7 +339,7 @@ public class StoreMailboxManager implements MailboxManager {
             for (MailboxPath mailbox : sanitizedMailboxPath.getHierarchyLevels(getDelimiter())) {
                 locker.executeWithLock(mailboxSession, mailbox, (LockAwareExecution<Void>) () -> {
                     if (!mailboxExists(mailbox, mailboxSession)) {
-                        Mailbox m = doCreateMailbox(mailbox, mailboxSession);
+                        Mailbox m = doCreateMailbox(mailbox);
                         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(mailboxSession);
                         try {
                             mapper.execute(Mapper.toTransaction(() -> mailboxIds.add(mapper.save(m))));
@@ -385,13 +386,21 @@ public class StoreMailboxManager implements MailboxManager {
 
             QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(mailboxPath);
             long messageCount = messageMapper.countMessagesInMailbox(mailbox);
-            long totalSize = Iterators.toStream(messageMapper.findInMailbox(mailbox, MessageRange.all(), MessageMapper.FetchType.Metadata, -1))
-                .mapToLong(Message::getFullContentOctets)
+
+            List<MetadataWithMailboxId> metadata = Iterators.toStream(messageMapper.findInMailbox(mailbox, MessageRange.all(), MessageMapper.FetchType.Metadata, UNLIMITED))
+                .map(message -> MetadataWithMailboxId.from(message.metaData(), message.getMailboxId()))
+                .collect(Guavate.toImmutableList());
+
+            long totalSize = metadata.stream()
+                .map(MetadataWithMailboxId::getMessageMetaData)
+                .mapToLong(MessageMetaData::getSize)
                 .sum();
+
+            preDeletionHooks.runHooks(PreDeletionHook.DeleteOperation.from(metadata)).block();
 
             // We need to create a copy of the mailbox as maybe we can not refer to the real
             // mailbox once we remove it
-            SimpleMailbox m = new SimpleMailbox(mailbox);
+            Mailbox m = new Mailbox(mailbox);
             mailboxMapper.delete(mailbox);
             eventBus.dispatch(EventFactory.mailboxDeleted()
                 .randomEventId()

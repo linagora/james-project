@@ -27,18 +27,16 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.events.EventBus;
-import org.apache.james.mailbox.model.MailboxACL;
-import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.store.MailboxManagerConfiguration;
+import org.apache.james.mailbox.store.PreDeletionHooks;
 import org.apache.james.mailbox.store.SessionProvider;
 import org.apache.james.mailbox.store.StoreMailboxAnnotationManager;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.mailbox.store.StoreMessageManager;
 import org.apache.james.mailbox.store.StoreRightManager;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.apache.james.mailbox.store.quota.QuotaComponents;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 
@@ -64,7 +62,8 @@ public class CassandraMailboxManager extends StoreMailboxManager {
                                    MessageId.Factory messageIdFactory, EventBus eventBus,
                                    StoreMailboxAnnotationManager annotationManager, StoreRightManager storeRightManager,
                                    QuotaComponents quotaComponents, MessageSearchIndex index,
-                                   MailboxManagerConfiguration configuration) {
+                                   MailboxManagerConfiguration configuration,
+                                   PreDeletionHooks preDeletionHooks) {
         super(mapperFactory,
             sessionProvider,
             locker,
@@ -75,7 +74,8 @@ public class CassandraMailboxManager extends StoreMailboxManager {
             storeRightManager,
             quotaComponents,
             index,
-            configuration);
+            configuration,
+            preDeletionHooks);
         this.locker = locker;
         this.mapperFactory = mapperFactory;
     }
@@ -88,13 +88,6 @@ public class CassandraMailboxManager extends StoreMailboxManager {
     @Override
     public EnumSet<MessageCapabilities> getSupportedMessageCapabilities() {
         return MESSAGE_CAPABILITIES;
-    }
-    
-    @Override
-    protected Mailbox doCreateMailbox(MailboxPath mailboxPath, MailboxSession session) {
-        SimpleMailbox cassandraMailbox = new SimpleMailbox(mailboxPath, randomUidValidity());
-        cassandraMailbox.setACL(MailboxACL.EMPTY);
-        return cassandraMailbox;
     }
 
     @Override
@@ -109,7 +102,8 @@ public class CassandraMailboxManager extends StoreMailboxManager {
             getMessageParser(),
             getMessageIdFactory(),
             configuration.getBatchSizes(),
-            getStoreRightManager());
+            getStoreRightManager(),
+            getPreDeletionHooks());
     }
 
 }

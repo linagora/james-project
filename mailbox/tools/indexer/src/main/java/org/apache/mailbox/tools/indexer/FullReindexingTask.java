@@ -31,31 +31,15 @@ public class FullReindexingTask implements Task {
 
     public static final String FULL_RE_INDEXING = "FullReIndexing";
 
-    public static class AdditionalInformation implements TaskExecutionDetails.AdditionalInformation {
-        private final ReprocessingContext reprocessingContext;
-
-        AdditionalInformation(ReprocessingContext reprocessingContext) {
-            this.reprocessingContext = reprocessingContext;
-        }
-
-        public int getSuccessfullyReprocessMailCount() {
-            return reprocessingContext.successfullyReprocessedMailCount();
-        }
-
-        public int getFailedReprocessedMailCount() {
-            return reprocessingContext.failedReprocessingMailCount();
-        }
-    }
-
     private final ReIndexerPerformer reIndexerPerformer;
-    private final AdditionalInformation additionalInformation;
+    private final ReprocessingContextInformation additionalInformation;
     private final ReprocessingContext reprocessingContext;
 
     @Inject
     public FullReindexingTask(ReIndexerPerformer reIndexerPerformer) {
         this.reIndexerPerformer = reIndexerPerformer;
         this.reprocessingContext = new ReprocessingContext();
-        this.additionalInformation = new AdditionalInformation(reprocessingContext);
+        this.additionalInformation = new ReprocessingContextInformation(reprocessingContext);
     }
 
     @Override

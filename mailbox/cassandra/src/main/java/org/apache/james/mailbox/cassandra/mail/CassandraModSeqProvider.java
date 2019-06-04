@@ -32,7 +32,6 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageModseqTab
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.inject.Inject;
@@ -42,14 +41,15 @@ import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.ModSeqProvider;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.util.FunctionalUtils;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.common.base.MoreObjects;
+
 import reactor.core.publisher.Mono;
 
 public class CassandraModSeqProvider implements ModSeqProvider {
@@ -145,7 +145,7 @@ public class CassandraModSeqProvider implements ModSeqProvider {
     }
 
     private Mono<Optional<ModSeq>> findHighestModSeq(CassandraId mailboxId) {
-        return cassandraAsyncExecutor.executeSingleRowOptionalReactor(
+        return cassandraAsyncExecutor.executeSingleRowOptional(
             select.bind()
                 .setUUID(MAILBOX_ID, mailboxId.asUuid()))
             .map(maybeRow -> maybeRow.map(row -> new ModSeq(row.getLong(NEXT_MODSEQ))));
@@ -172,7 +172,7 @@ public class CassandraModSeqProvider implements ModSeqProvider {
 
     private Mono<ModSeq> successToModSeq(ModSeq modSeq, Boolean success) {
         return Mono.just(success)
-            .filter(FunctionalUtils.toPredicate(Function.identity()))
+            .filter(FunctionalUtils.identityPredicate())
             .map(any -> modSeq);
     }
 

@@ -48,14 +48,23 @@ import com.google.common.collect.Multimaps;
 interface EventDeadLettersContract {
 
     class Group0 extends Group{}
+
     class Group1 extends Group{}
+
     class Group2 extends Group{}
+
     class Group3 extends Group{}
+
     class Group4 extends Group{}
+
     class Group5 extends Group{}
+
     class Group6 extends Group{}
+
     class Group7 extends Group{}
+
     class Group8 extends Group{}
+
     class Group9 extends Group{}
 
     static ImmutableMap<Integer, Group> concurrentGroups() {
@@ -83,20 +92,23 @@ interface EventDeadLettersContract {
     MailboxListener.MailboxAdded EVENT_1 = new MailboxListener.MailboxAdded(SESSION_ID, USER, MAILBOX_PATH, MAILBOX_ID, EVENT_ID_1);
     MailboxListener.MailboxAdded EVENT_2 = new MailboxListener.MailboxAdded(SESSION_ID, USER, MAILBOX_PATH, MAILBOX_ID, EVENT_ID_2);
     MailboxListener.MailboxAdded EVENT_3 = new MailboxListener.MailboxAdded(SESSION_ID, USER, MAILBOX_PATH, MAILBOX_ID, EVENT_ID_3);
+    EventDeadLetters.InsertionId INSERTION_ID_1 = EventDeadLetters.InsertionId.of("6e0dd59d-660e-4d9b-b22f-0354479f47b7");
+    EventDeadLetters.InsertionId INSERTION_ID_2 = EventDeadLetters.InsertionId.of("6e0dd59d-660e-4d9b-b22f-0354479f47b8");
+    EventDeadLetters.InsertionId INSERTION_ID_3 = EventDeadLetters.InsertionId.of("6e0dd59d-660e-4d9b-b22f-0354479f47b9");
 
     Group GROUP_A = new EventBusTestFixture.GroupA();
     Group GROUP_B = new EventBusTestFixture.GroupB();
     Group NULL_GROUP = null;
     Event NULL_EVENT = null;
-    Event.EventId NULL_EVENT_ID = null;
+    EventDeadLetters.InsertionId NULL_INSERTION_ID = null;
 
     EventDeadLetters eventDeadLetters();
 
-    default Stream<Event.EventId> allEventIds() {
+    default Stream<EventDeadLetters.InsertionId> allInsertionIds() {
         EventDeadLetters eventDeadLetters = eventDeadLetters();
 
         return eventDeadLetters.groupsWithFailedEvents()
-            .flatMap(eventDeadLetters::failedEventIds)
+            .flatMap(eventDeadLetters::failedIds)
             .toStream();
     }
 
@@ -106,7 +118,7 @@ interface EventDeadLettersContract {
         default void storeShouldThrowWhenNullGroup() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.store(NULL_GROUP, EVENT_1))
+            assertThatThrownBy(() -> eventDeadLetters.store(NULL_GROUP, EVENT_1, INSERTION_ID_1))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -114,15 +126,23 @@ interface EventDeadLettersContract {
         default void storeShouldThrowWhenNullEvent() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.store(GROUP_A, NULL_EVENT))
+            assertThatThrownBy(() -> eventDeadLetters.store(GROUP_A, NULL_EVENT, INSERTION_ID_1))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
-        default void storeShouldThrowWhenBothGroupAndEventAreNull() {
+        default void storeShouldThrowWhenNullInsertionId() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.store(NULL_GROUP, NULL_EVENT))
+            assertThatThrownBy(() -> eventDeadLetters.store(GROUP_A, EVENT_1, NULL_INSERTION_ID))
+                .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        default void storeShouldThrowWhenBothGroupAndEventAndInsertionIdAreNull() {
+            EventDeadLetters eventDeadLetters = eventDeadLetters();
+
+            assertThatThrownBy(() -> eventDeadLetters.store(NULL_GROUP, NULL_EVENT, NULL_INSERTION_ID))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -130,21 +150,20 @@ interface EventDeadLettersContract {
         default void storeShouldStoreGroupWithCorrespondingEvent() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            assertThat(eventDeadLetters.failedEvent(GROUP_A, EVENT_1.getEventId()).block())
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            assertThat(eventDeadLetters.failedEvent(GROUP_A, INSERTION_ID_1).block())
                 .isEqualTo(EVENT_1);
         }
 
         @Test
-        default void storeShouldIgnoreStoreDuplicatedEventsPerGroup() {
+        default void storeShouldStoreDuplicatedEventsPerGroupWhenStoreWithDifferentInsertionId() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_2).block();
 
-            assertThat(eventDeadLetters.failedEventIds(GROUP_A).toStream())
-                .containsExactly(EVENT_ID_1);
+            assertThat(eventDeadLetters.failedIds(GROUP_A).toStream())
+                .containsOnly(INSERTION_ID_1, INSERTION_ID_2);
         }
 
         @Test
@@ -152,13 +171,14 @@ interface EventDeadLettersContract {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
             ImmutableMap<Integer, Group> groups = concurrentGroups();
-            Multimap<Integer, Event.EventId> storedEventIds = Multimaps.synchronizedSetMultimap(HashMultimap.create());
+            Multimap<Integer, EventDeadLetters.InsertionId> storedInsertionIds = Multimaps.synchronizedSetMultimap(HashMultimap.create());
 
             ConcurrentTestRunner.builder()
                 .operation((threadNumber, step) -> {
                     Event.EventId eventId = Event.EventId.random();
-                    storedEventIds.put(threadNumber, eventId);
-                    eventDeadLetters.store(groups.get(threadNumber), event(eventId));
+                    EventDeadLetters.InsertionId insertionId = EventDeadLetters.InsertionId.random();
+                    storedInsertionIds.put(threadNumber, insertionId);
+                    eventDeadLetters.store(groups.get(threadNumber), event(eventId), insertionId).block();
                 })
                 .threadCount(THREAD_COUNT)
                 .operationCount(OPERATION_COUNT)
@@ -166,8 +186,8 @@ interface EventDeadLettersContract {
 
             groups.forEach((groupId, group) -> {
                 Group storedGroup = groups.get(groupId);
-                assertThat(eventDeadLetters.failedEventIds(storedGroup).toStream())
-                    .hasSameElementsAs(storedEventIds.get(groupId));
+                assertThat(eventDeadLetters.failedIds(storedGroup).collectList().block())
+                    .hasSameElementsAs(storedInsertionIds.get(groupId));
             });
         }
     }
@@ -178,23 +198,23 @@ interface EventDeadLettersContract {
         default void removeShouldThrowWhenGroupIsNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.remove(NULL_GROUP, EVENT_ID_1))
+            assertThatThrownBy(() -> eventDeadLetters.remove(NULL_GROUP, INSERTION_ID_1))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
-        default void removeShouldThrowWhenEventIdIsNull() {
+        default void removeShouldThrowWhenInsertionIdIsNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.remove(GROUP_A, NULL_EVENT_ID))
+            assertThatThrownBy(() -> eventDeadLetters.remove(GROUP_A, NULL_INSERTION_ID))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
-        default void removeShouldThrowWhenBothGroupAndEventIdAreNull() {
+        default void removeShouldThrowWhenBothGroupAndInsertionIdAreNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.remove(NULL_GROUP, NULL_EVENT_ID))
+            assertThatThrownBy(() -> eventDeadLetters.remove(NULL_GROUP, NULL_INSERTION_ID))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -202,12 +222,12 @@ interface EventDeadLettersContract {
         default void removeShouldRemoveMatched() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
 
-            eventDeadLetters.remove(GROUP_A, EVENT_1.getEventId()).block();
+            eventDeadLetters.remove(GROUP_A, INSERTION_ID_1).block();
 
-            assertThat(eventDeadLetters.failedEvent(GROUP_A, EVENT_1.getEventId()).block())
+            assertThat(eventDeadLetters.failedEvent(GROUP_A, INSERTION_ID_1).block())
                 .isNull();
         }
 
@@ -215,23 +235,33 @@ interface EventDeadLettersContract {
         default void removeShouldKeepNonMatched() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
-            eventDeadLetters.store(GROUP_A, EVENT_3).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
+            eventDeadLetters.store(GROUP_A, EVENT_3, INSERTION_ID_3).block();
 
-            eventDeadLetters.remove(GROUP_A, EVENT_1.getEventId()).block();
+            eventDeadLetters.remove(GROUP_A, INSERTION_ID_1).block();
 
-            assertThat(eventDeadLetters.failedEventIds(GROUP_A).toStream())
-                .containsOnly(EVENT_ID_2, EVENT_ID_3);
+            assertThat(eventDeadLetters.failedIds(GROUP_A).toStream())
+                .containsOnly(INSERTION_ID_2, INSERTION_ID_3);
         }
 
         @Test
-        default void removeShouldNotThrowWhenNoMatched() {
+        default void removeShouldNotThrowWhenNoInsertionIdMatched() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
 
-            assertThatCode(() -> eventDeadLetters.remove(GROUP_A, EVENT_2.getEventId()).block())
+            assertThatCode(() -> eventDeadLetters.remove(GROUP_A, INSERTION_ID_2).block())
+                .doesNotThrowAnyException();
+        }
+
+        @Test
+        default void removeShouldNotThrowWhenNoGroupMatched() {
+            EventDeadLetters eventDeadLetters = eventDeadLetters();
+
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+
+            assertThatCode(() -> eventDeadLetters.remove(GROUP_B, INSERTION_ID_1).block())
                 .doesNotThrowAnyException();
         }
 
@@ -240,14 +270,15 @@ interface EventDeadLettersContract {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
             ImmutableMap<Integer, Group> groups = concurrentGroups();
-            ConcurrentHashMap<Integer, Event.EventId> storedEventIds = new ConcurrentHashMap<>();
+            ConcurrentHashMap<Integer, EventDeadLetters.InsertionId> storedInsertionIds = new ConcurrentHashMap<>();
 
             ConcurrentTestRunner.builder()
                 .operation((threadNumber, step) -> {
                     int operationIndex = threadNumber * OPERATION_COUNT + step;
                     Event.EventId eventId = Event.EventId.random();
-                    storedEventIds.put(operationIndex, eventId);
-                    eventDeadLetters.store(groups.get(threadNumber), event(eventId)).subscribe();
+                    EventDeadLetters.InsertionId insertionId = EventDeadLetters.InsertionId.random();
+                    storedInsertionIds.put(operationIndex, insertionId);
+                    eventDeadLetters.store(groups.get(threadNumber), event(eventId), insertionId).block();
                 })
                 .threadCount(THREAD_COUNT)
                 .operationCount(OPERATION_COUNT)
@@ -256,13 +287,14 @@ interface EventDeadLettersContract {
             ConcurrentTestRunner.builder()
                 .operation((threadNumber, step) -> {
                     int operationIndex = threadNumber * OPERATION_COUNT + step;
-                    eventDeadLetters.remove(groups.get(threadNumber), storedEventIds.get(operationIndex));
+                    eventDeadLetters.remove(groups.get(threadNumber), storedInsertionIds.get(operationIndex))
+                        .block();
                 })
                 .threadCount(THREAD_COUNT)
                 .operationCount(OPERATION_COUNT)
                 .runSuccessfullyWithin(RUN_SUCCESSFULLY_IN);
 
-            assertThat(allEventIds())
+            assertThat(allInsertionIds())
                 .isEmpty();
         }
     }
@@ -273,23 +305,23 @@ interface EventDeadLettersContract {
         default void failedEventShouldThrowWhenGroupIsNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.failedEvent(NULL_GROUP, EVENT_ID_1))
+            assertThatThrownBy(() -> eventDeadLetters.failedEvent(NULL_GROUP, INSERTION_ID_1))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
-        default void failedEventShouldThrowWhenEventIdIsNull() {
+        default void failedEventShouldThrowWhenInsertionIdIsNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.failedEvent(GROUP_A, NULL_EVENT_ID))
+            assertThatThrownBy(() -> eventDeadLetters.failedEvent(GROUP_A, NULL_INSERTION_ID))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
-        default void failedEventShouldThrowWhenBothGroupAndEventIdAreNull() {
+        default void failedEventShouldThrowWhenBothGroupAndInsertionIdAreNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.failedEvent(NULL_GROUP, NULL_EVENT_ID))
+            assertThatThrownBy(() -> eventDeadLetters.failedEvent(NULL_GROUP, NULL_INSERTION_ID))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -297,10 +329,10 @@ interface EventDeadLettersContract {
         default void failedEventShouldReturnEmptyWhenNotFound() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
 
-            assertThat(eventDeadLetters.failedEvent(GROUP_A, EVENT_ID_3).block())
+            assertThat(eventDeadLetters.failedEvent(GROUP_A, INSERTION_ID_3).block())
                 .isNull();
         }
 
@@ -308,10 +340,10 @@ interface EventDeadLettersContract {
         default void failedEventShouldReturnEventWhenContains() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
 
-            assertThat(eventDeadLetters.failedEvent(GROUP_A, EVENT_1.getEventId()).block())
+            assertThat(eventDeadLetters.failedEvent(GROUP_A, INSERTION_ID_1).block())
                 .isEqualTo(EVENT_1);
         }
 
@@ -319,14 +351,24 @@ interface EventDeadLettersContract {
         default void failedEventShouldNotRemoveEvent() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
-            eventDeadLetters.store(GROUP_A, EVENT_3).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
+            eventDeadLetters.store(GROUP_A, EVENT_3, INSERTION_ID_3).block();
 
-            eventDeadLetters.failedEvent(GROUP_A, EVENT_1.getEventId()).block();
+            eventDeadLetters.failedEvent(GROUP_A, INSERTION_ID_1).block();
 
-            assertThat(allEventIds())
-                .containsOnly(EVENT_ID_1, EVENT_ID_2, EVENT_ID_3);
+            assertThat(allInsertionIds())
+                .containsOnly(INSERTION_ID_1, INSERTION_ID_2, INSERTION_ID_3);
+        }
+
+        @Test
+        default void failedEventShouldNotThrowWhenNoGroupMatched() {
+            EventDeadLetters eventDeadLetters = eventDeadLetters();
+
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+
+            assertThatCode(() -> eventDeadLetters.failedEvent(GROUP_B, INSERTION_ID_1).block())
+                .doesNotThrowAnyException();
         }
     }
 
@@ -336,7 +378,7 @@ interface EventDeadLettersContract {
         default void failedEventsShouldThrowWhenGroupIsNull() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            assertThatThrownBy(() -> eventDeadLetters.failedEventIds(NULL_GROUP))
+            assertThatThrownBy(() -> eventDeadLetters.failedIds(NULL_GROUP))
                 .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -344,11 +386,11 @@ interface EventDeadLettersContract {
         default void failedEventsByGroupShouldReturnEmptyWhenNonMatch() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
-            eventDeadLetters.store(GROUP_A, EVENT_3).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
+            eventDeadLetters.store(GROUP_A, EVENT_3, INSERTION_ID_3).block();
 
-            assertThat(eventDeadLetters.failedEventIds(GROUP_B).toStream())
+            assertThat(eventDeadLetters.failedIds(GROUP_B).toStream())
                 .isEmpty();
         }
 
@@ -356,26 +398,26 @@ interface EventDeadLettersContract {
         default void failedEventsByGroupShouldReturnAllEventsCorrespondingToGivenGroup() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
-            eventDeadLetters.store(GROUP_B, EVENT_3).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
+            eventDeadLetters.store(GROUP_B, EVENT_3, INSERTION_ID_3).block();
 
-            assertThat(eventDeadLetters.failedEventIds(GROUP_A).toStream())
-                .containsOnly(EVENT_ID_1, EVENT_ID_2);
+            assertThat(eventDeadLetters.failedIds(GROUP_A).toStream())
+                .containsOnly(INSERTION_ID_1, INSERTION_ID_2);
         }
 
         @Test
         default void failedEventsByGroupShouldNotRemoveEvents() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
 
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_A, EVENT_2).block();
-            eventDeadLetters.store(GROUP_B, EVENT_3).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_2, INSERTION_ID_2).block();
+            eventDeadLetters.store(GROUP_B, EVENT_3, INSERTION_ID_3).block();
 
-            eventDeadLetters.failedEventIds(GROUP_A).toStream();
+            eventDeadLetters.failedIds(GROUP_A).toStream();
 
-            assertThat(allEventIds())
-                .containsOnly(EVENT_ID_1, EVENT_ID_2, EVENT_ID_3);
+            assertThat(allInsertionIds())
+                .containsOnly(INSERTION_ID_1, INSERTION_ID_2, INSERTION_ID_3);
         }
     }
 
@@ -383,10 +425,10 @@ interface EventDeadLettersContract {
         @Test
         default void groupsWithFailedEventsShouldReturnAllStoredGroups() {
             EventDeadLetters eventDeadLetters = eventDeadLetters();
-            eventDeadLetters.store(GROUP_A, EVENT_1).block();
-            eventDeadLetters.store(GROUP_B, EVENT_1).block();
+            eventDeadLetters.store(GROUP_A, EVENT_1, INSERTION_ID_1).block();
+            eventDeadLetters.store(GROUP_B, EVENT_1, INSERTION_ID_2).block();
 
-            assertThat(eventDeadLetters.groupsWithFailedEvents().toStream())
+            assertThat(eventDeadLetters.groupsWithFailedEvents().collectList().block())
                 .containsOnly(GROUP_A, GROUP_B);
         }
 

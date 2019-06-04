@@ -18,24 +18,48 @@
  ****************************************************************/
 package org.apache.james.backend.rabbitmq;
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import static org.apache.james.backend.rabbitmq.RabbitMQFixture.DEFAULT_MANAGEMENT_CREDENTIAL;
 
-public class DockerRabbitMQTestRule implements TestRule {
+import org.junit.rules.ExternalResource;
+
+import com.github.fge.lambdas.runnable.ThrowingRunnable;
+
+public class DockerRabbitMQTestRule extends ExternalResource {
 
     private DockerRabbitMQ dockerRabbitMQ;
 
+    public DockerRabbitMQTestRule() {
+        dockerRabbitMQ = DockerRabbitMQSingleton.SINGLETON;
+    }
+
     @Override
-    public Statement apply(Statement base, Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                dockerRabbitMQ = DockerRabbitMQ.withoutCookie();
-                dockerRabbitMQ.start();
-                base.evaluate();
-            }
-        };
+    protected void before() throws Throwable {
+        dockerRabbitMQ.start();
+    }
+
+    @Override
+    protected void after() {
+        performQuietly(() -> {
+            RabbitMQManagementAPI managementAPI = managementAPI();
+            managementAPI.listQueues()
+                .forEach(queue -> managementAPI.deleteQueue("/", queue.getName()));
+        });
+    }
+
+    private void performQuietly(ThrowingRunnable runnable) {
+        try {
+            runnable.run();
+        } catch (Exception e){
+            // ignore
+        }
+    }
+
+    private RabbitMQManagementAPI managementAPI() throws Exception {
+        return RabbitMQManagementAPI.from(RabbitMQConfiguration.builder()
+            .amqpUri(dockerRabbitMQ.amqpUri())
+            .managementUri(dockerRabbitMQ.managementUri())
+            .managementCredentials(DEFAULT_MANAGEMENT_CREDENTIAL)
+            .build());
     }
 
     public DockerRabbitMQ getDockerRabbitMQ() {

@@ -18,7 +18,7 @@
   under the License.    
 -->
 
-<beans xmlns="http://www.springframework.org/schema/beans" 
+<beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="
           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
@@ -42,6 +42,7 @@
         <constructor-arg index="7" ref="storeRightManager" />
         <constructor-arg index="8" ref="quotaComponents" />
         <constructor-arg index="9" ref="indexer" />
+        <constructor-arg index="10" ref="preDeletionHooks" />
     </bean>
 
     <bean id ="memory-subscriptionManager" class="org.apache.james.mailbox.store.StoreSubscriptionManager">

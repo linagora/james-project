@@ -41,7 +41,6 @@ import static org.apache.james.mailbox.cassandra.table.MessageIdToImapUid.MOD_SE
 import static org.apache.james.mailbox.cassandra.table.MessageIdToImapUid.TABLE_NAME;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
@@ -150,12 +149,12 @@ public class CassandraMessageIdToImapUidDAO {
     }
 
     public Mono<Void> delete(CassandraMessageId messageId, CassandraId mailboxId) {
-        return cassandraAsyncExecutor.executeVoidReactor(delete.bind()
+        return cassandraAsyncExecutor.executeVoid(delete.bind()
                 .setUUID(MESSAGE_ID, messageId.get())
                 .setUUID(MAILBOX_ID, mailboxId.asUuid()));
     }
 
-    public CompletableFuture<Void> insert(ComposedMessageIdWithMetaData composedMessageIdWithMetaData) {
+    public Mono<Void> insert(ComposedMessageIdWithMetaData composedMessageIdWithMetaData) {
         ComposedMessageId composedMessageId = composedMessageIdWithMetaData.getComposedMessageId();
         Flags flags = composedMessageIdWithMetaData.getFlags();
         return cassandraAsyncExecutor.executeVoid(insert.bind()
@@ -211,10 +210,10 @@ public class CassandraMessageIdToImapUidDAO {
 
     private Mono<ResultSet> selectStatement(CassandraMessageId messageId, Optional<CassandraId> mailboxId) {
         return mailboxId
-            .map(cassandraId -> cassandraAsyncExecutor.executeReactor(select.bind()
+            .map(cassandraId -> cassandraAsyncExecutor.execute(select.bind()
                 .setUUID(MESSAGE_ID, messageId.get())
                 .setUUID(MAILBOX_ID, cassandraId.asUuid())))
-            .orElseGet(() -> cassandraAsyncExecutor.executeReactor(selectAll.bind()
+            .orElseGet(() -> cassandraAsyncExecutor.execute(selectAll.bind()
                 .setUUID(MESSAGE_ID, messageId.get())));
     }
 }

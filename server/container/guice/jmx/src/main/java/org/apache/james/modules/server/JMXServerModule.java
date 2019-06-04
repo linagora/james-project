@@ -36,7 +36,7 @@ import org.apache.james.adapter.mailbox.MailReprocessingManagement;
 import org.apache.james.adapter.mailbox.ReIndexerManagementMBean;
 import org.apache.james.domainlist.api.DomainListManagementMBean;
 import org.apache.james.domainlist.lib.DomainListManagement;
-import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.lifecycle.api.Startable;
 import org.apache.james.mailbox.copier.MailboxCopier;
 import org.apache.james.mailbox.indexer.ReIndexer;
 import org.apache.james.mailbox.tools.copier.MailboxCopierImpl;
@@ -175,8 +175,8 @@ public class JMXServerModule extends AbstractModule {
         }
 
         @Override
-        public List<Class<? extends Configurable>> forClasses() {
-            return ImmutableList.of();
+        public List<Class<? extends Startable>> forClasses() {
+            return ImmutableList.of(JMXServer.class);
         }
     }
 

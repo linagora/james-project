@@ -27,6 +27,7 @@ import javax.mail.Flags;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.CassandraClusterExtension;
+import org.apache.james.backends.cassandra.CassandraRestartExtension;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.mailbox.FlagsBuilder;
 import org.apache.james.mailbox.MessageUid;
@@ -39,23 +40,24 @@ import org.apache.james.mailbox.cassandra.modules.CassandraMailboxCounterModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxRecentsModule;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class CassandraIndexTableHandlerTest {
+@ExtendWith(CassandraRestartExtension.class)
+class CassandraIndexTableHandlerTest {
 
-    public static final CassandraId MAILBOX_ID = CassandraId.timeBased();
-    public static final MessageUid MESSAGE_UID = MessageUid.of(18L);
-    public static final CassandraMessageId CASSANDRA_MESSAGE_ID = new CassandraMessageId.Factory().generate();
-    public static final int UID_VALIDITY = 15;
-    public static final long MODSEQ = 17;
+    private static final CassandraId MAILBOX_ID = CassandraId.timeBased();
+    private static final MessageUid MESSAGE_UID = MessageUid.of(18L);
+    private static final CassandraMessageId CASSANDRA_MESSAGE_ID = new CassandraMessageId.Factory().generate();
+    private static final int UID_VALIDITY = 15;
+    private static final long MODSEQ = 17;
 
     @RegisterExtension
     static CassandraClusterExtension cassandraCluster = new CassandraClusterExtension(
@@ -88,7 +90,7 @@ public class CassandraIndexTableHandlerTest {
                                                 applicableFlagDAO,
                                                 deletedMessageDAO);
 
-        mailbox = new SimpleMailbox(MailboxPath.forUser("user", "name"),
+        mailbox = new Mailbox(MailboxPath.forUser("user", "name"),
             UID_VALIDITY,
             MAILBOX_ID);
     }

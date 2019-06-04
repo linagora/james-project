@@ -21,7 +21,6 @@ package org.apache.james.mailrepository.cassandra;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.CompletableFuture;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
@@ -31,10 +30,8 @@ import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
-import org.apache.james.util.CompletableFutureUtil;
 import org.apache.mailet.Mail;
 
-import com.github.fge.lambdas.Throwing;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -60,16 +57,14 @@ public class CassandraMailRepository implements MailRepository {
     public MailKey store(Mail mail) throws MessagingException {
         MailKey mailKey = MailKey.forMail(mail);
 
-        Mono.fromFuture(mimeMessageStore.save(mail.getMessage())
-            .toFuture()
-            .thenCompose(Throwing.function(parts -> mailDAO.store(url, mail,
+        return mimeMessageStore.save(mail.getMessage())
+            .flatMap(parts -> mailDAO.store(url, mail,
                 parts.getHeaderBlobId(),
-                parts.getBodyBlobId()))))
+                parts.getBodyBlobId()))
             .then(keysDAO.store(url, mailKey))
             .flatMap(this::increaseSizeIfStored)
+            .thenReturn(mailKey)
             .block();
-
-        return mailKey;
     }
 
     private Mono<Void> increaseSizeIfStored(Boolean isStored) {
@@ -88,22 +83,21 @@ public class CassandraMailRepository implements MailRepository {
 
     @Override
     public Mail retrieve(MailKey key) {
-        return CompletableFutureUtil
-            .unwrap(mailDAO.read(url, key)
-                .thenApply(optional -> optional.map(this::toMail)))
-            .join()
+        return mailDAO.read(url, key)
+            .flatMap(Mono::justOrEmpty)
+            .flatMap(this::toMail)
+            .blockOptional()
             .orElse(null);
     }
 
-    private CompletableFuture<Mail> toMail(CassandraMailRepositoryMailDAO.MailDTO mailDTO) {
+    private Mono<Mail> toMail(CassandraMailRepositoryMailDAO.MailDTO mailDTO) {
         MimeMessagePartsId parts = MimeMessagePartsId.builder()
             .headerBlobId(mailDTO.getHeaderBlobId())
             .bodyBlobId(mailDTO.getBodyBlobId())
             .build();
 
         return mimeMessageStore.read(parts)
-            .toFuture()
-            .thenApply(mimeMessage -> mailDTO.getMailBuilder()
+            .map(mimeMessage -> mailDTO.getMailBuilder()
                 .mimeMessage(mimeMessage)
                 .build());
     }
@@ -142,7 +136,7 @@ public class CassandraMailRepository implements MailRepository {
 
     @Override
     public long size() {
-        return countDAO.getCount(url).join();
+        return countDAO.getCount(url).block();
     }
 
     @Override

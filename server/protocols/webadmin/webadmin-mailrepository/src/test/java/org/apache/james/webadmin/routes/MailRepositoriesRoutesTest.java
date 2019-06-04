@@ -46,6 +46,7 @@ import java.util.List;
 
 import javax.mail.internet.MimeMessage;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.james.core.MailAddress;
 import org.apache.james.core.builder.MimeMessageBuilder;
 import org.apache.james.core.builder.MimeMessageBuilder.BodyPartBuilder;
@@ -53,6 +54,8 @@ import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.james.mailrepository.api.MailRepositoryPath;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
+import org.apache.james.mailrepository.api.Protocol;
+import org.apache.james.mailrepository.memory.MailRepositoryStoreConfiguration;
 import org.apache.james.mailrepository.memory.MemoryMailRepository;
 import org.apache.james.mailrepository.memory.MemoryMailRepositoryProvider;
 import org.apache.james.mailrepository.memory.MemoryMailRepositoryStore;
@@ -62,9 +65,6 @@ import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.api.RawMailQueueItemDecoratorFactory;
 import org.apache.james.queue.memory.MemoryMailQueueFactory;
-import org.apache.james.server.core.configuration.Configuration;
-import org.apache.james.server.core.configuration.FileConfigurationProvider;
-import org.apache.james.server.core.filesystem.FileSystemImpl;
 import org.apache.james.task.MemoryTaskManager;
 import org.apache.james.util.ClassLoaderUtils;
 import org.apache.james.webadmin.Constants;
@@ -77,6 +77,7 @@ import org.apache.james.webadmin.service.ReprocessingOneMailTask;
 import org.apache.james.webadmin.service.ReprocessingService;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.apache.james.webadmin.utils.JsonTransformer;
+import org.apache.mailet.Attribute;
 import org.apache.mailet.Mail;
 import org.apache.mailet.PerRecipientHeaders.Header;
 import org.apache.mailet.base.test.FakeMail;
@@ -85,6 +86,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
 import io.restassured.RestAssured;
@@ -106,9 +108,6 @@ public class MailRepositoriesRoutesTest {
     private MemoryMailRepositoryStore mailRepositoryStore;
     private ManageableMailQueue spoolQueue;
     private ManageableMailQueue customQueue;
-
-    private FileSystemImpl fileSystem;
-    private Configuration configuration;
 
     @Before
     public void setUp() throws Exception {
@@ -622,8 +621,8 @@ public class MailRepositoriesRoutesTest {
         MailAddress recipientHeaderAddress = new MailAddress("third@party");
         FakeMail mail = FakeMail.builder()
             .name(name)
-            .attribute("name1", "value1")
-            .attribute("name2", "value2")
+            .attribute(Attribute.convertToAttribute("name1", "value1"))
+            .attribute(Attribute.convertToAttribute("name2", "value2"))
             .mimeMessage(mimeMessage)
             .size(42424242)
             .addHeaderForRecipient(Header.builder()
@@ -1755,15 +1754,18 @@ public class MailRepositoriesRoutesTest {
     }
 
     private void createMailRepositoryStore() throws Exception {
-        configuration = Configuration.builder()
-                .workingDirectory("../")
-                .configurationFromClasspath()
-                .build();
-        fileSystem = new FileSystemImpl(configuration.directories());
         MemoryMailRepositoryUrlStore urlStore = new MemoryMailRepositoryUrlStore();
-        mailRepositoryStore = new MemoryMailRepositoryStore(urlStore, Sets.newHashSet(new MemoryMailRepositoryProvider()));
-        mailRepositoryStore.configure(new FileConfigurationProvider(fileSystem, configuration)
-                .getConfiguration("mailrepositorystore"));
+        MailRepositoryStoreConfiguration configuration = MailRepositoryStoreConfiguration.forItems(
+            new MailRepositoryStoreConfiguration.Item(
+                ImmutableList.of(new Protocol("memory")),
+                MemoryMailRepository.class.getName(),
+                new HierarchicalConfiguration()),
+            new MailRepositoryStoreConfiguration.Item(
+                ImmutableList.of(new Protocol("other")),
+                MemoryMailRepository.class.getName(),
+                new HierarchicalConfiguration()));
+        mailRepositoryStore = new MemoryMailRepositoryStore(urlStore, Sets.newHashSet(new MemoryMailRepositoryProvider()), configuration);
+
         mailRepositoryStore.init();
     }
 }

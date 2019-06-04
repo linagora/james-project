@@ -32,21 +32,12 @@ public class UserReindexingTask implements Task {
 
     public static final String USER_RE_INDEXING = "userReIndexing";
 
-    public static class AdditionalInformation implements TaskExecutionDetails.AdditionalInformation {
-        private final ReprocessingContext reprocessingContext;
+    public static class AdditionalInformation extends ReprocessingContextInformation {
         private final User user;
 
         AdditionalInformation(ReprocessingContext reprocessingContext, User user) {
-            this.reprocessingContext = reprocessingContext;
+            super(reprocessingContext);
             this.user = user;
-        }
-
-        public int getSuccessfullyReprocessMailCount() {
-            return reprocessingContext.successfullyReprocessedMailCount();
-        }
-
-        public int getFailedReprocessedMailCount() {
-            return reprocessingContext.failedReprocessingMailCount();
         }
 
         public String getUser() {

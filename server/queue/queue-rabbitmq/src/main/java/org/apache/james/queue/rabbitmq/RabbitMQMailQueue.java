@@ -19,7 +19,7 @@
 
 package org.apache.james.queue.rabbitmq;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.MoreObjects;
+import reactor.core.publisher.Flux;
 
 public class RabbitMQMailQueue implements ManageableMailQueue {
 
@@ -61,9 +62,9 @@ public class RabbitMQMailQueue implements ManageableMailQueue {
     }
 
     @Override
-    public void enQueue(Mail mail, long delay, TimeUnit unit) {
-        if (delay > 0) {
-            LOGGER.info("Ignored delay upon enqueue of {} : {} {}.", mail.getName(), delay, unit);
+    public void enQueue(Mail mail, Duration delay) {
+        if (!delay.isNegative()) {
+            LOGGER.info("Ignored delay upon enqueue of {} : {}.", mail.getName(), delay);
         }
         enQueue(mail);
     }
@@ -75,9 +76,9 @@ public class RabbitMQMailQueue implements ManageableMailQueue {
     }
 
     @Override
-    public MailQueueItem deQueue() {
-        return metricFactory.runPublishingTimerMetric(DEQUEUED_TIMER_METRIC_NAME_PREFIX + name.asString(),
-            Throwing.supplier(() -> decoratorFactory.decorate(dequeuer.deQueue())).sneakyThrow());
+    public Flux<MailQueueItem> deQueue() {
+        return dequeuer.deQueue()
+            .map(decoratorFactory::decorate);
     }
 
     @Override

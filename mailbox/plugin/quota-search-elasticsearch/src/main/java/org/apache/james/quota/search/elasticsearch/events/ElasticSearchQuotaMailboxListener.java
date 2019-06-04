@@ -18,21 +18,21 @@
  ****************************************************************/
 package org.apache.james.quota.search.elasticsearch.events;
 
+import java.io.IOException;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.james.backends.es.ElasticSearchIndexer;
-import org.apache.james.core.User;
 import org.apache.james.mailbox.events.Event;
 import org.apache.james.mailbox.events.Group;
 import org.apache.james.mailbox.events.MailboxListener;
 import org.apache.james.quota.search.elasticsearch.QuotaRatioElasticSearchConstants;
 import org.apache.james.quota.search.elasticsearch.json.QuotaRatioToElasticSearchJson;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 public class ElasticSearchQuotaMailboxListener implements MailboxListener.GroupMailboxListener {
-    private static class ElasticSearchQuotaMailboxListenerGroup extends Group {}
+    public static class ElasticSearchQuotaMailboxListenerGroup extends Group {
+    }
 
     private static final Group GROUP = new ElasticSearchQuotaMailboxListenerGroup();
 
@@ -41,8 +41,8 @@ public class ElasticSearchQuotaMailboxListener implements MailboxListener.GroupM
 
     @Inject
     public ElasticSearchQuotaMailboxListener(
-            @Named(QuotaRatioElasticSearchConstants.InjectionNames.QUOTA_RATIO) ElasticSearchIndexer indexer,
-            QuotaRatioToElasticSearchJson quotaRatioToElasticSearchJson) {
+        @Named(QuotaRatioElasticSearchConstants.InjectionNames.QUOTA_RATIO) ElasticSearchIndexer indexer,
+        QuotaRatioToElasticSearchJson quotaRatioToElasticSearchJson) {
         this.indexer = indexer;
         this.quotaRatioToElasticSearchJson = quotaRatioToElasticSearchJson;
     }
@@ -53,14 +53,17 @@ public class ElasticSearchQuotaMailboxListener implements MailboxListener.GroupM
     }
 
     @Override
-    public void event(Event event) throws JsonProcessingException {
-        if (event instanceof QuotaUsageUpdatedEvent) {
-            handleEvent(event.getUser(), (QuotaUsageUpdatedEvent) event);
-        }
+    public boolean isHandling(Event event) {
+        return event instanceof QuotaUsageUpdatedEvent;
     }
 
-    private void handleEvent(User user, QuotaUsageUpdatedEvent event) throws JsonProcessingException {
-        indexer.index(user.asString(),
-                quotaRatioToElasticSearchJson.convertToJson(user.asString(), event));
+    @Override
+    public void event(Event event) throws IOException {
+        handleEvent((QuotaUsageUpdatedEvent) event);
+    }
+
+    private void handleEvent(QuotaUsageUpdatedEvent event) throws IOException {
+        indexer.index(event.getUser().asString(),
+            quotaRatioToElasticSearchJson.convertToJson(event));
     }
 }

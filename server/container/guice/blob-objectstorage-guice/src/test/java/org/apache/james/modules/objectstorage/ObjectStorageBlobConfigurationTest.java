@@ -3,25 +3,11 @@ package org.apache.james.modules.objectstorage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.stream.Stream;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.MapConfiguration;
-import org.apache.james.blob.objectstorage.ContainerName;
-import org.apache.james.blob.objectstorage.swift.Credentials;
-import org.apache.james.blob.objectstorage.swift.DomainName;
-import org.apache.james.blob.objectstorage.swift.IdentityV3;
-import org.apache.james.blob.objectstorage.swift.PassHeaderName;
-import org.apache.james.blob.objectstorage.swift.Project;
-import org.apache.james.blob.objectstorage.swift.ProjectName;
-import org.apache.james.blob.objectstorage.swift.SwiftKeystone2ObjectStorage;
-import org.apache.james.blob.objectstorage.swift.SwiftKeystone3ObjectStorage;
-import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
-import org.apache.james.blob.objectstorage.swift.TenantName;
-import org.apache.james.blob.objectstorage.swift.UserHeaderName;
-import org.apache.james.blob.objectstorage.swift.UserName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -158,92 +144,16 @@ class ObjectStorageBlobConfigurationTest {
     }
 
     @Test
-    void tempAuthPropertiesProvider() throws ConfigurationException {
-        ObjectStorageBlobConfiguration configuration = ObjectStorageBlobConfiguration.from(
-            new MapConfigurationBuilder()
+    void shouldThrowWhenUnknownProvider() throws Exception {
+        MapConfiguration configuration = new MapConfiguration(
+            ImmutableMap.<String, Object>builder()
                 .put("objectstorage.payload.codec", PayloadCodecFactory.DEFAULT.name())
-                .put("objectstorage.provider", "swift")
+                .put("objectstorage.provider", "unknown")
                 .put("objectstorage.namespace", "foo")
-                .put("objectstorage.swift.authapi", "tmpauth")
-                .put("objectstorage.swift.endpoint", "http://swift/endpoint")
-                .put("objectstorage.swift.credentials", "testing")
-                .put("objectstorage.swift.tempauth.username", "tester")
-                .put("objectstorage.swift.tempauth.tenantname", "test")
-                .put("objectstorage.swift.tempauth.passheadername", "X-Storage-Pass")
-                .put("objectstorage.swift.tempauth.userheadername", "X-Storage-User")
                 .build());
-        assertThat(configuration)
-            .isEqualTo(
-                ObjectStorageBlobConfiguration.builder()
-                    .codec(PayloadCodecFactory.DEFAULT)
-                    .swift()
-                    .container(ContainerName.of("foo"))
-                    .tempAuth(SwiftTempAuthObjectStorage.configBuilder()
-                            .endpoint(URI.create("http://swift/endpoint"))
-                            .credentials(Credentials.of("testing"))
-                            .userName(UserName.of("tester"))
-                            .tenantName(TenantName.of("test"))
-                            .tempAuthHeaderUserName(UserHeaderName.of("X-Storage-User"))
-                            .tempAuthHeaderPassName(PassHeaderName.of("X-Storage-Pass"))
-                            .build())
-                    .build());
-    }
 
-    @Test
-    void keystone2PropertiesProvider() throws ConfigurationException {
-        ObjectStorageBlobConfiguration configuration = ObjectStorageBlobConfiguration.from(
-            new MapConfigurationBuilder()
-                .put("objectstorage.payload.codec", PayloadCodecFactory.DEFAULT.name())
-                .put("objectstorage.provider", "swift")
-                .put("objectstorage.namespace", "foo")
-                .put("objectstorage.swift.authapi", "keystone2")
-                .put("objectstorage.swift.endpoint", "http://swift/endpoint")
-                .put("objectstorage.swift.credentials", "creds")
-                .put("objectstorage.swift.keystone2.username", "demo")
-                .put("objectstorage.swift.keystone2.tenantname", "test")
-                .build());
-        assertThat(configuration)
-            .isEqualTo(
-                ObjectStorageBlobConfiguration.builder()
-                    .codec(PayloadCodecFactory.DEFAULT)
-                    .swift()
-                    .container(ContainerName.of("foo"))
-                    .keystone2(SwiftKeystone2ObjectStorage.configBuilder()
-                        .endpoint(URI.create("http://swift/endpoint"))
-                        .credentials(Credentials.of("creds"))
-                        .userName(UserName.of("demo"))
-                        .tenantName(TenantName.of("test"))
-                        .build())
-                    .build());
+        assertThatThrownBy(() -> ObjectStorageBlobConfiguration.from(configuration))
+            .isInstanceOf(ConfigurationException.class)
+            .hasMessage("Unknown object storage provider: unknown");
     }
-
-    @Test
-    void keystone3PropertiesProvider() throws ConfigurationException {
-        ObjectStorageBlobConfiguration configuration = ObjectStorageBlobConfiguration.from(
-            new MapConfigurationBuilder()
-                .put("objectstorage.payload.codec", PayloadCodecFactory.DEFAULT.name())
-                .put("objectstorage.provider", "swift")
-                .put("objectstorage.namespace", "foo")
-                .put("objectstorage.swift.authapi", "keystone3")
-                .put("objectstorage.swift.endpoint", "http://swift/endpoint")
-                .put("objectstorage.swift.credentials", "creds")
-                .put("objectstorage.swift.keystone3.user.name", "demo")
-                .put("objectstorage.swift.keystone3.user.domain", "Default")
-                .put("objectstorage.swift.keystone3.scope.project.name", "test")
-                .build());
-        assertThat(configuration)
-            .isEqualTo(
-                ObjectStorageBlobConfiguration.builder()
-                    .codec(PayloadCodecFactory.DEFAULT)
-                    .swift()
-                    .container(ContainerName.of("foo"))
-                    .keystone3(SwiftKeystone3ObjectStorage.configBuilder()
-                        .endpoint(URI.create("http://swift/endpoint"))
-                        .credentials(Credentials.of("creds"))
-                        .project(Project.of(ProjectName.of("test")))
-                        .identity(IdentityV3.of(DomainName.of("Default"), UserName.of("demo")))
-                        .build())
-                    .build());
-    }
-
 }

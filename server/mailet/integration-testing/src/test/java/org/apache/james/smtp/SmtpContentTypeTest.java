@@ -28,6 +28,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 
+import javax.mail.MessagingException;
+
 import org.apache.james.MemoryJamesServerMain;
 import org.apache.james.core.builder.MimeMessageBuilder;
 import org.apache.james.mailets.TemporaryJamesServer;
@@ -51,8 +53,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-
-import javax.mail.MessagingException;
 
 public class SmtpContentTypeTest {
     private static final String FROM = "fromuser@" + DEFAULT_DOMAIN;
@@ -141,8 +141,9 @@ public class SmtpContentTypeTest {
 
     private Mail mailWithContentType(String contentType) throws MessagingException {
         return MailImpl.builder()
+            .name("mail1")
             .sender(FROM)
-            .recipient(TO)
+            .addRecipient(TO)
             .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
                 .setSubject(SUBJECT)
                 .setText("content", contentType))

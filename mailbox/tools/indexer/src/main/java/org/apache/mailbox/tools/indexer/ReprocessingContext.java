@@ -19,35 +19,44 @@
 
 package org.apache.mailbox.tools.indexer;
 
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.james.task.Task;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.indexer.ReIndexingExecutionFailures;
+import org.apache.james.mailbox.model.MailboxId;
 
-public class ReprocessingContext {
+import com.google.common.collect.ImmutableList;
+
+class ReprocessingContext {
     private final AtomicInteger successfullyReprocessedMails;
     private final AtomicInteger failedReprocessingMails;
+    private final ConcurrentLinkedDeque<ReIndexingExecutionFailures.ReIndexingFailure> failures;
 
-    public ReprocessingContext() {
+    ReprocessingContext() {
         failedReprocessingMails = new AtomicInteger(0);
         successfullyReprocessedMails = new AtomicInteger(0);
+        failures = new ConcurrentLinkedDeque<>();
     }
 
-    public void updateAccordingToReprocessingResult(Task.Result result) {
-        switch (result) {
-            case COMPLETED:
-                successfullyReprocessedMails.incrementAndGet();
-                break;
-            case PARTIAL:
-                failedReprocessingMails.incrementAndGet();
-                break;
-        }
+    void recordFailureDetailsForMessage(MailboxId mailboxId, MessageUid uid) {
+        failures.add(new ReIndexingExecutionFailures.ReIndexingFailure(mailboxId, uid));
+        failedReprocessingMails.incrementAndGet();
     }
 
-    public int successfullyReprocessedMailCount() {
+    void recordSuccess() {
+        successfullyReprocessedMails.incrementAndGet();
+    }
+
+    int successfullyReprocessedMailCount() {
         return successfullyReprocessedMails.get();
     }
 
-    public int failedReprocessingMailCount() {
+    int failedReprocessingMailCount() {
         return failedReprocessingMails.get();
+    }
+
+    ReIndexingExecutionFailures failures() {
+        return new ReIndexingExecutionFailures(ImmutableList.copyOf(failures));
     }
 }

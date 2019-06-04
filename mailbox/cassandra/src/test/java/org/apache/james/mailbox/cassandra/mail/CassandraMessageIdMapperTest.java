@@ -36,10 +36,8 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.MessageIdMapperTest;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -47,28 +45,21 @@ import com.google.common.collect.ImmutableList;
 public class CassandraMessageIdMapperTest extends MessageIdMapperTest {
 
     private static final MailboxSession MAILBOX_SESSION = MailboxSessionUtil.create("benwa");
-    @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
 
-    private static CassandraCluster cassandra;
+    @Rule public DockerCassandraRule cassandraServer = new DockerCassandraRule().allowRestart();
 
-    @BeforeClass
-    public static void setUpClass() {
-        cassandra = CassandraCluster.create(MailboxAggregateModule.MODULE, cassandraServer.getHost());
-    }
+    private CassandraCluster cassandra;
 
     @Override
     @Before
     public void setUp() throws MailboxException {
+        cassandra = CassandraCluster.create(MailboxAggregateModule.MODULE, cassandraServer.getHost());
         super.setUp();
     }
     
     @After
     public void tearDown() {
         cassandra.clearTables();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
         cassandra.closeCluster();
     }
     

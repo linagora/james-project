@@ -39,9 +39,9 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.store.mail.UidProvider;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
@@ -116,7 +116,7 @@ public class CassandraUidProvider implements UidProvider {
     }
 
     private Mono<MessageUid> findHighestUid(CassandraId mailboxId) {
-        return Mono.defer(() -> executor.executeSingleRowReactor(
+        return Mono.defer(() -> executor.executeSingleRow(
             selectStatement.bind()
                 .setUUID(MAILBOX_ID, mailboxId.asUuid()))
             .map(row -> MessageUid.of(row.getLong(NEXT_UID))));

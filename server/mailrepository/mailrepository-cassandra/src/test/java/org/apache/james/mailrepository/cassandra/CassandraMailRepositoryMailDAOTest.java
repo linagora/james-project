@@ -78,9 +78,9 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader,
                 blobIdBody)
-                .join();
+                .block();
 
-            CassandraMailRepositoryMailDAO.MailDTO mailDTO = testee.read(URL, KEY_1).join().get();
+            CassandraMailRepositoryMailDAO.MailDTO mailDTO = testee.read(URL, KEY_1).block().get();
 
             Mail partialMail = mailDTO.getMailBuilder().build();
             assertSoftly(softly -> {
@@ -102,18 +102,18 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader,
                 blobIdBody)
-                .join();
+                .block();
 
             testee.remove(URL, KEY_1).block();
 
-            assertThat(testee.read(URL, KEY_1).join())
+            assertThat(testee.read(URL, KEY_1).block())
                 .isEmpty();
         }
 
 
         @Test
         void readShouldReturnEmptyWhenAbsent() {
-            assertThat(testee().read(URL, KEY_1).join())
+            assertThat(testee().read(URL, KEY_1).block())
                 .isEmpty();
         }
     }
@@ -144,8 +144,8 @@ class CassandraMailRepositoryMailDAOTest {
             String remoteAddr = "remoteAddr";
             String remoteHost = "remoteHost";
             PerRecipientHeaders.Header header = PerRecipientHeaders.Header.builder().name("headerName").value("headerValue").build();
-            String attributeName = "att1";
             ImmutableList<String> attributeValue = ImmutableList.of("value1", "value2");
+            Attribute attribute = Attribute.convertToAttribute("att1", attributeValue);
 
             testee.store(URL,
                 FakeMail.builder()
@@ -157,13 +157,13 @@ class CassandraMailRepositoryMailDAOTest {
                     .remoteAddr(remoteAddr)
                     .remoteHost(remoteHost)
                     .addHeaderForRecipient(header, MailAddressFixture.RECIPIENT1)
-                    .attribute(attributeName, attributeValue)
+                    .attribute(attribute)
                     .build(),
                 blobIdHeader,
                 blobIdBody)
-                .join();
+                .block();
 
-            CassandraMailRepositoryMailDAO.MailDTO mailDTO = testee.read(URL, KEY_1).join().get();
+            CassandraMailRepositoryMailDAO.MailDTO mailDTO = testee.read(URL, KEY_1).block().get();
 
             Mail partialMail = mailDTO.getMailBuilder().build();
             assertSoftly(softly -> {
@@ -174,8 +174,8 @@ class CassandraMailRepositoryMailDAOTest {
                 softly.assertThat(partialMail.getState()).isEqualTo(state);
                 softly.assertThat(partialMail.getRemoteAddr()).isEqualTo(remoteAddr);
                 softly.assertThat(partialMail.getRemoteHost()).isEqualTo(remoteHost);
-                softly.assertThat(partialMail.getAttributeNames()).containsOnly(attributeName);
-                softly.assertThat(partialMail.getAttribute(attributeName)).isEqualTo(attributeValue);
+                softly.assertThat(partialMail.attributes()).containsOnly(attribute);
+                softly.assertThat(partialMail.getAttribute(attribute.getName())).contains(attribute);
                 softly.assertThat(partialMail.getPerRecipientSpecificHeaders().getRecipientsWithSpecificHeaders())
                     .containsOnly(MailAddressFixture.RECIPIENT1);
                 softly.assertThat(partialMail.getPerRecipientSpecificHeaders().getHeadersForRecipient(MailAddressFixture.RECIPIENT1))
@@ -231,9 +231,9 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader,
                 blobIdBody)
-                .join();
+                .block();
 
-            CassandraMailRepositoryMailDAO.MailDTO mailDTO = testee.read(URL, KEY_1).join().get();
+            CassandraMailRepositoryMailDAO.MailDTO mailDTO = testee.read(URL, KEY_1).block().get();
 
             Mail partialMail = mailDTO.getMailBuilder().build();
             assertSoftly(softly -> {
@@ -286,9 +286,9 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader,
                 blobIdBody)
-                .join();
+                .block();
 
-            CassandraMailRepositoryMailDaoAPI.MailDTO actual = testee.read(URL, KEY_1).join().get();
+            CassandraMailRepositoryMailDaoAPI.MailDTO actual = testee.read(URL, KEY_1).block().get();
             Mail partialMail = actual.getMailBuilder().build();
             assertSoftly(softly -> {
                 softly.assertThat(actual.getBodyBlobId()).isEqualTo(blobIdBody);
@@ -308,9 +308,9 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader,
                 blobIdBody)
-                .join();
+                .block();
 
-            CassandraMailRepositoryMailDaoAPI.MailDTO actual = testee.read(URL, KEY_1).join().get();
+            CassandraMailRepositoryMailDaoAPI.MailDTO actual = testee.read(URL, KEY_1).block().get();
             Mail partialMail = actual.getMailBuilder().build();
             assertSoftly(softly -> {
                 softly.assertThat(actual.getBodyBlobId()).isEqualTo(blobIdBody);
@@ -332,7 +332,7 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader1,
                 blobIdBody1)
-                .join();
+                .block();
 
             v2.store(URL,
                 FakeMail.builder()
@@ -340,9 +340,9 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader2,
                 blobIdBody2)
-                .join();
+                .block();
 
-            CassandraMailRepositoryMailDaoAPI.MailDTO actual = testee.read(URL, KEY_1).join().get();
+            CassandraMailRepositoryMailDaoAPI.MailDTO actual = testee.read(URL, KEY_1).block().get();
             Mail partialMail = actual.getMailBuilder().build();
             assertSoftly(softly -> {
                 softly.assertThat(actual.getBodyBlobId()).isEqualTo(blobIdBody2);
@@ -364,7 +364,7 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader1,
                 blobIdBody1)
-                .join();
+                .block();
 
             v2.store(URL,
                 FakeMail.builder()
@@ -372,12 +372,12 @@ class CassandraMailRepositoryMailDAOTest {
                     .build(),
                 blobIdHeader2,
                 blobIdBody2)
-                .join();
+                .block();
 
             testee.remove(URL, KEY_1).block();
 
-            Optional<CassandraMailRepositoryMailDaoAPI.MailDTO> v1Entry = v1.read(URL, KEY_1).join();
-            Optional<CassandraMailRepositoryMailDaoAPI.MailDTO> v2Entry = v2.read(URL, KEY_1).join();
+            Optional<CassandraMailRepositoryMailDaoAPI.MailDTO> v1Entry = v1.read(URL, KEY_1).block();
+            Optional<CassandraMailRepositoryMailDaoAPI.MailDTO> v2Entry = v2.read(URL, KEY_1).block();
             assertThat(v1Entry).isEmpty();
             assertThat(v2Entry).isEmpty();
         }

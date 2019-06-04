@@ -40,6 +40,7 @@ import org.apache.james.mailbox.store.Authenticator;
 import org.apache.james.mailbox.store.Authorizator;
 import org.apache.james.mailbox.store.MailboxManagerConfiguration;
 import org.apache.james.mailbox.store.NoMailboxPathLocker;
+import org.apache.james.mailbox.store.PreDeletionHooks;
 import org.apache.james.mailbox.store.SessionProvider;
 import org.apache.james.mailbox.store.StoreMailboxAnnotationManager;
 import org.apache.james.mailbox.store.StoreMessageIdManager;
@@ -75,14 +76,15 @@ class CassandraTestSystemFixture {
         MessageSearchIndex index = new SimpleMessageSearchIndex(mapperFactory, mapperFactory, new DefaultTextExtractor());
         CassandraMailboxManager cassandraMailboxManager = new CassandraMailboxManager(mapperFactory, sessionProvider,
             new NoMailboxPathLocker(), new MessageParser(), new CassandraMessageId.Factory(),
-            eventBus, annotationManager, storeRightManager, quotaComponents, index, MailboxManagerConfiguration.DEFAULT);
+            eventBus, annotationManager, storeRightManager, quotaComponents, index, MailboxManagerConfiguration.DEFAULT, PreDeletionHooks.NO_PRE_DELETION_HOOK);
 
         eventBus.register(new MailboxAnnotationListener(mapperFactory, sessionProvider));
 
         return cassandraMailboxManager;
     }
 
-    static StoreMessageIdManager createMessageIdManager(CassandraMailboxSessionMapperFactory mapperFactory, QuotaManager quotaManager, EventBus eventBus) {
+    static StoreMessageIdManager createMessageIdManager(CassandraMailboxSessionMapperFactory mapperFactory, QuotaManager quotaManager, EventBus eventBus,
+                                                        PreDeletionHooks preDeletionHooks) {
         CassandraMailboxManager mailboxManager = createMailboxManager(mapperFactory);
         return new StoreMessageIdManager(
             mailboxManager,
@@ -90,7 +92,8 @@ class CassandraTestSystemFixture {
             eventBus,
             new CassandraMessageId.Factory(),
             quotaManager,
-            new DefaultUserQuotaRootResolver(mailboxManager.getSessionProvider(), mapperFactory));
+            new DefaultUserQuotaRootResolver(mailboxManager.getSessionProvider(), mapperFactory),
+            preDeletionHooks);
     }
 
     static MaxQuotaManager createMaxQuotaManager(CassandraCluster cassandra) {

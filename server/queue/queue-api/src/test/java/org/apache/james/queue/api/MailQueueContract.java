@@ -31,31 +31,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.core.MailAddress;
 import org.apache.james.core.MaybeSender;
 import org.apache.james.core.builder.MimeMessageBuilder;
-import org.apache.james.junit.ExecutorExtension;
 import org.apache.james.util.concurrency.ConcurrentTestRunner;
+import org.apache.mailet.Attribute;
 import org.apache.mailet.Mail;
 import org.apache.mailet.PerRecipientHeaders;
 import org.apache.mailet.base.test.FakeMail;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
-@ExtendWith(ExecutorExtension.class)
 public interface MailQueueContract {
 
     MailQueue getMailQueue();
@@ -76,7 +77,7 @@ public interface MailQueueContract {
             .build();
         enQueue(mail);
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getName())
             .isEqualTo(name);
     }
@@ -84,10 +85,11 @@ public interface MailQueueContract {
     @Test
     default void queueShouldPreserveMailRecipients() throws Exception {
         enQueue(defaultMail()
+            .name("mail")
             .recipients(RECIPIENT1, RECIPIENT2)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getRecipients())
             .containsOnly(RECIPIENT1, RECIPIENT2);
     }
@@ -102,7 +104,7 @@ public interface MailQueueContract {
             .lastUpdated(new Date())
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getMaybeSender())
             .isEqualTo(MaybeSender.nullSender());
     }
@@ -116,7 +118,7 @@ public interface MailQueueContract {
             .lastUpdated(new Date())
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getMaybeSender())
             .isEqualTo(MaybeSender.nullSender());
     }
@@ -124,10 +126,11 @@ public interface MailQueueContract {
     @Test
     default void queueShouldPreserveMailSender() throws Exception {
         enQueue(defaultMail()
+            .name("mail")
             .sender(SENDER)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getMaybeSender())
             .isEqualTo(MaybeSender.of(SENDER));
     }
@@ -136,35 +139,37 @@ public interface MailQueueContract {
     default void queueShouldPreserveMimeMessage() throws Exception {
         MimeMessage originalMimeMessage = createMimeMessage();
         enQueue(defaultMail()
+            .name("mail")
             .mimeMessage(originalMimeMessage)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(asString(mailQueueItem.getMail().getMessage()))
             .isEqualTo(asString(originalMimeMessage));
     }
 
     @Test
     default void queueShouldPreserveMailAttribute() throws Exception {
-        String attributeName = "any";
-        String attributeValue = "value";
+        Attribute attribute = Attribute.convertToAttribute("any", "value");
         enQueue(defaultMail()
-            .attribute(attributeName, attributeValue)
+            .name("mail")
+            .attribute(attribute)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
-        assertThat(mailQueueItem.getMail().getAttribute(attributeName))
-            .isEqualTo(attributeValue);
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
+        assertThat(mailQueueItem.getMail().getAttribute(attribute.getName()))
+            .contains(attribute);
     }
 
     @Test
     default void queueShouldPreserveErrorMessage() throws Exception {
         String errorMessage = "ErrorMessage";
         enQueue(defaultMail()
+            .name("mail")
             .errorMessage(errorMessage)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getErrorMessage())
             .isEqualTo(errorMessage);
     }
@@ -173,10 +178,11 @@ public interface MailQueueContract {
     default void queueShouldPreserveState() throws Exception {
         String state = "state";
         enQueue(defaultMail()
+            .name("mail")
             .state(state)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getState())
             .isEqualTo(state);
     }
@@ -185,10 +191,11 @@ public interface MailQueueContract {
     default void queueShouldPreserveRemoteAddress() throws Exception {
         String remoteAddress = "remote";
         enQueue(defaultMail()
+            .name("mail")
             .remoteAddr(remoteAddress)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getRemoteAddr())
             .isEqualTo(remoteAddress);
     }
@@ -197,10 +204,11 @@ public interface MailQueueContract {
     default void queueShouldPreserveRemoteHost() throws Exception {
         String remoteHost = "remote";
         enQueue(defaultMail()
+            .name("mail")
             .remoteHost(remoteHost)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getRemoteHost())
             .isEqualTo(remoteHost);
     }
@@ -209,10 +217,11 @@ public interface MailQueueContract {
     default void queueShouldPreserveLastUpdated() throws Exception {
         Date lastUpdated = new Date();
         enQueue(defaultMail()
+            .name("mail")
             .lastUpdated(lastUpdated)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getLastUpdated())
             .isEqualTo(lastUpdated);
     }
@@ -224,7 +233,7 @@ public interface MailQueueContract {
             .name(expectedName)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getName())
             .isEqualTo(expectedName);
     }
@@ -236,10 +245,11 @@ public interface MailQueueContract {
             .value("any")
             .build();
         enQueue(defaultMail()
+            .name("mail")
             .addHeaderForRecipient(header, RECIPIENT1)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
         assertThat(mailQueueItem.getMail().getPerRecipientSpecificHeaders()
             .getHeadersForRecipient(RECIPIENT1))
             .containsOnly(header);
@@ -247,16 +257,20 @@ public interface MailQueueContract {
 
     @Test
     default void queueShouldPreserveNonStringMailAttribute() throws Exception {
-        String attributeName = "any";
-        SerializableAttribute attributeValue = new SerializableAttribute("value");
+        Attribute attribute = Attribute.convertToAttribute("any", new SerializableAttribute("value"));
         enQueue(defaultMail()
-                .attribute(attributeName, attributeValue)
+                .name("mail")
+                .attribute(attribute)
                 .build());
 
-        MailQueue.MailQueueItem mailQueueItem = getMailQueue().deQueue();
-        assertThat(mailQueueItem.getMail().getAttribute(attributeName))
-                .isInstanceOf(SerializableAttribute.class)
-                .isEqualTo(attributeValue);
+        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
+        assertThat(mailQueueItem.getMail().getAttribute(attribute.getName()))
+            .hasValueSatisfying(item -> {
+                assertThat(item)
+                        .isEqualTo(attribute);
+                assertThat(item.getValue().value())
+                        .isInstanceOf(SerializableAttribute.class);
+            });
     }
 
     @Test
@@ -270,9 +284,10 @@ public interface MailQueueContract {
             .name(secondExpectedName)
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem1 = getMailQueue().deQueue();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        MailQueue.MailQueueItem mailQueueItem1 = items.next();
         mailQueueItem1.done(true);
-        MailQueue.MailQueueItem mailQueueItem2 = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem2 = items.next();
         mailQueueItem2.done(true);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo(firstExpectedName);
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo(secondExpectedName);
@@ -287,8 +302,10 @@ public interface MailQueueContract {
             .name("name2")
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem1 = getMailQueue().deQueue();
-        MailQueue.MailQueueItem mailQueueItem2 = getMailQueue().deQueue();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue())
+            .subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        MailQueue.MailQueueItem mailQueueItem1 = items.next();
+        MailQueue.MailQueueItem mailQueueItem2 = items.next();
         mailQueueItem1.done(true);
         mailQueueItem2.done(true);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
@@ -305,8 +322,9 @@ public interface MailQueueContract {
             .name("name2")
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem1 = getMailQueue().deQueue();
-        MailQueue.MailQueueItem mailQueueItem2 = getMailQueue().deQueue();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        MailQueue.MailQueueItem mailQueueItem1 = items.next();
+        MailQueue.MailQueueItem mailQueueItem2 = items.next();
         mailQueueItem2.done(true);
         mailQueueItem1.done(true);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
@@ -319,46 +337,47 @@ public interface MailQueueContract {
             .name("name1")
             .build());
 
-        MailQueue.MailQueueItem mailQueueItem1 = getMailQueue().deQueue();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        MailQueue.MailQueueItem mailQueueItem1 = items.next();
         mailQueueItem1.done(false);
-        MailQueue.MailQueueItem mailQueueItem2 = getMailQueue().deQueue();
+        MailQueue.MailQueueItem mailQueueItem2 = items.next();
         mailQueueItem2.done(true);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo("name1");
     }
 
     @Test
-    default void dequeueShouldNotReturnInProcessingEmails(ExecutorService executorService) throws Exception {
+    default void dequeueShouldNotReturnInProcessingEmails() throws Exception {
         enQueue(defaultMail()
             .name("name")
             .build());
 
-        getMailQueue().deQueue();
+        LinkedBlockingQueue<MailQueue.MailQueueItem> queue = new LinkedBlockingQueue<>(1);
+        Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).subscribe(Throwing.consumer(queue::put));
+        queue.take();
 
-        Future<?> future = executorService.submit(Throwing.runnable(() -> getMailQueue().deQueue()));
-        assertThatThrownBy(() -> future.get(2, TimeUnit.SECONDS))
-            .isInstanceOf(TimeoutException.class);
+        assertThat(queue.poll(2, TimeUnit.SECONDS)).isNull();
     }
 
     @Test
-    default void deQueueShouldBlockWhenNoMail(ExecutorService executorService) {
-        Future<?> future = executorService.submit(Throwing.runnable(() -> getMailQueue().deQueue()));
+    default void deQueueShouldBlockWhenNoMail() {
+        Mono<MailQueue.MailQueueItem> item = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).next();
 
-        assertThatThrownBy(() -> future.get(2, TimeUnit.SECONDS))
-            .isInstanceOf(TimeoutException.class);
+        assertThatThrownBy(() -> item.block(Duration.ofSeconds(2)))
+            .isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    default void deQueueShouldWaitForAMailToBeEnqueued(ExecutorService executorService) throws Exception {
+    default void deQueueShouldWaitForAMailToBeEnqueued() throws Exception {
         MailQueue testee = getMailQueue();
 
         Mail mail = defaultMail()
             .name("name")
             .build();
-        Future<MailQueue.MailQueueItem> tryDequeue = executorService.submit(testee::deQueue);
+        Mono<MailQueue.MailQueueItem> item = Flux.from(testee.deQueue()).next();
         testee.enQueue(mail);
 
-        assertThat(tryDequeue.get().getMail().getName()).isEqualTo("name");
+        assertThat(item.block(Duration.ofMinutes(1)).getMail().getName()).isEqualTo("name");
     }
 
     @Test
@@ -370,6 +389,18 @@ public interface MailQueueContract {
         int threadCount = 10;
         int operationCount = 10;
         int totalDequeuedMessages = 50;
+        LinkedBlockingQueue<MailQueue.MailQueueItem> itemQueue = new LinkedBlockingQueue<>(1);
+        Flux.from(testee
+            .deQueue())
+            .subscribeOn(Schedulers.elastic())
+            .flatMap(e -> {
+                try {
+                    itemQueue.put(e);
+                } catch (InterruptedException ignored) {
+                    //ignored
+                }
+                return Mono.empty();
+            }).subscribe();
         ConcurrentTestRunner.builder()
             .operation((threadNumber, step) -> {
                 if (step % 2 == 0) {
@@ -377,7 +408,7 @@ public interface MailQueueContract {
                         .name("name" + threadNumber + "-" + step)
                         .build());
                 } else {
-                    MailQueue.MailQueueItem mailQueueItem = testee.deQueue();
+                    MailQueue.MailQueueItem mailQueueItem = itemQueue.take();
                     dequeuedMails.add(mailQueueItem.getMail());
                     mailQueueItem.done(true);
                 }
@@ -402,6 +433,8 @@ public interface MailQueueContract {
         int threadCount = 10;
         int operationCount = 15;
         int totalDequeuedMessages = 50;
+        LinkedBlockingDeque<MailQueue.MailQueueItem> deque = new LinkedBlockingDeque<>();
+        Flux.from(testee.deQueue()).subscribeOn(Schedulers.elastic()).doOnNext(deque::addFirst).subscribe();
         ConcurrentTestRunner.builder()
             .operation((threadNumber, step) -> {
                 if (step % 3 == 0) {
@@ -410,11 +443,11 @@ public interface MailQueueContract {
                         .build());
                 }
                 if (step % 3 == 1) {
-                    MailQueue.MailQueueItem mailQueueItem = testee.deQueue();
+                    MailQueue.MailQueueItem mailQueueItem = deque.takeLast();
                     mailQueueItem.done(false);
                 }
                 if (step % 3 == 2) {
-                    MailQueue.MailQueueItem mailQueueItem = testee.deQueue();
+                    MailQueue.MailQueueItem mailQueueItem = deque.takeLast();
                     dequeuedMails.add(mailQueueItem.getMail());
                     mailQueueItem.done(true);
                 }

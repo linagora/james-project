@@ -19,27 +19,32 @@
 
 package org.apache.james.mailbox.util;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.apache.james.mailbox.events.Event;
 import org.apache.james.mailbox.events.Group;
 import org.apache.james.mailbox.events.MailboxListener;
 
 public class EventCollector implements MailboxListener.GroupMailboxListener {
-    private static class EventCollectorGroup extends Group {}
+    public static class EventCollectorGroup extends Group {}
 
     private static final Group GROUP = new EventCollectorGroup();
 
-    private final List<Event> events = new ArrayList<>();
+    private final ConcurrentLinkedDeque<Event> events = new ConcurrentLinkedDeque<>();
 
     @Override
     public Group getDefaultGroup() {
         return GROUP;
     }
 
-    public List<Event> getEvents() {
+    public Collection<Event> getEvents() {
         return events;
+    }
+
+    @Override
+    public boolean isHandling(Event event) {
+        return true;
     }
 
     @Override

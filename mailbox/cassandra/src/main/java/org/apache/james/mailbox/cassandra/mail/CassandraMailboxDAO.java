@@ -32,8 +32,6 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMailboxTable.NAM
 import static org.apache.james.mailbox.cassandra.table.CassandraMailboxTable.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraMailboxTable.UIDVALIDITY;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.inject.Inject;
 
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
@@ -42,15 +40,15 @@ import org.apache.james.backends.cassandra.utils.CassandraUtils;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.mail.utils.MailboxBaseTupleUtil;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxTable;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.annotations.VisibleForTesting;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -114,14 +112,14 @@ public class CassandraMailboxDAO {
 
     public Mono<Void> save(Mailbox mailbox) {
         CassandraId cassandraId = (CassandraId) mailbox.getMailboxId();
-        return executor.executeVoidReactor(insertStatement.bind()
+        return executor.executeVoid(insertStatement.bind()
             .setUUID(ID, cassandraId.asUuid())
             .setString(NAME, mailbox.getName())
             .setLong(UIDVALIDITY, mailbox.getUidValidity())
             .setUDTValue(MAILBOX_BASE, mailboxBaseTupleUtil.createMailboxBaseUDT(mailbox.getNamespace(), mailbox.getUser())));
     }
 
-    public CompletableFuture<Void> updatePath(CassandraId mailboxId, MailboxPath mailboxPath) {
+    public Mono<Void> updatePath(CassandraId mailboxId, MailboxPath mailboxPath) {
         return executor.executeVoid(updateStatement.bind()
             .setUUID(ID, mailboxId.asUuid())
             .setString(NAME, mailboxPath.getName())
@@ -129,24 +127,24 @@ public class CassandraMailboxDAO {
     }
 
     public Mono<Void> delete(CassandraId mailboxId) {
-        return executor.executeVoidReactor(deleteStatement.bind()
+        return executor.executeVoid(deleteStatement.bind()
             .setUUID(ID, mailboxId.asUuid()));
     }
 
-    public Mono<SimpleMailbox> retrieveMailbox(CassandraId mailboxId) {
-        return executor.executeSingleRowReactor(readStatement.bind()
+    public Mono<Mailbox> retrieveMailbox(CassandraId mailboxId) {
+        return executor.executeSingleRow(readStatement.bind()
             .setUUID(ID, mailboxId.asUuid()))
             .map(this::mailboxFromRow)
             .map(mailbox -> addMailboxId(mailboxId, mailbox));
     }
 
-    private SimpleMailbox addMailboxId(CassandraId cassandraId, SimpleMailbox mailbox) {
+    private Mailbox addMailboxId(CassandraId cassandraId, Mailbox mailbox) {
         mailbox.setMailboxId(cassandraId);
         return mailbox;
     }
 
-    private SimpleMailbox mailboxFromRow(Row row) {
-        return new SimpleMailbox(
+    private Mailbox mailboxFromRow(Row row) {
+        return new Mailbox(
             new MailboxPath(
                 row.getUDTValue(MAILBOX_BASE).getString(CassandraMailboxTable.MailboxBase.NAMESPACE),
                 row.getUDTValue(MAILBOX_BASE).getString(CassandraMailboxTable.MailboxBase.USER),
@@ -154,14 +152,14 @@ public class CassandraMailboxDAO {
             row.getLong(UIDVALIDITY));
     }
 
-    public Flux<SimpleMailbox> retrieveAllMailboxes() {
-        return executor.executeReactor(listStatement.bind())
+    public Flux<Mailbox> retrieveAllMailboxes() {
+        return executor.execute(listStatement.bind())
             .flatMapMany(cassandraUtils::convertToFlux)
             .map(this::toMailboxWithId);
     }
 
-    private SimpleMailbox toMailboxWithId(Row row) {
-        SimpleMailbox mailbox = mailboxFromRow(row);
+    private Mailbox toMailboxWithId(Row row) {
+        Mailbox mailbox = mailboxFromRow(row);
         mailbox.setMailboxId(CassandraId.of(row.getUUID(ID)));
         return mailbox;
     }

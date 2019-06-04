@@ -20,8 +20,7 @@
 package org.apache.james.backends.es.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,147 +28,154 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.james.backends.es.ClientProvider;
+import org.apache.james.backends.es.DockerElasticSearchRule;
 import org.apache.james.backends.es.ElasticSearchConfiguration;
-import org.apache.james.backends.es.EmbeddedElasticSearch;
 import org.apache.james.backends.es.IndexCreationFactory;
 import org.apache.james.backends.es.IndexName;
 import org.apache.james.backends.es.NodeMappingFactory;
 import org.apache.james.backends.es.ReadAliasName;
-import org.apache.james.backends.es.TypeName;
-import org.apache.james.backends.es.utils.TestingClientProvider;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.client.Client;
+import org.awaitility.Duration;
+import org.awaitility.core.ConditionFactory;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 public class ScrollIterableTest {
 
-    public static final TimeValue TIMEOUT = new TimeValue(6000);
-    public static final int SIZE = 2;
-    public static final String MESSAGE = "message";
-    public static final IndexName INDEX_NAME = new IndexName("index");
-    public static final ReadAliasName ALIAS_NAME = new ReadAliasName("alias");
-    public static final TypeName TYPE_NAME = new TypeName("messages");
+    private static final TimeValue TIMEOUT = TimeValue.timeValueMinutes(1);
+    private static final int SIZE = 2;
+    private static final String MESSAGE = "message";
+    private static final IndexName INDEX_NAME = new IndexName("index");
+    private static final ReadAliasName ALIAS_NAME = new ReadAliasName("alias");
 
-    private TemporaryFolder temporaryFolder = new TemporaryFolder();
-    private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
+    private static final ConditionFactory WAIT_CONDITION = await().timeout(Duration.FIVE_SECONDS);
 
     @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(temporaryFolder).around(embeddedElasticSearch);
-
+    public DockerElasticSearchRule elasticSearch = new DockerElasticSearchRule();
     private ClientProvider clientProvider;
 
     @Before
-    public void setUp() throws Exception {
-        clientProvider = new TestingClientProvider(embeddedElasticSearch.getNode());
+    public void setUp() {
+        clientProvider = elasticSearch.clientProvider();
         new IndexCreationFactory(ElasticSearchConfiguration.DEFAULT_CONFIGURATION)
             .useIndex(INDEX_NAME)
             .addAlias(ALIAS_NAME)
             .createIndexAndAliases(clientProvider.get());
-        embeddedElasticSearch.awaitForElasticSearch();
-        NodeMappingFactory.applyMapping(clientProvider.get(), INDEX_NAME, TYPE_NAME, getMappingsSources());
-    }
-
-    private XContentBuilder getMappingsSources() throws IOException {
-        return jsonBuilder()
-            .startObject()
-                .startObject(TYPE_NAME.getValue())
-                    .startObject(NodeMappingFactory.PROPERTIES)
-                        .startObject(MESSAGE)
-                            .field(NodeMappingFactory.TYPE, NodeMappingFactory.STRING)
-                        .endObject()
-                    .endObject()
-                .endObject()
-            .endObject();
+        elasticSearch.awaitForElasticSearch();
     }
 
     @Test
-    public void scrollIterableShouldWorkWhenEmpty() {
-        try (Client client = clientProvider.get()) {
-            SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME.getValue())
-                .setTypes(TYPE_NAME.getValue())
-                .setScroll(TIMEOUT)
-                .setQuery(matchAllQuery())
-                .setSize(SIZE);
-            assertThat(new ScrollIterable(client, searchRequestBuilder)).isEmpty();
+    public void scrollIterableShouldWorkWhenEmpty() throws Exception {
+        try (RestHighLevelClient client = clientProvider.get()) {
+            SearchRequest searchRequest = new SearchRequest(INDEX_NAME.getValue())
+                .scroll(TIMEOUT)
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.matchAllQuery())
+                    .size(SIZE));
+
+            assertThat(new ScrollIterable(client, searchRequest))
+                .isEmpty();
         }
     }
 
     @Test
-    public void scrollIterableShouldWorkWhenOneElement() {
-        try (Client client = clientProvider.get()) {
+    public void scrollIterableShouldWorkWhenOneElement() throws Exception {
+        try (RestHighLevelClient client = clientProvider.get()) {
             String id = "1";
-            client.prepareIndex(INDEX_NAME.getValue(), TYPE_NAME.getValue(), id)
-                .setSource(MESSAGE, "Sample message")
-                .execute();
+            client.index(new IndexRequest(INDEX_NAME.getValue())
+                    .type(NodeMappingFactory.DEFAULT_MAPPING_NAME)
+                    .id(id)
+                    .source(MESSAGE, "Sample message"),
+                RequestOptions.DEFAULT);
 
-            embeddedElasticSearch.awaitForElasticSearch();
+            elasticSearch.awaitForElasticSearch();
+            WAIT_CONDITION.untilAsserted(() -> hasIdsInIndex(client, id));
 
-            SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME.getValue())
-                .setTypes(TYPE_NAME.getValue())
-                .setScroll(TIMEOUT)
-                .setQuery(matchAllQuery())
-                .setSize(SIZE);
-            assertThat(convertToIdList(new ScrollIterable(client, searchRequestBuilder))).containsOnly(id);
+            SearchRequest searchRequest = new SearchRequest(INDEX_NAME.getValue())
+                .scroll(TIMEOUT)
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.matchAllQuery())
+                    .size(SIZE));
+
+            assertThat(convertToIdList(new ScrollIterable(client, searchRequest)))
+                .containsOnly(id);
         }
     }
 
     @Test
-    public void scrollIterableShouldWorkWhenSizeElement() {
-        try (Client client = clientProvider.get()) {
+    public void scrollIterableShouldWorkWhenSizeElement() throws Exception {
+        try (RestHighLevelClient client = clientProvider.get()) {
             String id1 = "1";
-            client.prepareIndex(INDEX_NAME.getValue(), TYPE_NAME.getValue(), id1)
-                .setSource(MESSAGE, "Sample message")
-                .execute();
+            client.index(new IndexRequest(INDEX_NAME.getValue())
+                    .type(NodeMappingFactory.DEFAULT_MAPPING_NAME)
+                    .id(id1)
+                    .source(MESSAGE, "Sample message"),
+                RequestOptions.DEFAULT);
 
             String id2 = "2";
-            client.prepareIndex(INDEX_NAME.getValue(), TYPE_NAME.getValue(), id2)
-                .setSource(MESSAGE, "Sample message")
-                .execute();
+            client.index(new IndexRequest(INDEX_NAME.getValue())
+                    .type(NodeMappingFactory.DEFAULT_MAPPING_NAME)
+                    .id(id2)
+                    .source(MESSAGE, "Sample message"),
+                RequestOptions.DEFAULT);
 
-            embeddedElasticSearch.awaitForElasticSearch();
+            elasticSearch.awaitForElasticSearch();
+            WAIT_CONDITION.untilAsserted(() -> hasIdsInIndex(client, id1, id2));
 
-            SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME.getValue())
-                .setTypes(TYPE_NAME.getValue())
-                .setScroll(TIMEOUT)
-                .setQuery(matchAllQuery())
-                .setSize(SIZE);
-            assertThat(convertToIdList(new ScrollIterable(client, searchRequestBuilder))).containsOnly(id1, id2);
+            SearchRequest searchRequest = new SearchRequest(INDEX_NAME.getValue())
+                .scroll(TIMEOUT)
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.matchAllQuery())
+                    .size(SIZE));
+
+            assertThat(convertToIdList(new ScrollIterable(client, searchRequest)))
+                .containsOnly(id1, id2);
         }
     }
 
     @Test
-    public void scrollIterableShouldWorkWhenMoreThanSizeElement() {
-        try (Client client = clientProvider.get()) {
+    public void scrollIterableShouldWorkWhenMoreThanSizeElement() throws Exception {
+        try (RestHighLevelClient client = clientProvider.get()) {
             String id1 = "1";
-            client.prepareIndex(INDEX_NAME.getValue(), TYPE_NAME.getValue(), id1)
-                .setSource(MESSAGE, "Sample message")
-                .execute();
+            client.index(new IndexRequest(INDEX_NAME.getValue())
+                    .type(NodeMappingFactory.DEFAULT_MAPPING_NAME)
+                    .id(id1)
+                    .source(MESSAGE, "Sample message"),
+                RequestOptions.DEFAULT);
 
             String id2 = "2";
-            client.prepareIndex(INDEX_NAME.getValue(), TYPE_NAME.getValue(), id2)
-                .setSource(MESSAGE, "Sample message")
-                .execute();
+            client.index(new IndexRequest(INDEX_NAME.getValue())
+                    .type(NodeMappingFactory.DEFAULT_MAPPING_NAME)
+                    .id(id2)
+                    .source(MESSAGE, "Sample message"),
+                RequestOptions.DEFAULT);
 
             String id3 = "3";
-            client.prepareIndex(INDEX_NAME.getValue(), TYPE_NAME.getValue(), id3)
-                .setSource(MESSAGE, "Sample message")
-                .execute();
+            client.index(new IndexRequest(INDEX_NAME.getValue())
+                    .type(NodeMappingFactory.DEFAULT_MAPPING_NAME)
+                    .id(id3)
+                    .source(MESSAGE, "Sample message"),
+                RequestOptions.DEFAULT);
 
-            embeddedElasticSearch.awaitForElasticSearch();
+            elasticSearch.awaitForElasticSearch();
+            WAIT_CONDITION.untilAsserted(() -> hasIdsInIndex(client, id1, id2, id3));
 
-            SearchRequestBuilder searchRequestBuilder = client.prepareSearch(INDEX_NAME.getValue())
-                .setTypes(TYPE_NAME.getValue())
-                .setScroll(TIMEOUT)
-                .setQuery(matchAllQuery())
-                .setSize(SIZE);
-            assertThat(convertToIdList(new ScrollIterable(client, searchRequestBuilder))).containsOnly(id1, id2, id3);
+            SearchRequest searchRequest = new SearchRequest(INDEX_NAME.getValue())
+                .scroll(TIMEOUT)
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.matchAllQuery())
+                    .size(SIZE));
+
+            assertThat(convertToIdList(new ScrollIterable(client, searchRequest)))
+                .containsOnly(id1, id2, id3);
         }
     }
 
@@ -178,5 +184,20 @@ public class ScrollIterableTest {
             .flatMap(searchResponse -> Arrays.stream(searchResponse.getHits().getHits()))
             .map(SearchHit::getId)
             .collect(Collectors.toList());
+    }
+
+    private void hasIdsInIndex(RestHighLevelClient client, String... ids) throws IOException {
+        SearchRequest searchRequest = new SearchRequest(INDEX_NAME.getValue())
+            .scroll(TIMEOUT)
+            .source(new SearchSourceBuilder()
+                .query(QueryBuilders.matchAllQuery()));
+
+        SearchHit[] hits = client.search(searchRequest, RequestOptions.DEFAULT)
+            .getHits()
+            .getHits();
+
+        assertThat(hits)
+            .extracting(SearchHit::getId)
+            .contains(ids);
     }
 }

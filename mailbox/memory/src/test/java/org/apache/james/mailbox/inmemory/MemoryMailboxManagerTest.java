@@ -23,9 +23,10 @@ import org.apache.james.mailbox.MailboxManagerTest;
 import org.apache.james.mailbox.events.EventBus;
 
 public class MemoryMailboxManagerTest extends MailboxManagerTest<InMemoryMailboxManager> {
+
     @Override
     protected InMemoryMailboxManager provideMailboxManager() {
-        return MemoryMailboxManagerProvider.provideMailboxManager();
+        return MemoryMailboxManagerProvider.provideMailboxManager(preDeletionHooks());
     }
 
     @Override

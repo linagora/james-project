@@ -20,96 +20,112 @@
 package org.apache.james.mailbox.events;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
-import org.apache.james.backend.rabbitmq.RabbitMQConnectionFactory;
+import org.apache.james.backend.rabbitmq.SimpleConnectionPool;
 import org.apache.james.event.json.EventSerializer;
+import org.apache.james.lifecycle.api.Startable;
 import org.apache.james.metrics.api.MetricFactory;
 
 import com.github.fge.lambdas.Throwing;
+import com.google.common.base.Preconditions;
 import com.rabbitmq.client.Connection;
-
 import reactor.core.publisher.Mono;
 import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.Sender;
 import reactor.rabbitmq.SenderOptions;
 
-public class RabbitMQEventBus implements EventBus {
+public class RabbitMQEventBus implements EventBus, Startable {
+    private static final String NOT_RUNNING_ERROR_MESSAGE = "Event Bus is not running";
     static final String MAILBOX_EVENT = "mailboxEvent";
     static final String MAILBOX_EVENT_EXCHANGE_NAME = MAILBOX_EVENT + "-exchange";
     static final String EVENT_BUS_ID = "eventBusId";
 
     private final Mono<Connection> connectionMono;
     private final EventSerializer eventSerializer;
-    private final AtomicBoolean isRunning;
     private final RoutingKeyConverter routingKeyConverter;
     private final RetryBackoffConfiguration retryBackoff;
     private final EventBusId eventBusId;
     private final EventDeadLetters eventDeadLetters;
     private final MailboxListenerExecutor mailboxListenerExecutor;
 
+    private volatile boolean isRunning;
+    private volatile boolean isStopping;
     private GroupRegistrationHandler groupRegistrationHandler;
     private KeyRegistrationHandler keyRegistrationHandler;
     private EventDispatcher eventDispatcher;
     private Sender sender;
 
     @Inject
-    public RabbitMQEventBus(RabbitMQConnectionFactory rabbitMQConnectionFactory, EventSerializer eventSerializer,
+    public RabbitMQEventBus(SimpleConnectionPool simpleConnectionPool, EventSerializer eventSerializer,
                      RetryBackoffConfiguration retryBackoff,
                      RoutingKeyConverter routingKeyConverter,
                      EventDeadLetters eventDeadLetters, MetricFactory metricFactory) {
         this.mailboxListenerExecutor = new MailboxListenerExecutor(metricFactory);
         this.eventBusId = EventBusId.random();
-        this.connectionMono = rabbitMQConnectionFactory.connectionMono();
+        this.connectionMono = simpleConnectionPool.getResilientConnection();
         this.eventSerializer = eventSerializer;
         this.routingKeyConverter = routingKeyConverter;
         this.retryBackoff = retryBackoff;
         this.eventDeadLetters = eventDeadLetters;
-        this.isRunning = new AtomicBoolean(false);
+        this.isRunning = false;
+        this.isStopping = false;
     }
 
     public void start() {
-        if (!isRunning.get()) {
+        if (!isRunning && !isStopping) {
             sender = RabbitFlux.createSender(new SenderOptions().connectionMono(connectionMono)
                 .resourceManagementChannelMono(connectionMono.map(Throwing.function(Connection::createChannel))));
-            MailboxListenerRegistry mailboxListenerRegistry = new MailboxListenerRegistry();
-            keyRegistrationHandler = new KeyRegistrationHandler(eventBusId, eventSerializer, sender, connectionMono, routingKeyConverter, mailboxListenerRegistry, mailboxListenerExecutor);
+            LocalListenerRegistry localListenerRegistry = new LocalListenerRegistry();
+            keyRegistrationHandler = new KeyRegistrationHandler(eventBusId, eventSerializer, sender, connectionMono, routingKeyConverter, localListenerRegistry, mailboxListenerExecutor);
             groupRegistrationHandler = new GroupRegistrationHandler(eventSerializer, sender, connectionMono, retryBackoff, eventDeadLetters, mailboxListenerExecutor);
-            eventDispatcher = new EventDispatcher(eventBusId, eventSerializer, sender, mailboxListenerRegistry, mailboxListenerExecutor);
+            eventDispatcher = new EventDispatcher(eventBusId, eventSerializer, sender, localListenerRegistry, mailboxListenerExecutor);
 
             eventDispatcher.start();
             keyRegistrationHandler.start();
-            isRunning.set(true);
+            isRunning = true;
         }
     }
 
     @PreDestroy
     public void stop() {
-        if (isRunning.get()) {
+        if (isRunning && !isStopping) {
+            isStopping = true;
+            isRunning = false;
             groupRegistrationHandler.stop();
             keyRegistrationHandler.stop();
             sender.close();
-            isRunning.set(false);
         }
     }
 
     @Override
     public Registration register(MailboxListener listener, RegistrationKey key) {
+        Preconditions.checkState(isRunning, NOT_RUNNING_ERROR_MESSAGE);
         return keyRegistrationHandler.register(listener, key);
     }
 
     @Override
     public Registration register(MailboxListener listener, Group group) {
+        Preconditions.checkState(isRunning, NOT_RUNNING_ERROR_MESSAGE);
         return groupRegistrationHandler.register(listener, group);
     }
 
     @Override
     public Mono<Void> dispatch(Event event, Set<RegistrationKey> key) {
+        Preconditions.checkState(isRunning, NOT_RUNNING_ERROR_MESSAGE);
         if (!event.isNoop()) {
             return eventDispatcher.dispatch(event, key);
+        }
+        return Mono.empty();
+    }
+
+    @Override
+    public Mono<Void> reDeliver(Group group, Event event) {
+        Preconditions.checkState(isRunning, NOT_RUNNING_ERROR_MESSAGE);
+        if (!event.isNoop()) {
+            return groupRegistrationHandler.retrieveGroupRegistration(group).reDeliver(event);
         }
         return Mono.empty();
     }

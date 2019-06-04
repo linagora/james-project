@@ -45,6 +45,7 @@ import reactor.core.publisher.MonoProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.rabbitmq.AcknowledgableDelivery;
 import reactor.rabbitmq.BindingSpecification;
+import reactor.rabbitmq.ConsumeOptions;
 import reactor.rabbitmq.QueueSpecification;
 import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.Receiver;
@@ -98,7 +99,7 @@ class GroupRegistration implements Registration {
         this.mailboxListenerExecutor = mailboxListenerExecutor;
         this.receiverSubscriber = Optional.empty();
         this.unregisterGroup = unregisterGroup;
-        this.retryHandler = new GroupConsumerRetry(sender, group, retryBackoff, eventDeadLetters);
+        this.retryHandler = new GroupConsumerRetry(sender, group, retryBackoff, eventDeadLetters, eventSerializer);
         this.delayGenerator = WaitDelayGenerator.of(retryBackoff);
         this.group = group;
     }
@@ -126,8 +127,7 @@ class GroupRegistration implements Registration {
     }
 
     private void subscribeWorkQueue() {
-        receiverSubscriber = Optional.of(receiver.consumeManualAck(queueName.asString())
-            .subscribeOn(Schedulers.parallel())
+        receiverSubscriber = Optional.of(receiver.consumeManualAck(queueName.asString(), new ConsumeOptions().qos(EventBus.EXECUTION_RATE))
             .filter(delivery -> Objects.nonNull(delivery.getBody()))
             .flatMap(this::deliver)
             .subscribeOn(Schedulers.elastic())
@@ -141,10 +141,14 @@ class GroupRegistration implements Registration {
 
         return delayGenerator.delayIfHaveTo(currentRetryCount)
             .flatMap(any -> Mono.fromRunnable(Throwing.runnable(() -> runListener(event))).publishOn(Schedulers.elastic()))
-            .onErrorResume(throwable -> retryHandler.handleRetry(eventAsBytes, event, currentRetryCount, throwable))
+            .onErrorResume(throwable -> retryHandler.handleRetry(event, currentRetryCount, throwable))
             .then(Mono.fromRunnable(acknowledgableDelivery::ack))
             .subscribeWith(MonoProcessor.create())
             .then();
+    }
+
+    Mono<Void> reDeliver(Event event) {
+        return retryHandler.retryOrStoreToDeadLetter(event, DEFAULT_RETRY_COUNT);
     }
 
     private void runListener(Event event) throws Exception {

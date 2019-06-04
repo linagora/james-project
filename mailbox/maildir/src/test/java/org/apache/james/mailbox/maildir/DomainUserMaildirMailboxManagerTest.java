@@ -22,9 +22,26 @@ import org.apache.james.junit.TemporaryFolderExtension;
 import org.apache.james.mailbox.MailboxManagerTest;
 import org.apache.james.mailbox.events.EventBus;
 import org.apache.james.mailbox.store.StoreMailboxManager;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class DomainUserMaildirMailboxManagerTest extends MailboxManagerTest<StoreMailboxManager> {
+
+    @Disabled("Maildir is using DefaultMessageId which doesn't support full feature of a messageId, which is an essential" +
+        " element of the Vault")
+    @Nested
+    class HookTests {
+    }
+
+    @Nested
+    class BasicFeaturesTests extends MailboxManagerTest<StoreMailboxManager>.BasicFeaturesTests {
+        @Disabled("MAILBOX-389 Mailbox rename fails with Maildir")
+        @Test
+        protected void renameMailboxShouldChangeTheMailboxPathOfAMailbox() {
+        }
+    }
 
     @RegisterExtension
     TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
@@ -42,4 +59,6 @@ public class DomainUserMaildirMailboxManagerTest extends MailboxManagerTest<Stor
     protected EventBus retrieveEventBus(StoreMailboxManager mailboxManager) {
         return mailboxManager.getEventBus();
     }
+
+
 }

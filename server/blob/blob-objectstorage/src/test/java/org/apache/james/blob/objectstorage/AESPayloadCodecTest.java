@@ -26,10 +26,10 @@ import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.objectstorage.crypto.CryptoConfig;
-import org.jclouds.io.Payload;
 import org.jclouds.io.Payloads;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
 import com.google.crypto.tink.subtle.Hex;
 
 class AESPayloadCodecTest implements PayloadCodecContract {
-    private static final byte[] ENCRYPTED_BYTES = Hex.decode("28cdfb53c283185598ec7c49c415c6b56e85d3d74af89740270c2d2cd8006e1265a301436d919ed7acfc14586b5bd193e34c744ef1641230457dae3475");
+    private static final byte[] ENCRYPTED_BYTES = Hex.decode("0d5321372dae79366a2cc4ca7f52a9acd9bb6408e50a6bcb7b0008d0b10c90db46");
 
     @Override
     public PayloadCodec codec() {
@@ -50,7 +50,7 @@ class AESPayloadCodecTest implements PayloadCodecContract {
     @Test
     void aesCodecShouldEncryptPayloadContentWhenWriting() throws Exception {
         Payload payload = codec().write(expected());
-        byte[] bytes = IOUtils.toByteArray(payload.openStream());
+        byte[] bytes = IOUtils.toByteArray(payload.getPayload().openStream());
         // authenticated encryption uses a random salt for the authentication
         // header all we can say for sure is that the output is not the same as
         // the input.
@@ -59,7 +59,7 @@ class AESPayloadCodecTest implements PayloadCodecContract {
 
     @Test
     void aesCodecShouldDecryptPayloadContentWhenReading() throws Exception {
-        Payload payload = Payloads.newInputStreamPayload(new ByteArrayInputStream(ENCRYPTED_BYTES));
+        Payload payload = new Payload(Payloads.newInputStreamPayload(new ByteArrayInputStream(ENCRYPTED_BYTES)), Optional.empty());
 
         InputStream actual = codec().read(payload);
 
@@ -69,7 +69,7 @@ class AESPayloadCodecTest implements PayloadCodecContract {
     @Test
     void aesCodecShouldRaiseExceptionWhenUnderliyingInputStreamFails() throws Exception {
         Payload payload =
-            Payloads.newInputStreamPayload(new FilterInputStream(new ByteArrayInputStream(ENCRYPTED_BYTES)) {
+            new Payload(Payloads.newInputStreamPayload(new FilterInputStream(new ByteArrayInputStream(ENCRYPTED_BYTES)) {
                 private int readCount = 0;
 
                 @Override
@@ -81,11 +81,8 @@ class AESPayloadCodecTest implements PayloadCodecContract {
                         return super.read(b, off, len);
                     }
                 }
-            });
-        int i = ENCRYPTED_BYTES.length / 2;
-        byte[] bytes = new byte[i];
-        InputStream is = codec().read(payload);
-        assertThatThrownBy(() -> is.read(bytes, 0, i)).isInstanceOf(IOException.class);
-
+            }),
+            Optional.empty());
+        assertThatThrownBy(() -> codec().read(payload)).isInstanceOf(IOException.class);
     }
 }

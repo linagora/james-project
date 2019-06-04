@@ -20,7 +20,6 @@ package org.apache.james.rrt.file;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.james.rrt.api.RecipientRewriteTableException;
@@ -71,6 +70,12 @@ public class XMLRecipientRewriteTableTest extends AbstractRecipientRewriteTableT
                 addMapping(source, Mapping.address(address));
             }
         };
+    }
+
+    @Test
+    @Ignore("addMapping doesn't handle checking for domain existence in this test implementation")
+    @Override
+    public void addAddressMappingShouldThrowWhenSourceDomainIsNotInDomainList() {
     }
 
     @Test

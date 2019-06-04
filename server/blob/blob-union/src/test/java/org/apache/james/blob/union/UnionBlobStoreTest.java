@@ -27,7 +27,6 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -46,8 +45,9 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testcontainers.shaded.com.google.common.base.MoreObjects;
-import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 import reactor.core.publisher.Mono;
 
@@ -57,6 +57,11 @@ class UnionBlobStoreTest implements BlobStoreContract {
 
         @Override
         public Mono<BlobId> save(byte[] data) {
+            return Mono.error(new RuntimeException("broken everywhere"));
+        }
+
+        @Override
+        public Mono<BlobId> save(String data) {
             return Mono.error(new RuntimeException("broken everywhere"));
         }
 
@@ -90,6 +95,11 @@ class UnionBlobStoreTest implements BlobStoreContract {
         }
 
         @Override
+        public Mono<BlobId> save(String data) {
+            throw new RuntimeException("broken everywhere");
+        }
+
+        @Override
         public Mono<BlobId> save(InputStream data) {
             throw new RuntimeException("broken everywhere");
         }
@@ -112,7 +122,8 @@ class UnionBlobStoreTest implements BlobStoreContract {
     }
 
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
-    private static final byte [] BLOB_CONTENT = "blob content".getBytes();
+    private static final String STRING_CONTENT = "blob content";
+    private static final byte [] BLOB_CONTENT = STRING_CONTENT.getBytes();
 
     private MemoryBlobStore currentBlobStore;
     private MemoryBlobStore legacyBlobStore;
@@ -285,6 +296,7 @@ class UnionBlobStoreTest implements BlobStoreContract {
         Stream<Function<UnionBlobStore, Mono<?>>> blobStoreOperationsReturnFutures() {
             return Stream.of(
                 blobStore -> blobStore.save(BLOB_CONTENT),
+                blobStore -> blobStore.save(STRING_CONTENT),
                 blobStore -> blobStore.save(new ByteArrayInputStream(BLOB_CONTENT)),
                 blobStore -> blobStore.readBytes(BLOB_ID_FACTORY.randomId()));
         }
@@ -331,8 +343,8 @@ class UnionBlobStoreTest implements BlobStoreContract {
         @ParameterizedTest
         @MethodSource("blobStoresCauseThrowExceptions")
         void operationShouldThrow(UnionBlobStore blobStoreThrowsException,
-                                  Function<UnionBlobStore, CompletableFuture<?>> blobStoreOperation) {
-            assertThatThrownBy(() -> blobStoreOperation.apply(blobStoreThrowsException))
+                                  Function<UnionBlobStore, Mono<?>> blobStoreOperation) {
+            assertThatThrownBy(() -> blobStoreOperation.apply(blobStoreThrowsException).block())
                 .isInstanceOf(RuntimeException.class);
         }
 
@@ -388,6 +400,22 @@ class UnionBlobStoreTest implements BlobStoreContract {
     @Test
     void saveShouldNotWriteToLegacy() {
         BlobId blobId = unionBlobStore.save(BLOB_CONTENT).block();
+
+        assertThatThrownBy(() -> legacyBlobStore.readBytes(blobId).block())
+            .isInstanceOf(ObjectStoreException.class);
+    }
+
+    @Test
+    void saveStringShouldWriteToCurrent() {
+        BlobId blobId = unionBlobStore.save(STRING_CONTENT).block();
+
+        assertThat(currentBlobStore.readBytes(blobId).block())
+            .isEqualTo(BLOB_CONTENT);
+    }
+
+    @Test
+    void saveStringShouldNotWriteToLegacy() {
+        BlobId blobId = unionBlobStore.save(STRING_CONTENT).block();
 
         assertThatThrownBy(() -> legacyBlobStore.readBytes(blobId).block())
             .isInstanceOf(ObjectStoreException.class);

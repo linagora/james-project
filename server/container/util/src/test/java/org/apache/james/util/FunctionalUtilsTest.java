@@ -20,25 +20,50 @@ package org.apache.james.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 class FunctionalUtilsTest {
 
     @Nested
     class ToFunction {
         @Test
-        void shouldCallConsumerAndReturnTheGivenParameter() {
+        void toFunctionShouldReturnTheGivenParameter() {
             Counter counter = new Counter(26);
             Consumer<Integer> consumer = counter::increment;
             Function<Integer, Integer> function = FunctionalUtils.toFunction(consumer);
 
             assertThat(function.apply(16)).isEqualTo(16);
+        }
+
+        @Test
+        void toFunctionShouldCallConsumer() {
+            Counter counter = new Counter(26);
+            Consumer<Integer> consumer = counter::increment;
+            FunctionalUtils.toFunction(consumer).apply(16);
+
             assertThat(counter.getCounter()).isEqualTo(42);
+        }
+
+        @Test
+        void identityWithSideEffectShouldReturnTheGivenParameterForRunnable() {
+            Counter counter = new Counter(26);
+            Runnable runnable = () -> counter.increment(1);
+            Function<Integer, Integer> function = FunctionalUtils.identityWithSideEffect(runnable);
+
+            assertThat(function.apply(16)).isEqualTo(16);
+        }
+
+        @Test
+        void identityWithSideEffectShouldCallRunnable() {
+            Counter counter = new Counter(26);
+            Runnable runnable = () -> counter.increment(1);
+            FunctionalUtils.identityWithSideEffect(runnable).apply(23);
+
+            assertThat(counter.getCounter()).isEqualTo(27);
         }
 
         private class Counter {
@@ -59,14 +84,15 @@ class FunctionalUtilsTest {
     }
 
     @Nested
-    class ToPredicate {
+    class IdentityPredicate {
         @Test
-        void shouldKeepProperty() {
-            Function<Integer, Boolean> function = value -> value % 42 == 0;
-            Predicate<Integer> predicate = FunctionalUtils.toPredicate(function);
+        void shouldKeepTrue() {
+            assertThat(FunctionalUtils.identityPredicate().test(true)).isTrue();
+        }
 
-            assertThat(predicate.test(5)).isFalse();
-            assertThat(predicate.test(42)).isTrue();
+        @Test
+        void shouldDiscardFalse() {
+            assertThat(FunctionalUtils.identityPredicate().test(false)).isFalse();
         }
     }
 }

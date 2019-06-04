@@ -22,24 +22,27 @@ package org.apache.james.blob.objectstorage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.blob.api.ObjectStoreException;
+import org.apache.james.blob.objectstorage.aws.AwsS3AuthConfiguration;
+import org.apache.james.blob.objectstorage.aws.AwsS3ObjectStorage;
 import org.apache.james.blob.objectstorage.swift.SwiftKeystone2ObjectStorage;
 import org.apache.james.blob.objectstorage.swift.SwiftKeystone3ObjectStorage;
 import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
 import org.jclouds.blobstore.domain.Blob;
 import org.jclouds.blobstore.options.CopyOptions;
 import org.jclouds.domain.Location;
-import org.jclouds.io.Payload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Hashing;
 import com.google.common.hash.HashingInputStream;
+
 import reactor.core.publisher.Mono;
 
 public class ObjectStorageBlobsDAO implements BlobStore {
@@ -51,13 +54,17 @@ public class ObjectStorageBlobsDAO implements BlobStore {
 
     private final ContainerName containerName;
     private final org.jclouds.blobstore.BlobStore blobStore;
+    private final PutBlobFunction putBlobFunction;
     private final PayloadCodec payloadCodec;
 
     ObjectStorageBlobsDAO(ContainerName containerName, BlobId.Factory blobIdFactory,
-                          org.jclouds.blobstore.BlobStore blobStore, PayloadCodec payloadCodec) {
+                          org.jclouds.blobstore.BlobStore blobStore,
+                          PutBlobFunction putBlobFunction,
+                          PayloadCodec payloadCodec) {
         this.blobIdFactory = blobIdFactory;
         this.containerName = containerName;
         this.blobStore = blobStore;
+        this.putBlobFunction = putBlobFunction;
         this.payloadCodec = payloadCodec;
     }
 
@@ -71,6 +78,10 @@ public class ObjectStorageBlobsDAO implements BlobStore {
 
     public static ObjectStorageBlobsDAOBuilder.RequireContainerName builder(SwiftKeystone3ObjectStorage.Configuration testConfig) {
         return SwiftKeystone3ObjectStorage.daoBuilder(testConfig);
+    }
+
+    public static ObjectStorageBlobsDAOBuilder.RequireContainerName builder(AwsS3AuthConfiguration testConfig) {
+        return AwsS3ObjectStorage.daoBuilder(testConfig);
     }
 
     public Mono<ContainerName> createContainer(ContainerName name) {
@@ -103,12 +114,13 @@ public class ObjectStorageBlobsDAO implements BlobStore {
     }
 
     private Mono<BlobId> save(InputStream data, BlobId id) {
-        String containerName = this.containerName.value();
         HashingInputStream hashingInputStream = new HashingInputStream(Hashing.sha256(), data);
         Payload payload = payloadCodec.write(hashingInputStream);
-        Blob blob = blobStore.blobBuilder(id.asString()).payload(payload).build();
+        Blob blob = blobStore.blobBuilder(id.asString())
+                            .payload(payload.getPayload())
+                            .build();
 
-        return Mono.fromCallable(() -> blobStore.putBlob(containerName, blob))
+        return Mono.fromRunnable(() -> putBlobFunction.putBlob(blob))
             .then(Mono.fromCallable(() -> blobIdFactory.from(hashingInputStream.hash().toString())));
     }
 
@@ -123,7 +135,7 @@ public class ObjectStorageBlobsDAO implements BlobStore {
 
         try {
             if (blob != null) {
-                return payloadCodec.read(blob.getPayload());
+                return payloadCodec.read(new Payload(blob.getPayload(), Optional.empty()));
             } else {
                 throw new ObjectStoreException("fail to load blob with id " + blobId);
             }

@@ -24,31 +24,26 @@ import org.apache.james.backends.cassandra.DockerCassandraRule;
 import org.apache.james.mailbox.MailboxManagerStressTest;
 import org.apache.james.mailbox.cassandra.mail.MailboxAggregateModule;
 import org.apache.james.mailbox.events.EventBus;
+import org.apache.james.mailbox.store.PreDeletionHooks;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
+import org.junit.Rule;
 
 public class CassandraMailboxManagerStressTest extends MailboxManagerStressTest<CassandraMailboxManager> {
     
-    @ClassRule public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
+    @Rule public DockerCassandraRule cassandraServer = new DockerCassandraRule().allowRestart();
 
-    private static CassandraCluster cassandra;
-
-    @BeforeClass
-    public static void setUpClass() {
-        cassandra = CassandraCluster.create(MailboxAggregateModule.MODULE_WITH_QUOTA, cassandraServer.getHost());
-    }
+    private CassandraCluster cassandra;
     
     @Before
     public void setup() throws Exception {
+        cassandra = CassandraCluster.create(MailboxAggregateModule.MODULE_WITH_QUOTA, cassandraServer.getHost());
         super.setUp();
     }
     
     @Override
     protected CassandraMailboxManager provideManager() {
-        return CassandraMailboxManagerProvider.provideMailboxManager(cassandra.getConf(), cassandra.getTypesProvider());
+        return CassandraMailboxManagerProvider.provideMailboxManager(cassandra.getConf(), cassandra.getTypesProvider(), PreDeletionHooks.NO_PRE_DELETION_HOOK);
     }
 
     @Override
@@ -59,10 +54,6 @@ public class CassandraMailboxManagerStressTest extends MailboxManagerStressTest<
     @After
     public void tearDown() {
         cassandra.clearTables();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
         cassandra.closeCluster();
     }
 }

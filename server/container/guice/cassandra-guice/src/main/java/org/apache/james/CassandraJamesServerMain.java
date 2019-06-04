@@ -19,6 +19,7 @@
 
 package org.apache.james;
 
+import org.apache.james.modules.BlobExportMechanismModule;
 import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.activemq.ActiveMQQueueModule;
 import org.apache.james.modules.data.CassandraDLPConfigurationStoreModule;
@@ -34,6 +35,7 @@ import org.apache.james.modules.mailbox.CassandraMailboxModule;
 import org.apache.james.modules.mailbox.CassandraObjectStoreModule;
 import org.apache.james.modules.mailbox.CassandraQuotaMailingModule;
 import org.apache.james.modules.mailbox.CassandraSessionModule;
+import org.apache.james.modules.mailbox.ElasticSearchClientModule;
 import org.apache.james.modules.mailbox.ElasticSearchMailboxModule;
 import org.apache.james.modules.mailbox.TikaMailboxModule;
 import org.apache.james.modules.metrics.CassandraMetricsModule;
@@ -59,6 +61,8 @@ import org.apache.james.modules.server.SieveRoutesModule;
 import org.apache.james.modules.server.SwaggerRoutesModule;
 import org.apache.james.modules.server.WebAdminServerModule;
 import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
+import org.apache.james.modules.vault.DeletedMessageVaultModule;
+import org.apache.james.modules.vault.DeletedMessageVaultRoutesModule;
 import org.apache.james.server.core.configuration.Configuration;
 
 import com.google.inject.Module;
@@ -70,6 +74,7 @@ public class CassandraJamesServerMain {
         new CassandraRoutesModule(),
         new CassandraDataRoutesModules(),
         new DataRoutesModules(),
+        new DeletedMessageVaultRoutesModule(),
         new MailboxRoutesModule(),
         new MailQueueRoutesModule(),
         new MailRepositoriesRoutesModule(),
@@ -94,6 +99,10 @@ public class CassandraJamesServerMain {
     public static final Module PLUGINS = Modules.combine(
         new CassandraQuotaMailingModule());
 
+    private static final Module BLOB_MODULE = Modules.combine(
+        new BlobStoreAPIModule(),
+        new BlobExportMechanismModule());
+
     public static final Module CASSANDRA_SERVER_CORE_MODULE = Modules.combine(
         new ActiveMQQueueModule(),
         new CassandraDomainListModule(),
@@ -101,15 +110,17 @@ public class CassandraJamesServerMain {
         new CassandraEventStoreModule(),
         new CassandraMailRepositoryModule(),
         new CassandraMetricsModule(),
-        new BlobStoreAPIModule(),
         new CassandraObjectStoreModule(),
         new CassandraRecipientRewriteTableModule(),
         new CassandraSessionModule(),
         new CassandraSieveRepositoryModule(),
-        new CassandraUsersRepositoryModule());
+        new CassandraUsersRepositoryModule(),
+        BLOB_MODULE);
 
     public static final Module CASSANDRA_MAILBOX_MODULE = Modules.combine(
         new CassandraMailboxModule(),
+        new DeletedMessageVaultModule(),
+        new ElasticSearchClientModule(),
         new ElasticSearchMailboxModule(),
         new ElasticSearchMetricReporterModule(),
         new MailboxModule(),

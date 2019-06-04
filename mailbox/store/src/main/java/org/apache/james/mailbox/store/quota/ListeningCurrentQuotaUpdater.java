@@ -36,7 +36,7 @@ import org.apache.james.mailbox.store.event.EventFactory;
 import com.google.common.collect.ImmutableSet;
 
 public class ListeningCurrentQuotaUpdater implements MailboxListener.GroupMailboxListener, QuotaUpdater {
-    private static class ListeningCurrentQuotaUpdaterGroup extends Group {}
+    public static class ListeningCurrentQuotaUpdaterGroup extends Group {}
 
     public static final Group GROUP = new ListeningCurrentQuotaUpdaterGroup();
     private static final ImmutableSet<RegistrationKey> NO_REGISTRATION_KEYS = ImmutableSet.of();
@@ -60,19 +60,24 @@ public class ListeningCurrentQuotaUpdater implements MailboxListener.GroupMailbo
     }
 
     @Override
+    public boolean isHandling(Event event) {
+        return event instanceof Added || event instanceof Expunged || event instanceof MailboxDeletion;
+    }
+
+    @Override
     public void event(Event event) throws MailboxException {
-        if (event instanceof Added) {
-            Added addedEvent = (Added) event;
-            QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(addedEvent.getMailboxId());
-            handleAddedEvent(addedEvent, quotaRoot);
-        } else if (event instanceof Expunged) {
-            Expunged expungedEvent = (Expunged) event;
-            QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(expungedEvent.getMailboxId());
-            handleExpungedEvent(expungedEvent, quotaRoot);
-        } else if (event instanceof MailboxDeletion) {
-            MailboxDeletion mailboxDeletionEvent = (MailboxDeletion) event;
-            handleMailboxDeletionEvent(mailboxDeletionEvent);
-        }
+            if (event instanceof Added) {
+                Added addedEvent = (Added) event;
+                QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(addedEvent.getMailboxId());
+                handleAddedEvent(addedEvent, quotaRoot);
+            } else if (event instanceof Expunged) {
+                Expunged expungedEvent = (Expunged) event;
+                QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(expungedEvent.getMailboxId());
+                handleExpungedEvent(expungedEvent, quotaRoot);
+            } else if (event instanceof MailboxDeletion) {
+                MailboxDeletion mailboxDeletionEvent = (MailboxDeletion) event;
+                handleMailboxDeletionEvent(mailboxDeletionEvent);
+            }
     }
 
     private void handleExpungedEvent(Expunged expunged, QuotaRoot quotaRoot) throws MailboxException {

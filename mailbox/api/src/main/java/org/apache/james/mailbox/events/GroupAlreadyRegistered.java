@@ -23,7 +23,7 @@ public class GroupAlreadyRegistered extends RuntimeException {
     private final Group group;
 
     public GroupAlreadyRegistered(Group group) {
-        super(group.getClass().getCanonicalName() + " is already Registered and thus can not be used.");
+        super(group.asString() + " is already Registered and thus can not be used.");
         this.group = group;
     }
 

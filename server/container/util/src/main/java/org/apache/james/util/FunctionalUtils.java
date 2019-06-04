@@ -19,7 +19,6 @@
 package org.apache.james.util;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
@@ -31,7 +30,14 @@ public class FunctionalUtils {
         };
     }
 
-    public static <T> Predicate<T> toPredicate(Function<T, Boolean> function) {
-        return value -> function.apply(value);
+    public static <T> UnaryOperator<T> identityWithSideEffect(Runnable runnable) {
+        return argument -> {
+            runnable.run();
+            return argument;
+        };
+    }
+
+    public static Predicate<Boolean> identityPredicate() {
+        return b -> b;
     }
 }

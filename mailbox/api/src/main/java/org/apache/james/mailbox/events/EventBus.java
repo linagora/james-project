@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableSet;
 import reactor.core.publisher.Mono;
 
 public interface EventBus {
+    int EXECUTION_RATE = 10;
+
     interface StructuredLoggingFields {
         String EVENT_ID = "eventId";
         String EVENT_CLASS = "eventClass";
@@ -47,6 +49,8 @@ public interface EventBus {
     Registration register(MailboxListener listener, Group group) throws GroupAlreadyRegistered;
 
     Mono<Void> dispatch(Event event, Set<RegistrationKey> key);
+
+    Mono<Void> reDeliver(Group group, Event event);
 
     default Mono<Void> dispatch(Event event, RegistrationKey key) {
         return dispatch(event, ImmutableSet.of(key));

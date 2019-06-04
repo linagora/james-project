@@ -23,12 +23,11 @@ import org.apache.james.backend.rabbitmq.DockerRabbitMQTestRule;
 import org.apache.james.mpt.api.ImapHostSystem;
 import org.apache.james.mpt.imapmailbox.rabbitmq.host.RabbitMQEventBusHostSystemRule;
 import org.apache.james.mpt.imapmailbox.suite.MailboxWithLongNameError;
-import org.junit.ClassRule;
 import org.junit.Rule;
 
 public class RabbitMQMailboxWithLongNameErrorTest extends MailboxWithLongNameError {
-    @ClassRule
-    public static DockerRabbitMQTestRule rabbitMQRule = new DockerRabbitMQTestRule();
+    @Rule
+    public DockerRabbitMQTestRule rabbitMQRule = new DockerRabbitMQTestRule();
 
     @Rule
     public RabbitMQEventBusHostSystemRule hostSystemRule = new RabbitMQEventBusHostSystemRule(rabbitMQRule);

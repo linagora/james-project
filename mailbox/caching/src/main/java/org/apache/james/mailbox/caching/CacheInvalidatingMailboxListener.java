@@ -11,9 +11,13 @@ import org.slf4j.LoggerFactory;
 /**
  * A MailboxListener that invalidates the configured caches in response to Events
  *
+ * @deprecated JAMES-2703 This class is deprecated and will be removed straight after upcoming James 3.4.0 release, unless it finds a maintainer
+ *
+ * This module lacks tests and is not used in James products hence the choice to deprecate it.
  */
+@Deprecated
 public class CacheInvalidatingMailboxListener implements MailboxListener.GroupMailboxListener {
-    private static class CacheInvalidatingMailboxListenerGroup extends Group {}
+    public static class CacheInvalidatingMailboxListenerGroup extends Group {}
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheInvalidatingMailboxListener.class);
     private static final Group GROUP = new CacheInvalidatingMailboxListenerGroup();
@@ -41,12 +45,14 @@ public class CacheInvalidatingMailboxListener implements MailboxListener.GroupMa
         eventBus.register(this);
     }
 
+    @Override
+    public boolean isHandling(Event event) {
+        return event instanceof MailboxEvent;
+    }
 
     @Override
     public void event(Event event) {
-        if (event instanceof MailboxEvent) {
             mailboxEvent((MailboxEvent) event);
-        }
     }
 
     private void mailboxEvent(MailboxEvent event) {

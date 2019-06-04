@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
+### Added
+- Add in-memory docker image
 
+### Changed
+- Migration to ElasticSearch 6.7
+- Blob export to LinShare
+
+## [3.3.0] - 2019-03-26
 ### Added
 - Metrics for BlobStore
 - New Guice product using Cassandra RabbitMQ ElasticSearch, OpenStack Swift and optional LDAP dependency (experimental)
@@ -15,6 +22,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Implementation of the RabbitMQ EventBus
 - DeadLetter APIs and memory implementation for storing events that failed delivery
 - RecipientRewriteTable Aliases and associated WebAdmin routes
+- EventBus DeadLetter reDeliver routes on top of WebAdmin
+- EventBus DeadLetter Cassandra implementation
+- WebAdmin routes for restoring and exporting deleted messages from the Deleted Messages Vault
+- PreDeletionHook extension mechanism
 
 ### Fixed
 - MAILBOX-350 Potential invalid UID <-> MSN mapping upon IMAP COPY
@@ -27,6 +38,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - MailboxListener and mailbox event system were reworked. Custom listeners will need to be adapted. Please see Upgrade instuctions.
 - Docker images are now using a JRE instead of a JDK
 - Replacement of the old mailbox event system with the EventBus
+- Progressive use of [reactor](https://github.com/reactor/reactor) for concurrency management (in progress)
 
 ### Removed
 - Drop HBase and JCR components (mailbox and server/data).

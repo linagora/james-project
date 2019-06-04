@@ -21,6 +21,7 @@ package org.apache.james.mailbox.events;
 
 import static org.apache.james.mailbox.events.EventBusTestFixture.EVENT;
 import static org.apache.james.mailbox.events.EventBusTestFixture.EVENT_2;
+import static org.apache.james.mailbox.events.EventBusTestFixture.EVENT_UNSUPPORTED_BY_LISTENER;
 import static org.apache.james.mailbox.events.EventBusTestFixture.FIVE_HUNDRED_MS;
 import static org.apache.james.mailbox.events.EventBusTestFixture.KEY_1;
 import static org.apache.james.mailbox.events.EventBusTestFixture.KEY_2;
@@ -43,6 +44,9 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import org.apache.james.core.User;
 import org.apache.james.mailbox.MailboxSession;
@@ -57,6 +61,30 @@ public interface KeyContract extends EventBusContract {
 
     interface SingleEventBusKeyContract extends EventBusContract {
         @Test
+        default void notificationShouldNotExceedRate() {
+            int eventCount = 50;
+            AtomicInteger nbCalls = new AtomicInteger(0);
+            AtomicInteger finishedExecutions = new AtomicInteger(0);
+            AtomicBoolean rateExceeded = new AtomicBoolean(false);
+
+            eventBus().register(event -> {
+                if (nbCalls.get() - finishedExecutions.get() > EventBus.EXECUTION_RATE) {
+                    rateExceeded.set(true);
+                }
+                nbCalls.incrementAndGet();
+                Thread.sleep(Duration.ofMillis(200).toMillis());
+                finishedExecutions.incrementAndGet();
+
+            }, KEY_1);
+
+            IntStream.range(0, eventCount)
+                .forEach(i -> eventBus().dispatch(EVENT, KEY_1).block());
+
+            WAIT_CONDITION.atMost(com.jayway.awaitility.Duration.TEN_MINUTES).until(() -> finishedExecutions.get() == eventCount);
+            assertThat(rateExceeded).isFalse();
+        }
+
+        @Test
         default void registeredListenersShouldNotReceiveNoopEvents() throws Exception {
             MailboxListener listener = newListener();
 
@@ -64,6 +92,18 @@ public interface KeyContract extends EventBusContract {
 
             MailboxListener.Added noopEvent = new MailboxListener.Added(MailboxSession.SessionId.of(18), User.fromUsername("bob"), MailboxPath.forUser("bob", "mailbox"), TestId.of(58), ImmutableSortedMap.of(), Event.EventId.random());
             eventBus().dispatch(noopEvent, KEY_1).block();
+
+            verify(listener, after(FIVE_HUNDRED_MS.toMillis()).never())
+                .event(any());
+        }
+
+       @Test
+        default void registeredListenersShouldReceiveOnlyHandledEvents() throws Exception {
+            MailboxListener listener = newListener();
+
+            eventBus().register(listener, KEY_1);
+
+            eventBus().dispatch(EVENT_UNSUPPORTED_BY_LISTENER, KEY_1).block();
 
             verify(listener, after(FIVE_HUNDRED_MS.toMillis()).never())
                 .event(any());

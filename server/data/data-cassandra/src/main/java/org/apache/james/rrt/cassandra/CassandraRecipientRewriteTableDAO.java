@@ -91,21 +91,21 @@ public class CassandraRecipientRewriteTableDAO {
     }
 
     public Mono<Void> addMapping(MappingSource source, Mapping mapping) {
-        return executor.executeVoidReactor(insertStatement.bind()
+        return executor.executeVoid(insertStatement.bind()
             .setString(USER, source.getFixedUser())
             .setString(DOMAIN, source.getFixedDomain())
             .setString(MAPPING, mapping.asString()));
     }
 
     Mono<Void> removeMapping(MappingSource source, Mapping mapping) {
-        return executor.executeVoidReactor(deleteStatement.bind()
+        return executor.executeVoid(deleteStatement.bind()
             .setString(USER, source.getFixedUser())
             .setString(DOMAIN, source.getFixedDomain())
             .setString(MAPPING, mapping.asString()));
     }
 
     Mono<MappingsImpl> retrieveMappings(MappingSource source) {
-        return executor.executeReactor(retrieveMappingStatement.bind()
+        return executor.execute(retrieveMappingStatement.bind()
             .setString(USER, source.getFixedUser())
             .setString(DOMAIN, source.getFixedDomain()))
             .map(resultSet -> cassandraUtils.convertToStream(resultSet)
@@ -116,8 +116,7 @@ public class CassandraRecipientRewriteTableDAO {
     }
 
     public Flux<Pair<MappingSource, Mapping>> getAllMappings() {
-        return executor.executeReactor(retrieveAllMappingsStatement.bind())
-            .flatMapMany(Flux::fromIterable)
+        return executor.executeRows(retrieveAllMappingsStatement.bind())
             .map(row -> Pair.of(
                 MappingSource.fromUser(row.getString(USER), row.getString(DOMAIN)),
                 Mapping.of(row.getString(MAPPING))));

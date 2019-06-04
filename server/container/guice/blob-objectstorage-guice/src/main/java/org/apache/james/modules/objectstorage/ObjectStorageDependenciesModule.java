@@ -21,9 +21,11 @@ package org.apache.james.modules.objectstorage;
 
 import java.io.FileNotFoundException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.configuration.Configuration;
@@ -32,10 +34,11 @@ import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.HashBlobId;
 import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAO;
 import org.apache.james.blob.objectstorage.ObjectStorageBlobsDAOBuilder;
-import org.apache.james.blob.objectstorage.swift.SwiftKeystone2ObjectStorage;
-import org.apache.james.blob.objectstorage.swift.SwiftKeystone3ObjectStorage;
-import org.apache.james.blob.objectstorage.swift.SwiftTempAuthObjectStorage;
+import org.apache.james.blob.objectstorage.PutBlobFunction;
+import org.apache.james.blob.objectstorage.aws.AwsS3AuthConfiguration;
+import org.apache.james.blob.objectstorage.aws.AwsS3ObjectStorage;
 import org.apache.james.modules.mailbox.ConfigurationComponent;
+import org.apache.james.modules.objectstorage.swift.SwiftObjectStorage;
 import org.apache.james.utils.PropertiesProvider;
 
 import com.google.inject.AbstractModule;
@@ -43,8 +46,6 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 
 public class ObjectStorageDependenciesModule extends AbstractModule {
-
-    private static final String OBJECTSTORAGE_PROVIDER_SWIFT = "swift";
 
     @Override
     protected void configure() {
@@ -55,7 +56,7 @@ public class ObjectStorageDependenciesModule extends AbstractModule {
     @Singleton
     private ObjectStorageBlobConfiguration getObjectStorageConfiguration(PropertiesProvider propertiesProvider) throws ConfigurationException {
         try {
-            Configuration configuration = propertiesProvider.getConfiguration(ConfigurationComponent.NAME);
+            Configuration configuration = propertiesProvider.getConfigurations(ConfigurationComponent.NAMES);
             return ObjectStorageBlobConfiguration.from(configuration);
         } catch (FileNotFoundException e) {
             throw new ConfigurationException(ConfigurationComponent.NAME + " configuration was not found");
@@ -64,30 +65,38 @@ public class ObjectStorageDependenciesModule extends AbstractModule {
 
     @Provides
     @Singleton
-    private ObjectStorageBlobsDAO buildObjectStore(ObjectStorageBlobConfiguration configuration, BlobId.Factory blobIdFactory) throws InterruptedException, ExecutionException, TimeoutException {
+    private ObjectStorageBlobsDAO buildObjectStore(ObjectStorageBlobConfiguration configuration, BlobId.Factory blobIdFactory, Provider<AwsS3ObjectStorage> awsS3ObjectStorageProvider) throws InterruptedException, ExecutionException, TimeoutException {
         ObjectStorageBlobsDAO dao = selectDaoBuilder(configuration)
             .container(configuration.getNamespace())
             .blobIdFactory(blobIdFactory)
             .payloadCodec(configuration.getPayloadCodec())
+            .putBlob(putBlob(blobIdFactory, configuration, awsS3ObjectStorageProvider))
             .build();
         dao.createContainer(configuration.getNamespace()).block(Duration.ofMinutes(1));
         return dao;
     }
 
     private ObjectStorageBlobsDAOBuilder.RequireContainerName selectDaoBuilder(ObjectStorageBlobConfiguration configuration) {
-        if (!configuration.getProvider().equals(OBJECTSTORAGE_PROVIDER_SWIFT)) {
-            throw new IllegalArgumentException("unknown provider " + configuration.getProvider());
+        switch (configuration.getProvider()) {
+            case SWIFT:
+                return SwiftObjectStorage.builder(configuration);
+            case AWSS3:
+                return AwsS3ObjectStorage.daoBuilder((AwsS3AuthConfiguration) configuration.getSpecificAuthConfiguration());
         }
-        switch (configuration.getAuthApi()) {
-            case SwiftTempAuthObjectStorage.AUTH_API_NAME:
-                return ObjectStorageBlobsDAO.builder(configuration.getTempAuthConfiguration().get());
-            case SwiftKeystone2ObjectStorage.AUTH_API_NAME:
-                return ObjectStorageBlobsDAO.builder(configuration.getKeystone2Configuration().get());
-            case SwiftKeystone3ObjectStorage.AUTH_API_NAME:
-                return ObjectStorageBlobsDAO.builder(configuration.getKeystone3Configuration().get());
-            default:
-                throw new IllegalArgumentException("unknown auth api " + configuration.getAuthApi());
+        throw new IllegalArgumentException("unknown provider " + configuration.getProvider());
+    }
+
+    private Optional<PutBlobFunction> putBlob(BlobId.Factory blobIdFactory, ObjectStorageBlobConfiguration configuration, Provider<AwsS3ObjectStorage> awsS3ObjectStorageProvider) {
+        switch (configuration.getProvider()) {
+            case SWIFT:
+                return Optional.empty();
+            case AWSS3:
+                return awsS3ObjectStorageProvider
+                    .get()
+                    .putBlob(configuration.getNamespace(), (AwsS3AuthConfiguration) configuration.getSpecificAuthConfiguration());
         }
+        throw new IllegalArgumentException("unknown provider " + configuration.getProvider());
+
     }
 
 }

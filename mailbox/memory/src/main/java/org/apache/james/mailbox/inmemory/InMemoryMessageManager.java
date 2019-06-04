@@ -8,15 +8,16 @@ import org.apache.james.mailbox.MailboxPathLocker;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.events.EventBus;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MessageAttachment;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.PreDeletionHooks;
 import org.apache.james.mailbox.store.StoreMessageManager;
 import org.apache.james.mailbox.store.StoreRightManager;
-import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.MessageParser;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
@@ -37,10 +38,11 @@ public class InMemoryMessageManager extends StoreMessageManager {
                                   MessageParser messageParser,
                                   MessageId.Factory messageIdFactory,
                                   BatchSizes batchSizes,
-                                  StoreRightManager storeRightManager) {
+                                  StoreRightManager storeRightManager,
+                                  PreDeletionHooks preDeletionHooks) {
 
         super(InMemoryMailboxManager.MESSAGE_CAPABILITIES, mapperFactory, index, eventBus, locker, mailbox, quotaManager, quotaRootResolver,
-            messageParser, messageIdFactory, batchSizes, storeRightManager);
+            messageParser, messageIdFactory, batchSizes, storeRightManager, preDeletionHooks);
         this.mapperFactory = (InMemoryMailboxSessionMapperFactory) mapperFactory;
     }
 

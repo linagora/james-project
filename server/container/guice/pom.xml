@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-server</artifactId>
-        <version>3.3.0-SNAPSHOT</version>
+        <version>3.4.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -34,6 +34,8 @@
 
     <modules>
         <module>blob-api-guice</module>
+        <module>blob-export-guice</module>
+        <module>blob-memory-guice</module>
         <module>blob-objectstorage-guice</module>
         <module>cassandra-guice</module>
         <module>cassandra-ldap-guice</module>
@@ -51,6 +53,7 @@
         <module>jpa-smtp-common</module>
         <module>jpa-smtp-mariadb</module>
         <module>mailbox</module>
+        <module>mailbox-plugin-deleted-messages-vault-guice</module>
         <module>mailbox-plugin-spamassassin</module>
         <module>mailet</module>
         <module>memory-guice</module>

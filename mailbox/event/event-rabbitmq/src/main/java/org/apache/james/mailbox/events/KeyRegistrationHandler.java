@@ -43,6 +43,7 @@ import com.rabbitmq.client.Delivery;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.rabbitmq.ConsumeOptions;
 import reactor.rabbitmq.QueueSpecification;
 import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.Receiver;
@@ -53,7 +54,7 @@ class KeyRegistrationHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(KeyRegistrationHandler.class);
 
     private final EventBusId eventBusId;
-    private final MailboxListenerRegistry mailboxListenerRegistry;
+    private final LocalListenerRegistry localListenerRegistry;
     private final EventSerializer eventSerializer;
     private final Sender sender;
     private final RoutingKeyConverter routingKeyConverter;
@@ -63,12 +64,12 @@ class KeyRegistrationHandler {
     private final MailboxListenerExecutor mailboxListenerExecutor;
     private Optional<Disposable> receiverSubscriber;
 
-    KeyRegistrationHandler(EventBusId eventBusId, EventSerializer eventSerializer, Sender sender, Mono<Connection> connectionMono, RoutingKeyConverter routingKeyConverter, MailboxListenerRegistry mailboxListenerRegistry, MailboxListenerExecutor mailboxListenerExecutor) {
+    KeyRegistrationHandler(EventBusId eventBusId, EventSerializer eventSerializer, Sender sender, Mono<Connection> connectionMono, RoutingKeyConverter routingKeyConverter, LocalListenerRegistry localListenerRegistry, MailboxListenerExecutor mailboxListenerExecutor) {
         this.eventBusId = eventBusId;
         this.eventSerializer = eventSerializer;
         this.sender = sender;
         this.routingKeyConverter = routingKeyConverter;
-        this.mailboxListenerRegistry = mailboxListenerRegistry;
+        this.localListenerRegistry = localListenerRegistry;
         this.receiver = RabbitFlux.createReceiver(new ReceiverOptions().connectionMono(connectionMono));
         this.mailboxListenerExecutor = mailboxListenerExecutor;
         this.registrationQueue = new RegistrationQueueName();
@@ -85,7 +86,7 @@ class KeyRegistrationHandler {
             .doOnSuccess(registrationQueue::initialize)
             .block();
 
-        receiverSubscriber = Optional.of(receiver.consumeAutoAck(registrationQueue.asString())
+        receiverSubscriber = Optional.of(receiver.consumeAutoAck(registrationQueue.asString(), new ConsumeOptions().qos(EventBus.EXECUTION_RATE))
             .subscribeOn(Schedulers.parallel())
             .flatMap(this::handleDelivery)
             .subscribe());
@@ -99,13 +100,15 @@ class KeyRegistrationHandler {
     }
 
     Registration register(MailboxListener listener, RegistrationKey key) {
-        Runnable bindIfEmpty = () -> registrationBinder.bind(key).block();
-        Runnable unbindIfEmpty = () -> registrationBinder.unbind(key).block();
-        Runnable unregister = () -> mailboxListenerRegistry.removeListener(key, listener, unbindIfEmpty);
-
-        KeyRegistration keyRegistration = new KeyRegistration(unregister);
-        mailboxListenerRegistry.addListener(key, listener, bindIfEmpty);
-        return keyRegistration;
+        LocalListenerRegistry.LocalRegistration registration = localListenerRegistry.addListener(key, listener);
+        if (registration.isFirstListener()) {
+            registrationBinder.bind(key).block();
+        }
+        return new KeyRegistration(() -> {
+            if (registration.unregister().lastListenerRemoved()) {
+                registrationBinder.unbind(key).block();
+            }
+        });
     }
 
     private Mono<Void> handleDelivery(Delivery delivery) {
@@ -120,7 +123,7 @@ class KeyRegistrationHandler {
         RegistrationKey registrationKey = routingKeyConverter.toRegistrationKey(routingKey);
         Event event = toEvent(delivery);
 
-        return mailboxListenerRegistry.getLocalMailboxListeners(registrationKey)
+        return localListenerRegistry.getLocalMailboxListeners(registrationKey)
             .filter(listener -> !isLocalSynchronousListeners(eventBusId, listener))
             .flatMap(listener -> Mono.fromRunnable(Throwing.runnable(() -> executeListener(listener, event, registrationKey)))
                 .doOnError(e -> structuredLogger(event, registrationKey)

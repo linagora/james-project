@@ -31,26 +31,16 @@ public class SingleMailboxReindexingTask implements Task {
 
     public static final String MAILBOX_RE_INDEXING = "mailboxReIndexing";
 
-    public static class AdditionalInformation implements TaskExecutionDetails.AdditionalInformation {
+    public static class AdditionalInformation extends ReprocessingContextInformation {
         private final MailboxId mailboxId;
-        private final ReprocessingContext reprocessingContext;
 
         AdditionalInformation(MailboxId mailboxId, ReprocessingContext reprocessingContext) {
+            super(reprocessingContext);
             this.mailboxId = mailboxId;
-            this.reprocessingContext = reprocessingContext;
         }
-
 
         public String getMailboxId() {
             return mailboxId.serialize();
-        }
-
-        public int getSuccessfullyReprocessMailCount() {
-            return reprocessingContext.successfullyReprocessedMailCount();
-        }
-
-        public int getFailedReprocessedMailCount() {
-            return reprocessingContext.failedReprocessingMailCount();
         }
     }
 
