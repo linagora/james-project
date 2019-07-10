@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 
 import javax.mail.internet.AddressException;
 
+import net.javacrumbs.jsonunit.core.Option;
 import org.apache.james.core.Domain;
 import org.apache.james.core.MailAddress;
 import org.apache.james.core.User;
@@ -95,6 +96,10 @@ class MappingRoutesTest {
             MappingSource.fromUser(User.fromUsername("alias@domain.tld")),
             "user@domain.tld");
 
+        recipientRewriteTable.addAliasMapping(
+            MappingSource.fromUser(User.fromUsername("alias@domain.tld")),
+            "user1@domain.tld");
+
         String jsonBody = when()
             .get()
         .then()
@@ -105,15 +110,19 @@ class MappingRoutesTest {
             .asString();
 
         assertThatJson(jsonBody)
-            .isEqualTo(
-                "{" +
-                "  \"alias@domain.tld\" : [" +
-                "    {" +
-                "      \"type\": \"Alias\"," +
-                "      \"mapping\": \"user@domain.tld\"" +
-                "    }" +
-                "  ]" +
-                "}");
+            .when(Option.IGNORING_ARRAY_ORDER)
+            .isEqualTo("{" +
+                    "  \"alias@domain.tld\": [" +
+                    "    {" +
+                    "      \"type\": \"Alias\"," +
+                    "      \"mapping\": \"user@domain.tld\"" +
+                    "    }," +
+                    "    {" +
+                    "      \"type\": \"Alias\"," +
+                    "      \"mapping\": \"user1@domain.tld\"" +
+                    "    }" +
+                    "  ]" +
+                    "}");
     }
 
     @Test
@@ -122,6 +131,10 @@ class MappingRoutesTest {
             MappingSource.fromDomain(Domain.of("aliasdomain.tld")),
             Domain.of("realdomain.tld"));
 
+        recipientRewriteTable.addAliasDomainMapping(
+            MappingSource.fromDomain(Domain.of("aliasdomain.tld")),
+            Domain.of("realdomain1.tld"));
+
         String jsonBody = when()
             .get()
         .then()
@@ -132,15 +145,19 @@ class MappingRoutesTest {
             .asString();
 
         assertThatJson(jsonBody)
+            .when(Option.IGNORING_ARRAY_ORDER)
             .isEqualTo("{" +
-                "  \"aliasdomain.tld\" : [" +
-                "    {" +
-                "      \"type\": \"Domain\"," +
-                "      \"mapping\": \"realdomain.tld\"" +
-                "    }" +
-                "  ]" +
-                "}");
-
+                    "  \"aliasdomain.tld\": [" +
+                    "    {" +
+                    "      \"type\": \"Domain\"," +
+                    "      \"mapping\": \"realdomain.tld\"" +
+                    "    }," +
+                    "    {" +
+                    "      \"type\": \"Domain\"," +
+                    "      \"mapping\": \"realdomain1.tld\"" +
+                    "    }" +
+                    "  ]" +
+                    "}");
     }
 
     @Test
@@ -149,6 +166,9 @@ class MappingRoutesTest {
         recipientRewriteTable.addAddressMapping(
             MappingSource.fromMailAddress(mailAddress), "user@domain.tld" );
 
+        recipientRewriteTable.addAddressMapping(
+                MappingSource.fromMailAddress(mailAddress), "user1@domain.tld" );
+
         String jsonBody = when()
             .get()
         .then()
@@ -159,14 +179,19 @@ class MappingRoutesTest {
             .asString();
 
         assertThatJson(jsonBody)
+            .when(Option.IGNORING_ARRAY_ORDER)
             .isEqualTo("{" +
-                "  \"group@domain.tld\" : [" +
-                "    {" +
-                "      \"type\": \"Address\"," +
-                "      \"mapping\": \"user@domain.tld\"" +
-                "    }" +
-                "  ]" +
-                "}");
+                    "  \"group@domain.tld\": [" +
+                    "    {" +
+                    "      \"type\": \"Address\"," +
+                    "      \"mapping\": \"user@domain.tld\"" +
+                    "    }," +
+                    "    {" +
+                    "      \"type\": \"Address\"," +
+                    "      \"mapping\": \"user1@domain.tld\"" +
+                    "    }" +
+                    "  ]" +
+                    "}");
     }
 
     @Test
@@ -220,5 +245,4 @@ class MappingRoutesTest {
                 "}"
                 );
     }
-
 }

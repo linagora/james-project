@@ -20,8 +20,8 @@
 package org.apache.james.webadmin.routes;
 
 import java.util.List;
-import java.util.Map;
 
+import com.google.common.collect.ImmutableListMultimap;
 import org.apache.james.rrt.api.RecipientRewriteTable;
 import org.apache.james.rrt.api.RecipientRewriteTableException;
 import org.apache.james.rrt.lib.MappingSource;
@@ -34,6 +34,7 @@ import org.eclipse.jetty.http.HttpStatus;
 
 import com.github.steveash.guavate.Guavate;
 
+import org.eclipse.jetty.util.MultiMap;
 import spark.Request;
 import spark.Response;
 import spark.Service;
@@ -60,13 +61,13 @@ public class MappingRoutes implements Routes {
         service.get(BASE_PATH, this::getMappings, jsonTransformer);
     }
 
-    private Map<String, List<MappingValue>> getMappings(Request request, Response response) {
+    private ImmutableListMultimap<String, List<MappingValue>> getMappings(Request request, Response response) {
         try {
             return recipientRewriteTable.getAllMappings()
                 .entrySet()
                 .stream()
-                .collect(Guavate.toImmutableMap(
-                    this::toMappingKey,
+                .collect(Guavate.toImmutableListMultimap(
+                    entry -> entry.getKey().asString(),
                     this::toMappingValues));
         } catch (RecipientRewriteTableException e) {
             throw ErrorResponder.builder()
@@ -77,15 +78,10 @@ public class MappingRoutes implements Routes {
         }
     }
 
-    private List<MappingValue> toMappingValues(Map.Entry<MappingSource, Mappings> entry) {
+    private List<MappingValue> toMappingValues(MultiMap.Entry<MappingSource, Mappings> entry) {
         return entry.getValue()
             .asStream()
             .map(mapping -> new MappingValue(mapping.getType().name(), mapping.getMappingValue()))
             .collect(Guavate.toImmutableList());
     }
-
-    private String toMappingKey(Map.Entry<MappingSource, Mappings> entry) {
-        return entry.getKey().asString();
-    }
 }
-
