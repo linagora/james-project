@@ -39,11 +39,13 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.webadmin.WebAdminServer;
 import org.apache.james.webadmin.WebAdminUtils;
@@ -68,12 +70,13 @@ class UserMailboxesRoutesTest {
     private WebAdminServer webAdminServer;
     private UsersRepository usersRepository;
 
-    private void createServer(MailboxManager mailboxManager) throws Exception {
+    private void createServer(MailboxManager mailboxManager, QuotaRootResolver quotaRootResolver) throws Exception {
         usersRepository = mock(UsersRepository.class);
         when(usersRepository.contains(USERNAME)).thenReturn(true);
 
         webAdminServer = WebAdminUtils.createWebAdminServer(
-                new UserMailboxesRoutes(new UserMailboxesService(mailboxManager, usersRepository), new JsonTransformer()))
+                new UserMailboxesRoutes(new UserMailboxesService(mailboxManager, usersRepository, quotaRootResolver),
+                    new JsonTransformer()))
             .start();
 
         RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminServer)
@@ -91,7 +94,8 @@ class UserMailboxesRoutesTest {
 
         @BeforeEach
         void setUp() throws Exception {
-            createServer(InMemoryIntegrationResources.defaultResources().getMailboxManager());
+            InMemoryMailboxManager mailboxManager = InMemoryIntegrationResources.defaultResources().getMailboxManager();
+            createServer(mailboxManager, mailboxManager.getQuotaComponents().getQuotaRootResolver());
         }
 
         @Test
@@ -516,14 +520,15 @@ class UserMailboxesRoutesTest {
         }
 
         @Test
-        void getShouldReturnOkWhenMailboxExists() {
+        void getShouldReturnMailboxDetailsWhenMailboxExists() {
             with()
                 .put(MAILBOX_NAME);
 
             when()
                 .get(MAILBOX_NAME)
             .then()
-                .statusCode(HttpStatus.NO_CONTENT_204);
+                .statusCode(HttpStatus.OK_200)
+                .body(is("{\"quotaRoot\":\"#private&username\"}"));
         }
 
         @Test
@@ -718,7 +723,7 @@ class UserMailboxesRoutesTest {
             mailboxManager = mock(MailboxManager.class);
             when(mailboxManager.createSystemSession(any())).thenReturn(MailboxSessionUtil.create(USERNAME));
 
-            createServer(mailboxManager);
+            createServer(mailboxManager, mock(QuotaRootResolver.class));
         }
 
         @Test

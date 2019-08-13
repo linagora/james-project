@@ -80,7 +80,7 @@ public class UserMailboxesRoutes implements Routes {
     public void define(Service service) {
         this.service = service;
 
-        defineMailboxExists();
+        defineGetMailboxDetails();
 
         defineGetUserMailboxes();
 
@@ -208,19 +208,19 @@ public class UserMailboxesRoutes implements Routes {
             @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
-    public void defineMailboxExists() {
+    public void defineGetMailboxDetails() {
         service.get(SPECIFIC_MAILBOX, (request, response) -> {
             try {
+                String username = request.params(USER_NAME);
                 MailboxName mailboxName = new MailboxName(request.params(MAILBOX_NAME));
-                if (userMailboxesService.testMailboxExists(request.params(USER_NAME), mailboxName)) {
-                    return Responses.returnNoContent(response);
-                } else {
-                    throw ErrorResponder.builder()
+
+                response.status(HttpStatus.OK_200);
+                return userMailboxesService.getMailboxDetails(username, mailboxName)
+                    .orElseThrow(() -> ErrorResponder.builder()
                         .statusCode(HttpStatus.NOT_FOUND_404)
                         .type(ErrorType.NOT_FOUND)
                         .message(String.format("Mailbox '%s' does not exist", mailboxName.asString()))
-                        .haltError();
-                }
+                        .haltError());
             } catch (IllegalStateException e) {
                 LOGGER.info("Invalid get on user mailbox", e);
                 throw ErrorResponder.builder()
@@ -238,7 +238,7 @@ public class UserMailboxesRoutes implements Routes {
                     .cause(e)
                     .haltError();
             }
-        });
+        }, jsonTransformer);
     }
 
     @PUT
