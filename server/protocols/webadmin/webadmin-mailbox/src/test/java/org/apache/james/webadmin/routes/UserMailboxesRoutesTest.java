@@ -511,8 +511,8 @@ class UserMailboxesRoutesTest {
 
             assertThat(errors)
                 .containsEntry("statusCode", HttpStatus.NOT_FOUND_404)
-                .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "Invalid get on user mailboxes");
+                .containsEntry("type", "notFound")
+                .containsEntry("message", "Mailbox 'myMailboxName' does not exist");
         }
 
         @Test
@@ -553,20 +553,10 @@ class UserMailboxesRoutesTest {
             with()
                 .delete(MAILBOX_NAME);
 
-            Map<String, Object> errors = when()
+            when()
                 .get(MAILBOX_NAME)
             .then()
-                .statusCode(HttpStatus.NOT_FOUND_404)
-                .contentType(ContentType.JSON)
-                .extract()
-                .body()
-                .jsonPath()
-                .getMap(".");
-
-            assertThat(errors)
-                .containsEntry("statusCode", HttpStatus.NOT_FOUND_404)
-                .containsEntry("type", "InvalidArgument")
-                .containsEntry("message", "Invalid get on user mailboxes");
+                .statusCode(HttpStatus.NOT_FOUND_404);
         }
 
         @Test

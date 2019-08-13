@@ -211,13 +211,14 @@ public class UserMailboxesRoutes implements Routes {
     public void defineMailboxExists() {
         service.get(SPECIFIC_MAILBOX, (request, response) -> {
             try {
-                if (userMailboxesService.testMailboxExists(request.params(USER_NAME), new MailboxName(request.params(MAILBOX_NAME)))) {
+                MailboxName mailboxName = new MailboxName(request.params(MAILBOX_NAME));
+                if (userMailboxesService.testMailboxExists(request.params(USER_NAME), mailboxName)) {
                     return Responses.returnNoContent(response);
                 } else {
                     throw ErrorResponder.builder()
                         .statusCode(HttpStatus.NOT_FOUND_404)
-                        .type(ErrorType.INVALID_ARGUMENT)
-                        .message("Invalid get on user mailboxes")
+                        .type(ErrorType.NOT_FOUND)
+                        .message(String.format("Mailbox '%s' does not exist", mailboxName.asString()))
                         .haltError();
                 }
             } catch (IllegalStateException e) {
