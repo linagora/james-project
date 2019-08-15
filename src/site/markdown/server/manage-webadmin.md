@@ -1672,13 +1672,16 @@ Respond code:
 ### Listing User Mappings
 
 This endpoint allows receiving all mappings of a corresponding user.
+
 ```
 curl -XGET http://ip:port/mappings/user/{user}
 ```
+
 Return all mappings of a user.
 {user} is the selected username.
 
-Respond body:
+Response body:
+
 ```
 [
   {
@@ -1696,7 +1699,7 @@ Respond body:
 ]
 ```
 
-Respond code:
+Response codes:
 - 200: OK
 - 400: Invalid parameter value
 
