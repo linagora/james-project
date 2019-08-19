@@ -1636,6 +1636,7 @@ Here are the following actions available on address mappings:
 
  - [List all address mappings](#List_all_address_mappinig)
  - [Add an address mapping](#Add_an_address_mapping)
+ - [Remove an address mapping](#Remove_an_address_mapping)
 
 ### List all address mappings
 
@@ -1699,6 +1700,17 @@ Type of mapping destination is Address
 Respond code:
 - 204: NO CONTENT
 - 400: INVALID PARAMETERS
+
+### Remove an address mapping
+
+```
+curl -XDELETE http://ip:port/mappings/address/{mappingSource}/targets/{destinationAddress}
+```
+
+Remove an address mapping from the [Recipients rewrite table](/server/config-recipientrewritetable.html)
+Mapping source is the value of {mappingSource}
+Mapping destination is the value of {destinationAddress}
+Type of mapping destination is Address
 
 ## User Mappings
 
