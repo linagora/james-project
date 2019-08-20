@@ -1685,6 +1685,7 @@ Response body:
 ```
 
 Response code:
+
  - 200: OK
 
 ### Add an address mapping
@@ -1697,7 +1698,8 @@ Mapping source is the value of {mappingSource}
 Mapping destination is the value of {destinationAddress}
 Type of mapping destination is Address
 
-Respond code:
+Response codes:
+
 - 204: NO CONTENT
 - 400: INVALID PARAMETERS
 
@@ -1711,6 +1713,12 @@ Remove an address mapping from the [Recipients rewrite table](/server/config-rec
 Mapping source is the value of {mappingSource}
 Mapping destination is the value of {destinationAddress}
 Type of mapping destination is Address
+
+Response codes:
+
+- 204: NO CONTENT
+- 400: INVALID PARAMETERS
+
 
 ## User Mappings
 
