@@ -1700,8 +1700,8 @@ Type of mapping destination is Address
 
 Response codes:
 
-- 204: NO CONTENT
-- 400: INVALID PARAMETERS
+- 204: No content
+- 400: Invalid parameters
 
 ### Remove an address mapping
 
@@ -1716,8 +1716,8 @@ Type of mapping destination is Address
 
 Response codes:
 
-- 204: NO CONTENT
-- 400: INVALID PARAMETERS
+- 204: No content
+- 400: Invalid parameters
 
 
 ## User Mappings
