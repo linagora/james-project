@@ -81,6 +81,12 @@ class PropertiesProviderTest {
     @Test
     void getConfigurationShouldLoadListValues() throws Exception {
         assertThat(testee.getConfiguration("a").getList(String.class, "keyByList"))
-            .containsExactly("value1", "value2");
+            .containsExactly("value1", "value2", "value3", "value4", "value5");
+    }
+
+    @Test
+    void getConfigurationShouldLoadCassandraNodeConfigurations() throws Exception {
+        assertThat(testee.getConfiguration("a").getList(String.class, "cassandra"))
+            .containsExactly("cassandra-0.cassandra:9042", "cassandra-1.cassandra:9042", "cassandra-2.cassandra:9042");
     }
 }
