@@ -56,7 +56,8 @@ public class MemoryTaskManager implements TaskManager {
 
         @Override
         public void completed(TaskId taskId, Task.Result result) {
-            updaterFactory.apply(taskId).accept(TaskExecutionDetails::completed);
+            updaterFactory.apply(taskId)
+                .accept(TaskExecutionDetails::completed);
         }
 
         @Override
@@ -66,12 +67,14 @@ public class MemoryTaskManager implements TaskManager {
 
         @Override
         public void failed(TaskId taskId) {
-            updaterFactory.apply(taskId).accept(TaskExecutionDetails::failed);
+            updaterFactory.apply(taskId)
+                .accept(TaskExecutionDetails::failed);
         }
 
         @Override
         public void cancelled(TaskId taskId) {
-            updaterFactory.apply(taskId).accept(TaskExecutionDetails::cancelEffectively);
+            updaterFactory.apply(taskId)
+                .accept(TaskExecutionDetails::cancelEffectively);
         }
     }
 
