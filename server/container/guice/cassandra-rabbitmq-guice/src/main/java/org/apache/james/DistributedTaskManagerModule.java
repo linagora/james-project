@@ -38,7 +38,7 @@ public class DistributedTaskManagerModule extends AbstractModule {
     public static final WorkQueueSupplier workQueueSupplier = eventSourcingSystem -> {
         WorkerStatusListener listener = new WorkerStatusListener(eventSourcingSystem);
         TaskManagerWorker worker = new SerialTaskManagerWorker(listener);
-        return MemoryWorkQueue.builder().worker(worker);
+        return new MemoryWorkQueue(worker);
     };
 
     @Override

@@ -80,7 +80,7 @@ class DistributedTaskManagerTest {
         WorkQueueSupplier workQueueSupplier = eventSourcingSystem -> {
             WorkerStatusListener listener = new WorkerStatusListener(eventSourcingSystem);
             TaskManagerWorker worker = new SerialTaskManagerWorker(listener);
-            return MemoryWorkQueue.builder().worker(worker);
+            return new MemoryWorkQueue(worker);
         };
         TaskManager taskManager1 = new EventSourcingTaskManager(workQueueSupplier, eventStore, executionDetailsProjection);
         TaskManager taskManager2 = new EventSourcingTaskManager(workQueueSupplier, eventStore, executionDetailsProjection);
