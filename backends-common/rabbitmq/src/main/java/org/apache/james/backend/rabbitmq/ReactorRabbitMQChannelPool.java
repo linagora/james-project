@@ -90,7 +90,7 @@ public class ReactorRabbitMQChannelPool implements ChannelPool {
     private final GenericObjectPool<Channel> pool;
     private final ConcurrentSkipListSet<Channel> borrowedChannels;
 
-   public ReactorRabbitMQChannelPool(Mono<Connection> connectionMono, int poolSize) {
+    public ReactorRabbitMQChannelPool(Mono<Connection> connectionMono, int poolSize) {
         ChannelFactory channelFactory = new ChannelFactory(connectionMono);
 
         GenericObjectPoolConfig<Channel> config = new GenericObjectPoolConfig<>();
