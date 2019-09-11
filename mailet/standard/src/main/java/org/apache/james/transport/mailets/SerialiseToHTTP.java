@@ -18,7 +18,6 @@
  ****************************************************************/
 package org.apache.james.transport.mailets;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -35,6 +34,7 @@ import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.james.util.MimeMessageUtil;
 import org.apache.mailet.Experimental;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.GenericMailet;
@@ -118,16 +118,14 @@ public class SerialiseToHTTP extends GenericMailet {
     @Override
     public void service(Mail mail) {
         try {
-            MimeMessage message = mail.getMessage();
-            String serialisedMessage = getSerialisedMessage(message);
-            NameValuePair[] nameValuePairs = getNameValuePairs(serialisedMessage);
-            String result = httpPost(nameValuePairs);
+            String result = httpPost(
+                    getNameValuePairs(MimeMessageUtil.asString(mail.getMessage())));
             if (passThrough) {
                 addHeader(mail, (result == null || result.length() == 0), result);
             } else {
                 mail.setState(Mail.GHOST);
             }
-        } catch (MessagingException | IOException me) {
+        } catch (Exception me) {
             LOGGER.error("Messaging exception", me);
             addHeader(mail, false, me.getMessage());
         }
@@ -146,20 +144,13 @@ public class SerialiseToHTTP extends GenericMailet {
         }
     }
 
-    private String getSerialisedMessage(MimeMessage message)
-            throws IOException, MessagingException {
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        message.writeTo(os);
-        return os.toString();
-    }
-
     private String httpPost(NameValuePair[] data) {
 
         RequestBuilder requestBuilder = RequestBuilder.post(url);
 
-        if (data.length > 1 && data[1] != null) {
-            requestBuilder.addParameter(data[1].getName(),data[1].getValue());
-            LOGGER.debug("{}::{}", data[1].getName(), data[1].getValue());
+        for (NameValuePair parameter : data) {
+            requestBuilder.addParameter(parameter);
+            LOGGER.debug("{}::{}", parameter.getName(), parameter.getValue());
         }
 
 
