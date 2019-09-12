@@ -16,10 +16,10 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.transport.mailets;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -117,17 +117,28 @@ public class SerialiseToHTTP extends GenericMailet {
      */
     @Override
     public void service(Mail mail) {
+        MimeMessage message;
         try {
-            String result = httpPost(
-                    getNameValuePairs(MimeMessageUtil.asString(mail.getMessage())));
-            if (passThrough) {
-                addHeader(mail, (result == null || result.length() == 0), result);
-            } else {
-                mail.setState(Mail.GHOST);
-            }
-        } catch (Exception me) {
+            message = mail.getMessage();
+        } catch (MessagingException me) {
             LOGGER.error("Messaging exception", me);
             addHeader(mail, false, me.getMessage());
+            return;
+        }
+        String messageAsString;
+        try {
+            messageAsString = MimeMessageUtil.asString(message);
+        } catch (Exception e) {
+            LOGGER.error("Message to string exception", e);
+            addHeader(mail, false, e.getMessage());
+            return;
+        }
+
+        String result = httpPost(getNameValuePairs(messageAsString));
+        if (passThrough) {
+            addHeader(mail, (result == null || result.length() == 0), result);
+        } else {
+            mail.setState(Mail.GHOST);
         }
     }
 
@@ -171,7 +182,7 @@ public class SerialiseToHTTP extends GenericMailet {
         }
     }
 
-    private NameValuePair[] getNameValuePairs(String message) throws UnsupportedEncodingException {
+    private NameValuePair[] getNameValuePairs(String message) {
 
         int l = 1;
         if (parameterKey != null && parameterKey.length() > 0) {

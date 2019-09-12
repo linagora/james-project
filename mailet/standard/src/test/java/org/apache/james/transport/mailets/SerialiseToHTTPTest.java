@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.transport.mailets;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,7 +59,7 @@ public class SerialiseToHTTPTest {
     private String urlTestPattern;
 
     @BeforeAll
-    public static void setupServer() throws MessagingException, IOException {
+    static void setupServer() throws MessagingException, IOException {
         mapper = new UriHttpRequestHandlerMapper();
 
         SocketConfig socketConfig = SocketConfig.custom().setSoTimeout(50000).build();
@@ -70,23 +71,23 @@ public class SerialiseToHTTPTest {
     }
 
     @AfterAll
-    public static void shutdown() {
+    static void shutdown() {
         server.shutdown(5L, TimeUnit.SECONDS);
     }
 
     @BeforeEach
-    public void setup() throws MessagingException, IOException {
+    void setup() throws MessagingException, IOException {
         mail = MailUtil.createMockMail2Recipients(MimeMessageUtil.mimeMessageFromStream(
                 ClassLoader.getSystemResourceAsStream("mime/sendToRemoteHttp.mime")));
     }
 
     @AfterEach
-    public void cleanMapper() throws MessagingException, IOException {
+    void cleanMapper() throws MessagingException, IOException {
         mapper.unregister(urlTestPattern);
     }
 
     @Test
-    public void shouldBeFailedWhenServiceResponseIsNotOk() throws Exception {
+    void shouldBeFailedWhenServiceResponseIsNotOk() throws Exception {
 
         urlTestPattern = "/path/to/service/internal/error";
 
@@ -112,7 +113,7 @@ public class SerialiseToHTTPTest {
     }
 
     @Test
-    public void shouldBeFailedWhenServiceNotExists() throws Exception {
+    void shouldBeFailedWhenServiceNotExists() throws Exception {
 
         urlTestPattern = "/path/to/service/failed";
 
@@ -135,7 +136,7 @@ public class SerialiseToHTTPTest {
     }
 
     @Test
-    public void shouldBeSucceededWhenServiceResponseIsOk() throws Exception {
+    void shouldBeSucceededWhenServiceResponseIsOk() throws Exception {
 
         urlTestPattern = "/path/to/service/succeeded";
 
@@ -180,7 +181,7 @@ public class SerialiseToHTTPTest {
     }
 
     @Test
-    public void shouldSetTheMailStateWhenPassThroughIsFalse() throws Exception {
+    void shouldSetTheMailStateWhenPassThroughIsFalse() throws Exception {
 
         urlTestPattern = "/path/to/service/PassThroughIsFalse";
 
@@ -207,7 +208,7 @@ public class SerialiseToHTTPTest {
     }
 
     @Test
-    public void shouldThrowMessagingExceptionWhenInvalidUrl() throws Exception {
+    void shouldThrowMessagingExceptionWhenInvalidUrl() throws Exception {
 
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .setProperty("parameterKey", "pKey").setProperty("parameterValue", "pValue")
@@ -222,7 +223,7 @@ public class SerialiseToHTTPTest {
     }
 
     @Test
-    public void shouldThrowMessagingExceptionWhenUrlIsNull() throws Exception {
+    void shouldThrowMessagingExceptionWhenUrlIsNull() throws Exception {
 
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
                 .setProperty("parameterKey", "pKey").setProperty("parameterValue", "pValue")
