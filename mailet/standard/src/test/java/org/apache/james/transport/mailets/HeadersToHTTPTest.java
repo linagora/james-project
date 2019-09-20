@@ -119,6 +119,31 @@ public class HeadersToHTTPTest {
                 .build();
 
         mapper.register(urlTestPattern, (request, response, context) -> {
+            response.setStatusCode(HttpStatus.SC_OK);
+        });
+
+        Mailet mailet = new HeadersToHTTP();
+        mailet.init(mailetConfig);
+
+        mailet.service(mail);
+
+        assertThat(mail.getMessage().getHeader("X-headerToHTTP")).hasSize(1)
+                .allSatisfy((header) -> assertThat(header).isEqualTo("Succeeded"));
+
+    }
+
+    @Test
+    void serviceShouldNotModifyHeadersContent() throws Exception {
+
+        urlTestPattern = "/path/to/service/succeeded";
+
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .setProperty("parameterKey", "pKey").setProperty("parameterValue", "pValue")
+                .setProperty("url", "http://" + server.getInetAddress().getHostAddress() + ":"
+                        + server.getLocalPort() + urlTestPattern)
+                .build();
+
+        mapper.register(urlTestPattern, (request, response, context) -> {
 
             assertThat(request.getRequestLine().getMethod()).isEqualTo("POST");
 
@@ -156,9 +181,6 @@ public class HeadersToHTTPTest {
         mailet.init(mailetConfig);
 
         mailet.service(mail);
-
-        assertThat(mail.getMessage().getHeader("X-headerToHTTP")).hasSize(1)
-                .allSatisfy((header) -> assertThat(header).isEqualTo("Succeeded"));
 
     }
 

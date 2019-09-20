@@ -140,6 +140,32 @@ public class SerialiseToHTTPTest {
 
         urlTestPattern = "/path/to/service/succeeded";
 
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+                .setProperty("parameterKey", "pKey").setProperty("parameterValue", "pValue")
+                .setProperty("messageKey", "mKey")
+                .setProperty("url", "http://" + server.getInetAddress().getHostAddress() + ":"
+                        + server.getLocalPort() + urlTestPattern)
+                .build();
+
+        mapper.register(urlTestPattern, (request, response, context) -> {
+            response.setStatusCode(HttpStatus.SC_OK);
+        });
+
+        Mailet mailet = new SerialiseToHTTP();
+        mailet.init(mailetConfig);
+
+        mailet.service(mail);
+
+        assertThat(mail.getMessage().getHeader("X-toHTTP")).hasSize(1)
+                .allSatisfy((header) -> assertThat(header).isEqualTo("Succeeded"));
+
+    }
+
+    @Test
+    void serviceShouldNotModifyMessageContent() throws Exception {
+
+        urlTestPattern = "/path/to/service/succeeded";
+
         final String originalMessage = MimeMessageUtil.asString(mail.getMessage());
 
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
@@ -174,9 +200,6 @@ public class SerialiseToHTTPTest {
         mailet.init(mailetConfig);
 
         mailet.service(mail);
-
-        assertThat(mail.getMessage().getHeader("X-toHTTP")).hasSize(1)
-                .allSatisfy((header) -> assertThat(header).isEqualTo("Succeeded"));
 
     }
 
