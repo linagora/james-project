@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+
+import click
+import json
+import requests as req
+import sys
+
+
+def print_json(obj):
+    parsed = json.loads(obj.text)
+    print(json.dumps(parsed, indent=4, sort_keys=True))
+
+
+@click.group()
+@click.option("--ip", default="127.0.0.1", show_default=True, help="Set ip address")
+@click.option("--port", default="8000", show_default=True, help="Set port")
+@click.pass_context
+def main(ctx, ip, port):
+    """Run './james_cli COMMAND --help' for more information on a command."""
+    path = "http://" + ip + ":" + port
+    ctx.obj = {
+        "path": path
+    }
+
+
+# Mapping routes implemantation ---------------------------------------
+@main.group()
+def mapping():
+    """Mapping routes implementation"""
+    pass
+
+
+@mapping.command(name="list")
+@click.pass_context
+def get_all_mapping(ctx):
+    """List all mappings"""
+    res = req.get(ctx.obj["path"] + "/mappings")
+    if res.status_code == 200:
+        print_json(res)
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+# Domain routes implemantation ---------------------------------------
+@main.group()
+def domain():
+    """Domain routes implementation"""
+    pass
+
+
+@domain.command(name="list")
+@click.pass_context
+def get_all_domains(ctx):
+    """Show all available domains"""
+    res = req.get(ctx.obj["path"] + "/domains")
+
+    if res.status_code == 200:
+        print("List of all available domains: ")
+        print_json(res)
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+@domain.command(name="add")
+@click.pass_context
+@click.argument("domain_name", type=str)
+def add_domain(ctx, domain_name):
+    """Add a domain to the domain list"""
+
+    res = req.put(ctx.obj["path"] + "/domains/" + domain_name)
+
+    if res.status_code == 204:
+        print("%s has been added." % domain_name)
+    elif res.status_code == 400:
+        print("Invalid request for domain creation.")
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+@domain.command(name="remove")
+@click.pass_context
+@click.argument("domain_name", type=str)
+def delete_domain(ctx, domain_name):
+    """Remove a domain from the domain list"""
+    res = req.delete(ctx.obj["path"] + "/domains/" + domain_name)
+
+    if res.status_code == 204:
+        print("%s has been removed." % domain_name)
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+@domain.command(name="exist")
+@click.pass_context
+@click.argument("domain_name", type=str)
+def check_existence(ctx, domain_name):
+    """Check whether a domain is existing or not"""
+    res = req.get(ctx.obj["path"] + "/domains/" + domain_name)
+    if res.status_code == 204:
+        print("%s does exist." % domain_name)
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 404:
+        print("%s does NOT exist." % domain_name)
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+@main.group()
+def domain_alias():
+    """Domain's alias implementation"""
+    pass
+
+
+@domain_alias.command(name="list")
+@click.pass_context
+@click.argument("domain_name", type=str)
+def get_domain_aliases(ctx, domain_name):
+    """Show all aliases of a domain"""
+    res = req.get(ctx.obj["path"] + "/domains/" + domain_name + "/aliases")
+    if res.status_code == 200:
+        print_json(res)
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 404:
+        print("The domain does not exist.")
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+@domain_alias.command(name="add")
+@click.pass_context
+@click.argument("source_domain", type=str)
+@click.argument("destination_domain", type=str)
+def add_alias(ctx, source_domain, destination_domain):
+    """Add an alias to a destination domain"""
+    req.put(ctx.obj["path"] + "/domains/" + source_domain)
+    res = req.put(ctx.obj["path"] + "/domains/" +
+                  destination_domain + "/aliases/" + source_domain)
+    if res.status_code == 204:
+        print("%s has been added to %s" % (source_domain, destination_domain))
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 404:
+        print("%s does not exist." % source_domain)
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+@domain_alias.command(name="remove")
+@click.pass_context
+@click.argument("source_domain", type=str)
+@click.argument("destination_domain", type=str)
+def remove_alias(ctx, source_domain, destination_domain):
+    """Remove an alias from a destination domain"""
+    res = req.delete(ctx.obj["path"] + "/domains/" +
+                     destination_domain + "/aliases/" + source_domain)
+    if res.status_code == 204:
+        print("%s has been removed from %s" %
+              (source_domain, destination_domain))
+    elif res.status_code == 401:
+        print("Authentication error.")
+    elif res.status_code == 404:
+        print("%s does not exist." % source_domain)
+    elif res.status_code == 500:
+        print("Internal server error!")
+    else:
+        print("Unhandled response received from the server.")
+        print("Status: " + str(res.status_code))
+        print_json(res)
+
+
+if __name__ == "__main__":
+    main()
