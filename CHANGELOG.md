@@ -16,6 +16,11 @@ of tasks being currently executed.
   - Removed unnecessary fields from mailbox mapping
   - Disable dynamic mapping thanks to a change of the header structure 
   - Read related [upgrade instructions](upgrade-instructions.md)
+  
+### Fixed
+- JAMES-2828 & JAMES-2928 bugs affecting JDBCMailRepository usage with PostgresSQL
+- JAMES-2936 Creating a mailbox using consecutive delimiter character leads to creation of list of unnamed mailbox
+- JAMES-2911 Unable to send mail from James using an SMTP gateway
 
 ### Removed
 - Classes marked as deprecated whose removal was planned after 3.4.0 release (See JAMES-2703). This includes:
