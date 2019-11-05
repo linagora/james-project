@@ -18,7 +18,7 @@ of tasks being currently executed.
   - Read related [upgrade instructions](upgrade-instructions.md)
   
 ### Fixed
-- JAMES-2828 & JAMES-2929 bugs affecting JDBCMailRepository usage with PostgresSQL
+- JAMES-2828 & JAMES-2929 bugs affecting JDBCMailRepository usage with PostgresSQL thanks to Jörg Thomas & Sergey B
 - JAMES-2936 Creating a mailbox using consecutive delimiter character leads to creation of list of unnamed mailbox
 - JAMES-2911 Unable to send mail from James using an SMTP gateway
 
