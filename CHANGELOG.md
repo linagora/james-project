@@ -21,6 +21,12 @@ of tasks being currently executed.
 - JAMES-2828 & JAMES-2929 bugs affecting JDBCMailRepository usage with PostgresSQL thanks to Jörg Thomas & Sergey B
 - JAMES-2936 Creating a mailbox using consecutive delimiter character leads to creation of list of unnamed mailbox
 - JAMES-2911 Unable to send mail from James using an SMTP gateway
+- JAMES-2944 Inlined attachments should be wrapped in multipart/related by JMAP draft
+- JAMES-2941 Return NO when an IMAP command unexpectedly fails
+- JAMES-2943 Deleting auto detected domain should fail
+- JAMES-2957 dlp.Dlp matcher should parse emails containing attachments
+- JAMES-2958 Limit domain name size to not longer than 255 characters
+- JAMES-2939 Prevent mixed case INBOX creation
 
 ### Removed
 - Classes marked as deprecated whose removal was planned after 3.4.0 release (See JAMES-2703). This includes:
