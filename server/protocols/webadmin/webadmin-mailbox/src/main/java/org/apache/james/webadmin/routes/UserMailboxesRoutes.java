@@ -28,6 +28,7 @@ import javax.ws.rs.Produces;
 
 import org.apache.james.webadmin.Constants;
 import org.apache.james.webadmin.Routes;
+import org.apache.james.webadmin.dto.MailboxDetailsDTO;
 import org.apache.james.webadmin.service.UserMailboxesService;
 import org.apache.james.webadmin.utils.ErrorResponder;
 import org.apache.james.webadmin.utils.ErrorResponder.ErrorType;
@@ -80,7 +81,7 @@ public class UserMailboxesRoutes implements Routes {
     public void define(Service service) {
         this.service = service;
 
-        defineMailboxExists();
+        defineGetMailboxDetails();
 
         defineGetUserMailboxes();
 
@@ -200,26 +201,27 @@ public class UserMailboxesRoutes implements Routes {
             @ApiImplicitParam(required = true, dataType = "string", name = "username", paramType = "path"),
             @ApiImplicitParam(required = true, dataType = "string", name = "mailboxName", paramType = "path")
     })
-    @ApiOperation(value = "Testing existence of a mailbox.")
+    @ApiOperation(value = "Getting details of a mailbox.")
     @ApiResponses(value = {
-            @ApiResponse(code = HttpStatus.NO_CONTENT_204, message = "The mailbox exists", response = String.class),
+            @ApiResponse(code = HttpStatus.OK_200, message = "The mailbox details", response = MailboxDetailsDTO.class),
             @ApiResponse(code = HttpStatus.BAD_REQUEST_400, message = "Invalid mailbox name"),
             @ApiResponse(code = HttpStatus.UNAUTHORIZED_401, message = "Unauthorized. The user is not authenticated on the platform"),
-            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The user name does not exist."),
+            @ApiResponse(code = HttpStatus.NOT_FOUND_404, message = "The username or mailbox does not exist."),
             @ApiResponse(code = HttpStatus.INTERNAL_SERVER_ERROR_500, message = "Internal server error - Something went bad on the server side.")
     })
-    public void defineMailboxExists() {
+    public void defineGetMailboxDetails() {
         service.get(SPECIFIC_MAILBOX, (request, response) -> {
             try {
-                if (userMailboxesService.testMailboxExists(request.params(USER_NAME), new MailboxName(request.params(MAILBOX_NAME)))) {
-                    return Responses.returnNoContent(response);
-                } else {
-                    throw ErrorResponder.builder()
+                String username = request.params(USER_NAME);
+                MailboxName mailboxName = new MailboxName(request.params(MAILBOX_NAME));
+
+                response.status(HttpStatus.OK_200);
+                return userMailboxesService.getMailboxDetails(username, mailboxName)
+                    .orElseThrow(() -> ErrorResponder.builder()
                         .statusCode(HttpStatus.NOT_FOUND_404)
-                        .type(ErrorType.INVALID_ARGUMENT)
-                        .message("Invalid get on user mailboxes")
-                        .haltError();
-                }
+                        .type(ErrorType.NOT_FOUND)
+                        .message(String.format("Mailbox '%s' does not exist", mailboxName.asString()))
+                        .haltError());
             } catch (IllegalStateException e) {
                 LOGGER.info("Invalid get on user mailbox", e);
                 throw ErrorResponder.builder()
@@ -237,7 +239,7 @@ public class UserMailboxesRoutes implements Routes {
                     .cause(e)
                     .haltError();
             }
-        });
+        }, jsonTransformer);
     }
 
     @PUT

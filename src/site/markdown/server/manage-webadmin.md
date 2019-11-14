@@ -344,7 +344,7 @@ Response codes:
 
  - [Creating a mailbox](#Creating_a_mailbox)
  - [Deleting a mailbox and its children](#Deleting_a_mailbox_and_its_children)
- - [Testing existence of a mailbox](#Testing_existence_of_a_mailbox)
+ - [Getting details of a mailbox](#Getting_details_of_a_mailbox)
  - [Listing user mailboxes](#Listing_user_mailboxes)
  - [Deleting_user_mailboxes](#Deleting_user_mailboxes)
 
@@ -384,18 +384,29 @@ Response codes:
  - 400: Invalid mailbox name
  - 404: The user name does not exist
 
-### Testing existence of a mailbox
+### Getting details of a mailbox
 
 ```
-curl -XGET http://ip:port/users/usernameToBeUsed/mailboxes/mailboxNameToBeCreated
+curl -XGET http://ip:port/users/usernameToBeUsed/mailboxes/mailboxNameToBeUsed
 ```
+
+will return :
+
+```
+{"quotaRoot":"#private&usernameToBeUsed"}
+```
+
+Where:
+
+ - quotaRoot is the quotaRoot applicable for this mailbox
 
 Resource name usernameToBeUsed should be an existing user
-Resource name mailboxNameToBeCreated should not be empty
+
+Resource name mailboxNameToBeUsed should not be empty
 
 Response codes:
 
- - 204: The mailbox exists
+ - 200: The mailbox exists
  - 400: Invalid mailbox name
  - 404: The user name does not exist, the mailbox does not exist
 

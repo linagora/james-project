@@ -20,6 +20,7 @@
 package org.apache.james.webadmin.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
@@ -31,9 +32,12 @@ import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.QuotaRoot;
 import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.quota.QuotaRootResolver;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
+import org.apache.james.webadmin.dto.MailboxDetailsDTO;
 import org.apache.james.webadmin.dto.MailboxResponse;
 import org.apache.james.webadmin.utils.MailboxHaveChildrenException;
 import org.apache.james.webadmin.validation.MailboxName;
@@ -51,11 +55,13 @@ public class UserMailboxesService {
 
     private final MailboxManager mailboxManager;
     private final UsersRepository usersRepository;
+    private final QuotaRootResolver quotaRootResolver;
 
     @Inject
-    public UserMailboxesService(MailboxManager mailboxManager, UsersRepository usersRepository) {
+    public UserMailboxesService(MailboxManager mailboxManager, UsersRepository usersRepository, QuotaRootResolver quotaRootResolver) {
         this.mailboxManager = mailboxManager;
         this.usersRepository = usersRepository;
+        this.quotaRootResolver = quotaRootResolver;
     }
 
     public void createMailbox(String username, MailboxName mailboxName) throws MailboxException, UsersRepositoryException {
@@ -86,12 +92,17 @@ public class UserMailboxesService {
             .collect(Guavate.toImmutableList());
     }
 
-    public boolean testMailboxExists(String username, MailboxName mailboxName) throws MailboxException, UsersRepositoryException {
+    public Optional<MailboxDetailsDTO> getMailboxDetails(String username, MailboxName mailboxName) throws MailboxException, UsersRepositoryException {
         usernamePreconditions(username);
         MailboxSession mailboxSession = mailboxManager.createSystemSession(username);
-        return mailboxManager.mailboxExists(
-            convertToMailboxPath(username, mailboxName.asString(), mailboxSession),
-            mailboxSession);
+        MailboxPath mailboxPath = convertToMailboxPath(username, mailboxName.asString(), mailboxSession);
+
+        if (!mailboxManager.mailboxExists(mailboxPath, mailboxSession)) {
+            return Optional.empty();
+        }
+
+        QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(mailboxPath);
+        return Optional.of(MailboxDetailsDTO.from(quotaRoot));
     }
 
     public void deleteMailbox(String username, MailboxName mailboxName) throws MailboxException, UsersRepositoryException, MailboxHaveChildrenException {
