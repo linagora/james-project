@@ -505,11 +505,11 @@ Deleted Messages Vault is an interesting feature that will help James users have
 
 If the Deleted Messages Vault is enabled when users delete their mails, and by that we mean when they try to definitely delete them by emptying the trash, James will retain these mails into the Deleted Messages Vault, before an email or a mailbox is going to be deleted. And only administrators can interact with this component via [WebAdmin REST APIs](manage-webadmin.html#deleted-messages-vault).
 
-However, mails are not retained forever as you have to configure a retention period before using it (with one-year retention by default if not defined). It's also possible to permanently delete an mail if needed.
+However, mails are not retained forever as you have to configure a retention period before using it (with one-year retention by default if not defined). It's also possible to permanently delete a mail if needed.
 
 ### How to configure deleted messages vault
 
-To setup James with Deleted Messages Vault, you need to following this step:
+To setup James with Deleted Messages Vault, you need to following those steps:
 
 - Enable Deleted Messages Vault by configuring Pre Deletion Hooks.
 - Configuring the retention time for the Deleted Messages Vault.
@@ -522,10 +522,10 @@ You need to configure this hook in [listeners.xml](https://github.com/apache/jam
 
 In order to configure the retention time for the Deleted Messages Vault, an administrator needs to perform fine configuration tunning as explained in [deletedMessageVault.properties](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra/destination/conf/deletedMessageVault.properties). Mails are not retained forever as you have to configure a retention period (by `retentionPeriod`) before using it (with one-year retention by default if not defined)
 
-### Restore deleted messages after deleted
+### Restore deleted messages after deletion
 
-After users deleted their mails and empty emptying the trash, admin can use `Restore Deleted Messages` API from [Admin document](manage-webadmin.html#deleted-messages-vault) to restore all the deleted mails.  
+After users deleted their mails and emptied the trash, the admin can use [Restore Deleted Messages](manage-webadmin.html#deleted-messages-vault) to restore all the deleted mails.  
 
-### Cleaning DeletedMessages passed the rentention period
+### Cleaning expired deleted messages
 
-You can delete all deleted messages older than the configured `retentionPeriod` by using `Purge Deleted Messages` API from [web admin document](manage-webadmin.html#deleted-messages-vault). We recommand to call this API in CRON at 1st day each month.
+You can delete all deleted messages older than the configured `retentionPeriod` by using [Purge Deleted Messages](manage-webadmin.html#deleted-messages-vault). We recommend calling this API in CRON job on 1st day each month.
