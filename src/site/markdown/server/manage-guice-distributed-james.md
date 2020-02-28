@@ -507,7 +507,7 @@ If the Deleted Messages Vault is enabled when users delete their mails, and by t
 
 However, mails are not retained forever as you have to configure a retention period before using it (with one-year retention by default if not defined). It's also possible to permanently delete an mail if needed.
 
-### How to recovering deleted messages
+### How to configure deleted messages vault
 
 To setup James with Deleted Messages Vault, you need to following this step:
 
@@ -529,6 +529,10 @@ To do this, you have to create a configuration file [deletedMessageVault.propert
 
 - `retentionPeriod`: represent for the period deleted messages allowed to be stored in Deleted Messages Vault (default of one year).
 
+### Restore deleted messages after deleted
+
+After users deleted their mails and empty emptying the trash, admin can use `Restore Deleted Messages` API from [Admin document](manage-webadmin.html#deleted-messages-vault) to restore all the deleted mails.  
+
 ### Cleaning DeletedMessages passed the rentention period
 
-You can delete all deleted messages older than the configured `retentionPeriod` by using `Purge Deleted Messages` API from [web admin documentation](manage-webadmin.html#deleted-messages-vault). By default, this API will run in CRON at 1st day each month.
+You can delete all deleted messages older than the configured `retentionPeriod` by using `Purge Deleted Messages` API from [web admin document](manage-webadmin.html#deleted-messages-vault). By default, this API will run in CRON at 1st day each month.
