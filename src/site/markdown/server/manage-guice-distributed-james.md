@@ -512,22 +512,15 @@ However, mails are not retained forever as you have to configure a retention per
 To setup James with Deleted Messages Vault, you need to following this step:
 
 - Enable Deleted Messages Vault by configuring Pre Deletion Hooks.
-- Configuring your BlobStore.
 - Configuring the retention time for the Deleted Messages Vault.
 
 #### Enable Deleted Messages Vault by configuring Pre Deletion Hooks
 
-By default, you need to configure a Pre Deletion Hook to let James use it. Before deleting a mail in James, `PreDeletionHooks` will be triggered to execute all declared hooks. If all hook executions success, then James will process to delete that mail. There is already a `DeletedMessageVaultHook` in James, its job is to store deleted mails into Deleted Messages Vault. Thus, you need to configure this hook in [listeners.xml](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra-rabbitmq/destination/conf/listeners.xml) configuration file.
-
-#### Configuring your BlobStore
-
-The Deleted Messages Vault is using a BlobStore to store and manage the deleted messages. A BlobStore is a dedicated component to store blobs, non-indexable content. There are different implementations available for the BlobStore on top of Cassandra or file object storage services like Openstack Swift and AWS S3, you need to configure it in [blob.properties](https://github.com/apache/james-project/blob/master/dockerfiles/packaging/guice/cassandra/package/etc/james/templates/blobstore.properties) (following this [guide](config-blobstore.html)).
+You need to configure this hook in [listeners.xml](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra-rabbitmq/destination/conf/listeners.xml) configuration file. More details about configuration & example is at [Pre Deletion Hook Configuration](http://james.apache.org/server/config-listeners.html)
 
 #### Configuring the retention time for the Deleted Messages Vault
 
-To do this, you have to create a configuration file [deletedMessageVault.properties], then put it into the conf directory of James. There is only one available property you may want to configure at the moment:
-
-- `retentionPeriod`: represent for the period deleted messages allowed to be stored in Deleted Messages Vault (default of one year).
+In order to configure the retention time for the Deleted Messages Vault, an administrator needs to perform fine configuration tunning as explained in [deletedMessageVault.properties](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra/destination/conf/deletedMessageVault.properties). Mails are not retained forever as you have to configure a retention period (by `retentionPeriod`) before using it (with one-year retention by default if not defined)
 
 ### Restore deleted messages after deleted
 
@@ -535,4 +528,4 @@ After users deleted their mails and empty emptying the trash, admin can use `Res
 
 ### Cleaning DeletedMessages passed the rentention period
 
-You can delete all deleted messages older than the configured `retentionPeriod` by using `Purge Deleted Messages` API from [web admin document](manage-webadmin.html#deleted-messages-vault). By default, this API will run in CRON at 1st day each month.
+You can delete all deleted messages older than the configured `retentionPeriod` by using `Purge Deleted Messages` API from [web admin document](manage-webadmin.html#deleted-messages-vault). We recommand to call this API in CRON at 1st day each month.
