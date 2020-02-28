@@ -516,7 +516,7 @@ To setup James with Deleted Messages Vault, you need to following those steps:
 
 #### Enable Deleted Messages Vault by configuring Pre Deletion Hooks
 
-You need to configure this hook in [listeners.xml](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra-rabbitmq/destination/conf/listeners.xml) configuration file. More details about configuration & example is at [Pre Deletion Hook Configuration](http://james.apache.org/server/config-listeners.html)
+You need to configure this hook in [listeners.xml](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra-rabbitmq/destination/conf/listeners.xml) configuration file. More details about configuration & example can be found at [Pre Deletion Hook Configuration](http://james.apache.org/server/config-listeners.html)
 
 #### Configuring the retention time for the Deleted Messages Vault
 
