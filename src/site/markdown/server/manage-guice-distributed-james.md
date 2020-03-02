@@ -505,7 +505,7 @@ Deleted Messages Vault is an interesting feature that will help James users have
 
 If the Deleted Messages Vault is enabled when users delete their mails, and by that we mean when they try to definitely delete them by emptying the trash, James will retain these mails into the Deleted Messages Vault, before an email or a mailbox is going to be deleted. And only administrators can interact with this component via [WebAdmin REST APIs](manage-webadmin.html#deleted-messages-vault).
 
-However, mails are not retained forever as you have to configure a retention period before using it (with one-year retention by default if not defined). It's also possible to permanently delete a mail if needed and we recommend administrator need to [run it](#Cleaning_expired_deleted_messages) in cron job to save storage volume.
+However, mails are not retained forever as you have to configure a retention period before using it (with one-year retention by default if not defined). It's also possible to permanently delete a mail if needed and we recommend the administrator to [run it](#Cleaning_expired_deleted_messages) in cron job to save storage volume.
 
 ### How to configure deleted messages vault
 
