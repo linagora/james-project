@@ -17,14 +17,14 @@ advanced users.
 
  - [Overall architecture](#Overall_architecture)
  - [Basic Monitoring](#Basic_Monitoring)
+ - [Cassandra table level configuration](#Cassandra_table_level_configuration)
+ - [Deleted Messages Vault](#Deleted_Messages_Vault)
+ - [ElasticSearch Indexing](#Elasticsearch_Indexing)
  - [Mailbox Event Bus](#Mailbox_Event_Bus)
  - [Mail Processing](#Mail_Processing)
- - [ElasticSearch Indexing](#Elasticsearch_Indexing)
- - [Solving cassandra inconsistencies](#Solving_cassandra_inconsistencies) 
- - [Setting Cassandra user permissions](#Setting_Cassandra_user_permissions)
- - [Cassandra table level configuration](#Cassandra_table_level_configuration) 
  - [Mail Queue](#Mail_Queue)
- - [Deleted Messages Vault](#Deleted_Messages_Vault)
+ - [Setting Cassandra user permissions](#Setting_Cassandra_user_permissions)
+ - [Solving cassandra inconsistencies](#Solving_cassandra_inconsistencies)
 
 ## Overall architecture
 
@@ -509,7 +509,7 @@ However, mails are not retained forever as you have to configure a retention per
 
 ### How to configure deleted messages vault
 
-To setup James with Deleted Messages Vault, you need to following those steps:
+To setup James with Deleted Messages Vault, you need to follow those steps:
 
 - Enable Deleted Messages Vault by configuring Pre Deletion Hooks.
 - Configuring the retention time for the Deleted Messages Vault.
@@ -520,7 +520,7 @@ You need to configure this hook in [listeners.xml](https://github.com/apache/jam
 
 #### Configuring the retention time for the Deleted Messages Vault
 
-In order to configure the retention time for the Deleted Messages Vault, an administrator needs to perform fine configuration tunning as explained in [deletedMessageVault.properties](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra/destination/conf/deletedMessageVault.properties). Mails are not retained forever as you have to configure a retention period (by `retentionPeriod`) before using it (with one-year retention by default if not defined)
+In order to configure the retention time for the Deleted Messages Vault, an administrator needs to perform fine configuration tunning as explained in [deletedMessageVault.properties](https://github.com/apache/james-project/blob/master/dockerfiles/run/guice/cassandra/destination/conf/deletedMessageVault.properties). Mails are not retained forever as you have to configure a retention period (by `retentionPeriod`) before using it (with one-year retention by default if not defined).
 
 ### Restore deleted messages after deletion
 
