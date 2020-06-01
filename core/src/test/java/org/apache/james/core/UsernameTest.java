@@ -122,6 +122,12 @@ class UsernameTest {
     }
 
     @Test
+    void fromLocalPartShouldThrowOnConsecutivelyDots() {
+        assertThatThrownBy(() -> Username.fromLocalPartWithoutDomain("..thispartiswrong"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void fromUsernameShouldThrowOnNull() {
         assertThatThrownBy(() -> Username.of(null))
             .isInstanceOf(IllegalArgumentException.class);

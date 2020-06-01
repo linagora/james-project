@@ -33,6 +33,8 @@ import com.google.common.collect.ImmutableList;
 
 public class Username {
     public static final int MAXIMUM_MAIL_ADDRESS_LENGTH = 255;
+    private static final String CONSECUTIVELY_DOTS = "..";
+    private static final List<String> INVALID_CHARACTERS = ImmutableList.of(CONSECUTIVELY_DOTS);
 
     public static Username of(String username) {
         Preconditions.checkArgument(username != null, "username should not be null or empty");
@@ -84,6 +86,8 @@ public class Username {
         Preconditions.checkNotNull(localPart);
         Preconditions.checkArgument(!localPart.isEmpty(), "username should not be empty");
         Preconditions.checkArgument(!localPart.contains("@"), "username can not contain domain delimiter");
+        Preconditions.checkArgument(!isContainInvalidCharacters(localPart),
+            "localPart should not contain consecutively dots");
 
         this.localPart = localPart.toLowerCase(Locale.US);
         this.domainPart = domainPart;
@@ -132,6 +136,10 @@ public class Username {
     public MailAddress asMailAddress() throws AddressException {
         Preconditions.checkState(hasDomainPart());
         return new MailAddress(localPart, domainPart.get());
+    }
+
+    private static boolean isContainInvalidCharacters(String localPart) {
+        return INVALID_CHARACTERS.stream().filter(localPart::contains).count() >= 1;
     }
 
     @Override
