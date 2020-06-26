@@ -22,6 +22,7 @@ package org.apache.james.mailbox;
 import java.util.List;
 
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxACL.Right;
@@ -110,6 +111,7 @@ public interface RightManager {
      * @throws MailboxException in case of unknown mailbox or unsupported right
      */
     Publisher<Rfc4314Rights> myRights(MailboxId mailboxId, MailboxSession session);
+    Rfc4314Rights myRights(Mailbox mailbox, MailboxSession session);
 
     /**
      * Update the Mailbox ACL of the designated mailbox. We can either ADD REPLACE or REMOVE entries.
