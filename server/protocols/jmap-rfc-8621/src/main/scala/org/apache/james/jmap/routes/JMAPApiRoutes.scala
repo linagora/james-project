@@ -153,9 +153,7 @@ class JMAPApiRoutes (val authenticator: Authenticator,
   private def respondDetails(httpServerResponse: HttpServerResponse, details: ProblemDetails): SMono[Void] =
     SMono.fromPublisher(httpServerResponse.status(SC_BAD_REQUEST)
       .header(CONTENT_TYPE, JSON_CONTENT_TYPE)
-      .sendString(SMono.fromCallable(() => {
-        serializer.serialize(details).toString
-      }),
+      .sendString(SMono.fromCallable(() => serializer.serialize(details).toString),
         StandardCharsets.UTF_8)
       .`then`)
 }
