@@ -105,9 +105,11 @@ class JMAPApiRoutes (val authenticator: Authenticator,
                       httpServerResponse: HttpServerResponse,
                       mailboxSession: MailboxSession): SMono[Void] = {
     val unsupportedCapabilities = requestObject.using
-      .filterNot(capability => CapabilityIdentifier.ALL_CAPABILITIES.contains(capability))
+      .filterNot(capability => CapabilityIdentifier.SUPPORTED_CAPABILITIES.contains(capability))
 
-    if (unsupportedCapabilities.isEmpty) {
+    if (unsupportedCapabilities.nonEmpty) {
+      SMono.raiseError(UnsupportedCapabilitiesException(unsupportedCapabilities))
+    } else {
       requestObject
         .methodCalls
         .map(invocation => this.processMethodWithMatchName(requestObject.using.toSet, invocation, mailboxSession))
@@ -122,8 +124,6 @@ class JMAPApiRoutes (val authenticator: Authenticator,
               StandardCharsets.UTF_8
             ).`then`())
         )
-    } else {
-      SMono.raiseError(UnsupportedCapabilitiesException(unsupportedCapabilities))
     }
   }
 
@@ -138,12 +138,12 @@ class JMAPApiRoutes (val authenticator: Authenticator,
   private def handleError(throwable: Throwable, httpServerResponse: HttpServerResponse): SMono[Void] = throwable match {
     case exception: IllegalArgumentException => respondDetails(httpServerResponse,
       ProblemDetails(RequestLevelErrorType.NOT_REQUEST, SC_BAD_REQUEST, None,
-        s"The request parsed as JSON but did not match the type signature of the Request object: ${exception.getMessage}"))
+        s"The request was successfully parsed as JSON but did not match the type signature of the Request object: ${exception.getMessage}"))
     case exception: UnauthorizedException => SMono(handleAuthenticationFailure(httpServerResponse, JMAPApiRoutes.LOGGER, exception))
     case exception: JsonParseException => respondDetails(httpServerResponse,
       ProblemDetails(RequestLevelErrorType.NOT_JSON, SC_BAD_REQUEST, None,
         s"The content type of the request was not application/json or the request did not parse as I-JSON: ${exception.getMessage}"))
-    case exception: UnsupportedCapabilitiesException =>respondDetails(httpServerResponse,
+    case exception: UnsupportedCapabilitiesException => respondDetails(httpServerResponse,
       ProblemDetails(RequestLevelErrorType.UNKNOWN_CAPABILITY,
         SC_BAD_REQUEST, None,
         s"The request used unsupported capabilities: ${exception.capabilities}"))

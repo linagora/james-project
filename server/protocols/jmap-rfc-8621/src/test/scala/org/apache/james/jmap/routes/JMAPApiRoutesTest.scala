@@ -46,7 +46,7 @@ import org.apache.james.mailbox.inmemory.MemoryMailboxManagerProvider
 import org.apache.james.mailbox.model.TestId
 import org.apache.james.metrics.tests.RecordingMetricFactory
 import org.apache.james.user.memory.MemoryUsersRepository
-import org.hamcrest.Matchers.{containsString, equalTo}
+import org.hamcrest.Matchers.equalTo
 import org.mockito.Mockito.mock
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
@@ -335,7 +335,7 @@ class JMAPApiRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
         .statusCode(HttpStatus.SC_BAD_REQUEST)
         .body("status", equalTo(400))
         .body("type", equalTo(RequestLevelErrorType.NOT_REQUEST.value))
-        .body("detail", equalTo("The request parsed as JSON but did not match the type signature of the Request object: Invalid RequestObject: List((/methodCalls,List(JsonValidationError(List(error.expected.jsarray),ArraySeq()))))"))
+        .body("detail", equalTo("The request was successfully parsed as JSON but did not match the type signature of the Request object: Invalid RequestObject: List((/methodCalls,List(JsonValidationError(List(error.expected.jsarray),ArraySeq()))))"))
   }
 
   "RFC-8621 version, POST, with not json request body" should "return 400 status" in {
@@ -353,8 +353,8 @@ class JMAPApiRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
         .statusCode(HttpStatus.SC_BAD_REQUEST)
         .body("status", equalTo(400))
         .body("type", equalTo(RequestLevelErrorType.NOT_JSON.value))
-        .body("detail", containsString("The content type of the request was not application/json or the request did not parse as I-JSON"))
-        .body("detail", containsString("Unexpected character ('}' (code 125)): was expecting double-quote to start field name"))
+        .body("detail", equalTo("The content type of the request was not application/json or the request did not parse as I-JSON: Unexpected character ('}' (code 125)): was expecting double-quote to start field name\n " +
+          "at [Source: (reactor.netty.ByteBufMono$ReleasingInputStream); line: 6, column: 2]"))
   }
 
   "RFC-8621 version, POST, with unknown capability" should "return 400 status" in {

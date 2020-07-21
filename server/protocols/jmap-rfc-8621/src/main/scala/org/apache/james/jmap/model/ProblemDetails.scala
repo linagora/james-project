@@ -25,4 +25,4 @@ import org.apache.james.jmap.model.RequestLevelErrorType.ErrorTypeIdentifier
  * https://tools.ietf.org/html/rfc7807
  * see https://jmap.io/spec-core.html#errors
  */
-case class ProblemDetails(`type`: ErrorTypeIdentifier, status: Int, limit: Option[String], detail : String)
+case class ProblemDetails(`type`: ErrorTypeIdentifier, status: Int, limit: Option[String], detail: String)
