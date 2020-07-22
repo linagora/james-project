@@ -335,7 +335,7 @@ class JMAPApiRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
         .statusCode(HttpStatus.SC_BAD_REQUEST)
         .body("status", equalTo(400))
         .body("type", equalTo(RequestLevelErrorType.NOT_REQUEST.value))
-        .body("detail", equalTo("The request was successfully parsed as JSON but did not match the type signature of the Request object: Invalid RequestObject: List((/methodCalls,List(JsonValidationError(List(error.expected.jsarray),ArraySeq()))))"))
+        .body("detail", equalTo("The request was successfully parsed as JSON but did not match the type signature of the Request object: {\"errors\":[{\"path\":\"obj.methodCalls\",\"messages\":[\"error.expected.jsarray\"]}]}"))
   }
 
   "RFC-8621 version, POST, with not json request body" should "return 400 status" in {
@@ -372,6 +372,6 @@ class JMAPApiRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
         .statusCode(HttpStatus.SC_BAD_REQUEST)
         .body("status", equalTo(400))
         .body("type", equalTo(RequestLevelErrorType.UNKNOWN_CAPABILITY.value))
-        .body("detail", equalTo("The request used unsupported capabilities: List(urn:ietf:params:jmap:core1)"))
+        .body("detail", equalTo("The request used unsupported capabilities: Set(urn:ietf:params:jmap:core1)"))
   }
 }

@@ -98,14 +98,13 @@ class JMAPApiRoutes (val authenticator: Authenticator,
   private def parseRequestObject(inputStream: InputStream): SMono[RequestObject] =
     serializer.deserializeRequestObject(inputStream) match {
       case JsSuccess(requestObject, _) => SMono.just(requestObject)
-      case JsError(errors) => SMono.raiseError(new IllegalArgumentException(s"Invalid RequestObject: ${errors}"))
+      case errors: JsError => SMono.raiseError(new IllegalArgumentException(serializer.serialize(errors).toString()))
     }
 
   private def process(requestObject: RequestObject,
                       httpServerResponse: HttpServerResponse,
                       mailboxSession: MailboxSession): SMono[Void] = {
-    val unsupportedCapabilities = requestObject.using
-      .filterNot(capability => CapabilityIdentifier.SUPPORTED_CAPABILITIES.contains(capability))
+    val unsupportedCapabilities = requestObject.using.toSet -- CapabilityIdentifier.SUPPORTED_CAPABILITIES
 
     if (unsupportedCapabilities.nonEmpty) {
       SMono.raiseError(UnsupportedCapabilitiesException(unsupportedCapabilities))
@@ -158,4 +157,4 @@ class JMAPApiRoutes (val authenticator: Authenticator,
       .`then`)
 }
 
-case class UnsupportedCapabilitiesException(capabilities: Seq[CapabilityIdentifier]) extends RuntimeException
+case class UnsupportedCapabilitiesException(capabilities: Set[CapabilityIdentifier]) extends RuntimeException
