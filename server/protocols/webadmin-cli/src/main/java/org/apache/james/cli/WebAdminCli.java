@@ -19,7 +19,6 @@
 
 package org.apache.james.cli;
 
-import org.apache.james.cli.domain.DomainListCommand;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -28,7 +27,7 @@ import picocli.CommandLine;
         mixinStandardHelpOptions = true,
         version = "1.0",
         subcommands = {
-                DomainListCommand.class
+
         }
 )
 public class WebAdminCli implements Runnable {
