@@ -56,6 +56,17 @@
             <artifactId>json-unit-assertj</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-core</artifactId>
+            <version>11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-gson</artifactId>
+            <version>10.11</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -74,7 +85,7 @@
                 </executions>
                 <configuration>
                     <imageName>james-cli</imageName>
-                    <mainClass>org.apache.james.WebAdminCli</mainClass>
+                    <mainClass>org.apache.james.cli.WebAdminCli</mainClass>
                     <buildArgs>-ea</buildArgs>
                 </configuration>
             </plugin>
