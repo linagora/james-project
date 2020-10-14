@@ -19,9 +19,14 @@
 
 package org.apache.james;
 
-import org.apache.james.Picocli.Picocli;
 import picocli.CommandLine;
 
+@CommandLine.Command(
+        name = "./james-cli",
+        description = "James Webadmin CLI",
+        mixinStandardHelpOptions = true,
+        version = "1.0"
+)
 public class WebAdminCli implements Runnable {
 
     @Override
@@ -30,7 +35,7 @@ public class WebAdminCli implements Runnable {
     }
 
     public static void main(String[] args) {
-        new CommandLine(new Picocli()).execute(args);
+        new CommandLine(new WebAdminCli()).execute(args);
     }
 
 }

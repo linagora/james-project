@@ -17,8 +17,9 @@
  * under the License.                                             *
  ******************************************************************/
 
-package org.apache.james.Picocli;
+package org.apache.james.cli;
 
+import org.apache.james.WebAdminCli;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,16 +28,16 @@ import picocli.CommandLine;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class HelpVersionCommandTest {
 
-    private static final String successHelpMessage = "Usage: ./james-cli [-hV]\n" +
+    private static final String SUCCESS_HELP_MESSAGE = "Usage: ./james-cli [-hV]\n" +
             "James Webadmin CLI\n" +
             "  -h, --help      Show this help message and exit.\n" +
             "  -V, --version   Print version information and exit.";
 
-    private static final String rightVersion = "1.0";
+    private static final String VERSION = "1.0";
 
     private final PrintStream standardOut = System.out;
     private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
@@ -53,26 +54,26 @@ public class HelpVersionCommandTest {
 
     @Test
     void longHelpCommandShouldWork() {
-        new CommandLine(new Picocli()).execute("--help");
-        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(successHelpMessage);
+        new CommandLine(new WebAdminCli()).execute("--help");
+        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(SUCCESS_HELP_MESSAGE);
     }
 
     @Test
     void shortHelpCommandShouldWork() {
-        new CommandLine(new Picocli()).execute("-h");
-        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(successHelpMessage);
+        new CommandLine(new WebAdminCli()).execute("-h");
+        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(SUCCESS_HELP_MESSAGE);
     }
 
     @Test
     void longVersionCommandShouldWork() {
-        new CommandLine(new Picocli()).execute("--version");
-        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(rightVersion);
+        new CommandLine(new WebAdminCli()).execute("--version");
+        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(VERSION);
     }
 
     @Test
     void shortVersionCommandShouldWork() {
-        new CommandLine(new Picocli()).execute("-V");
-        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(rightVersion);
+        new CommandLine(new WebAdminCli()).execute("-V");
+        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(VERSION);
     }
 
 }
