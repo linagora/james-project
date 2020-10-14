@@ -17,17 +17,37 @@
  * under the License.                                             *
  ******************************************************************/
 
-package org.apache.james;
+package org.apache.james.cli;
 
+import org.apache.james.cli.domain.DomainListCommand;
 import picocli.CommandLine;
 
 @CommandLine.Command(
         name = "./james-cli",
         description = "James Webadmin CLI",
         mixinStandardHelpOptions = true,
-        version = "1.0"
+        version = "1.0",
+        subcommands = {
+                DomainListCommand.class
+        }
 )
 public class WebAdminCli implements Runnable {
+
+    public  @CommandLine.Option(
+            names = "--url",
+            scope = CommandLine.ScopeType.INHERIT,
+            description = "James Server URL",
+            defaultValue = "127.0.0.1" // for easily test on local server now
+    )
+    String url;
+
+    public  @CommandLine.Option(
+            names = "--port",
+            scope = CommandLine.ScopeType.INHERIT,
+            description = "James Server Port",
+            defaultValue = "8000"
+    )
+    String port;
 
     @Override
     public void run() {
