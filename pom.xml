@@ -540,7 +540,6 @@
         <module>server</module>
         <module>testing/base</module>
         <module>third-party</module>
-        <module>server/protocols/webadmin-cli</module>
     </modules>
 
     <scm>
