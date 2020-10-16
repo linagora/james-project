@@ -22,7 +22,7 @@ package org.apache.james.cli;
 import picocli.CommandLine;
 
 @CommandLine.Command(
-        name = "./james-cli",
+        name = "james-cli",
         description = "James Webadmin CLI",
         mixinStandardHelpOptions = true,
         version = "1.0",

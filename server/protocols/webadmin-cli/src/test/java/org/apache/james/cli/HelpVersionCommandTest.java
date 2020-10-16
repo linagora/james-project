@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class HelpVersionCommandTest {
 
-    private static final String SUCCESS_HELP_MESSAGE = "Usage: ./james-cli [-hV]\n" +
+    private static final String SUCCESS_HELP_MESSAGE = "Usage: james-cli [-hV]\n" +
             "James Webadmin CLI\n" +
             "  -h, --help      Show this help message and exit.\n" +
             "  -V, --version   Print version information and exit.";
