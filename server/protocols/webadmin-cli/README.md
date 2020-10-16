@@ -33,7 +33,7 @@ The above command lists all domain names available on domain route at address ht
 It does not require any argument to execute. Options --url and --port are optional. Without them, the default value is http://127.0.0.0:8000.
 As for other commands, arguments might be required after the sub-command (ACTION such as list, add and remove).
 
-Note: the command line before ENTITY will be documente as {cli}.
+Note: the command line before ENTITY will be documented as {cli}.
 
 ## Navigation menu
 
@@ -124,5 +124,4 @@ Show all users' name on the list.
 Same as Create, but an user need to exist.
 
 If the user do not exist, then it will be created.
-
 
