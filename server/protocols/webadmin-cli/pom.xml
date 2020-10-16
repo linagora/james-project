@@ -41,12 +41,6 @@
             <version>4.5.1</version>
         </dependency>
         <dependency>
-            <groupId>org.graalvm.sdk</groupId>
-            <artifactId>graal-sdk</artifactId>
-            <version>20.2.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>testing-base</artifactId>
             <scope>test</scope>
@@ -62,24 +56,33 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.graalvm.nativeimage</groupId>
-                <artifactId>native-image-maven-plugin</artifactId>
-                <version>20.2.0</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>native-image</goal>
-                        </goals>
                         <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <mainClass>
+                                        org.apache.james.cli.WebAdminCli
+                                    </mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                            <finalName>james-cli</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <imageName>james-cli</imageName>
-                    <mainClass>org.apache.james.cli.WebAdminCli</mainClass>
-                    <buildArgs>-ea</buildArgs>
-                </configuration>
             </plugin>
         </plugins>
     </build>
+
 
 </project>
