@@ -21,24 +21,32 @@ package org.apache.james.cli;
 
 import picocli.CommandLine;
 
+import java.util.concurrent.Callable;
+
 @CommandLine.Command(
         name = "james-cli",
-        description = "James Webadmin CLI",
-        mixinStandardHelpOptions = true,
-        version = "1.0",
-        subcommands = {
-
-        }
-)
-public class WebAdminCli implements Runnable {
+        description = "James Webadmin CLI")
+public class WebAdminCli implements Callable<Integer> {
 
     @Override
-    public void run() {
-
+    public Integer call() {
+        return 0;
     }
 
     public static void main(String[] args) {
-        new CommandLine(new WebAdminCli()).execute(args);
+        int exitCode = execute(args);
+        System.exit(exitCode);
+    }
+
+    public static int execute(String[] args) {
+        WebAdminCli parent = new WebAdminCli();
+        return new CommandLine(parent)
+                .addSubcommand(new CommandLine.HelpCommand())
+                .execute(args);
+    }
+
+    public static int executeFluent(String... args) {
+        return execute(args);
     }
 
 }

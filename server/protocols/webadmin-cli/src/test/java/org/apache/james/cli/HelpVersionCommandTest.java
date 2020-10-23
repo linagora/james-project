@@ -22,7 +22,6 @@ package org.apache.james.cli;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -30,8 +29,6 @@ import java.io.PrintStream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class HelpVersionCommandTest {
-
-    private static final String VERSION = "1.0";
 
     private final PrintStream standardOut = System.out;
     private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
@@ -47,29 +44,11 @@ public class HelpVersionCommandTest {
     }
 
     @Test
-    void longHelpCommandShouldShowHelpMessage() {
-        new CommandLine(new WebAdminCli()).execute("--help");
-        assertThat(outputStreamCaptor.toString()).contains("-h, --help");
-        assertThat(outputStreamCaptor.toString()).contains("Show this help message and exit.");
-    }
-
-    @Test
-    void shortHelpCommandShouldShowHelpMessage() {
-        new CommandLine(new WebAdminCli()).execute("-h");
-        assertThat(outputStreamCaptor.toString()).contains("-h, --help");
-        assertThat(outputStreamCaptor.toString()).contains("Show this help message and exit.");
-    }
-
-    @Test
-    void longVersionCommandShouldShowExactlyTheVersion() {
-        new CommandLine(new WebAdminCli()).execute("--version");
-        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(VERSION);
-    }
-
-    @Test
-    void shortVersionCommandShouldShowExactlyTheVersion() {
-        new CommandLine(new WebAdminCli()).execute("-V");
-        assertThat(outputStreamCaptor.toString().trim()).isEqualTo(VERSION);
+    void helpCommandShouldShowHelpMessage() {
+        int exitCode = WebAdminCli.executeFluent("help");
+        assertThat(exitCode).isEqualTo(0);
+        assertThat(outputStreamCaptor.toString()).contains("help");
+        assertThat(outputStreamCaptor.toString()).contains("Displays help information about the specified command");
     }
 
 }
