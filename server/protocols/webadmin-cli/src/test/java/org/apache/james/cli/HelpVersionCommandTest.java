@@ -49,13 +49,15 @@ public class HelpVersionCommandTest {
     @Test
     void longHelpCommandShouldShowHelpMessage() {
         new CommandLine(new WebAdminCli()).execute("--help");
-        assertThat(outputStreamCaptor.toString()).contains("-h, --help      Show this help message and exit.");
+        assertThat(outputStreamCaptor.toString()).contains("-h, --help");
+        assertThat(outputStreamCaptor.toString()).contains("Show this help message and exit.");
     }
 
     @Test
     void shortHelpCommandShouldShowHelpMessage() {
         new CommandLine(new WebAdminCli()).execute("-h");
-        assertThat(outputStreamCaptor.toString()).contains("-h, --help      Show this help message and exit.");
+        assertThat(outputStreamCaptor.toString()).contains("-h, --help");
+        assertThat(outputStreamCaptor.toString()).contains("Show this help message and exit.");
     }
 
     @Test
