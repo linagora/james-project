@@ -30,7 +30,8 @@ import picocli.CommandLine;
         name = "domain",
         description = "Manage Domains",
         subcommands = {
-                DomainListCommand.class
+            DomainListCommand.class,
+            DomainCreateCommand.class
         })
 public class DomainCommand implements Callable<Integer> {
 
@@ -46,7 +47,7 @@ public class DomainCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        return 0;
+        return WebAdminCli.CLI_FINISHED_SUCCEED;
     }
 
 }

@@ -21,11 +21,16 @@ package org.apache.james.httpclient;
 
 import java.util.List;
 
+import feign.Param;
 import feign.RequestLine;
+import feign.Response;
 
 public interface DomainClient {
 
     @RequestLine("GET")
     List<String> getDomainList();
+
+    @RequestLine("PUT /{domainToBeCreated}")
+    Response createADomain(@Param("domainToBeCreated") String domainName);
 
 }
