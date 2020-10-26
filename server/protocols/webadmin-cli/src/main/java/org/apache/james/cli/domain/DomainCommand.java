@@ -17,48 +17,36 @@
  * under the License.                                             *
  ******************************************************************/
 
-package org.apache.james.cli;
+package org.apache.james.cli.domain;
 
 import java.io.PrintStream;
 import java.util.concurrent.Callable;
 
-import org.apache.james.cli.domain.DomainCommand;
+import org.apache.james.cli.WebAdminCli;
 
 import picocli.CommandLine;
 
 @CommandLine.Command(
-        name = "james-cli",
-        description = "James Webadmin CLI")
-public class WebAdminCli implements Callable<Integer> {
+        name = "domain",
+        description = "Manage Domains",
+        subcommands = {
+                DomainListCommand.class
+        })
+public class DomainCommand implements Callable<Integer> {
 
-    public @CommandLine.Option(
-            names = "--url",
-            description = "James server URL",
-            defaultValue = "http://127.0.0.1:8000")
-    String jamesUrl;
+    protected final WebAdminCli webAdminCli;
+    protected final PrintStream out;
+    protected final PrintStream err;
+
+    public DomainCommand(PrintStream out, WebAdminCli webAdminCli, PrintStream err) {
+        this.out = out;
+        this.webAdminCli = webAdminCli;
+        this.err = err;
+    }
 
     @Override
     public Integer call() {
         return 0;
-    }
-
-    public static void main(String[] args) {
-        PrintStream out = System.out;
-        PrintStream err = System.err;
-        int exitCode = execute(out, err, args);
-        System.exit(exitCode);
-    }
-
-    public static int execute(PrintStream out, PrintStream err, String[] args) {
-        WebAdminCli parent = new WebAdminCli();
-        return new CommandLine(parent)
-                .addSubcommand(new CommandLine.HelpCommand())
-                .addSubcommand(new DomainCommand(out, parent, err))
-                .execute(args);
-    }
-
-    public static int executeFluent(PrintStream out, PrintStream err, String... args) {
-        return execute(out, err, args);
     }
 
 }
