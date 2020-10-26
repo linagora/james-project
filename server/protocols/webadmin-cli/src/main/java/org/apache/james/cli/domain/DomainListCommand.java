@@ -19,12 +19,13 @@
 
 package org.apache.james.cli.domain;
 
+import java.util.concurrent.Callable;
+
+import org.apache.james.httpclient.DomainClient;
+
 import feign.Feign;
 import feign.jackson.JacksonDecoder;
-import org.apache.james.httpclient.DomainClient;
 import picocli.CommandLine;
-
-import java.util.concurrent.Callable;
 
 @CommandLine.Command(
         name = "list",
@@ -43,7 +44,7 @@ public class DomainListCommand implements Callable<Integer> {
                 domainClient.getDomainList().forEach(domainCommand.out::println);
             }
             return 0;
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace(domainCommand.err);
             return 1;
         }

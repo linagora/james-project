@@ -19,11 +19,12 @@
 
 package org.apache.james.cli.domain;
 
-import org.apache.james.cli.WebAdminCli;
-import picocli.CommandLine;
-
 import java.io.PrintStream;
 import java.util.concurrent.Callable;
+
+import org.apache.james.cli.WebAdminCli;
+
+import picocli.CommandLine;
 
 @CommandLine.Command(
         name = "domain",

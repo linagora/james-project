@@ -19,9 +19,9 @@
 
 package org.apache.james.httpclient;
 
-import feign.RequestLine;
-
 import java.util.List;
+
+import feign.RequestLine;
 
 public interface DomainClient {
 
