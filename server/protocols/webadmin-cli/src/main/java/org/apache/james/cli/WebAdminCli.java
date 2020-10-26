@@ -19,9 +19,9 @@
 
 package org.apache.james.cli;
 
-import picocli.CommandLine;
-
 import java.util.concurrent.Callable;
+
+import picocli.CommandLine;
 
 @CommandLine.Command(
         name = "james-cli",
