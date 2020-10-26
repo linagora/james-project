@@ -17,20 +17,41 @@
  * under the License.                                             *
  ******************************************************************/
 
-package org.apache.james.httpclient;
+package org.apache.james.cli.domain;
 
-import java.util.List;
+import java.util.concurrent.Callable;
 
-import feign.Param;
-import feign.RequestLine;
+import org.apache.james.httpclient.DomainClient;
+
+import feign.Feign;
 import feign.Response;
+import picocli.CommandLine;
 
-public interface DomainClient {
+@CommandLine.Command(
+    name = "create",
+    description = "Create a new domain")
+public class DomainCreateCommand implements Callable<Integer> {
 
-    @RequestLine("GET")
-    List<String> getDomainList();
+    @CommandLine.ParentCommand DomainCommand domainCommand;
 
-    @RequestLine("PUT /{domainToBeCreated}")
-    Response createADomain(@Param("domainToBeCreated") String domainName);
+    @CommandLine.Parameters
+    String domainName;
+
+    @Override
+    public Integer call() {
+        try {
+            DomainClient domainClient = Feign.builder()
+                .target(DomainClient.class, domainCommand.webAdminCli.jamesUrl + "/domains");
+            Response rs = domainClient.createADomain(domainName);
+            if (rs.status() == 204) {
+                return 0;
+            } else {
+                return 1;
+            }
+        } catch (Exception e) {
+            e.printStackTrace(domainCommand.err);
+            return 1;
+        }
+    }
 
 }
