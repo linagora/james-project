@@ -58,4 +58,38 @@ public class DomainManageTest {
         assertThat(outputStreamCaptor.toString().trim().toCharArray()).containsOnly("localhost".toCharArray());
     }
 
+    @Test
+    void domainCreateCommandWithValidNameShouldSuccessfully(GuiceJamesServer server) {
+        Port port = server.getProbe(WebAdminGuiceProbe.class).getWebAdminPort();
+
+        int exitCode = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "create", "linagora.com");
+        assertThat(exitCode).isEqualTo(0);
+
+        WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "list");
+        assertThat(outputStreamCaptor.toString()).contains("linagora.com");
+    }
+
+    @Test
+    void domainCreateCommandWithInvalidNameShouldFailed(GuiceJamesServer server) {
+        Port port = server.getProbe(WebAdminGuiceProbe.class).getWebAdminPort();
+
+        int exitCode1 = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "create", "@linagora.com");
+        assertThat(exitCode1).isEqualTo(1);
+
+        int exitCode2 = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "create", "linagora.com/");
+        assertThat(exitCode2).isEqualTo(1);
+
+        int exitCode3 = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "create", "");
+        assertThat(exitCode3).isEqualTo(1);
+
+        // These above domains should not be in domain list
+        WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "list");
+        assertThat(outputStreamCaptor.toString().trim().toCharArray()).containsOnly("localhost".toCharArray());
+    }
 }
