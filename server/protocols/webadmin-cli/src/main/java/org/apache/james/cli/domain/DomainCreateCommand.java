@@ -21,6 +21,7 @@ package org.apache.james.cli.domain;
 
 import java.util.concurrent.Callable;
 
+import org.apache.james.cli.WebAdminCli;
 import org.apache.james.httpclient.DomainClient;
 
 import feign.Feign;
@@ -31,6 +32,8 @@ import picocli.CommandLine;
     name = "create",
     description = "Create a new domain")
 public class DomainCreateCommand implements Callable<Integer> {
+
+    public static final int CREATED_CODE = 204;
 
     @CommandLine.ParentCommand DomainCommand domainCommand;
 
@@ -43,14 +46,14 @@ public class DomainCreateCommand implements Callable<Integer> {
             DomainClient domainClient = Feign.builder()
                 .target(DomainClient.class, domainCommand.webAdminCli.jamesUrl + "/domains");
             Response rs = domainClient.createADomain(domainName);
-            if (rs.status() == 204) {
-                return 0;
+            if (rs.status() == CREATED_CODE) {
+                return WebAdminCli.CLI_FINISHED_SUCCEED;
             } else {
-                return 1;
+                return WebAdminCli.CLI_FINISHED_FAILED;
             }
         } catch (Exception e) {
             e.printStackTrace(domainCommand.err);
-            return 1;
+            return WebAdminCli.CLI_FINISHED_FAILED;
         }
     }
 

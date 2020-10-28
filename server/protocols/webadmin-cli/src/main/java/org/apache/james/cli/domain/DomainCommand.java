@@ -47,7 +47,7 @@ public class DomainCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        return 0;
+        return WebAdminCli.CLI_FINISHED_SUCCEED;
     }
 
 }

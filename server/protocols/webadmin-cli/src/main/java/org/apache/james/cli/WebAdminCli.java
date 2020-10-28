@@ -31,6 +31,9 @@ import picocli.CommandLine;
         description = "James Webadmin CLI")
 public class WebAdminCli implements Callable<Integer> {
 
+    public static final int CLI_FINISHED_SUCCEED = 0;
+    public static final int CLI_FINISHED_FAILED = 1;
+
     public @CommandLine.Option(
             names = "--url",
             description = "James server URL",
@@ -39,7 +42,7 @@ public class WebAdminCli implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        return 0;
+        return CLI_FINISHED_SUCCEED;
     }
 
     public static void main(String[] args) {
