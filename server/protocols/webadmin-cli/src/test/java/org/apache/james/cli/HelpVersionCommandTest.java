@@ -19,19 +19,20 @@
 
 package org.apache.james.cli;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class HelpVersionCommandTest {
 
     private final PrintStream standardOut = System.out;
     private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream errorStreamCaptor = new ByteArrayOutputStream();
 
     @BeforeEach
     void setup() {
@@ -45,7 +46,7 @@ public class HelpVersionCommandTest {
 
     @Test
     void helpCommandShouldShowHelpMessage() {
-        int exitCode = WebAdminCli.executeFluent("help");
+        int exitCode = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor), "help");
         assertThat(exitCode).isEqualTo(0);
         assertThat(outputStreamCaptor.toString()).contains("help");
         assertThat(outputStreamCaptor.toString()).contains("Displays help information about the specified command");
