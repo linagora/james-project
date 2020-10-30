@@ -19,34 +19,49 @@
 
 package org.apache.james.cli;
 
+import java.io.PrintStream;
 import java.util.concurrent.Callable;
+
+import org.apache.james.cli.domain.DomainCommand;
 
 import picocli.CommandLine;
 
 @CommandLine.Command(
-        name = "james-cli",
-        description = "James Webadmin CLI")
+    name = "james-cli",
+    description = "James Webadmin CLI")
 public class WebAdminCli implements Callable<Integer> {
+
+    public static final int CLI_FINISHED_SUCCEED = 0;
+    public static final int CLI_FINISHED_FAILED = 1;
+
+    public @CommandLine.Option(
+        names = "--url",
+        description = "James server URL",
+        defaultValue = "http://127.0.0.1:8000")
+    String jamesUrl;
 
     @Override
     public Integer call() {
-        return 0;
+        return CLI_FINISHED_SUCCEED;
     }
 
     public static void main(String[] args) {
-        int exitCode = execute(args);
+        PrintStream out = System.out;
+        PrintStream err = System.err;
+        int exitCode = execute(out, err, args);
         System.exit(exitCode);
     }
 
-    public static int execute(String[] args) {
+    public static int execute(PrintStream out, PrintStream err, String[] args) {
         WebAdminCli parent = new WebAdminCli();
         return new CommandLine(parent)
-                .addSubcommand(new CommandLine.HelpCommand())
-                .execute(args);
+            .addSubcommand(new CommandLine.HelpCommand())
+            .addSubcommand(new DomainCommand(out, parent, err))
+            .execute(args);
     }
 
-    public static int executeFluent(String... args) {
-        return execute(args);
+    public static int executeFluent(PrintStream out, PrintStream err, String... args) {
+        return execute(out, err, args);
     }
 
 }
