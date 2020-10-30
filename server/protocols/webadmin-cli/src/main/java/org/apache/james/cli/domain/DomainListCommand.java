@@ -21,6 +21,7 @@ package org.apache.james.cli.domain;
 
 import java.util.concurrent.Callable;
 
+import org.apache.james.cli.WebAdminCli;
 import org.apache.james.httpclient.DomainClient;
 
 import feign.Feign;
@@ -40,13 +41,11 @@ public class DomainListCommand implements Callable<Integer> {
             DomainClient domainClient = Feign.builder()
                     .decoder(new JacksonDecoder())
                     .target(DomainClient.class, domainCommand.webAdminCli.jamesUrl + "/domains");
-            if (domainClient.getDomainList().size() != 0) {
-                domainClient.getDomainList().forEach(domainCommand.out::println);
-            }
-            return 0;
+            domainClient.getDomainList().forEach(domainCommand.out::println);
+            return WebAdminCli.CLI_FINISHED_SUCCEED;
         } catch (Exception e) {
             e.printStackTrace(domainCommand.err);
-            return 1;
+            return WebAdminCli.CLI_FINISHED_FAILED;
         }
     }
 
