@@ -34,6 +34,7 @@ import picocli.CommandLine;
 public class DomainExistCommand implements Callable<Integer> {
 
     public static final int EXISTED_CODE = 204;
+    public static final int NOT_EXISTED_CODE = 404;
 
     @CommandLine.ParentCommand DomainCommand domainCommand;
 
@@ -45,13 +46,15 @@ public class DomainExistCommand implements Callable<Integer> {
         try {
             DomainClient domainClient = Feign.builder()
                 .target(DomainClient.class, domainCommand.webAdminCli.jamesUrl + "/domains");
-            Response rs = domainClient.isExist(domainName);
+            Response rs = domainClient.doesExist(domainName);
             if (rs.status() == EXISTED_CODE) {
                 domainCommand.out.println(domainName + " exists");
-            } else {
+                return WebAdminCli.CLI_FINISHED_SUCCEED;
+            } else if (rs.status() == NOT_EXISTED_CODE) {
                 domainCommand.out.println(domainName + " does not exist");
+                return WebAdminCli.CLI_FINISHED_SUCCEED;
             }
-            return WebAdminCli.CLI_FINISHED_SUCCEED;
+            return WebAdminCli.CLI_FINISHED_FAILED;
         } catch (Exception e) {
             e.printStackTrace(domainCommand.err);
             return WebAdminCli.CLI_FINISHED_FAILED;
