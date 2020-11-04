@@ -19,37 +19,43 @@
 
 package org.apache.james.cli.domain;
 
-import java.io.PrintStream;
 import java.util.concurrent.Callable;
 
 import org.apache.james.cli.WebAdminCli;
+import org.apache.james.httpclient.DomainClient;
 
+import feign.Feign;
+import feign.Response;
 import picocli.CommandLine;
 
 @CommandLine.Command(
-        name = "domain",
-        description = "Manage Domains",
-        subcommands = {
-            DomainListCommand.class,
-            DomainCreateCommand.class,
-            DomainDeleteCommand.class,
-            DomainExistCommand.class
-        })
-public class DomainCommand implements Callable<Integer> {
+    name = "exist",
+    description = "Check if a domain is exist")
+public class DomainExistCommand implements Callable<Integer> {
 
-    protected final WebAdminCli webAdminCli;
-    protected final PrintStream out;
-    protected final PrintStream err;
+    public static final int EXISTED_CODE = 204;
 
-    public DomainCommand(PrintStream out, WebAdminCli webAdminCli, PrintStream err) {
-        this.out = out;
-        this.webAdminCli = webAdminCli;
-        this.err = err;
-    }
+    @CommandLine.ParentCommand DomainCommand domainCommand;
+
+    @CommandLine.Parameters
+    String domainName;
 
     @Override
     public Integer call() {
-        return WebAdminCli.CLI_FINISHED_SUCCEED;
+        try {
+            DomainClient domainClient = Feign.builder()
+                .target(DomainClient.class, domainCommand.webAdminCli.jamesUrl + "/domains");
+            Response rs = domainClient.isExist(domainName);
+            if (rs.status() == EXISTED_CODE) {
+                domainCommand.out.println(domainName + " exists");
+            } else {
+                domainCommand.out.println(domainName + " does not exist");
+            }
+            return WebAdminCli.CLI_FINISHED_SUCCEED;
+        } catch (Exception e) {
+            e.printStackTrace(domainCommand.err);
+            return WebAdminCli.CLI_FINISHED_FAILED;
+        }
     }
 
 }

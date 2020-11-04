@@ -121,4 +121,26 @@ public class DomainManageTest {
         assertThat(exitCode).isEqualTo(1);
     }
 
+    @Test
+    void domainExistCommandWithDefaultDomainShouldBeExisted(GuiceJamesServer server) {
+        Port port = server.getProbe(WebAdminGuiceProbe.class).getWebAdminPort();
+
+        int exitCode = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "exist", "localhost");
+
+        assertThat(exitCode).isEqualTo(0);
+        assertThat(outputStreamCaptor.toString().trim()).isEqualTo("localhost exists");
+    }
+
+    @Test
+    void domainExistCommandNotWithDefaultDomainShouldNotBeExisted(GuiceJamesServer server) {
+        Port port = server.getProbe(WebAdminGuiceProbe.class).getWebAdminPort();
+
+        int exitCode = WebAdminCli.executeFluent(new PrintStream(outputStreamCaptor), new PrintStream(errorStreamCaptor),
+            "--url", "http://127.0.0.1:" + port.getValue(), "domain", "exist", "linagora.com");
+
+        assertThat(exitCode).isEqualTo(0);
+        assertThat(outputStreamCaptor.toString().trim()).isEqualTo("linagora.com does not exist");
+    }
+
 }
