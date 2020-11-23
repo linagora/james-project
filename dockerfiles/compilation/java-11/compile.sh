@@ -131,6 +131,7 @@ if [ $? -eq 0 ]; then
       cp -r server/container/cli/target/james-server-cli.lib $MEMORY_DESTINATION || true
       mkdir -p ${MEMORY_DESTINATION}/glowroot
       cp -r ${GLOW_ROOT_DIR}/* ${MEMORY_DESTINATION}/glowroot || true
+      unzip $MEMORY_DESTINATION/james-server-memory-guice.zip
    fi
 
    if [ -d "$SPRING_DESTINATION" ]; then
