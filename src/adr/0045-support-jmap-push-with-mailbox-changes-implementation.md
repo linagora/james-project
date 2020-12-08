@@ -79,6 +79,6 @@ CLUSTERING COLUMN state
 COLUMN created
 COLUMN updated
 COLUMN destroyed
-COLUMN isMailboxChange
+COLUMN isCountChange
 ORDERED BY state
 ```
