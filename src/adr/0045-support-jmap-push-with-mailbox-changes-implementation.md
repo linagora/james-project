@@ -1,3 +1,11 @@
+# 45. Support JMAP Push with Mailbox/changes implementation
+
+Date: 2020-12-08
+
+## Status
+
+Accepted (lazy consensus).
+
 ## Context
 
 JMAP Push notifications allow clients to efficiently update (almost) instantly to stay in sync with data changes on the server. 
@@ -17,6 +25,8 @@ Each state will have a list of changes, and all the **mailboxId** will be stored
 For the case when message are appended to a mailbox, it will be counted as an updated event and that mailboxId should be store in **updated** list. 
 
 Leveraging the **MailboxChanges** table, We can now fetch all the changes that have occured since a particular **state**.
+
+States are stored in Cassandra as time based UUID. This ensures that no conflicting changes will happen in the case when two or more events occur at the same point in time.    
 
 Components that need to be implemented:
 
@@ -65,10 +75,10 @@ Only one table is required:
 ```
 TABLE mailbox_changes
 PRIMARY KEY accountId
-COLUMN state
+CLUSTERING COLUMN state
 COLUMN created
 COLUMN updated
 COLUMN destroyed
 COLUMN isMailboxChange
-ORDERED BY date
+ORDERED BY state
 ```
