@@ -19,6 +19,7 @@
 
 package org.apache.james.mailetcontainer.impl;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import javax.mail.internet.MimeMessage;
@@ -289,7 +291,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(mailAddress)
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
         testee.bounce(mail, "message");
     }
@@ -300,7 +302,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(MailAddress.nullSender())
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
 
         testee.bounce(mail, "message");
@@ -313,7 +315,7 @@ public class JamesMailetContextTest {
         MailImpl mail = MailImpl.builder()
             .name("mail1")
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
 
         testee.bounce(mail, "message");
@@ -327,7 +329,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(mailAddress)
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
 
         testee.bounce(mail, "message");
@@ -345,7 +347,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(mailAddress)
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
         testee.sendMail(mail);
 
@@ -362,7 +364,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(mailAddress)
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
         String other = "other";
         testee.sendMail(mail, other);
@@ -380,7 +382,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(mailAddress)
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
         testee.sendMail(mail, 5, TimeUnit.MINUTES);
 
@@ -401,7 +403,7 @@ public class JamesMailetContextTest {
             .name("mail1")
             .sender(mailAddress)
             .addRecipient(mailAddress)
-            .mimeMessage(MimeMessageUtil.defaultMimeMessage())
+            .mimeMessage(MimeMessageUtil.mimeMessageFromBytes("header: value\r\n".getBytes(UTF_8)))
             .build();
         String other = "other";
         testee.sendMail(mail, other, 5, TimeUnit.MINUTES);
