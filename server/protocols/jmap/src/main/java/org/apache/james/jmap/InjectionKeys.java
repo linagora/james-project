@@ -17,10 +17,8 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.api.change;
+package org.apache.james.jmap;
 
-import org.apache.james.jmap.api.model.AccountId;
-
-public interface JmapChange {
-    AccountId getAccountId();
+public interface InjectionKeys {
+    String JMAP = "JMAP";
 }

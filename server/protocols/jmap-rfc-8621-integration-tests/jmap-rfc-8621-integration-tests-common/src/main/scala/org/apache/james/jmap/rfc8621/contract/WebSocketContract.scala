@@ -19,13 +19,20 @@
 package org.apache.james.jmap.rfc8621.contract
 
 import java.net.{ProtocolException, URI}
+import java.nio.charset.StandardCharsets
 
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.apache.james.GuiceJamesServer
+import org.apache.james.jmap.api.model.AccountId
 import org.apache.james.jmap.draft.JmapGuiceProbe
 import org.apache.james.jmap.rfc8621.contract.Fixture._
+import org.apache.james.mailbox.MessageManager.AppendCommand
+import org.apache.james.mailbox.model.MailboxACL.Right
+import org.apache.james.mailbox.model.{MailboxACL, MailboxPath}
+import org.apache.james.mime4j.dom.Message
+import org.apache.james.modules.{ACLProbeImpl, MailboxProbeImpl}
 import org.apache.james.utils.DataProbeImpl
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.{assertThat, assertThatThrownBy}
 import org.junit.jupiter.api.{BeforeEach, Test}
 import sttp.capabilities.WebSockets
 import sttp.client3.monad.IdMonad
@@ -37,6 +44,8 @@ import sttp.monad.syntax.MonadErrorOps
 import sttp.ws.WebSocketFrame
 import sttp.ws.WebSocketFrame.Text
 
+import scala.jdk.CollectionConverters._
+
 trait WebSocketContract {
   private lazy val backend: SttpBackend[Identity, WebSockets] = OkHttpSyncBackend()
   private lazy implicit val monadError: MonadError[Identity] = IdMonad
@@ -46,6 +55,7 @@ trait WebSocketContract {
     server.getProbe(classOf[DataProbeImpl])
       .fluent()
       .addDomain(DOMAIN.asString())
+      .addUser(ANDRE.asString(), ANDRE_PASSWORD)
       .addUser(BOB.asString(), BOB_PASSWORD)
   }
 
@@ -92,6 +102,66 @@ trait WebSocketContract {
                    |  ]
                    |}
                    |""".stripMargin)
+  }
+
+  @Test
+  def executingSeveralAPICallsShouldBePossible(server: GuiceJamesServer): Unit = {
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            List({
+              ws.send(WebSocketFrame.text(
+                """{
+                  |  "@type": "Request",
+                  |  "requestId": "req-36",
+                  |  "using": [ "urn:ietf:params:jmap:core"],
+                  |  "methodCalls": [
+                  |    [
+                  |      "Core/echo",
+                  |      {
+                  |        "arg1": "1",
+                  |        "arg2": "arg2data"
+                  |      },
+                  |      "c1"
+                  |    ]
+                  |  ]
+                  |}""".stripMargin))
+              ws.receive()
+                .map {
+                  case t: Text => t.payload
+                }
+            }, {
+              Thread.sleep(200)
+
+              ws.send(WebSocketFrame.text(
+                """{
+                  |  "@type": "Request",
+                  |  "requestId": "req-36",
+                  |  "using": [ "urn:ietf:params:jmap:core"],
+                  |  "methodCalls": [
+                  |    [
+                  |      "Core/echo",
+                  |      {
+                  |        "arg1": "2",
+                  |        "arg2": "arg2data"
+                  |      },
+                  |      "c1"
+                  |    ]
+                  |  ]
+                  |}""".stripMargin))
+
+              ws.receive()
+                .map {
+                  case t: Text => t.payload
+                }
+            })
+        })
+        .send(backend)
+        .body
+
+    assertThat(response.toOption.get.asJava)
+      .hasSize(2)
   }
 
   @Test
@@ -360,6 +430,275 @@ trait WebSocketContract {
                    |  "sessionState": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
                    |  "methodResponses": [["error",{"type":"invalidArguments","description":"The following properties [invalidProperty] do not exist."},"c1"]]
                    |}""".stripMargin)
+  }
+
+  @Test
+  def pushEnableRequestsShouldBeProcessed(server: GuiceJamesServer): Unit = {
+    val bobPath = MailboxPath.inbox(BOB)
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
+
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["Mailbox", "Email"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            ws.send(WebSocketFrame.text(
+              s"""{
+                 |  "@type": "Request",
+                 |  "requestId": "req-36",
+                 |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+                 |  "methodCalls": [
+                 |    ["Email/set", {
+                 |      "accountId": "$ACCOUNT_ID",
+                 |      "create": {
+                 |        "aaaaaa":{
+                 |          "mailboxIds": {
+                 |             "${mailboxId.serialize}": true
+                 |          }
+                 |        }
+                 |      }
+                 |    }, "c1"]]
+                 |}""".stripMargin))
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    val jmapGuiceProbe: JmapGuiceProbe = server.getProbe(classOf[JmapGuiceProbe])
+    val emailState: String = jmapGuiceProbe.getLatestEmailState(accountId).getValue.toString
+    val mailboxState: String = jmapGuiceProbe.getLatestMailboxState(accountId).getValue.toString
+
+    val mailboxStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Mailbox":"$mailboxState"}}}"""
+    val emailStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"$emailState"}}}"""
+
+    assertThat(response.toOption.get.asJava)
+      .hasSize(3) // email notification + mailbox notification + API response
+      .contains(mailboxStateChange, emailStateChange)
+  }
+
+  @Test
+  def dataTypesShouldDefaultToAll(server: GuiceJamesServer): Unit = {
+    val bobPath = MailboxPath.inbox(BOB)
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
+
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": null
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            ws.send(WebSocketFrame.text(
+              s"""{
+                 |  "@type": "Request",
+                 |  "requestId": "req-36",
+                 |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+                 |  "methodCalls": [
+                 |    ["Email/set", {
+                 |      "accountId": "$ACCOUNT_ID",
+                 |      "create": {
+                 |        "aaaaaa":{
+                 |          "mailboxIds": {
+                 |             "${mailboxId.serialize}": true
+                 |          }
+                 |        }
+                 |      }
+                 |    }, "c1"]]
+                 |}""".stripMargin))
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    val jmapGuiceProbe: JmapGuiceProbe = server.getProbe(classOf[JmapGuiceProbe])
+    val emailState: String = jmapGuiceProbe.getLatestEmailState(accountId).getValue.toString
+    val mailboxState: String = jmapGuiceProbe.getLatestMailboxState(accountId).getValue.toString
+
+    val mailboxStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Mailbox":"$mailboxState"}}}"""
+    val emailStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"$emailState"}}}"""
+
+    assertThat(response.toOption.get.asJava)
+      .hasSize(3) // email notification + mailbox notification + API response
+      .contains(mailboxStateChange, emailStateChange)
+  }
+
+  @Test
+  def pushEnableShouldUpdatePreviousSubscriptions(server: GuiceJamesServer): Unit = {
+    val bobPath = MailboxPath.inbox(BOB)
+    val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["Mailbox", "Email"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["Mailbox"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            ws.send(WebSocketFrame.text(
+              s"""{
+                 |  "@type": "Request",
+                 |  "requestId": "req-36",
+                 |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+                 |  "methodCalls": [
+                 |    ["Email/set", {
+                 |      "accountId": "$ACCOUNT_ID",
+                 |      "create": {
+                 |        "aaaaaa":{
+                 |          "mailboxIds": {
+                 |             "${mailboxId.serialize}": true
+                 |          }
+                 |        }
+                 |      }
+                 |    }, "c1"]]
+                 |}""".stripMargin))
+
+            List(ws.receive()
+              .map { case t: Text =>
+                t.payload
+            },
+            ws.receive()
+              .map { case t: Text =>
+                t.payload
+              })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+    val jmapGuiceProbe: JmapGuiceProbe = server.getProbe(classOf[JmapGuiceProbe])
+    val emailState: String = jmapGuiceProbe.getLatestEmailState(accountId).getValue.toString
+    val mailboxState: String = jmapGuiceProbe.getLatestMailboxState(accountId).getValue.toString
+
+    val mailboxStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Mailbox":"$mailboxState"}}}"""
+    val emailStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"$emailState"}}}"""
+
+    assertThat(response.toOption.get.asJava)
+      .hasSize(2) // No Email notification
+      .contains(mailboxStateChange)
+      .doesNotContain(emailStateChange)
+  }
+
+  @Test
+  def pushShouldSupportDelegation(server: GuiceJamesServer): Unit = {
+    val mailboxProbe: MailboxProbeImpl = server.getProbe(classOf[MailboxProbeImpl])
+    val andrePath = MailboxPath.inbox(ANDRE)
+    mailboxProbe.createMailbox(andrePath)
+
+    server.getProbe(classOf[ACLProbeImpl])
+      .replaceRights(andrePath, BOB.asString, new MailboxACL.Rfc4314Rights(Right.Lookup, Right.Read))
+
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["Mailbox", "Email"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            val message: Message = Message.Builder
+              .of
+              .setSubject("test")
+              .setBody("testmail", StandardCharsets.UTF_8)
+              .build
+            mailboxProbe.appendMessage(ANDRE.asString(), andrePath, AppendCommand.from(message))
+
+            Thread.sleep(100)
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    val jmapGuiceProbe: JmapGuiceProbe = server.getProbe(classOf[JmapGuiceProbe])
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val emailState: String = jmapGuiceProbe.getLatestEmailStateWithDelegation(accountId).getValue.toString
+    val mailboxState: String = jmapGuiceProbe.getLatestMailboxStateWithDelegation(accountId).getValue.toString
+
+    val mailboxStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Mailbox":"$mailboxState"}}}"""
+    val emailStateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"$emailState"}}}"""
+
+    assertThat(response.toOption.get.asJava)
+      .hasSize(2) // email notification + mailbox notification
+      .contains(mailboxStateChange, emailStateChange)
   }
 
   private def authenticatedRequest(server: GuiceJamesServer): RequestT[Identity, Either[String, String], Any] = {

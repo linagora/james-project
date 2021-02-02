@@ -25,6 +25,7 @@ import java.net.URL
 import eu.timepit.refined.refineV
 import io.netty.handler.codec.http.HttpResponseStatus
 import org.apache.james.core.Username
+import org.apache.james.jmap.change.{EmailTypeName, MailboxTypeName, TypeName, TypeState}
 import org.apache.james.jmap.core
 import org.apache.james.jmap.core.CapabilityIdentifier.CapabilityIdentifier
 import org.apache.james.jmap.core.Id.IdConstraint
@@ -185,16 +186,32 @@ object ResponseSerializer {
       }
     case _ => JsError("Expecting a JsObject to represent a webSocket inbound request")
   }
+  private implicit val typeNameReads: Reads[TypeName] = {
+    case JsString(MailboxTypeName.asString) => JsSuccess(MailboxTypeName)
+    case JsString(EmailTypeName.asString) => JsSuccess(EmailTypeName)
+    case _ => JsError("Expecting a JsString as typeName")
+  }
+  private implicit val webSocketPushEnableReads: Reads[WebSocketPushEnable] = Json.reads[WebSocketPushEnable]
   private implicit val webSocketInboundReads: Reads[WebSocketInboundMessage] = {
     case json: JsObject =>
       json.value.get("@type") match {
         case Some(JsString("Request")) => webSocketRequestReads.reads(json)
+        case Some(JsString("WebSocketPushEnable")) => webSocketPushEnableReads.reads(json)
         case Some(JsString(unknownType)) => JsError(s"Unknown @type field on a webSocket inbound message: $unknownType")
         case Some(invalidType) => JsError(s"Invalid @type field on a webSocket inbound message: expecting a JsString, got $invalidType")
         case None => JsError(s"Missing @type field on a webSocket inbound message")
       }
     case _ => JsError("Expecting a JsObject to represent a webSocket inbound message")
   }
+
+  private implicit val typeStateMapWrites: Writes[Map[TypeName, State]] = mapWrites[TypeName, State](_.asString(), stateWrites)
+  private implicit val typeStateWrites: Writes[TypeState] = Json.valueWrites[TypeState]
+  private implicit val changeWrites: OWrites[Map[AccountId, TypeState]] = mapWrites[AccountId, TypeState](_.id.value, typeStateWrites)
+  private implicit val stateChangeWrites: Writes[StateChange] = stateChange =>
+    JsObject(Map(
+      "@type" -> JsString("StateChange"),
+      "changed" -> changeWrites.writes(stateChange.changes)))
+
   private implicit val webSocketResponseWrites: Writes[WebSocketResponse] = response => {
     val apiResponseJson: JsObject = responseObjectFormat.writes(response.responseObject)
     JsObject(Map(
@@ -210,6 +227,7 @@ object ResponseSerializer {
       ++ errorJson.value)
   }
   private implicit val webSocketOutboundWrites: Writes[WebSocketOutboundMessage] = {
+    case stateChange: StateChange => stateChangeWrites.writes(stateChange)
     case response: WebSocketResponse => webSocketResponseWrites.writes(response)
     case error: WebSocketError => webSocketErrorWrites.writes(error)
   }

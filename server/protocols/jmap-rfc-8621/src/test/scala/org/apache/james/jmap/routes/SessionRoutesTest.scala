@@ -143,7 +143,7 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |      "mayCreateTopLevelMailbox" : true
                          |    },
                          |    "urn:ietf:params:jmap:websocket": {
-                         |      "supportsPush": false,
+                         |      "supportsPush": true,
                          |      "url": "http://localhost/jmap/ws"
                          |    },
                          |    "urn:apache:james:params:jmap:mail:quota": {},
@@ -161,7 +161,7 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |          "submissionExtensions": []
                          |        },
                          |        "urn:ietf:params:jmap:websocket": {
-                         |            "supportsPush": false,
+                         |            "supportsPush": true,
                          |            "url": "http://localhost/jmap/ws"
                          |        },
                          |        "urn:ietf:params:jmap:core" : {

@@ -17,10 +17,29 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.api.change;
+package org.apache.james.jmap.change
 
-import org.apache.james.jmap.api.model.AccountId;
+import org.apache.james.events.Event
+import org.apache.james.events.EventListener.ReactiveEventListener
+import org.apache.james.jmap.core.WebSocketOutboundMessage
+import org.reactivestreams.Publisher
+import reactor.core.publisher.Sinks
+import reactor.core.publisher.Sinks.EmitFailureHandler.FAIL_FAST
+import reactor.core.scala.publisher.SMono
 
-public interface JmapChange {
-    AccountId getAccountId();
+case class StateChangeListener(types: Set[TypeName], sink: Sinks.Many[WebSocketOutboundMessage]) extends ReactiveEventListener {
+  override def reactiveEvent(event: Event): Publisher[Void] =
+    event match {
+      case stateChangeEvent: StateChangeEvent =>
+        SMono.fromCallable(() =>
+          stateChangeEvent.asStateChange.filter(types)
+            .foreach(next => sink.emitNext(next, FAIL_FAST)))
+          .asJava().`then`()
+      case _ => SMono.empty
+    }
+
+  override def isHandling(event: Event): Boolean = event match {
+    case _: StateChangeEvent => true
+    case _ => false
+  }
 }

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance   *
  * with the License.  You may obtain a copy of the License at   *
  *                                                              *
- *   http://www.apache.org/licenses/LICENSE-2.0                 *
+ *  http://www.apache.org/licenses/LICENSE-2.0                  *
  *                                                              *
  * Unless required by applicable law or agreed to in writing,   *
  * software distributed under the License is distributed on an  *
@@ -17,10 +17,22 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.api.change;
+package org.apache.james.jmap.change
 
-import org.apache.james.jmap.api.model.AccountId;
+import org.apache.james.core.Username
+import org.apache.james.events.RegistrationKey
+import org.apache.james.jmap.api.model.AccountId
 
-public interface JmapChange {
-    AccountId getAccountId();
+case class Factory() extends RegistrationKey.Factory {
+  override val forClass: Class[_ <: RegistrationKey] = classOf[AccountIdRegistrationKey]
+
+  override def fromString(asString: String): RegistrationKey = AccountIdRegistrationKey(AccountId.fromString(asString))
+}
+
+object AccountIdRegistrationKey {
+  def of(username: Username): AccountIdRegistrationKey = AccountIdRegistrationKey(AccountId.fromUsername(username))
+}
+
+case class AccountIdRegistrationKey(accountId: AccountId) extends RegistrationKey {
+  override def asString(): String = accountId.getIdentifier
 }
