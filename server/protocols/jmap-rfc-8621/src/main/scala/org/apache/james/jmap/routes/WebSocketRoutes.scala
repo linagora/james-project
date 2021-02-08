@@ -27,11 +27,14 @@ import io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import javax.inject.{Inject, Named}
+import org.apache.james.core.Username
 import org.apache.james.events.{EventBus, Registration}
 import org.apache.james.jmap.HttpConstants.JSON_CONTENT_TYPE
 import org.apache.james.jmap.JMAPUrls.JMAP_WS
-import org.apache.james.jmap.change.{AccountIdRegistrationKey, StateChangeListener, TypeName}
-import org.apache.james.jmap.core.{ProblemDetails, RequestId, WebSocketError, WebSocketOutboundMessage, WebSocketPushEnable, WebSocketRequest, WebSocketResponse}
+import org.apache.james.jmap.api.change.{EmailChangeRepository, MailboxChangeRepository}
+import org.apache.james.jmap.api.model.{AccountId => JavaAccountId}
+import org.apache.james.jmap.change._
+import org.apache.james.jmap.core._
 import org.apache.james.jmap.http.rfc8621.InjectionKeys
 import org.apache.james.jmap.http.{Authenticator, UserProvisioning}
 import org.apache.james.jmap.json.ResponseSerializer
@@ -64,7 +67,9 @@ case class ClientContext(outbound: Sinks.Many[WebSocketOutboundMessage], pushReg
 class WebSocketRoutes @Inject() (@Named(InjectionKeys.RFC_8621) val authenticator: Authenticator,
                                  userProvisioner: UserProvisioning,
                                  @Named(JMAPInjectionKeys.JMAP) eventBus: EventBus,
-                                 jmapApi: JMAPApi) extends JMAPRoutes {
+                                 jmapApi: JMAPApi,
+                                 mailboxChangeRepository: MailboxChangeRepository,
+                                 emailChangeRepository: EmailChangeRepository) extends JMAPRoutes {
 
   override def routes(): stream.Stream[JMAPRoute] = stream.Stream.of(
     JMAPRoute.builder
@@ -131,8 +136,26 @@ class WebSocketRoutes @Inject() (@Named(InjectionKeys.RFC_8621) val authenticato
                 StateChangeListener(pushEnable.dataTypes.getOrElse(TypeName.ALL), clientContext.outbound),
                 AccountIdRegistrationKey.of(clientContext.session.getUser)))
               .doOnNext(newRegistration => clientContext.withRegistration(newRegistration))
-              .`then`()
+              .`then`(sendPushState(pushEnable, clientContext))
       })
+
+  private def sendPushState(pushEnable: WebSocketPushEnable, clientContext: ClientContext): SMono[Unit] = {
+    pushEnable.pushState.map(p => {
+      val username: Username = clientContext.session.getUser
+      val accountId: AccountId = AccountId.from(username).fold(
+        failure => throw new IllegalArgumentException(failure),
+        success => success)
+      val x: Mono[Unit] = for {
+        mailboxState <- mailboxChangeRepository.getLatestStateWithDelegation(JavaAccountId.fromUsername(username))
+        emailState <- emailChangeRepository.getLatestStateWithDelegation(JavaAccountId.fromUsername(username))
+      } yield {
+        clientContext.outbound.emitNext(StateChange(Map(accountId -> TypeState(
+          MailboxTypeName.asMap(Some(State.fromJava(mailboxState))) ++
+          EmailTypeName.asMap(Some(State.fromJava(emailState))))), Some(PushState("xyz"))), FAIL_FAST)
+      }
+      SMono(x)
+    }).getOrElse(SMono.empty)
+  }
 
   private def handleHttpHandshakeError(throwable: Throwable, response: HttpServerResponse): SMono[Void] =
     respondDetails(response, ProblemDetails.forThrowable(throwable))

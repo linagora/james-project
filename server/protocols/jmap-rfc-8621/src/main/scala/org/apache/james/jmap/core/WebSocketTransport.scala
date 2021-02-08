@@ -33,14 +33,16 @@ case class WebSocketResponse(requestId: Option[RequestId], responseObject: Respo
 
 case class WebSocketError(requestId: Option[RequestId], problemDetails: ProblemDetails) extends WebSocketOutboundMessage
 
-case class StateChange(changes: Map[AccountId, TypeState]) extends WebSocketOutboundMessage {
+case class PushState(value: String)
+
+case class StateChange(changes: Map[AccountId, TypeState], pushState: Option[PushState]) extends WebSocketOutboundMessage {
 
   def filter(types: Set[TypeName]): Option[StateChange] =
     Option(changes.flatMap {
       case (accountId, typeState) => typeState.filter(types).map(typeState => (accountId, typeState))
     })
     .filter(_.nonEmpty)
-    .map(StateChange)
+    .map(changes => StateChange(changes, None))
 }
 
-case class WebSocketPushEnable(dataTypes: Option[Set[TypeName]]) extends WebSocketInboundMessage
+case class WebSocketPushEnable(dataTypes: Option[Set[TypeName]], pushState: Option[PushState]) extends WebSocketInboundMessage

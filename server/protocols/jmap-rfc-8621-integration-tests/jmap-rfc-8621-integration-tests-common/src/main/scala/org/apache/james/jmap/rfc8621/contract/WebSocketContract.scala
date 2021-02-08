@@ -502,6 +502,47 @@ trait WebSocketContract {
   }
 
   @Test
+  def pushEnableRequestWithPushStateShouldReturnServerState(server: GuiceJamesServer): Unit = {
+    val bobPath = MailboxPath.inbox(BOB)
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
+
+    Thread.sleep(100)
+
+    val response: Either[String, String] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, String] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["Mailbox", "Email"],
+                |  "pushState": "aaa"
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            ws.receive()
+              .map { case t: Text =>
+                t.payload
+              }
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    val jmapGuiceProbe: JmapGuiceProbe = server.getProbe(classOf[JmapGuiceProbe])
+    val emailState: String = jmapGuiceProbe.getLatestEmailState(accountId).getValue.toString
+    val mailboxState: String = jmapGuiceProbe.getLatestMailboxState(accountId).getValue.toString
+
+    val pushEnableResponse: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Mailbox":"$mailboxState", "Email":"$emailState"}}, "pushState": "xyz"}"""
+
+    assertThat(response.toOption.get)
+      .isEqualTo(pushEnableResponse)
+  }
+
+  @Test
   def dataTypesShouldDefaultToAll(server: GuiceJamesServer): Unit = {
     val bobPath = MailboxPath.inbox(BOB)
     val accountId: AccountId = AccountId.fromUsername(BOB)

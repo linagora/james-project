@@ -191,6 +191,7 @@ object ResponseSerializer {
     case JsString(EmailTypeName.asString) => JsSuccess(EmailTypeName)
     case _ => JsError("Expecting a JsString as typeName")
   }
+  private implicit val pushStateReads: Reads[PushState] = Json.valueReads[PushState]
   private implicit val webSocketPushEnableReads: Reads[WebSocketPushEnable] = Json.reads[WebSocketPushEnable]
   private implicit val webSocketInboundReads: Reads[WebSocketInboundMessage] = {
     case json: JsObject =>

@@ -61,7 +61,8 @@ case class StateChangeEvent(eventId: EventId,
       success => success) ->
       TypeState(
         MailboxTypeName.asMap(mailboxState) ++
-          EmailTypeName.asMap(emailState))))
+          EmailTypeName.asMap(emailState))),
+      None)
 
   override val getUsername: Username = username
 
