@@ -90,10 +90,9 @@ public class GetFilterMethod implements Method {
     }
 
     private Mono<JmapResponse> retrieveFilter(MethodCallId methodCallId, Username username) {
-        return Flux.from(filteringManagement.listRulesForUser(username))
-            .collect(Guavate.toImmutableList())
+        return Mono.from(filteringManagement.listRulesForUser(username))
             .map(rules -> GetFilterResponse.builder()
-                .rules(rules)
+                .rules(rules.getRules())
                 .build())
             .map(getFilterResponse -> JmapResponse.builder()
                 .methodCallId(methodCallId)

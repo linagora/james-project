@@ -16,48 +16,42 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.eventsourcing.eventstore
 
-import org.apache.james.eventsourcing.{Event, EventId}
+package org.apache.james.jmap.api.filtering;
 
-import java.util.Optional
-import scala.annotation.varargs
-import scala.jdk.CollectionConverters._
-import scala.jdk.OptionConverters._
+import java.util.Objects;
 
-object History {
-  def empty: History = new History(Nil)
+public class Version {
+    public static Version INITIAL = new Version(-1);
 
-  def of(events: List[Event]): History = new History(events)
+    private final int version;
 
-  @varargs
-  def of(events: Event*): History = of(events.toList)
-}
+    public Version(int version) {
+        this.version = version;
+    }
 
-final case class History private(events: List[Event]) {
-  if (hasEventIdDuplicates(events)) {
-    throw EventStoreFailedException("Event History contains duplicated EventId")
-  }
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Version) {
+            Version that = (Version) o;
+            return Objects.equals(this.version, that.version);
+        }
+        return false;
+    }
 
-  private def hasEventIdDuplicates(events: List[Event]) = {
-    val eventIdsNumber = events.map(event => event.eventId)
-      .toSet
-      .size
-    eventIdsNumber != events.size
-  }
+    @Override
+    public int hashCode() {
+        return Objects.hash(version);
+    }
 
-  def getVersion: Option[EventId] = events
-    .map(event => event.eventId)
-    .maxOption
+    @Override
+    public String toString() {
+        return "Version{" +
+            "version=" + version +
+            '}';
+    }
 
-  def getVersionAsJava: Optional[EventId] = getVersion.toJava
-
-  def getEvents:List[Event] = events
-
-  def getEventsJava:java.util.List[Event] = events.asJava
-
-  def getNextEventId: EventId = getVersion
-    .map(eventId => eventId.next)
-    .getOrElse(EventId.first)
-
+    public String asString() {
+        return String.valueOf(version);
+    }
 }

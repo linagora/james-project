@@ -29,6 +29,7 @@ import org.apache.james.core.MailAddress;
 import org.apache.james.core.Username;
 import org.apache.james.jmap.api.filtering.FilteringManagement;
 import org.apache.james.jmap.api.filtering.Rule;
+import org.apache.james.jmap.api.filtering.Rules;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.mailet.Mail;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import com.github.steveash.guavate.Guavate;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Mailet for applying JMAP filtering to incoming email.
@@ -81,10 +83,9 @@ public class JMAPFiltering extends GenericMailet {
     }
 
     private void findFirstApplicableRule(Username username, Mail mail) {
-        List<Rule> filteringRules = Flux.from(filteringManagement.listRulesForUser(username))
-            .collect(Guavate.toImmutableList())
+        Rules filteringRules = Mono.from(filteringManagement.listRulesForUser(username))
             .block();
-        RuleMatcher ruleMatcher = new RuleMatcher(filteringRules);
+        RuleMatcher ruleMatcher = new RuleMatcher(filteringRules.getRules());
         Stream<Rule> matchingRules = ruleMatcher.findApplicableRules(mail);
 
         actionApplierFactory.forMail(mail)

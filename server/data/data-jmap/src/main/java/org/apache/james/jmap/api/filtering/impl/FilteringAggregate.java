@@ -22,13 +22,18 @@ package org.apache.james.jmap.api.filtering.impl;
 import java.util.List;
 
 import org.apache.james.eventsourcing.Event;
+import org.apache.james.eventsourcing.EventId;
 import org.apache.james.eventsourcing.eventstore.History;
 import org.apache.james.jmap.api.filtering.Rule;
+import org.apache.james.jmap.api.filtering.Rules;
+import org.apache.james.jmap.api.filtering.Version;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 public class FilteringAggregate {
+
+    public static final int NO_HISTORY = -1;
 
     public static FilteringAggregate load(FilteringAggregateId aggregateId, History eventsOfAggregate) {
         return new FilteringAggregate(aggregateId, eventsOfAggregate);
@@ -78,8 +83,9 @@ public class FilteringAggregate {
         return uniqueIdCount == rules.size();
     }
 
-    public List<Rule> listRules() {
-        return state.rules;
+    public Rules listRules() {
+        return new Rules(state.rules,
+            history.getVersionAsJava().map(EventId::value).map(Version::new).orElse(Version.INITIAL));
     }
 
     private void apply(Event event) {
