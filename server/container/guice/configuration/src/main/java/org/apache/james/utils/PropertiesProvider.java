@@ -43,10 +43,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 public class PropertiesProvider {
-
     private static final Logger LOGGER = LoggerFactory.getLogger("org.apache.james.CONFIGURATION");
     private static final char COMMA = ',';
     private static final String COMMA_STRING = ",";
+
+    public static Configuration getConfiguration(File propertiesFile) throws ConfigurationException {
+        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
+            .configure(new Parameters()
+                .fileBased()
+                .setListDelimiterHandler(new DefaultListDelimiterHandler(COMMA))
+                .setFile(propertiesFile));
+
+        return new DelegatedPropertiesConfiguration(COMMA_STRING, builder.getConfiguration());
+    }
 
     private final FileSystem fileSystem;
     private final ConfigurationPath configurationPrefix;
@@ -74,16 +83,6 @@ public class PropertiesProvider {
             .orElseThrow(() -> new FileNotFoundException(fileName));
 
         return getConfiguration(file);
-    }
-
-    private Configuration getConfiguration(File propertiesFile) throws ConfigurationException {
-        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
-            .configure(new Parameters()
-                .fileBased()
-                .setListDelimiterHandler(new DefaultListDelimiterHandler(COMMA))
-                .setFile(propertiesFile));
-
-        return new DelegatedPropertiesConfiguration(COMMA_STRING, builder.getConfiguration());
     }
 
     private Optional<File> getConfigurationFile(String fileName) {

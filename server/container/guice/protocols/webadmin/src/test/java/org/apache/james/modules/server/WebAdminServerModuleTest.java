@@ -21,16 +21,16 @@ package org.apache.james.modules.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.commons.configuration2.FileBasedConfiguration;
-import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
-import org.apache.commons.configuration2.builder.fluent.Parameters;
+import java.io.File;
+
+import org.apache.commons.configuration2.Configuration;
+import org.apache.james.utils.PropertiesProvider;
 import org.junit.jupiter.api.Test;
 
 class WebAdminServerModuleTest {
     @Test
     void shouldReturnEmptyWhenNoField() throws Exception {
-        FileBasedConfiguration configuration = getConfiguration("webadmin-none.properties");
+        Configuration configuration = getConfiguration("webadmin-none.properties");
 
         assertThat(new WebAdminServerModule().additionalRoutes(configuration))
             .isEmpty();
@@ -38,7 +38,7 @@ class WebAdminServerModuleTest {
 
     @Test
     void shouldReturnEmptyWhenEmptyField() throws Exception {
-        FileBasedConfiguration configuration = getConfiguration("webadmin-empty.properties");
+        Configuration configuration = getConfiguration("webadmin-empty.properties");
 
         assertThat(new WebAdminServerModule().additionalRoutes(configuration))
             .isEmpty();
@@ -46,7 +46,7 @@ class WebAdminServerModuleTest {
 
     @Test
     void shouldReturnOneRoutes() throws Exception {
-        FileBasedConfiguration configuration = getConfiguration("webadmin-one.properties");
+        Configuration configuration = getConfiguration("webadmin-one.properties");
 
         assertThat(new WebAdminServerModule().additionalRoutes(configuration))
             .containsOnly("org.apache.custom.webadmin.CustomRoute");
@@ -54,17 +54,13 @@ class WebAdminServerModuleTest {
 
     @Test
     void shouldReturnSeveralRoutes() throws Exception {
-        FileBasedConfiguration configuration = getConfiguration("webadmin-two.properties");
+        Configuration configuration = getConfiguration("webadmin-two.properties");
 
         assertThat(new WebAdminServerModule().additionalRoutes(configuration))
             .containsOnly("org.apache.custom.webadmin.CustomRoute", "org.apache.custom.webadmin.AnotherCustomRoute");
     }
 
-    private FileBasedConfiguration getConfiguration(String name) throws org.apache.commons.configuration2.ex.ConfigurationException {
-        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
-            .configure(new Parameters()
-                .fileBased()
-                .setURL(ClassLoader.getSystemResource(name)));
-        return builder.getConfiguration();
+    private Configuration getConfiguration(String name) throws Exception {
+        return PropertiesProvider.getConfiguration(new File(ClassLoader.getSystemResource(name).toURI()));
     }
 }
