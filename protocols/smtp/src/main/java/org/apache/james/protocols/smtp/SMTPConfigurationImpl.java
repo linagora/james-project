@@ -20,6 +20,9 @@
 
 package org.apache.james.protocols.smtp;
 
+import java.util.Optional;
+
+import org.apache.james.protocols.api.OidcSASLConfiguration;
 import org.apache.james.protocols.api.ProtocolConfigurationImpl;
 
 /**
@@ -54,7 +57,7 @@ public class SMTPConfigurationImpl extends ProtocolConfigurationImpl implements 
      * Return <code>false</code>
      */
     @Override
-    public boolean isAuthRequired(String remoteIP) {
+    public boolean isAuthAnnounced(String remoteIP, boolean tlsStarted) {
         return false;
     }
 
@@ -79,4 +82,13 @@ public class SMTPConfigurationImpl extends ProtocolConfigurationImpl implements 
         this.bracketsEnforcement = bracketsEnforcement;
     }
 
+    @Override
+    public boolean isPlainAuthEnabled() {
+        return true;
+    }
+
+    @Override
+    public Optional<OidcSASLConfiguration> saslConfiguration() {
+        return Optional.empty();
+    }
 }

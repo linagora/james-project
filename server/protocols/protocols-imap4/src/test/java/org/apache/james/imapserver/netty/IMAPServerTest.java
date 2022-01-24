@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 import javax.mail.Folder;
@@ -39,13 +40,17 @@ import javax.mail.search.RecipientStringTerm;
 import javax.mail.search.SearchTerm;
 import javax.mail.search.SubjectTerm;
 
+import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.apache.commons.configuration2.tree.ImmutableNode;
+import org.apache.commons.net.imap.AuthenticatingIMAPClient;
 import org.apache.commons.net.imap.IMAPReply;
 import org.apache.commons.net.imap.IMAPSClient;
 import org.apache.james.core.Username;
 import org.apache.james.imap.encode.main.DefaultImapEncoderFactory;
 import org.apache.james.imap.main.DefaultImapDecoderFactory;
 import org.apache.james.imap.processor.main.DefaultImapProcessorFactory;
+import org.apache.james.jwt.OidcTokenFixture;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.inmemory.InMemoryMailboxManager;
@@ -55,6 +60,9 @@ import org.apache.james.mailbox.store.FakeAuthenticator;
 import org.apache.james.mailbox.store.FakeAuthorizator;
 import org.apache.james.mailbox.store.StoreSubscriptionManager;
 import org.apache.james.metrics.tests.RecordingMetricFactory;
+import org.apache.james.protocols.api.OIDCSASLHelper;
+import org.apache.james.protocols.api.utils.BogusSslContextFactory;
+import org.apache.james.protocols.api.utils.BogusTrustManagerFactory;
 import org.apache.james.protocols.lib.mock.ConfigLoader;
 import org.apache.james.server.core.configuration.Configuration;
 import org.apache.james.server.core.filesystem.FileSystemImpl;
@@ -67,6 +75,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockserver.integration.ClientAndServer;
+import org.mockserver.model.HttpRequest;
+import org.mockserver.model.HttpResponse;
 
 import nl.altindag.ssl.exception.GenericKeyStoreException;
 import nl.altindag.ssl.exception.PrivateKeyParseException;
@@ -83,7 +94,7 @@ class IMAPServerTest {
     @RegisterExtension
     public TestIMAPClient testIMAPClient = new TestIMAPClient();
 
-    private IMAPServer createImapServer(String configurationFile) throws Exception {
+    private IMAPServer createImapServer(HierarchicalConfiguration<ImmutableNode> config) throws Exception {
         FakeAuthenticator authenticator = new FakeAuthenticator();
         authenticator.addUser(USER, USER_PASS);
         authenticator.addUser(USER2, USER_PASS);
@@ -119,10 +130,14 @@ class IMAPServerTest {
         FileSystemImpl fileSystem = new FileSystemImpl(configuration.directories());
         imapServer.setFileSystem(fileSystem);
 
-        imapServer.configure(ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream(configurationFile)));
+        imapServer.configure(config);
         imapServer.init();
 
         return imapServer;
+    }
+
+    private IMAPServer createImapServer(String configurationFile) throws Exception {
+        return createImapServer(ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream(configurationFile)));
     }
 
     @Nested
@@ -247,7 +262,7 @@ class IMAPServerTest {
             assertThat(imapCode).isEqualTo(IMAPReply.NO);
         }
     }
-    
+
     @Nested
     class Ssl {
         IMAPServer imapServer;
@@ -395,6 +410,353 @@ class IMAPServerTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("BAD APPEND failed.");
         }
+    }
+
+    @Nested
+    class PlainAuthDisabled {
+        IMAPServer imapServer;
+        private int port;
+
+        @BeforeEach
+        void beforeEach() throws Exception {
+            imapServer = createImapServer("imapServerPlainAuthDisabled.xml");
+            port = imapServer.getListenAddresses().get(0).getPort();
+        }
+
+        @AfterEach
+        void tearDown() {
+            imapServer.destroy();
+        }
+
+        @Test
+        void loginShouldFail() {
+            assertThatThrownBy(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .login(USER.asString(), USER_PASS))
+                .hasMessage("Login failed");
+        }
+
+        @Test
+        void authenticatePlainShouldFail() {
+            assertThatThrownBy(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .authenticatePlain(USER.asString(), USER_PASS))
+                .hasMessage("Login failed");
+        }
+
+        @Test
+        void capabilityShouldNotAdvertiseLoginAndAuthenticationPlain() throws Exception {
+            testIMAPClient.connect("127.0.0.1", port);
+
+            assertThat(testIMAPClient.capability())
+                .contains("LOGINDISABLED")
+                .doesNotContain("AUTH=PLAIN");
+        }
+    }
+
+    @Nested
+    class PlainAuthEnabledWithoutRequireSSL {
+        IMAPServer imapServer;
+        private int port;
+
+        @BeforeEach
+        void beforeEach() throws Exception {
+            imapServer = createImapServer("imapServerPlainAuthEnabledWithoutRequireSSL.xml");
+            port = imapServer.getListenAddresses().get(0).getPort();
+        }
+
+        @AfterEach
+        void tearDown() {
+            imapServer.destroy();
+        }
+
+        @Test
+        void loginShouldSucceed() {
+            assertThatCode(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .login(USER.asString(), USER_PASS))
+                .doesNotThrowAnyException();
+        }
+
+        @Test
+        void authenticatePlainShouldSucceed() {
+            assertThatCode(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .authenticatePlain(USER.asString(), USER_PASS))
+                .doesNotThrowAnyException();
+        }
+
+        @Test
+        void capabilityShouldAdvertiseLoginAndAuthenticationPlain() throws Exception {
+            testIMAPClient.connect("127.0.0.1", port);
+
+            assertThat(testIMAPClient.capability())
+                .doesNotContain("LOGINDISABLED")
+                .contains("AUTH=PLAIN");
+        }
+    }
+
+    @Nested
+    class PlainAuthDisallowed {
+        IMAPServer imapServer;
+        private int port;
+
+        @BeforeEach
+        void beforeEach() throws Exception {
+            imapServer = createImapServer("imapServerPlainAuthDisallowed.xml");
+            port = imapServer.getListenAddresses().get(0).getPort();
+        }
+
+        @AfterEach
+        void tearDown() {
+            imapServer.destroy();
+        }
+
+        @Test
+        void loginShouldFailOnUnEncryptedChannel() {
+            assertThatThrownBy(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .login(USER.asString(), USER_PASS))
+                .hasMessage("Login failed");
+        }
+
+        @Test
+        void capabilityShouldNotAdvertiseLoginOnUnEncryptedChannel() throws Exception {
+            testIMAPClient.connect("127.0.0.1", port);
+
+            assertThat(testIMAPClient.capability())
+                .contains("LOGINDISABLED")
+                .doesNotContain("AUTH=PLAIN");
+        }
+    }
+
+    @Nested
+    class PlainAuthDisallowedSSL {
+        IMAPServer imapServer;
+        private int port;
+
+        @BeforeEach
+        void beforeEach() throws Exception {
+            imapServer = createImapServer("imapServerPlainAuthAllowed.xml");
+            port = imapServer.getListenAddresses().get(0).getPort();
+        }
+
+        @AfterEach
+        void tearDown() {
+            imapServer.destroy();
+        }
+
+        @Test
+        void loginShouldSucceedOnUnEncryptedChannel() {
+            assertThatCode(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .login(USER.asString(), USER_PASS))
+                .doesNotThrowAnyException();
+        }
+
+        @Test
+        void capabilityShouldAdvertiseLoginOnUnEncryptedChannel() throws Exception {
+            testIMAPClient.connect("127.0.0.1", port);
+
+            assertThat(testIMAPClient.capability())
+                .doesNotContain("LOGINDISABLED")
+                .contains("AUTH=PLAIN");
+        }
+    }
+
+    @Nested
+    class AuthenticationRequireSSL {
+        IMAPServer imapServer;
+
+        @AfterEach
+        void tearDown() {
+            if (imapServer != null) {
+                imapServer.destroy();
+            }
+        }
+
+        @Test
+        void loginShouldFailWhenRequireSSLAndUnEncryptedChannel() throws Exception {
+            imapServer = createImapServer("imapServerRequireSSLIsTrueAndStartSSLIsFalse.xml");
+            int port = imapServer.getListenAddresses().get(0).getPort();
+
+            assertThatThrownBy(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .login(USER.asString(), USER_PASS))
+                .hasMessage("Login failed");
+
+        }
+
+        @Test
+        void loginShouldSuccessWhenRequireSSLAndEncryptedChannel() throws Exception {
+            imapServer = createImapServer("imapServerRequireSSLIsTrueAndStartSSLIsTrue.xml");
+            int port = imapServer.getListenAddresses().get(0).getPort();
+
+            IMAPSClient client = new IMAPSClient(false, BogusSslContextFactory.getClientContext());
+            client.setTrustManager(BogusTrustManagerFactory.getTrustManagers()[0]);
+            client.connect("127.0.0.1", port);
+            client.execTLS();
+            client.login(USER.asString(), USER_PASS);
+
+            assertThat(client.getReplyString()).contains("OK LOGIN completed.");
+        }
+
+        @Test
+        void loginShouldSuccessWhenNOTRequireSSLAndUnEncryptedChannel() throws Exception {
+            imapServer = createImapServer("imapServerRequireSSLIsFalseAndStartSSLIsFalse.xml");
+            int port = imapServer.getListenAddresses().get(0).getPort();
+
+            assertThatCode(() ->
+                testIMAPClient.connect("127.0.0.1", port)
+                    .login(USER.asString(), USER_PASS)
+                    .append("INBOX", SMALL_MESSAGE))
+                .doesNotThrowAnyException();
+        }
+
+        @Test
+        void loginShouldSuccessWhenNOTRequireSSLAndEncryptedChannel() throws Exception {
+            imapServer = createImapServer("imapServerRequireSSLIsFalseAndStartSSLIsTrue.xml");
+            int port = imapServer.getListenAddresses().get(0).getPort();
+
+            IMAPSClient client = new IMAPSClient(false, BogusSslContextFactory.getClientContext());
+            client.setTrustManager(BogusTrustManagerFactory.getTrustManagers()[0]);
+            client.connect("127.0.0.1", port);
+            client.execTLS();
+            client.login(USER.asString(), USER_PASS);
+
+            assertThat(client.getReplyString()).contains("OK LOGIN completed.");
+        }
+    }
+
+    @Nested
+    class Oauth {
+        String JWKS_URI_PATH = "/jwks";
+        ClientAndServer authServer;
+        IMAPServer imapServer;
+        int port;
+
+        @BeforeEach
+        void authSetup() throws Exception {
+            authServer = ClientAndServer.startClientAndServer(0);
+            authServer
+                .when(HttpRequest.request().withPath(JWKS_URI_PATH))
+                .respond(HttpResponse.response().withStatusCode(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(OidcTokenFixture.JWKS_RESPONSE, StandardCharsets.UTF_8));
+
+            HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("oauth.xml"));
+            config.addProperty("auth.oauth.jwksURL", String.format("http://127.0.0.1:%s%s", authServer.getLocalPort(), JWKS_URI_PATH));
+            config.addProperty("auth.oauth.claim", OidcTokenFixture.CLAIM);
+            config.addProperty("auth.oauth.oidcConfigurationURL", "https://example.com/jwks");
+            config.addProperty("auth.oauth.scope", "email");
+            imapServer = createImapServer(config);
+            port = imapServer.getListenAddresses().get(0).getPort();
+        }
+
+        @AfterEach
+        void tearDown() {
+            if (imapServer != null) {
+                imapServer.destroy();
+            }
+            authServer.stop();
+        }
+
+        @Test
+        void oauthShouldSuccessWhenValidToken() throws Exception {
+            String oauthBearer = OIDCSASLHelper.generateOauthBearer(USER.asString(), OidcTokenFixture.VALID_TOKEN);
+            IMAPSClient client = imapsClient(port);
+            client.sendCommand("AUTHENTICATE OAUTHBEARER " + oauthBearer);
+            assertThat(client.getReplyString()).contains("OK AUTHENTICATE completed.");
+        }
+
+        @Test
+        void oauthShouldFailWhenInValidToken() throws Exception {
+            IMAPSClient client = imapsClient(port);
+            client.sendCommand("AUTHENTICATE OAUTHBEARER invalidtoken");
+            assertThat(client.getReplyString()).contains("NO AUTHENTICATE failed.");
+        }
+
+        @Test
+        void oauthShouldFailWhenConfigIsNotProvided() throws Exception {
+            imapServer.destroy();
+            HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("imapServerRequireSSLIsTrueAndStartSSLIsTrue.xml"));
+            imapServer = createImapServer(config);
+            int port = imapServer.getListenAddresses().get(0).getPort();
+
+            IMAPSClient client = imapsClient(port);
+            client.sendCommand("AUTHENTICATE OAUTHBEARER " + OidcTokenFixture.VALID_TOKEN);
+            assertThat(client.getReplyString()).contains("NO AUTHENTICATE failed. Authentication mechanism is unsupported.");
+        }
+
+        @Test
+        void capabilityShouldAdvertiseOAUTHBEARERWhenConfigIsProvided() throws Exception {
+            IMAPSClient client = imapsClient(port);
+            client.capability();
+            assertThat(client.getReplyString()).contains("AUTH=OAUTHBEARER");
+        }
+
+        @Test
+        void capabilityShouldAdvertiseXOAUTH2WhenConfigIsProvided() throws Exception {
+            IMAPSClient client = imapsClient(port);
+            client.capability();
+            assertThat(client.getReplyString()).contains("AUTH=XOAUTH2");
+        }
+
+        @Test
+        void oauthShouldSupportOAUTH2Type() throws Exception {
+            String oauthBearer = OIDCSASLHelper.generateOauthBearer(USER.asString(), OidcTokenFixture.VALID_TOKEN);
+            IMAPSClient client = imapsClient(port);
+            client.sendCommand("AUTHENTICATE XOAUTH2 " + oauthBearer);
+            assertThat(client.getReplyString()).contains("OK AUTHENTICATE completed.");
+        }
+
+        @Test
+        void capabilityShouldNotAdvertiseOAUTHBEARERWhenConfigIsNotProvided() throws Exception {
+            imapServer.destroy();
+            HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("imapServerRequireSSLIsTrueAndStartSSLIsTrue.xml"));
+            imapServer = createImapServer(config);
+            int port = imapServer.getListenAddresses().get(0).getPort();
+
+            IMAPSClient client = imapsClient(port);
+            client.capability();
+            assertThat(client.getReplyString()).doesNotContain("AUTH=OAUTHBEARER");
+            assertThat(client.getReplyString()).doesNotContain("AUTH=XOAUTH2");
+        }
+
+        @Test
+        void shouldNotOauthWhenAuthIsReady() throws Exception {
+            String oauthBearer = OIDCSASLHelper.generateOauthBearer(USER.asString(), OidcTokenFixture.VALID_TOKEN);
+            IMAPSClient client = imapsClient(port);
+            client.sendCommand("AUTHENTICATE OAUTHBEARER " + oauthBearer);
+            client.sendCommand("AUTHENTICATE OAUTHBEARER " + oauthBearer);
+            assertThat(client.getReplyString()).contains("NO AUTHENTICATE failed. Command not valid in this state.");
+        }
+
+        @Test
+        void appendShouldSuccessWhenAuthenticated() throws Exception {
+            String oauthBearer = OIDCSASLHelper.generateOauthBearer(USER.asString(), OidcTokenFixture.VALID_TOKEN);
+            IMAPSClient imapsClient = imapsClient(port);
+            imapsClient.sendCommand("AUTHENTICATE OAUTHBEARER " + oauthBearer);
+            imapsClient.create("INBOX");
+            imapsClient.append("INBOX", null, null, SMALL_MESSAGE);
+
+            assertThat(imapsClient.getReplyString()).contains("APPEND completed.");
+        }
+
+        @Test
+        void appendShouldFailWhenNotAuthenticated() throws Exception {
+            IMAPSClient imapsClient = imapsClient(port);
+            imapsClient.create("INBOX");
+            assertThat(imapsClient.getReplyString()).contains("Command not valid in this state.");
+        }
+    }
+
+    private AuthenticatingIMAPClient imapsClient(int port) throws Exception {
+        AuthenticatingIMAPClient client = new AuthenticatingIMAPClient(false, BogusSslContextFactory.getClientContext());
+        client.setTrustManager(BogusTrustManagerFactory.getTrustManagers()[0]);
+        client.connect("127.0.0.1", port);
+        client.execTLS();
+        return client;
     }
 
     @Nested

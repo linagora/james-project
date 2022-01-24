@@ -100,13 +100,6 @@ public class ActiveMQMailQueueTest implements DelayedManageableMailQueueContract
 
     @Test
     @Override
-    @Disabled("JAMES-2296 Not handled by JMS mailqueue. Only single recipient per-recipient removal works")
-    public void removeByRecipientShouldRemoveSpecificEmailWhenMultipleRecipients() {
-
-    }
-
-    @Test
-    @Override
     @Disabled("JAMES-2308 Flushing JMS mail queue randomly re-order them" +
         "Random test failing around 1% of the time")
     public void flushShouldPreserveBrowseOrder() {
@@ -139,6 +132,20 @@ public class ActiveMQMailQueueTest implements DelayedManageableMailQueueContract
     @Override
     @Disabled("JAMES-2544 Mixing concurrent ack/nack might lead to a deadlock")
     public void concurrentEnqueueDequeueWithAckNackShouldNotFail() {
+
+    }
+
+    @Test
+    @Override
+    @Disabled("JAMES-3687 Delayed deletes are buggy")
+    public void delayedEmailsShouldBeDeleted() {
+
+    }
+
+    @Test
+    @Override
+    @Disabled("JAMES-3687 Delayed deletes are buggy")
+    public void delayedEmailsShouldBeDeletedWhenMixedWithOtherEmails() {
 
     }
 }

@@ -280,12 +280,17 @@
                             <volume>/var/store</volume>
                             <volume>/root/glowroot/plugins</volume>
                             <volume>/root/glowroot/data</volume>
+                            <volume>/root/extensions-jars</volume>
                         </volumes>
                     </container>
                     <extraDirectories>
                         <paths>
                             <path>
                                 <from>sample-configuration</from>
+                                <into>/root/conf</into>
+                            </path>
+                            <path>
+                                <from>docker-configuration</from>
                                 <into>/root/conf</into>
                             </path>
                             <path>

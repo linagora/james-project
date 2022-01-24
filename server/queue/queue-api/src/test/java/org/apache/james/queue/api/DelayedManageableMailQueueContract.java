@@ -20,18 +20,24 @@
 package org.apache.james.queue.api;
 
 import static org.apache.james.queue.api.Mails.defaultMail;
+import static org.apache.james.queue.api.Mails.defaultMailNoRecipient;
+import static org.apache.mailet.base.MailAddressFixture.RECIPIENT1;
+import static org.apache.mailet.base.MailAddressFixture.RECIPIENT2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.concurrent.ExecutorService;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.james.junit.ExecutorExtension;
 import org.apache.mailet.Mail;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @ExtendWith(ExecutorExtension.class)
 public interface DelayedManageableMailQueueContract extends DelayedMailQueueContract, ManageableMailQueueContract {
@@ -39,33 +45,172 @@ public interface DelayedManageableMailQueueContract extends DelayedMailQueueCont
     @Override
     ManageableMailQueue getManageableMailQueue();
 
+    default void enQueue(Mail mail, long delay, TimeUnit unit) throws MailQueue.MailQueueException {
+        getManageableMailQueue().enQueue(mail, delay, unit);
+    }
+
+
     @Test
-    default void flushShouldRemoveDelays(ExecutorService executorService) throws Exception {
-        getManageableMailQueue().enQueue(defaultMail()
-            .name("name1")
-            .build(),
+    default void delayedMessagesShouldBeBrowesable() throws Exception {
+        enQueue(defaultMail()
+                .name("name1")
+                .build(),
             30L,
             TimeUnit.SECONDS);
 
+        Awaitility.await().untilAsserted(() -> assertThat(getManageableMailQueue().getSize()).isEqualTo(1L));
+
+        assertThat(getManageableMailQueue().browse()).toIterable()
+            .extracting(mail -> mail.getMail().getName())
+            .containsExactly("name1");
+    }
+
+    @Test
+    default void delayedMessagesShouldBeCleared() throws Exception {
+        enQueue(defaultMail()
+                .name("name1")
+                .build(),
+            30L,
+            TimeUnit.SECONDS);
+
+        Awaitility.await().untilAsserted(() -> assertThat(getManageableMailQueue().getSize()).isEqualTo(1L));
+
+        getManageableMailQueue().clear();
+
+        assertThat(getManageableMailQueue().getSize()).isEqualTo(0L);
+    }
+
+    @Test
+    default void delayedEmailsShouldBeDeleted() throws Exception {
+        enQueue(defaultMail()
+                .name("abc")
+                .build(),
+            5L,
+            TimeUnit.SECONDS);
+        // The queue being FIFO a second email can serve as a wait condition
+        enQueue(defaultMail()
+                .name("def")
+                .build(),
+            5L,
+            TimeUnit.SECONDS);
+
+        getManageableMailQueue().remove(ManageableMailQueue.Type.Name, "abc");
+
+        ArrayList<String> names = new ArrayList<>();
+        Flux.from(getManageableMailQueue().deQueue())
+            .subscribeOn(Schedulers.elastic())
+            .subscribe(item -> names.add(item.getMail().getName()));
+
+       Awaitility.await()
+           .untilAsserted(() -> assertThat(names).contains("def"));
+        assertThat(names).containsExactly("def");
+    }
+
+    @Test
+    default void deletedDelayedMessagesShouldNotBeBrowseable() throws Exception {
+        enQueue(defaultMail()
+                .name("name1")
+                .build(),
+                30L,
+                TimeUnit.SECONDS);
+        enQueue(defaultMailNoRecipient()
+                .name("name2")
+                .recipient(RECIPIENT1)
+                .build());
+        enQueue(defaultMailNoRecipient()
+                .name("name3")
+                .recipient(RECIPIENT2)
+                .build());
+
+        getManageableMailQueue().remove(ManageableMailQueue.Type.Recipient, RECIPIENT2.asString());
+
+        awaitRemove();
+
+        assertThat(getManageableMailQueue().browse()).toIterable()
+                .extracting(mail -> mail.getMail().getName())
+                .containsExactly("name2");
+    }
+
+    @Test
+    default void delayedEmailsShouldBeDeletedWhenMixedWithOtherEmails() throws Exception {
+        enQueue(defaultMail()
+                .name("abc")
+                .build(),
+            5L,
+            TimeUnit.SECONDS);
+
+        getManageableMailQueue().remove(ManageableMailQueue.Type.Name, "abc");
+
+        // The newer email
+        enQueue(defaultMail()
+                .name("def")
+                .build());
+        // The queue being FIFO a third email can serve as a wait condition
+        enQueue(defaultMail()
+                .name("ghi")
+                .build(),
+            5L,
+            TimeUnit.SECONDS);
+
+        ArrayList<String> names = new ArrayList<>();
+        Flux.from(getManageableMailQueue().deQueue())
+            .subscribeOn(Schedulers.elastic())
+            .subscribe(item -> names.add(item.getMail().getName()));
+
+       Awaitility.await()
+           .untilAsserted(() -> assertThat(names).contains("ghi"));
+        assertThat(names).containsExactly("def", "ghi");
+    }
+
+    @Test
+    default void flushShouldRemoveDelaysWhenImmediateMessageFirst() throws Exception {
+        enQueue(defaultMail()
+                .name("name1")
+                .build());
+        enQueue(defaultMail()
+                .name("name2")
+                .build(),
+            30L,
+            TimeUnit.HOURS);
+
+        Awaitility.await().untilAsserted(() -> assertThat(getManageableMailQueue().getSize()).isEqualTo(2L));
+
         getManageableMailQueue().flush();
 
-        assertThat(Flux.from(getManageableMailQueue().deQueue()).blockFirst(Duration.ofSeconds(1)).getMail().getName())
+        List<MailQueue.MailQueueItem> items = Flux.from(getManageableMailQueue().deQueue()).bufferTimeout(5, Duration.ofSeconds(5)).blockFirst();
+        assertThat(items.stream().map(x -> x.getMail().getName()))
+            .containsExactly("name1", "name2");
+    }
+
+    @Test
+    default void flushShouldRemoveDelays() throws Exception {
+        enQueue(defaultMail()
+            .name("name1")
+            .build(),
+            30L,
+            TimeUnit.HOURS);
+
+        Awaitility.await().untilAsserted(() -> assertThat(getManageableMailQueue().getSize()).isEqualTo(1L));
+
+        getManageableMailQueue().flush();
+
+        assertThat(Flux.from(getManageableMailQueue().deQueue()).blockFirst(Duration.ofSeconds(5)).getMail().getName())
             .isEqualTo("name1");
     }
 
     @Test
     default void flushShouldPreserveBrowseOrder() throws Exception {
-        getManageableMailQueue().enQueue(defaultMail()
+        enQueue(defaultMail()
             .name("name1")
             .build());
 
-        getManageableMailQueue().enQueue(defaultMail()
+        enQueue(defaultMail()
             .name("name2")
             .build(),
             30L,
             TimeUnit.SECONDS);
 
-        getManageableMailQueue().enQueue(defaultMail()
+        enQueue(defaultMail()
             .name("name3")
             .build(),
             2L,

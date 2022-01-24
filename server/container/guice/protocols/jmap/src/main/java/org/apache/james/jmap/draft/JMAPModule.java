@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -36,14 +37,20 @@ import org.apache.james.jmap.JMAPConfiguration;
 import org.apache.james.jmap.JMAPServer;
 import org.apache.james.jmap.Version;
 import org.apache.james.jmap.change.MailboxChangeListener;
-import org.apache.james.jmap.core.Capability;
-import org.apache.james.jmap.core.DefaultCapabilities;
+import org.apache.james.jmap.core.CapabilityFactory;
+import org.apache.james.jmap.core.CoreCapabilityFactory;
 import org.apache.james.jmap.core.JmapRfc8621Configuration;
+import org.apache.james.jmap.core.MDNCapabilityFactory$;
+import org.apache.james.jmap.core.MailCapabilityFactory$;
+import org.apache.james.jmap.core.QuotaCapabilityFactory$;
+import org.apache.james.jmap.core.SharesCapabilityFactory$;
+import org.apache.james.jmap.core.SubmissionCapabilityFactory$;
+import org.apache.james.jmap.core.VacationResponseCapabilityFactory$;
+import org.apache.james.jmap.core.WebSocketCapabilityFactory$;
 import org.apache.james.jmap.draft.methods.RequestHandler;
 import org.apache.james.jmap.draft.send.PostDequeueDecoratorFactory;
 import org.apache.james.jmap.draft.utils.JsoupHtmlTextExtractor;
 import org.apache.james.jmap.event.PropagateLookupRightListener;
-import org.apache.james.jmap.mailet.VacationMailet;
 import org.apache.james.jmap.mailet.filter.JMAPFiltering;
 import org.apache.james.jmap.rfc8621.RFC8621MethodsModule;
 import org.apache.james.jwt.JwtConfiguration;
@@ -55,6 +62,7 @@ import org.apache.james.modules.server.MailetContainerModule;
 import org.apache.james.modules.server.MailetContainerModule.ProcessorsCheck;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
 import org.apache.james.server.core.configuration.FileConfigurationProvider;
+import org.apache.james.transport.mailets.VacationMailet;
 import org.apache.james.transport.matchers.All;
 import org.apache.james.transport.matchers.RecipientIsLocal;
 import org.apache.james.util.Port;
@@ -133,13 +141,13 @@ public class JMAPModule extends AbstractModule {
         supportedVersions.addBinding().toInstance(Version.DRAFT);
         supportedVersions.addBinding().toInstance(Version.RFC8621);
 
-        Multibinder<Capability> supportedCapabilities = Multibinder.newSetBinder(binder(), Capability.class);
-        supportedCapabilities.addBinding().toInstance(DefaultCapabilities.MAIL_CAPABILITY());
-        supportedCapabilities.addBinding().toInstance(DefaultCapabilities.QUOTA_CAPABILITY());
-        supportedCapabilities.addBinding().toInstance(DefaultCapabilities.SHARES_CAPABILITY());
-        supportedCapabilities.addBinding().toInstance(DefaultCapabilities.VACATION_RESPONSE_CAPABILITY());
-        supportedCapabilities.addBinding().toInstance(DefaultCapabilities.SUBMISSION_CAPABILITY());
-        supportedCapabilities.addBinding().toInstance(DefaultCapabilities.MDN_CAPABILITY());
+        Multibinder<CapabilityFactory> supportedCapabilities = Multibinder.newSetBinder(binder(), CapabilityFactory.class);
+        supportedCapabilities.addBinding().toInstance(MailCapabilityFactory$.MODULE$);
+        supportedCapabilities.addBinding().toInstance(QuotaCapabilityFactory$.MODULE$);
+        supportedCapabilities.addBinding().toInstance(SharesCapabilityFactory$.MODULE$);
+        supportedCapabilities.addBinding().toInstance(VacationResponseCapabilityFactory$.MODULE$);
+        supportedCapabilities.addBinding().toInstance(SubmissionCapabilityFactory$.MODULE$);
+        supportedCapabilities.addBinding().toInstance(MDNCapabilityFactory$.MODULE$);
     }
 
     @ProvidesIntoSet
@@ -159,13 +167,13 @@ public class JMAPModule extends AbstractModule {
     }
 
     @ProvidesIntoSet
-    Capability coreCapability(JmapRfc8621Configuration configuration) {
-        return DefaultCapabilities.coreCapability(configuration.maxUploadSize());
+    CapabilityFactory coreCapability(JmapRfc8621Configuration configuration) {
+        return new CoreCapabilityFactory(configuration.maxUploadSize());
     }
 
     @ProvidesIntoSet
-    Capability webSocketCapability(JmapRfc8621Configuration configuration) {
-        return DefaultCapabilities.webSocketCapability(configuration.webSocketUrl());
+    CapabilityFactory webSocketCapability(JmapRfc8621Configuration configuration) {
+        return WebSocketCapabilityFactory$.MODULE$;
     }
 
     @Provides
@@ -177,6 +185,7 @@ public class JMAPModule extends AbstractModule {
                 .enabled(configuration.getBoolean("enabled", true))
                 .port(Port.of(configuration.getInt("jmap.port", DEFAULT_JMAP_PORT)))
                 .enableEmailQueryView(Optional.ofNullable(configuration.getBoolean("view.email.query.enabled", null)))
+                .userProvisioningEnabled(Optional.ofNullable(configuration.getBoolean("user.provisioning.enabled", null)))
                 .defaultVersion(Optional.ofNullable(configuration.getString("jmap.version.default", null))
                     .map(Version::of))
                 .maximumSendSize(Optional.ofNullable(configuration.getString("email.send.max.size", null))
@@ -203,7 +212,8 @@ public class JMAPModule extends AbstractModule {
                 .certificates(configuration.getString("tls.certificates", null))
                 .keystoreType(configuration.getString("tls.keystoreType", null))
                 .secret(configuration.getString("tls.secret", null))
-                .jwtPublicKeyPem(loadPublicKey(fileSystem, Optional.ofNullable(configuration.getString("jwt.publickeypem.url"))))
+                .jwtPublicKeyPem(loadPublicKey(fileSystem, ImmutableList.copyOf(configuration.getStringArray("jwt.publickeypem.url"))))
+                .authenticationStrategies(Optional.ofNullable(configuration.getList(String.class, "authentication.strategy.draft", null)))
                 .build();
         } catch (FileNotFoundException e) {
             LOGGER.warn("Could not find JMAP configuration file. JMAP server will not be enabled.");
@@ -221,8 +231,10 @@ public class JMAPModule extends AbstractModule {
         return JwtTokenVerifier.create(jwtConfiguration);
     }
 
-    private Optional<String> loadPublicKey(FileSystem fileSystem, Optional<String> jwtPublickeyPemUrl) {
-        return jwtPublickeyPemUrl.map(Throwing.function(url -> FileUtils.readFileToString(fileSystem.getFile(url), StandardCharsets.US_ASCII)));
+    private List<String> loadPublicKey(FileSystem fileSystem, List<String> jwtPublickeyPemUrl) {
+        return jwtPublickeyPemUrl.stream()
+            .map(Throwing.function(url -> FileUtils.readFileToString(fileSystem.getFile(url), StandardCharsets.US_ASCII)))
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Singleton

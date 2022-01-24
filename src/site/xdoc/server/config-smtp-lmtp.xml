@@ -59,9 +59,7 @@
       <dd></dd>
       <dt><strong>tls</strong></dt>
       <dd>Set to true to support STARTTLS or SSL for the Socket.
-         To use this you need to copy sunjce_provider.jar to /path/james/lib directory. To create a new keystore execute:
-        keytool -genkey -alias james -keyalg RSA -storetype PKCS12 -keystore /path/to/james/conf/keystore. The algorithm is optional and only needs to be specified when using something other
-        than the Sun JCE provider - You could use IbmX509 with IBM Java runtime.<br/>
+         To create a new keystore execute: keytool -genkey -alias james -keyalg RSA -storetype PKCS12 -keystore /path/to/james/conf/keystore.<br/>
           Please note that each SMTP/LMTP server exposed on different port can specify its own keystore, independently from any other
           TLS based protocols.</dd>
       <dt><strong>handler.helloName</strong></dt>
@@ -76,19 +74,43 @@
       <dd>Set the maximum simultaneous incoming connections for this service.</dd>
       <dt><strong>handler.connectionLimitPerIP</strong></dt>
       <dd>Set the maximum simultaneous incoming connections per IP for this service.</dd>
-      <dt><strong>handler.authRequired</strong></dt>
-      <dd>This is an optional tag with a boolean body.  If true, then the server will 
-      require authentication before delivering mail to non-local email addresses.  If this tag is absent, or the value 
-      is false then the client will not be prompted for authentication.  Only simple user/password authentication is
-      supported at this time. supported values:
-               true: required but announced only to not authorizedAddresses
-               false: don't use AUTH
-               announce: like true, but always announce AUTH capability to clients
+        <dt><strong>authRequired</strong></dt>
+        <dd>(deprecated) use auth.announce instead.
+            This is an optional tag with a boolean body.  If true, then the server will
+            announce authentication. If this tag is absent, or the value
+            is false then the client will not be prompted for authentication.  Only simple user/password authentication is
+            supported at this time. supported values:
+            true: announced only to not authorizedAddresses
+            false: don't announce AUTH. If absent, *authorizedAddresses* are set to a wilcard to accept all remote hosts.
+            announce: like true, but always announce AUTH capability to clients
 
-               The correct behaviour per RFC value would be false or announce
-               but we still support true for backward compatibility and because
-               some webmail client fails when AUTH is announced but no authentication
-               information has been provided</dd>
+            Please note that emails are only relayed if, and only if, the user did authenticate, or is in an authorized network,
+            regardless of this option.</dd>
+        <dt><strong>auth.announce</strong></dt>
+        <dd>This is an optional tag.  Possible values are:<br/>
+
+            * never: Don't announce auth.<br/>
+
+            * always: always announce AUTH capability to clients.<br/>
+
+            * forUnauthorizedAddresses: announced only to not authorizedAddresses<br/>
+
+            Please note that emails are only relayed if, and only if, the user did authenticate, or is in an authorized network,
+            regardless of this option.</dd>
+        <dt><strong>auth.requireSSL</strong></dt>
+        <dd>This is an optional tag, defaults to true. If true, authentication is not advertised via capabilities on unencrypted
+            channels.</dd>
+        <dt><strong>auth.plainAuthEnabled</strong></dt>
+        <dd>This is an optional tag, defaults to true. If false, AUTH PLAIN and AUTH LOGIN will not be exposed. This setting
+            can be used to enforce strong authentication mechanisms.</dd>
+        <dt><strong>auth.oidc.oidcConfigurationURL</strong></dt>
+        <dd>Provide OIDC url address for information to user. Only configure this when you want to authenticate SMTP server using a OIDC provider.</dd>
+        <dt><strong>auth.oidc.jwksURL</strong></dt>
+        <dd>Provide url to get OIDC's JSON Web Key Set to validate user token. Only configure this when you want to authenticate SMTP server using a OIDC provider.</dd>
+        <dt><strong>auth.oidc.claim</strong></dt>
+        <dd>Claim string uses to identify user. E.g: "email_address". Only configure this when you want to authenticate SMTP server using a OIDC provider.</dd>
+        <dt><strong>auth.oidc.scope</strong></dt>
+        <dd>An OAuth scope that is valid to access the service (RF: RFC7628). Only configure this when you want to authenticate SMTP server using a OIDC provider.</dd>
       <dt><strong>handler.authorizedAddresses</strong></dt>
       <dd>Authorize specific addresses/networks.
                If you use SMTP AUTH, addresses that match those specified here will
@@ -130,6 +152,13 @@
       <dt><strong>handler.handlerchain</strong></dt>
       <dd>The configuration handler chain</dd>
     </dl>
+
+      <subsection name="OIDC set up">
+          <p>James SMTP support XOAUTH2 authentication mechanism which allow authenticating against a OIDC providers.
+              Please configure <code>auth.oidc</code> part to use this.</p>
+          <p>We do supply an <a href="https://github.com/apache/james-project/tree/master/examples/oidc">example</a> of such a setup. It uses the
+              <a href="https://www.keycloak.org/">Keycloack</a> OIDC provider, but usage of similar technologies is definitely doable.</p>
+      </subsection>
 
     <subsection name="Configure Authenticated SMTP (SMTP AUTH)">
 

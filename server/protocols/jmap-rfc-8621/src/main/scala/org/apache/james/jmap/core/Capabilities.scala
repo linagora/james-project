@@ -20,6 +20,7 @@ package org.apache.james.jmap.core
 
 import java.net.URI
 
+import com.google.common.annotations.VisibleForTesting
 import eu.timepit.refined.auto._
 import org.apache.james.jmap.core.CapabilityIdentifier.CapabilityIdentifier
 
@@ -52,14 +53,16 @@ object DefaultCapabilities {
   val VACATION_RESPONSE_CAPABILITY = VacationResponseCapability()
   val SUBMISSION_CAPABILITY = SubmissionCapability()
 
-  def supported(configuration: JmapRfc8621Configuration): Capabilities = Capabilities.of(
-    coreCapability(configuration.maxUploadSize),
-    MAIL_CAPABILITY,
-    QUOTA_CAPABILITY,
-    SHARES_CAPABILITY,
-    VACATION_RESPONSE_CAPABILITY,
-    SUBMISSION_CAPABILITY,
-    webSocketCapability(configuration.webSocketUrl))
+  @VisibleForTesting
+  def supported(configuration: JmapRfc8621Configuration): Set[CapabilityFactory] = Set(
+    CoreCapabilityFactory(configuration.maxUploadSize),
+    MailCapabilityFactory,
+    QuotaCapabilityFactory,
+    SharesCapabilityFactory,
+    VacationResponseCapabilityFactory,
+    SharesCapabilityFactory,
+    SubmissionCapabilityFactory,
+    WebSocketCapabilityFactory)
 }
 
 object Capabilities {

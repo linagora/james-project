@@ -21,6 +21,9 @@
 
 package org.apache.james.protocols.smtp;
 
+import java.util.Optional;
+
+import org.apache.james.protocols.api.OidcSASLConfiguration;
 import org.apache.james.protocols.api.ProtocolConfiguration;
 
 
@@ -53,7 +56,7 @@ public interface SMTPConfiguration extends ProtocolConfiguration {
      * @param remoteIP the remote IP address in String form
      * @return whether SMTP authentication is on
      */
-    boolean isAuthRequired(String remoteIP);
+    boolean isAuthAnnounced(String remoteIP, boolean tlsStarted);
     
     /**
      * Returns whether the remote server needs to send a HELO/EHLO
@@ -69,5 +72,9 @@ public interface SMTPConfiguration extends ProtocolConfiguration {
      * @return true or false
      */
     boolean useAddressBracketsEnforcement();
+
+    boolean isPlainAuthEnabled();
+
+    Optional<OidcSASLConfiguration> saslConfiguration();
 
 }

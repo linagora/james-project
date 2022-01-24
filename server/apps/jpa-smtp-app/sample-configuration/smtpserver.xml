@@ -45,7 +45,11 @@
         <connectiontimeout>360</connectiontimeout>
         <connectionLimit>0</connectionLimit>
         <connectionLimitPerIP>0</connectionLimitPerIP>
-        <authRequired>false</authRequired>
+        <auth>
+            <announce>never</announce>
+            <requireSSL>false</requireSSL>
+            <plainAuthEnabled>true</plainAuthEnabled>
+        </auth>
         <authorizedAddresses>127.0.0.0/8</authorizedAddresses>
         <verifyIdentity>false</verifyIdentity>
         <maxmessagesize>0</maxmessagesize>
@@ -79,10 +83,17 @@
         <connectiontimeout>360</connectiontimeout>
         <connectionLimit>0</connectionLimit>
         <connectionLimitPerIP>0</connectionLimitPerIP>
-        <!--
-           Authorize only local users
-        -->
-        <authRequired>true</authRequired>
+        <auth>
+            <announce>forUnauthorizedAddresses</announce>
+            <requireSSL>true</requireSSL>
+            <plainAuthEnabled>true</plainAuthEnabled>
+            <oidc>
+                <oidcConfigurationURL>https://auth.upn.integration-open-paas.org/auth/realms/upn/.well-known/openid-configuration</oidcConfigurationURL>
+                <jwksURL>https://auth.upn.integration-open-paas.org/auth/realms/upn/protocol/openid-connect/certs</jwksURL>
+                <claim>email</claim>
+                <scope>openid profile email</scope>
+            </oidc>
+        </auth>
         <authorizedAddresses>127.0.0.0/8</authorizedAddresses>
         <!-- Trust authenticated users -->
         <verifyIdentity>false</verifyIdentity>
@@ -117,10 +128,17 @@
         <connectiontimeout>360</connectiontimeout>
         <connectionLimit>0</connectionLimit>
         <connectionLimitPerIP>0</connectionLimitPerIP>
-        <!--
-           Authorize only local users
-        -->
-        <authRequired>true</authRequired>
+        <auth>
+            <announce>forUnauthorizedAddresses</announce>
+            <requireSSL>true</requireSSL>
+            <plainAuthEnabled>true</plainAuthEnabled>
+            <oidc>
+                <oidcConfigurationURL>https://auth.upn.integration-open-paas.org/auth/realms/upn/.well-known/openid-configuration</oidcConfigurationURL>
+                <jwksURL>https://auth.upn.integration-open-paas.org/auth/realms/upn/protocol/openid-connect/certs</jwksURL>
+                <claim>email</claim>
+                <scope>openid profile email</scope>
+            </oidc>
+        </auth>
         <authorizedAddresses>127.0.0.0/8</authorizedAddresses>
         <!-- Trust authenticated users -->
         <verifyIdentity>false</verifyIdentity>

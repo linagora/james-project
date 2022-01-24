@@ -21,6 +21,7 @@ package org.apache.james.transport.mailets.remote.delivery;
 
 import static org.apache.james.transport.mailets.remote.delivery.Bouncer.IS_DELIVERY_PERMANENT_ERROR;
 
+import java.io.Closeable;
 import java.time.Duration;
 import java.util.Date;
 import java.util.function.Supplier;
@@ -32,6 +33,7 @@ import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.metrics.api.TimeMetric;
 import org.apache.james.queue.api.MailPrioritySupport;
 import org.apache.james.queue.api.MailQueue;
+import org.apache.james.util.MDCBuilder;
 import org.apache.mailet.Attribute;
 import org.apache.mailet.AttributeValue;
 import org.apache.mailet.Mail;
@@ -39,7 +41,9 @@ import org.apache.mailet.MailetContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -62,19 +66,20 @@ public class DeliveryRunnable implements Disposable {
     private final Bouncer bouncer;
     private final MailDelivrer mailDelivrer;
     private final Supplier<Date> dateSupplier;
+    private final MailetContext mailetContext;
     private Disposable disposable;
     private Scheduler remoteDeliveryScheduler;
 
     public DeliveryRunnable(MailQueue queue, RemoteDeliveryConfiguration configuration, DNSService dnsServer, MetricFactory metricFactory,
                             MailetContext mailetContext, Bouncer bouncer) {
         this(queue, configuration, metricFactory, bouncer,
-            new MailDelivrer(configuration, new MailDelivrerToHost(configuration, mailetContext), dnsServer, bouncer),
-            CURRENT_DATE_SUPPLIER);
+            new MailDelivrer(configuration, new MailDelivrerToHost(configuration, mailetContext), dnsServer, bouncer, mailetContext),
+            CURRENT_DATE_SUPPLIER, mailetContext);
     }
 
     @VisibleForTesting
     DeliveryRunnable(MailQueue queue, RemoteDeliveryConfiguration configuration, MetricFactory metricFactory, Bouncer bouncer,
-                     MailDelivrer mailDelivrer, Supplier<Date> dateSupplier) {
+                     MailDelivrer mailDelivrer, Supplier<Date> dateSupplier, MailetContext mailetContext) {
         this.queue = queue;
         this.configuration = configuration;
         this.outgoingMailsMetric = metricFactory.generate(OUTGOING_MAILS);
@@ -82,6 +87,7 @@ public class DeliveryRunnable implements Disposable {
         this.mailDelivrer = mailDelivrer;
         this.dateSupplier = dateSupplier;
         this.metricFactory = metricFactory;
+        this.mailetContext = mailetContext;
     }
 
     public void start() {
@@ -107,7 +113,12 @@ public class DeliveryRunnable implements Disposable {
         return Mono.create(sink -> {
             Mail mail = queueItem.getMail();
 
-            try {
+            try (Closeable closeable =
+                     MDCBuilder.create()
+                        .addToContext("mail", mail.getName())
+                        .addToContext("recipients", ImmutableList.copyOf(mail.getRecipients()).toString())
+                        .addToContext("sender", mail.getMaybeSender().asString())
+                        .build()) {
                 LOGGER.debug("will process mail {}", mail.getName());
                 attemptDelivery(mail);
                 queueItem.done(true);
@@ -136,6 +147,8 @@ public class DeliveryRunnable implements Disposable {
         switch (executionResult.getExecutionState()) {
             case SUCCESS:
                 outgoingMailsMetric.increment();
+                configuration.getOnSuccess()
+                    .ifPresent(Throwing.consumer(onSuccess -> mailetContext.sendMail(mail, onSuccess)));
                 break;
             case TEMPORARY_FAILURE:
                 handleTemporaryFailure(mail, executionResult);

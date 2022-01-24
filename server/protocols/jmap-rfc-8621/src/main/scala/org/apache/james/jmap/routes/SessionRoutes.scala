@@ -1,4 +1,4 @@
-/** **************************************************************
+/****************************************************************
  * Licensed to the Apache Software Foundation (ASF) under one   *
  * or more contributor license agreements.  See the NOTICE file *
  * distributed with this work for additional information        *
@@ -6,16 +6,16 @@
  * to you under the Apache License, Version 2.0 (the            *
  * "License"); you may not use this file except in compliance   *
  * with the License.  You may obtain a copy of the License at   *
- * *
- * http://www.apache.org/licenses/LICENSE-2.0                 *
- * *
+ *                                                              *
+ * http://www.apache.org/licenses/LICENSE-2.0                   *
+ *                                                              *
  * Unless required by applicable law or agreed to in writing,   *
  * software distributed under the License is distributed on an  *
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
  * KIND, either express or implied.  See the License for the    *
  * specific language governing permissions and limitations      *
  * under the License.                                           *
- * ***************************************************************/
+ ****************************************************************/
 
 package org.apache.james.jmap.routes
 
@@ -28,14 +28,14 @@ import io.netty.handler.codec.http.{HttpMethod, HttpResponseStatus}
 import javax.inject.{Inject, Named}
 import org.apache.james.jmap.HttpConstants.{JSON_CONTENT_TYPE, JSON_CONTENT_TYPE_UTF8}
 import org.apache.james.jmap.JMAPRoutes.CORS_CONTROL
-import org.apache.james.jmap.core.{ProblemDetails, Session}
+import org.apache.james.jmap.core.{JmapRfc8621Configuration, ProblemDetails, Session, UrlPrefixes}
 import org.apache.james.jmap.exceptions.UnauthorizedException
 import org.apache.james.jmap.http.Authenticator
 import org.apache.james.jmap.http.rfc8621.InjectionKeys
 import org.apache.james.jmap.json.ResponseSerializer
 import org.apache.james.jmap.routes.SessionRoutes.{JMAP_SESSION, LOGGER, WELL_KNOWN_JMAP}
 import org.apache.james.jmap.{Endpoint, JMAPRoute, JMAPRoutes}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.Json
 import reactor.core.publisher.Mono
 import reactor.core.scala.publisher.SMono
@@ -45,17 +45,18 @@ import reactor.netty.http.server.HttpServerResponse
 object SessionRoutes {
   private val JMAP_SESSION: String = "/jmap/session"
   private val WELL_KNOWN_JMAP: String = "/.well-known/jmap"
-  private val LOGGER = LoggerFactory.getLogger(classOf[SessionRoutes])
+  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[SessionRoutes])
 }
 
 class SessionRoutes @Inject() (@Named(InjectionKeys.RFC_8621) val authenticator: Authenticator,
-                               val sessionSupplier: SessionSupplier) extends JMAPRoutes {
+                               val sessionSupplier: SessionSupplier,
+                               val jmapRfc8621Configuration: JmapRfc8621Configuration) extends JMAPRoutes {
 
   private val generateSession: JMAPRoute.Action =
     (request, response) => SMono.fromPublisher(authenticator.authenticate(request))
       .map(_.getUser)
       .handle[Session] {
-        case (username, sink) =>  sessionSupplier.generate(username)
+        case (username, sink) => sessionSupplier.generate(username, UrlPrefixes.from(jmapRfc8621Configuration, request))
           .fold(sink.error, session => sink.next(session))
       }
       .flatMap(session => sendRespond(session, response))
@@ -84,7 +85,7 @@ class SessionRoutes @Inject() (@Named(InjectionKeys.RFC_8621) val authenticator:
         .action(CORS_CONTROL)
         .noCorsHeaders)
 
-  private def sendRespond(session: Session, resp: HttpServerResponse) =
+  private def sendRespond(session: Session, resp: HttpServerResponse): SMono[Void] =
     SMono.fromCallable(() => Json.stringify(ResponseSerializer.serialize(session)))
       .map(_.getBytes(StandardCharsets.UTF_8))
       .flatMap(bytes => SMono(resp.header(CONTENT_TYPE, JSON_CONTENT_TYPE_UTF8)

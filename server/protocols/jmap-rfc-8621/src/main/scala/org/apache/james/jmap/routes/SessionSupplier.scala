@@ -19,17 +19,19 @@
 
 package org.apache.james.jmap.routes
 
+import java.net.URL
+
 import javax.inject.Inject
 import org.apache.james.core.Username
 import org.apache.james.jmap.core.CapabilityIdentifier.CapabilityIdentifier
-import org.apache.james.jmap.core.{Account, AccountId, Capabilities, Capability, IsPersonal, IsReadOnly, JmapRfc8621Configuration, Session}
+import org.apache.james.jmap.core.{Account, AccountId, Capabilities, Capability, CapabilityFactory, IsPersonal, IsReadOnly, Session, UrlPrefixes}
 
 import scala.jdk.CollectionConverters._
 
-class SessionSupplier(val configuration: JmapRfc8621Configuration, defaultCapabilities: Set[Capability]) {
+class SessionSupplier(capabilityFactories: Set[CapabilityFactory]) {
   @Inject
-  def this(configuration: JmapRfc8621Configuration, defaultCapabilities: java.util.Set[Capability]) {
-    this(configuration, defaultCapabilities.asScala.toSet)
+  def this(defaultCapabilities: java.util.Set[CapabilityFactory]) {
+    this(defaultCapabilities.asScala.toSet)
   }
 
   def validate(username: Username, accountId: AccountId): Boolean = AccountId.from(username)
@@ -37,23 +39,37 @@ class SessionSupplier(val configuration: JmapRfc8621Configuration, defaultCapabi
     .toOption
     .getOrElse(false)
 
-  def generate(username: Username): Either[IllegalArgumentException, Session] =
-    accounts(username)
+  def generate(username: Username, urlPrefixes: UrlPrefixes): Either[IllegalArgumentException, Session] = {
+    val urlEndpointResolver: JmapUrlEndpointResolver = new JmapUrlEndpointResolver(urlPrefixes)
+    val capabilities: Set[Capability] = capabilityFactories
+      .map(cf => cf.create(urlPrefixes))
+    accounts(username, capabilities)
       .map(account => Session(
-        Capabilities(defaultCapabilities),
+        Capabilities(capabilities),
         List(account),
-        primaryAccounts(account.accountId),
+        primaryAccounts(account.accountId, capabilities),
         username,
-        apiUrl = configuration.apiUrl,
-        downloadUrl = configuration.downloadUrl,
-        uploadUrl = configuration.uploadUrl,
-        eventSourceUrl = configuration.eventSourceUrl))
+        apiUrl = urlEndpointResolver.apiUrl,
+        downloadUrl = urlEndpointResolver.downloadUrl,
+        uploadUrl = urlEndpointResolver.uploadUrl,
+        eventSourceUrl = urlEndpointResolver.eventSourceUrl))
+  }
 
-  private def accounts(username: Username): Either[IllegalArgumentException, Account] =
-    Account.from(username, IsPersonal(true), IsReadOnly(false), defaultCapabilities)
+  private def accounts(username: Username, capabilities: Set[Capability]): Either[IllegalArgumentException, Account] =
+    Account.from(username, IsPersonal(true), IsReadOnly(false), capabilities)
 
-  private def primaryAccounts(accountId: AccountId): Map[CapabilityIdentifier, AccountId] =
-    defaultCapabilities
+  private def primaryAccounts(accountId: AccountId, capabilities: Set[Capability]): Map[CapabilityIdentifier, AccountId] =
+    capabilities
       .map(capability => (capability.identifier(), accountId))
       .toMap
+}
+
+class JmapUrlEndpointResolver(val urlPrefixes: UrlPrefixes) {
+  val apiUrl: URL = new URL(urlPrefixes.httpUrlPrefix.toString + "/jmap")
+
+  val downloadUrl: URL = new URL(urlPrefixes.httpUrlPrefix.toString + "/download/{accountId}/{blobId}?type={type}&name={name}")
+
+  val uploadUrl: URL = new URL(urlPrefixes.httpUrlPrefix.toString + "/upload/{accountId}")
+
+  val eventSourceUrl: URL = new URL(urlPrefixes.httpUrlPrefix.toString + "/eventSource?types={types}&closeAfter={closeafter}&ping={ping}")
 }
