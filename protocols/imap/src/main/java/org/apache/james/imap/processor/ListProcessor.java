@@ -45,6 +45,8 @@ import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import reactor.core.publisher.Mono;
+
 public class ListProcessor<T extends ListRequest> extends AbstractMailboxProcessor<T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListProcessor.class);
 
@@ -70,21 +72,26 @@ public class ListProcessor<T extends ListRequest> extends AbstractMailboxProcess
      */
 
     @Override
-    protected void processRequest(T request, ImapSession session, Responder responder) {
+    protected Mono<Void> processRequestReactive(T request, ImapSession session, Responder responder) {
         String baseReferenceName = request.getBaseReferenceName();
         String mailboxPatternString = request.getMailboxPattern();
         MailboxSession mailboxSession = session.getMailboxSession();
 
-        try {
-            if (mailboxPatternString.length() == 0) {
-                respondNamespace(baseReferenceName, responder, mailboxSession);
-            } else {
-                respondMailboxList(baseReferenceName, mailboxPatternString, session, responder, mailboxSession);
-            }
-            okComplete(request, responder);
-        } catch (MailboxException e) {
-            LOGGER.error("List failed for mailboxName {}", mailboxPatternString, e);
-            no(request, responder, HumanReadableText.SEARCH_FAILED);
+        return respond(session, responder, baseReferenceName, mailboxPatternString, mailboxSession)
+            .then(Mono.fromRunnable(() -> okComplete(request, responder)))
+                .onErrorResume(MailboxException.class, e -> {
+                    LOGGER.error("List failed for mailboxName {}", mailboxPatternString, e);
+                    no(request, responder, HumanReadableText.SEARCH_FAILED);
+                    return Mono.empty();
+                })
+            .then();
+    }
+
+    private Mono<Void> respond(ImapSession session, Responder responder, String baseReferenceName, String mailboxPatternString, MailboxSession mailboxSession) {
+        if (mailboxPatternString.length() == 0) {
+            return Mono.fromRunnable(() -> respondNamespace(baseReferenceName, responder, mailboxSession));
+        } else {
+            return respondMailboxList(baseReferenceName, mailboxPatternString, session, responder, mailboxSession);
         }
     }
 
@@ -121,7 +128,7 @@ public class ListProcessor<T extends ListRequest> extends AbstractMailboxProcess
         }
     }
 
-    private void respondMailboxList(String referenceName, String mailboxName, ImapSession session, Responder responder, MailboxSession mailboxSession) throws MailboxException {
+    private Mono<Void> respondMailboxList(String referenceName, String mailboxName, ImapSession session, Responder responder, MailboxSession mailboxSession) {
         // If the mailboxPattern is fully qualified, ignore the
         // reference name.
         String finalReferencename = referenceName;
@@ -134,7 +141,7 @@ public class ListProcessor<T extends ListRequest> extends AbstractMailboxProcess
 
         MailboxPath basePath = computeBasePath(session, finalReferencename, isRelative);
 
-        getMailboxManager().search(
+        return getMailboxManager().search(
                 MailboxQuery.builder()
                     .userAndNamespaceFrom(basePath)
                     .expression(new PrefixedRegex(
@@ -143,8 +150,7 @@ public class ListProcessor<T extends ListRequest> extends AbstractMailboxProcess
                         mailboxSession.getPathDelimiter()))
                     .build(), Minimal, mailboxSession)
             .doOnNext(metaData -> processResult(responder, isRelative, metaData, getMailboxType(session, metaData.getPath())))
-            .then()
-            .block();
+            .then();
     }
 
     private MailboxPath computeBasePath(ImapSession session, String finalReferencename, boolean isRelative) {
