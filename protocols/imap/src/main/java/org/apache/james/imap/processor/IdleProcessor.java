@@ -54,6 +54,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import reactor.core.publisher.Mono;
+
 public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> implements CapabilityImplementingProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(IdleProcessor.class);
 
@@ -85,7 +87,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
     }
 
     @Override
-    protected void processRequest(IdleRequest request, ImapSession session, Responder responder) {
+    protected Mono<Void> processRequestReactive(IdleRequest request, ImapSession session, Responder responder) {
         SelectedMailbox sm = session.getSelected();
         if (sm != null) {
             sm.registerIdle(new IdleMailboxListener(session, responder));
@@ -149,7 +151,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
         // Write the response after the listener was add
         // IMAP-341
         responder.respond(new ContinuationResponse(HumanReadableText.IDLING));
-        unsolicitedResponses(session, responder, false);
+        return unsolicitedResponses(session, responder, false);
     }
 
     @Override
@@ -174,7 +176,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
 
         @Override
         public void event(Event event) {
-                unsolicitedResponses(session, responder, false);
+            unsolicitedResponses(session, responder, false).block();
         }
 
         @Override
