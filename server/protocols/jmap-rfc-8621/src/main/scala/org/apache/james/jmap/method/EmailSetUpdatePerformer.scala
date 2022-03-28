@@ -19,8 +19,6 @@
 
 package org.apache.james.jmap.method
 
-import java.util.function.Consumer
-
 import com.google.common.collect.ImmutableList
 import javax.inject.Inject
 import javax.mail.Flags
@@ -152,8 +150,7 @@ class EmailSetUpdatePerformer @Inject() (serializer: EmailSetSerializer,
     val mailboxMono: SMono[MessageManager] = SMono.fromCallable(() => mailboxManager.getMailbox(mailboxId, session))
 
     mailboxMono.flatMap(mailbox => updateByRange(ranges, metaData,
-      range => mailbox.setFlags(flags, updateMode, range, session)))
-      .subscribeOn(Schedulers.elastic())
+      range => SMono(mailbox.setFlagsReactive(flags, updateMode, range, session)).`then`()))
   }
 
   private def moveByRange(mailboxId: MailboxId,
@@ -164,23 +161,22 @@ class EmailSetUpdatePerformer @Inject() (serializer: EmailSetSerializer,
     val targetId: MailboxId = update.update.mailboxIds.get.value.headOption.get
 
     updateByRange(ranges, metaData,
-      range => mailboxManager.moveMessages(range, mailboxId, targetId, session))
+      range => SMono.fromCallable(() => mailboxManager.moveMessages(range, mailboxId, targetId, session))
+        .subscribeOn(Schedulers.elastic())
+        .`then`())
   }
 
   private def updateByRange(ranges: List[MessageRange],
                             metaData: Map[MessageId, Traversable[ComposedMessageIdWithMetaData]],
-                            operation: Consumer[MessageRange]): SMono[Seq[EmailUpdateResult]] =
+                            operation: MessageRange => SMono[Unit]): SMono[Seq[EmailUpdateResult]] =
     SFlux.fromIterable(ranges)
       .concatMap(range => {
         val messageIds = metaData.filter(entry => entry._2.exists(composedId => range.includes(composedId.getComposedMessageId.getUid)))
           .keys
           .toSeq
-        SMono.fromCallable[Seq[EmailUpdateResult]](() => {
-          operation.accept(range)
-          messageIds.map(EmailUpdateSuccess)
-        })
+        operation.apply(range)
+          .`then`(SMono.just(messageIds.map(EmailUpdateSuccess)))
           .onErrorResume(e => SMono.just(messageIds.map(id => EmailUpdateFailure(EmailSet.asUnparsed(id), e))))
-          .subscribeOn(Schedulers.elastic())
       })
       .reduce(Seq[EmailUpdateResult]())( _ ++ _)
 

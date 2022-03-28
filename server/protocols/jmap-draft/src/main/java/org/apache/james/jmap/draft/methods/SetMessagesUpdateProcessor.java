@@ -152,8 +152,7 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
             .collect(ImmutableListMultimap.toImmutableListMultimap(metaData -> metaData.getComposedMessageId().getMessageId(), Function.identity()))
             .flatMap(messages -> {
                 if (isAMassiveFlagUpdate(patches, messages)) {
-                    return Mono.fromCallable(() -> applyRangedFlagUpdate(patches, messages, mailboxSession))
-                        .subscribeOn(Schedulers.elastic());
+                    return applyRangedFlagUpdate(patches, messages, mailboxSession);
                 } else if (isAMassiveMove(patches, messages)) {
                     return Mono.fromCallable(() -> applyMove(patches, messages, mailboxSession))
                         .subscribeOn(Schedulers.elastic());
@@ -188,53 +187,56 @@ public class SetMessagesUpdateProcessor implements SetMessagesProcessor {
             && messages.size() > 3;
     }
 
-    private SetMessagesResponse.Builder applyRangedFlagUpdate(Map<MessageId, UpdateMessagePatch> patches, Multimap<MessageId, ComposedMessageIdWithMetaData> messages, MailboxSession mailboxSession) {
+    private Mono<SetMessagesResponse.Builder> applyRangedFlagUpdate(Map<MessageId, UpdateMessagePatch> patches, Multimap<MessageId, ComposedMessageIdWithMetaData> messages, MailboxSession mailboxSession) {
         MailboxId mailboxId = messages.values()
             .iterator()
             .next()
             .getComposedMessageId()
             .getMailboxId();
         UpdateMessagePatch patch = patches.values().iterator().next();
-        List<MessageRange> uidRanges = MessageRange.toRanges(messages.values().stream().map(metaData -> metaData.getComposedMessageId().getUid())
-            .distinct()
-            .collect(ImmutableList.toImmutableList()));
+
 
         if (patch.isValid()) {
-            return uidRanges.stream().map(range -> {
+            return Mono.from(mailboxManager.getMailboxReactive(mailboxId, mailboxSession))
+                .flatMap(mailbox -> applyRangedFlagUpdate(messages, mailboxSession, mailbox, patch));
+        } else {
+            return Mono.just(messages.keySet().stream()
+                .map(messageId -> handleInvalidRequest(messageId, patch.getValidationErrors(), patch))
+                .reduce(SetMessagesResponse.Builder::mergeWith)
+                .orElse(SetMessagesResponse.builder()));
+        }
+    }
+
+    private Mono<SetMessagesResponse.Builder> applyRangedFlagUpdate(Multimap<MessageId, ComposedMessageIdWithMetaData> messages, MailboxSession mailboxSession, MessageManager messageManager, UpdateMessagePatch patch) {
+        return Flux.fromIterable(MessageRange.toRanges(messages.values().stream().map(metaData -> metaData.getComposedMessageId().getUid())
+            .distinct()
+            .collect(ImmutableList.toImmutableList())))
+            .concatMap(range -> {
                 ImmutableList<MessageId> messageIds = messages.entries()
                     .stream()
                     .filter(entry -> range.includes(entry.getValue().getComposedMessageId().getUid()))
                     .map(Map.Entry::getKey)
                     .distinct()
                     .collect(ImmutableList.toImmutableList());
-                try {
-                    mailboxManager.getMailbox(mailboxId, mailboxSession)
-                        .setFlags(patch.applyToState(new Flags()), FlagsUpdateMode.REPLACE, range, mailboxSession);
-                    return SetMessagesResponse.builder().updated(messageIds);
-                } catch (MailboxException e) {
-                    return messageIds.stream()
+                return Mono.from(messageManager.setFlagsReactive(patch.applyToState(new Flags()), FlagsUpdateMode.REPLACE, range, mailboxSession))
+                    .thenReturn(SetMessagesResponse.builder().updated(messageIds))
+                    .onErrorResume(MailboxException.class, e -> Mono.just(messageIds.stream()
                         .map(messageId -> handleMessageUpdateException(messageId, e))
                         .reduce(SetMessagesResponse.Builder::mergeWith)
-                        .orElse(SetMessagesResponse.builder());
-                } catch (IllegalArgumentException e) {
-                    ValidationResult invalidPropertyKeywords = ValidationResult.builder()
-                        .property(MessageProperties.MessageProperty.keywords.asFieldName())
-                        .message(e.getMessage())
-                        .build();
+                        .orElse(SetMessagesResponse.builder())))
+                    .onErrorResume(IllegalArgumentException.class, e -> {
+                        ValidationResult invalidPropertyKeywords = ValidationResult.builder()
+                            .property(MessageProperties.MessageProperty.keywords.asFieldName())
+                            .message(e.getMessage())
+                            .build();
 
-                    return messageIds.stream()
-                        .map(messageId -> handleInvalidRequest(messageId, ImmutableList.of(invalidPropertyKeywords), patch))
-                        .reduce(SetMessagesResponse.Builder::mergeWith)
-                        .orElse(SetMessagesResponse.builder());
-                }
+                        return Mono.just(messageIds.stream()
+                            .map(messageId -> handleInvalidRequest(messageId, ImmutableList.of(invalidPropertyKeywords), patch))
+                            .reduce(SetMessagesResponse.Builder::mergeWith)
+                            .orElse(SetMessagesResponse.builder()));
+                    });
             }).reduce(SetMessagesResponse.Builder::mergeWith)
-                .orElse(SetMessagesResponse.builder());
-        } else {
-            return messages.keySet().stream()
-                .map(messageId -> handleInvalidRequest(messageId, patch.getValidationErrors(), patch))
-                .reduce(SetMessagesResponse.Builder::mergeWith)
-                .orElse(SetMessagesResponse.builder());
-        }
+            .switchIfEmpty(Mono.fromCallable(SetMessagesResponse::builder));
     }
 
     private SetMessagesResponse.Builder applyMove(Map<MessageId, UpdateMessagePatch> patches, Multimap<MessageId, ComposedMessageIdWithMetaData> messages, MailboxSession mailboxSession) {
