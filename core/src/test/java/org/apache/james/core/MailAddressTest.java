@@ -48,11 +48,15 @@ class MailAddressTest {
                 GOOD_QUOTED_LOCAL_PART,
                 "server-dev@james-apache.org",
                 "server-dev@[127.0.0.1]",
-                "server-dev@#123",
-                "server-dev@#123.apache.org",
                 "server.dev@james.apache.org",
                 "\\.server-dev@james.apache.org",
-                "server-dev\\.@james.apache.org")
+                "Abc@10.42.0.1",
+                "Abc.123@example.com",
+                "user+mailbox/department=shipping@example.com",
+                "\"Abc@def\"@example.com",
+                "\"Fred Bloggs\"@example.com",
+                "\"Joe.\\Blow\"@example.com",
+                "!#$%&'*+-/=?^_`.{|}~@example.com")
             .map(Arguments::of);
     }
 
@@ -83,8 +87,22 @@ class MailAddressTest {
                 "server-dev@[0127.0.0.1]",
                 "server-dev@[127.0.1.1a]",
                 "server-dev@[127\\.0.1.1]",
+                "server-dev@#123",
+                "server-dev@#123.apache.org",
                 "server-dev@[127.0.1.1.1]",
-                "server-dev@[127.0.1.-1]")
+                "server-dev@[127.0.1.-1]",
+                "\"a..b\"@domain.com", // Javax.mail is unable to handle this so we better reject it
+                "server-dev\\.@james.apache.org", // Javax.mail is unable to handle this so we better reject it
+                "a..b@domain.com",
+                // According to wikipedia these addresses are valid but as javax.mail is unable
+                // to work with thenm we shall rather reject them (note that this is not breaking retro-compatibility)
+                "Loïc.Accentué@voilà.fr8",
+                "pelé@exemple.com",
+                "δοκιμή@παράδειγμα.δοκιμή",
+                "我買@屋企.香港",
+                "二ノ宮@黒川.日本",
+                "медведь@с-балалайкой.рф",
+                "संपर्क@डाटामेल.भारत")
             .map(Arguments::of);
     }
 
@@ -93,6 +111,13 @@ class MailAddressTest {
     void testGoodMailAddressString(String mailAddress) {
         assertThatCode(() -> new MailAddress(mailAddress))
             .doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @MethodSource("goodAddresses")
+    void toInternetAddressShouldNoop(String mailAddress) throws Exception {
+        assertThat(new MailAddress(mailAddress).toInternetAddress())
+            .isNotEmpty();
     }
 
     @ParameterizedTest
@@ -146,7 +171,7 @@ class MailAddressTest {
         InternetAddress b = new InternetAddress(GOOD_ADDRESS);
         MailAddress a = new MailAddress(b);
 
-        assertThat(a.toInternetAddress()).isEqualTo(b);
+        assertThat(a.toInternetAddress()).contains(b);
         assertThat(a.toString()).isEqualTo(GOOD_ADDRESS);
     }
 

@@ -39,7 +39,7 @@ import org.apache.mailet.base.test.FakeMailetConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class NotifyPostmasterTest {
+class NotifyPostmasterTest {
 
     private static final String MAILET_NAME = "mailetName";
 
@@ -100,7 +100,7 @@ public class NotifyPostmasterTest {
                 .build();
         notifyPostmaster.init(mailetConfig);
 
-        assertThat(notifyPostmaster.getTo()).containsOnly(postmaster.toInternetAddress());
+        assertThat(notifyPostmaster.getTo()).containsOnly(postmaster.toInternetAddress().get());
     }
 
     @Test
@@ -112,7 +112,7 @@ public class NotifyPostmasterTest {
                 .build();
         notifyPostmaster.init(mailetConfig);
 
-        assertThat(notifyPostmaster.getTo()).containsOnly(postmaster.toInternetAddress());
+        assertThat(notifyPostmaster.getTo()).containsOnly(postmaster.toInternetAddress().get());
     }
 
     @Test
@@ -124,7 +124,7 @@ public class NotifyPostmasterTest {
                 .build();
         notifyPostmaster.init(mailetConfig);
 
-        assertThat(notifyPostmaster.getTo()).containsOnly(SpecialAddress.UNALTERED.toInternetAddress());
+        assertThat(notifyPostmaster.getTo()).containsOnly(SpecialAddress.UNALTERED.toInternetAddress().get());
     }
 
     @Test
@@ -136,27 +136,53 @@ public class NotifyPostmasterTest {
                 .build();
         notifyPostmaster.init(mailetConfig);
 
-        assertThat(notifyPostmaster.getTo()).containsOnly(postmaster.toInternetAddress());
+        assertThat(notifyPostmaster.getTo()).containsOnly(postmaster.toInternetAddress().get());
     }
 
     @Test
-    void notifyPostmasterShouldAddPrefixToSubjectWhenPrefixIsConfigured() throws Exception {
+    void notifyPostmasterShouldNotAddPrefixToSubjectOfInFlightMailWhenPrefixIsConfigured() throws Exception {
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
-                .mailetName(MAILET_NAME)
-                .mailetContext(fakeMailContext)
-                .setProperty("prefix", "pre")
-                .build();
+            .mailetName(MAILET_NAME)
+            .mailetContext(fakeMailContext)
+            .setProperty("prefix", "pre")
+            .build();
         notifyPostmaster.init(mailetConfig);
 
         FakeMail mail = FakeMail.builder()
-                .name(MAILET_NAME)
-                .sender(MailAddressFixture.ANY_AT_JAMES)
-                .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
-                    .setSubject("My subject"))
-                .build();
+            .name(MAILET_NAME)
+            .sender(MailAddressFixture.ANY_AT_JAMES)
+            .recipient(MailAddressFixture.ANY_AT_JAMES2)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setSubject("My subject"))
+            .build();
 
         notifyPostmaster.service(mail);
 
-        assertThat(mail.getMessage().getSubject()).isEqualTo("pre My subject");
+        assertThat(mail.getMessage().getSubject()).isEqualTo("My subject");
+    }
+
+    @Test
+    void notifyPostmasterShouldAddPrefixToSubjectOfSentEmailWhenPrefixIsConfigured() throws Exception {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .mailetName(MAILET_NAME)
+            .mailetContext(fakeMailContext)
+            .setProperty("prefix", "pre")
+            .build();
+        notifyPostmaster.init(mailetConfig);
+
+        FakeMail mail = FakeMail.builder()
+            .name(MAILET_NAME)
+            .sender(MailAddressFixture.ANY_AT_JAMES)
+            .recipient(MailAddressFixture.ANY_AT_JAMES2)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setSubject("My subject"))
+            .build();
+
+        notifyPostmaster.service(mail);
+
+        assertThat(fakeMailContext.getSentMails())
+            .first()
+            .extracting(s -> s.getSubject().get())
+            .isEqualTo("pre My subject");
     }
 }

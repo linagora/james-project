@@ -63,6 +63,11 @@ public class BaseFakeSMTPSession implements SMTPSession {
     }
 
     @Override
+    public boolean supportsOAuth() {
+        return false;
+    }
+
+    @Override
     public String getSessionID() {
         throw new UnsupportedOperationException("Unimplemented Stub Method");
     }
@@ -78,7 +83,7 @@ public class BaseFakeSMTPSession implements SMTPSession {
     }
 
     @Override
-    public boolean isAuthSupported() {
+    public boolean isAuthAnnounced() {
         throw new UnsupportedOperationException("Unimplemented Stub Method");
     }
 
@@ -114,11 +119,6 @@ public class BaseFakeSMTPSession implements SMTPSession {
 
     @Override
     public boolean isTLSStarted() {
-        throw new UnsupportedOperationException("Unimplemented Stub Method");
-    }
-
-    @Override
-    public int getPushedLineHandlerCount() {
         throw new UnsupportedOperationException("Unimplemented Stub Method");
     }
 

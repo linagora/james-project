@@ -19,6 +19,7 @@
 
 package org.apache.james.blob.mail;
 
+import static org.apache.james.blob.api.BlobStore.StoragePolicy.LOW_COST;
 import static org.apache.james.blob.api.BlobStore.StoragePolicy.SIZE_BASED;
 import static org.apache.james.blob.mail.MimeMessagePartsId.BODY_BLOB_TYPE;
 import static org.apache.james.blob.mail.MimeMessagePartsId.HEADER_BLOB_TYPE;
@@ -46,7 +47,6 @@ import org.apache.james.server.core.MimeMessageSource;
 import org.apache.james.server.core.MimeMessageWrapper;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 
 import reactor.core.publisher.Mono;
@@ -105,15 +105,14 @@ public class MimeMessageStore {
                                 throw new IOException("Failed accessing body size", e);
                             }
                         }
-                    }, SIZE_BASED))));
+                    }, LOW_COST))));
         }
     }
 
     static class MimeMessageDecoder implements Store.Impl.Decoder<MimeMessage> {
         @Override
-        public MimeMessage decode(Stream<Pair<BlobType, CloseableByteSource>> streams) {
-            Preconditions.checkNotNull(streams);
-            Map<BlobType, CloseableByteSource> pairs = streams.collect(ImmutableMap.toImmutableMap(Pair::getLeft, Pair::getRight));
+        public MimeMessage decode(Map<BlobType, CloseableByteSource> pairs) {
+            Preconditions.checkNotNull(pairs);
             Preconditions.checkArgument(pairs.containsKey(HEADER_BLOB_TYPE));
             Preconditions.checkArgument(pairs.containsKey(BODY_BLOB_TYPE));
 
@@ -131,7 +130,7 @@ public class MimeMessageStore {
         return new Factory(blobStore);
     }
 
-    private static class MimeMessageBytesSource extends MimeMessageSource implements Disposable {
+    private static class MimeMessageBytesSource implements MimeMessageSource, Disposable {
         private final CloseableByteSource headers;
         private final CloseableByteSource body;
         private final String sourceId;

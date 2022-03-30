@@ -23,42 +23,61 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-import java.util.stream.Collectors;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Optional;
 
 import org.apache.james.metrics.tests.RecordingMetricFactory;
+import org.apache.james.protocols.api.ProtocolSession;
 import org.apache.james.protocols.api.Request;
+import org.apache.james.protocols.api.Response;
+import org.apache.james.protocols.pop3.POP3Response;
 import org.apache.james.protocols.pop3.POP3Session;
+import org.apache.james.protocols.pop3.POP3StreamResponse;
+import org.apache.james.protocols.pop3.mailbox.Mailbox;
+import org.apache.james.protocols.pop3.mailbox.MessageMetaData;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class RetrCmdHandlerTest {
 
-    @ParameterizedTest
-    @ValueSource(ints = {8, 16, 32, 64, 128, 256})
-    void onCommandShouldNotThrowOnMessageHexNumberOverflow(int pad) {
+    @Test
+    void onCommandHandlesMissingContent() throws IOException {
         POP3Session session = mock(POP3Session.class);
         when(session.getHandlerState()).thenReturn(POP3Session.TRANSACTION);
 
         Request request = mock(Request.class);
-        String overflowedNumber = Collections.nCopies(pad, "\\xff").stream().collect(Collectors.joining());
-        when(request.getArgument()).thenReturn(overflowedNumber);
+        when(request.getArgument()).thenReturn("1");
 
-        assertThat(new RetrCmdHandler(new RecordingMetricFactory()).onCommand(session, request))
-            .isEqualTo(RetrCmdHandler.SYNTAX_ERROR);
+        MessageMetaData data = new MessageMetaData("1234", 567);
+        when(session.getAttachment(POP3Session.UID_LIST, ProtocolSession.State.Transaction)).thenReturn(Optional.of(List.of(data)));
+
+        Mailbox mailbox = mock(Mailbox.class);
+        when(session.getUserMailbox()).thenReturn(mailbox);
+        when(mailbox.getMessage(data.getUid())).thenThrow(new IOException("cannot retrieve message content"));
+
+        Response response = new RetrCmdHandler(new RecordingMetricFactory()).onCommand(session, request);
+        assertThat(response.getRetCode()).isEqualTo(POP3Response.ERR_RESPONSE);
+        assertThat(response.getLines().get(0)).contains("does not exist");
     }
 
     @Test
-    void onCommandShouldNotThrowOnMessageDecNumberOverflow() {
+    void onCommandRetrievesMessage() throws IOException {
         POP3Session session = mock(POP3Session.class);
         when(session.getHandlerState()).thenReturn(POP3Session.TRANSACTION);
 
         Request request = mock(Request.class);
-        String overflowedNumber = Long.toString(Long.MAX_VALUE);
-        when(request.getArgument()).thenReturn(overflowedNumber);
+        when(request.getArgument()).thenReturn("1");
 
-        assertThat(new RetrCmdHandler(new RecordingMetricFactory()).onCommand(session, request))
-            .isEqualTo(RetrCmdHandler.SYNTAX_ERROR);
+        MessageMetaData data = new MessageMetaData("1234", 567);
+        when(session.getAttachment(POP3Session.UID_LIST, ProtocolSession.State.Transaction)).thenReturn(Optional.of(List.of(data)));
+
+        Mailbox mailbox = mock(Mailbox.class);
+        when(session.getUserMailbox()).thenReturn(mailbox);
+        when(mailbox.getMessage(data.getUid())).thenReturn(InputStream.nullInputStream());
+
+        Response response = new RetrCmdHandler(new RecordingMetricFactory()).onCommand(session, request);
+        assertThat(response.getRetCode()).isEqualTo(POP3Response.OK_RESPONSE);
+        assertThat(response).isInstanceOf(POP3StreamResponse.class);
     }
 }

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.mail.MessagingException;
@@ -34,6 +35,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.DeferredFileOutputStream;
 import org.apache.james.lifecycle.api.Disposable;
+import org.apache.james.util.SizeFormat;
 
 /**
  * Takes an input stream and creates a repeatable input stream source for a
@@ -42,29 +44,85 @@ import org.apache.james.lifecycle.api.Disposable;
  *
  * This class is not thread safe!
  */
-public class MimeMessageInputStreamSource extends MimeMessageSource implements Disposable {
-
-    private final Set<InputStream> streams = new HashSet<>();
-
+public class MimeMessageInputStreamSource extends Disposable.LeakAware<MimeMessageInputStreamSource.Resource> implements MimeMessageSource {
     /**
-     * A temporary file used to hold the message stream
+     * 100kb threshold for the stream.
      */
-    private BufferedDeferredFileOutputStream out;
+    private static final int DEFAULT_THRESHOLD = 1024 * 100;
 
+    private static int threshold() {
+        return Optional.ofNullable(System.getProperty("james.message.memory.threshold"))
+            .map(SizeFormat::parseAsByteCount)
+            .map(Math::toIntExact)
+            .orElse(DEFAULT_THRESHOLD);
+    }
+
+    private static final int THRESHOLD = threshold();
     /**
      * The full path of the temporary file
      */
     private final String sourceId;
 
     /**
-     * 100kb threshold for the stream.
-     */
-    private static final int THRESHOLD = 1024 * 100;
-
-    /**
      * Temporary directory to use
      */
     private static final File TMPDIR = new File(System.getProperty("java.io.tmpdir"));
+
+    static class Resource extends LeakAware.Resource {
+        private final BufferedDeferredFileOutputStream out;
+        private final Set<InputStream> streams;
+
+        Resource(BufferedDeferredFileOutputStream out, Set<InputStream> streams) {
+            super(() -> {
+                // explicit close all streams
+                for (InputStream stream : streams) {
+                    try {
+                        stream.close();
+                    } catch (IOException e) {
+                        //ignore exception during close
+                    }
+                }
+
+                if (out != null) {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        //ignore exception during close
+                    }
+                    File file = out.getFile();
+                    if (file != null) {
+                        FileUtils.deleteQuietly(file);
+                        file = null;
+                    }
+                    out.dispose();
+                }
+            });
+            this.out = out;
+            this.streams = streams;
+        }
+
+        public BufferedDeferredFileOutputStream getOut() {
+            return out;
+        }
+
+
+    }
+
+    public static MimeMessageInputStreamSource create(String key, InputStream in) throws MessagingException {
+        Disposable.LeakAware.track();
+        BufferedDeferredFileOutputStream out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
+        Resource resource = new Resource(out, new HashSet<>());
+
+        return new MimeMessageInputStreamSource(resource, key, in);
+    }
+
+    public static MimeMessageInputStreamSource create(String key) {
+        Disposable.LeakAware.track();
+        BufferedDeferredFileOutputStream out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
+        Resource resource = new Resource(out, new HashSet<>());
+
+        return new MimeMessageInputStreamSource(resource, key);
+    }
 
     /**
      * Construct a new MimeMessageInputStreamSource from an
@@ -74,24 +132,23 @@ public class MimeMessageInputStreamSource extends MimeMessageSource implements D
      * @param in  the stream containing the MimeMessage
      * @throws MessagingException if an error occurs while trying to store the stream
      */
-    public MimeMessageInputStreamSource(String key, InputStream in) throws MessagingException {
-        super();
+    private MimeMessageInputStreamSource(Resource resource, String key, InputStream in) throws MessagingException {
+        super(resource);
         // We want to immediately read this into a temporary file
         // Create a temp file and channel the input stream into it
         try {
-            out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
-            IOUtils.copy(in, out);
+            IOUtils.copy(in, resource.out);
             sourceId = key;
         } catch (IOException ioe) {
-            File file = out.getFile();
+            File file = resource.out.getFile();
             if (file != null) {
                 FileUtils.deleteQuietly(file);
             }
             throw new MessagingException("Unable to retrieve the data: " + ioe.getMessage(), ioe);
         } finally {
             try {
-                if (out != null) {
-                    out.close();
+                if (resource.out != null) {
+                    resource.out.close();
                 }
             } catch (IOException ioe) {
                 // Ignored - logging unavailable to log this non-fatal error.
@@ -108,9 +165,8 @@ public class MimeMessageInputStreamSource extends MimeMessageSource implements D
         }
     }
 
-    public MimeMessageInputStreamSource(String key) {
-        super();
-        out = new BufferedDeferredFileOutputStream(THRESHOLD, key, ".m64", TMPDIR);
+    private MimeMessageInputStreamSource(Resource resource, String key) {
+        super(resource);
         sourceId = key;
     }
 
@@ -132,12 +188,12 @@ public class MimeMessageInputStreamSource extends MimeMessageSource implements D
     @Override
     public InputStream getInputStream() throws IOException {
         InputStream in;
-        if (out.isInMemory()) {
-            in = new SharedByteArrayInputStream(out.getData());
+        if (getResource().getOut().isInMemory()) {
+            in = new SharedByteArrayInputStream(getResource().getOut().getData());
         } else {
-            in = new SharedFileInputStream(out.getFile());
+            in = new SharedFileInputStream(getResource().getOut().getFile());
         }
-        streams.add(in);
+        getResource().streams.add(in);
         return in;
     }
 
@@ -145,42 +201,13 @@ public class MimeMessageInputStreamSource extends MimeMessageSource implements D
      * Get the size of the temp file
      *
      * @return the size of the temp file
-     * @throws IOException if an error is encoutered while computing the size of the
-     *                     message
      */
     @Override
-    public long getMessageSize() throws IOException {
-        return out.getByteCount();
+    public long getMessageSize() {
+        return getResource().getOut().getByteCount();
     }
 
     public OutputStream getWritableOutputStream() {
-        return out;
+        return getResource().getOut();
     }
-
-    @Override
-    public void dispose() {
-        // explicit close all streams
-        for (InputStream stream : streams) {
-            try {
-                stream.close();
-            } catch (IOException e) {
-                //ignore exception during close
-            }
-        }
-
-        if (out != null) {
-            try {
-                out.close();
-            } catch (IOException e) {
-                //ignore exception during close
-            }
-            File file = out.getFile();
-            if (file != null) {
-                FileUtils.deleteQuietly(file);
-                file = null;
-            }
-            out = null;
-        }
-    }
-
 }

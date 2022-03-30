@@ -19,7 +19,6 @@
 
 package org.apache.james.protocols.pop3.core;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,7 +28,6 @@ import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.protocols.api.ProtocolSession.State;
 import org.apache.james.protocols.api.Request;
 import org.apache.james.protocols.api.Response;
-import org.apache.james.protocols.api.handler.CommandHandler;
 import org.apache.james.protocols.pop3.POP3Response;
 import org.apache.james.protocols.pop3.POP3Session;
 import org.apache.james.protocols.pop3.mailbox.MessageMetaData;
@@ -43,7 +41,7 @@ import com.google.common.collect.ImmutableSet;
 /**
  * Handles STAT command
  */
-public class StatCmdHandler implements CommandHandler<POP3Session> {
+public class StatCmdHandler extends AbstractPOP3CommandHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(StatCmdHandler.class);
     private static final Collection<String> COMMANDS = ImmutableSet.of("STAT");
 
@@ -77,17 +75,14 @@ public class StatCmdHandler implements CommandHandler<POP3Session> {
             long size = 0;
             int count = 0;
             if (!uidList.isEmpty()) {
-                List<MessageMetaData> validResults = new ArrayList<>();
                 for (MessageMetaData data : uidList) {
                     if (!deletedUidList.contains(data.getUid())) {
                         size += data.getSize();
                         count++;
-                        validResults.add(data);
                     }
                 }
             }
-            StringBuilder responseBuffer = new StringBuilder(32).append(count).append(" ").append(size);
-            return new POP3Response(POP3Response.OK_RESPONSE, responseBuffer.toString());
+            return new POP3Response(POP3Response.OK_RESPONSE, count + " " + size);
 
         } else {
             return POP3Response.ERR;

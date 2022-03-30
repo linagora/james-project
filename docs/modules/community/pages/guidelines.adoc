@@ -45,17 +45,47 @@ The Apache James Project's private mailing list for discussion of issues that ar
 such as legal, personal, or security issues prior to a published fix. Subscription to the list is only opened to Apache
 James PMC members and Apache Software Foundation Members.
 
+Topics to be discussed on the private mailing list:
+
+ - Discussion of board reports. PMC members need to report quaterly project activity to the Apache board of directors,
+which is done through link:https://reporter.apache.org[reporter.apache.org]. Prior report submission, the draft should
+be discussed on the private mailing list.
+ - Discussions of link:https://community.apache.org/newcommitter.html[new committers, new PMCs], including proposition discussions, votes and process follow up.
+ - Handling of xref:contributing.adoc#_reporting_security_vulnerabilities[security vulnerability reports], and CVE publication.
+
+Other topics should be discussed/voted on server-dev instead.
+
 === GIT
 
 All of the Apache James products are maintained in shared information repositories using GIT on git-wip-us.apache.org.
 The Apache committers have write access to these repositories; everyone has read access via anonymous GIT.
 
-== Voting
+== Consensus
+
+As a community we are seeking link:https://community.apache.org/committers/decisionMaking.html[consensus] in our
+decision making.
+
+We actively rely on link:https://community.apache.org/committers/lazyConsensus.html[lazy consensus] for most of our
+decisions, be them validating xref:contributing.adoc#_how_to_contribute_some_code[code changes], enacting
+xref:contributing.adoc#_idea_or_design_proposals[design decisions].
+
+All code modifications should achieve lazy consensus under the form of github pull requests.
+
+=== Voting
+
+Some decisions might require to vote:
+
+ - xref:release.adoc[releases]
+ - establishing a new sub-project
+ - retiring sub-projects
+ - taking a decision when lazy consensus failed.
+
+Note that we encourage discussing the issues prior to trigger a vote. That way bad surprises may be avoided ahead of time.
 
 Any of the Apache James Committers may vote on any issue or action item. However, the only binding votes are those cast
 by active members of the Apache James PMC; if the vote is about a change to source code or documentation, the primary
 author of what is being changed may also cast a binding vote on that issue. All other votes are non-binding. All
-committers are encouraged to participate in decisions, but the decision itself is made by those who have been long-time
+contributors are encouraged to participate in decisions, but the decision itself is made by those who have been long-time
 contributors to the project. In other words, the Apache Project is a minimum-threshold meritocracy.
 
 The act of voting carries certain obligations -- voting members are not only stating their opinion, they are agreeing
@@ -90,51 +120,27 @@ All votes must be either sent to the mailing list for that action item.
 Votes are to remain open for 72 hours after which the developer who put forth the vote should tabulate the result and
 send this to the mailing list. A developer should be sensitive to holidays that could dampen participation in the vote.
 
-== Types of Action Items
+== Section for new committers
 
-=== Long Term Plans
+First congratulation for your involvement!
 
-Long term plans are simply announcements that group members are working on particular issues related to the Apache
-software. These are not voted on, but group members who do not agree with a particular plan, or think an alternate plan
-would be better, are obligated to inform the group of their feelings. In general, it is always better to hear about
-alternate plans prior to spending time on less adequate solutions.
+As part of the link:https://community.apache.org/newcommitter.html[process to become a committer], the following steps should have had been emailed to you:
 
-=== Short Term Plans
+ - Signing of link:https://www.apache.org/licenses/#clas[Contributor License Agreement]
+ - Establishing an Apache profile with the Apache secretary.
+ - Access will directly be granted on the link:https://issues.apache.org/jira/projects/JAMES[JIRA],
+the ASF Git repository and the link:https://ci-builds.apache.org/job/james/job/ApacheJames/[ci].
+ - Extra steps should be taken for xref:#_accessing_apache_github_as_a_committer[Github access].
+ - A PMC should have had announced your nomination. If you have not already been doing it, we strongly
+encourage you to write an email on public mailing list, presenting you, and your motivations toward
+contributing on Apache James. A reply to the announce would do the trick!
 
-Short term plans are announcements that a developer is working on a particular set of documentation or code files, with
-the implication that other committers should avoid them or try to coordinate their changes. This is a good way to
-proactively avoid conflict and possible duplication of work.
+=== Accessing Apache GitHub as a Committer
 
-=== Release Plan
+- Verify you have a Github ID enabled with link:https://help.github.com/articles/securing-your-account-with-two-factor-authentication-2fa/[2FA]
+- Enter your Github ID into your link:https://id.apache.org/[Apache ID profile]
+- Merge your Apache and GitHub accounts using link:https://gitbox.apache.org/setup/[GitBox] (Apache Account Linking utility). You should see 3 green checks in GitBox.
 
-A release plan is used to keep all the committers aware of when a release is desired, who will be the release manager,
-when the repository will be frozen in order to create the release, and assorted other trivia to keep us from tripping
-over ourselves during the final moments. Lazy majority decides each issue in the release plan.
+Wait at least 30  minutes for an email inviting you to Apache GitHub Organization and accept invitation.
 
-=== Release Testing
-
-After a new release is built, colloquially termed a tarball, it must be tested before being released to the public.
-Majority approval is required before the tarball can be publically released.
-
-=== Showstoppers
-
-Showstoppers are issues that require a fix be in place before the next public release.
-
-=== Product Changes
-
-Changes to the Apache James products, including code and documentation, will appear as action items under several
-categories corresponding to the change status:
-
-* *Concept/Plan*
-An idea or plan for a change. These are represented as ADRs (Architectural Decision Records), stored under the `src/adr`
-folder. Votes are being requested early so as to uncover conflicts before too much work is done. You can find more
-information about this xref:contributing.adoc#_idea_or_design_proposals[here].
-
-* *Proposed Patch*
-A specific set of changes to the current product in the form of input to the patch command (a diff output).
-
-* *Committed Change*
-A one-line summary of a change that has been committed to the repository since the last public release.
-
-All product changes to the currently active repository are subject to lazy consensus. All product changes to a
-prior-branch (old version) repository require consensus before the change is committed.
+- After accepting the Github Invitation verify that you are a member of the link:https://github.com/orgs/apache/teams/james-committers[GitHub Apache James team].

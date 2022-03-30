@@ -53,7 +53,7 @@
                     The generated startup warning log can be deactivated via the <code>cassandra.blob.store.disable.startup.warning</code> environment
                     variable being positioned to <code>false</code>.
                 </dd>
-                <dt><strong>deduplication/enable</strong></dt>
+                <dt><strong>deduplication.enable</strong></dt>
                 <dd>Mandatory. Supported value: true and false.</dd>
                 <dd>If you choose to enable deduplication, the mails with the same content will be stored only once.</dd>
                 <dd>Warning: Once this feature is enabled, there is no turning back as turning it off will lead to the deletion of all</dd>
@@ -167,6 +167,27 @@ generate salt with : openssl rand -hex 16
 
                         <dt><strong>objectstorage.s3.http.concurrency</strong></dt>
                         <dd>Allow setting the number of concurrent HTTP requests allowed by the Netty driver.</dd>
+
+                        <dt><strong>objectstorage.s3.truststore.path</strong></dt>
+                        <dd><i>optional:</i> Verify the S3 server certificate against this trust store file.</dd>
+
+                        <dt><strong>objectstorage.s3.truststore.type</strong></dt>
+                        <dd><i>optional:</i> Specify the type of the trust store, e.g. JKS, PKCS12</dd>
+
+                        <dt><strong>objectstorage.s3.truststore.secret</strong></dt>
+                        <dd><i>optional:</i> Use this secret/password to access the trust store; default none</dd>
+
+                        <dt><strong>objectstorage.s3.truststore.algorithm</strong></dt>
+                        <dd><i>optional:</i> Use this specific trust store algorithm; default SunX509</dd>
+
+                        <dt><strong>objectstorage.s3.read.timeout</strong></dt>
+                        <dd><i>optional:</i> HTTP read timeout. duration, default value being second. Leaving it empty relies on S3 driver defaults.</dd>
+
+                        <dt><strong>objectstorage.s3.write.timeout</strong></dt>
+                        <dd><i>optional:</i> HTTP write timeout. duration, default value being second. Leaving it empty relies on S3 driver defaults.</dd>
+
+                        <dt><strong>objectstorage.s3.connection.timeout</strong></dt>
+                        <dd><i>optional:</i> HTTP connection timeout. duration, default value being second. Leaving it empty relies on S3 driver defaults.</dd>
                     </dl>
                 </subsection>
             </subsection>

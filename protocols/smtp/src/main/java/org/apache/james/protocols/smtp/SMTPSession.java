@@ -68,7 +68,7 @@ public interface SMTPSession extends ProtocolSession {
      *
      * @return authentication required or not
      */
-    boolean isAuthSupported();
+    boolean isAuthAnnounced();
 
     
     /**
@@ -77,7 +77,9 @@ public interface SMTPSession extends ProtocolSession {
      * @return recipient count
      */
     int getRcptCount();
-    
+
+
+    boolean supportsOAuth();
 
 }
 

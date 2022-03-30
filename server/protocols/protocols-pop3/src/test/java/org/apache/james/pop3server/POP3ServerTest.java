@@ -19,6 +19,7 @@
 package org.apache.james.pop3server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.commons.configuration2.XMLConfiguration;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.net.pop3.POP3Client;
 import org.apache.commons.net.pop3.POP3MessageInfo;
 import org.apache.commons.net.pop3.POP3Reply;
@@ -48,6 +50,7 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.store.StoreMailboxManager;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.metrics.tests.RecordingMetricFactory;
@@ -64,7 +67,6 @@ import org.apache.james.server.core.filesystem.FileSystemImpl;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.user.memory.MemoryUsersRepository;
-import org.jboss.netty.util.HashedWheelTimer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -72,6 +74,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.google.inject.name.Names;
+
+import reactor.core.publisher.Flux;
 
 public class POP3ServerTest {
     private static final DomainList NO_DOMAIN_LIST = null;
@@ -87,11 +91,9 @@ public class POP3ServerTest {
             + "Subject: test\r\n\r\n"
             + "Body Text POP3ServerTest.setupTestMails\r\n").getBytes();
     private POP3Server pop3Server;
-    private HashedWheelTimer hashedWheelTimer;
 
     @BeforeEach
     void setUp() throws Exception {
-        hashedWheelTimer = new HashedWheelTimer();
         setUpServiceManager();
         setUpPOP3Server();
         pop3Configuration = ConfigLoader.getConfig(fileSystem.getResource("classpath://pop3server.xml"));
@@ -111,7 +113,6 @@ public class POP3ServerTest {
         }
         protocolHandlerChain.dispose();
         pop3Server.destroy();
-        hashedWheelTimer.stop();
     }
 
     @Nested
@@ -544,6 +545,49 @@ public class POP3ServerTest {
         mailboxManager.deleteMailbox(mailboxPath, session);
     }
 
+    @Test
+    void pop3SessionShouldTolerateConcurrentDeletes() throws Exception {
+        finishSetUp(pop3Configuration);
+
+        pop3Client = new POP3Client();
+        InetSocketAddress bindedAddress = new ProtocolServerUtils(pop3Server).retrieveBindedAddress();
+        pop3Client.connect(bindedAddress.getAddress().getHostAddress(), bindedAddress.getPort());
+
+        Username username = Username.of("foo2");
+        usersRepository.addUser(username, "bar2");
+
+        MailboxPath mailboxPath = MailboxPath.inbox(username);
+        MailboxSession session = mailboxManager.login(username, "bar2");
+
+        if (!mailboxManager.mailboxExists(mailboxPath, session).block()) {
+            mailboxManager.createMailbox(mailboxPath, session);
+        }
+
+        setupTestMails(session, mailboxManager.getMailbox(mailboxPath, session));
+
+        pop3Client.login("foo2", "bar2");
+        assertThat(pop3Client.getState()).isEqualTo(1);
+
+        POP3MessageInfo[] entries = pop3Client.listMessages();
+
+        assertThat(entries).isNotNull();
+        assertThat(entries.length).isEqualTo(2);
+        assertThat(pop3Client.getState()).isEqualTo(1);
+
+        mailboxManager.getMailbox(mailboxPath, session).delete(
+            Flux.from(mailboxManager.getMailbox(mailboxPath, session).listMessagesMetadata(MessageRange.all(), session))
+            .map(i -> i.getComposedMessageId().getUid())
+            .collectList().block(),
+            session);
+
+        Reader r = pop3Client.retrieveMessageTop(entries[0].number, 0);
+
+        assertThat(r).isNull(); // = message not found
+
+        // POP3 session must still be valid afterwards
+        assertThatCode(() -> pop3Client.listMessages()).doesNotThrowAnyException();
+    }
+
     /**
      * Test for JAMES-1202 -  Which shows that UIDL,STAT and LIST all show the same message numbers.
      */
@@ -878,7 +922,6 @@ public class POP3ServerTest {
     protected void setUpPOP3Server() {
         pop3Server = createPOP3Server();
         pop3Server.setFileSystem(fileSystem);
-        pop3Server.setHashWheelTimer(hashedWheelTimer);
         pop3Server.setProtocolHandlerLoader(protocolHandlerChain);
     }
 

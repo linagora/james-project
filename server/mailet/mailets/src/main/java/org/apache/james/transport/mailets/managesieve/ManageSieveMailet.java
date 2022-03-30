@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 import javax.inject.Inject;
@@ -115,7 +116,7 @@ public class ManageSieveMailet extends GenericMailet implements MessageToCoreToM
         setHelpURL(getInitParameter("helpURL"));
         cache = getInitParameter("cache", true);
         transcoder = new MessageToCoreToMessage(new ManageSieveProcessor(
-                new ArgumentParser(new CoreProcessor(sieveRepository, usersRepository, sieveParser))),
+                new ArgumentParser(new CoreProcessor(sieveRepository, usersRepository, sieveParser), false)),
             this);
     }
 
@@ -193,18 +194,11 @@ public class ManageSieveMailet extends GenericMailet implements MessageToCoreToM
     }
 
     private String computeHelp() throws MessagingException {
-        InputStream stream = null;
-        Scanner scanner = null;
-        try {
-            stream = helpURL.openStream();
-            scanner = new Scanner(stream, "UTF-8");
+        try (InputStream stream = helpURL.openStream();
+                Scanner scanner = new Scanner(stream, StandardCharsets.UTF_8)) {
             return scanner.useDelimiter("\\A").next();
         } catch (IOException ex) {
             throw new MessagingException("Unable to access help URL: " + helpURL.toExternalForm(), ex);
-        } finally {
-            if (scanner != null) {
-                scanner.close();
-            }
         }
     }
 

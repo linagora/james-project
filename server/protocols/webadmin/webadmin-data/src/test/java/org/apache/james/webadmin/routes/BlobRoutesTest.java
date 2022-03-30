@@ -74,7 +74,7 @@ import io.restassured.RestAssured;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class BlobRoutesTest {
+class BlobRoutesTest {
     private static final String BASE_PATH = "/blobs";
     private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
     private static final ZonedDateTime TIMESTAMP = ZonedDateTime.parse("2015-10-30T16:12:00Z");
@@ -190,7 +190,7 @@ public class BlobRoutesTest {
             .body("additionalInformation.gcedBlobCount", is(0))
             .body("additionalInformation.errorCount", is(0))
             .body("additionalInformation.bloomFilterExpectedBlobCount", is(1_000_000))
-            .body("additionalInformation.bloomFilterAssociatedProbability", is(0.8F));
+            .body("additionalInformation.bloomFilterAssociatedProbability", is(0.01F));
     }
 
     @Test

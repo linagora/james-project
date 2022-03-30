@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-project</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>james-server</artifactId>
@@ -46,6 +46,7 @@
         <module>apps/jpa-app</module>
         <module>apps/jpa-smtp-app</module>
         <module>apps/memory-app</module>
+        <module>apps/smtp-pulsar-cassandra-app</module>
         <module>apps/spring-app</module>
         <module>apps/webadmin-cli</module>
 
@@ -84,6 +85,8 @@
         <module>mailet/mailetcontainer-impl</module>
         <module>mailet/mailets</module>
         <module>mailet/mock-smtp-server</module>
+        <module>mailet/rate-limiter</module>
+        <module>mailet/rate-limiter-redis</module>
         <module>mailet/remote-delivery-integration-testing</module>
 
         <module>mailrepository/mailrepository-api</module>
@@ -111,6 +114,7 @@
         <module>queue/queue-api</module>
         <module>queue/queue-jms</module>
         <module>queue/queue-memory</module>
+        <module>queue/queue-pulsar</module>
         <module>queue/queue-rabbitmq</module>
 
         <module>task/task-api</module>

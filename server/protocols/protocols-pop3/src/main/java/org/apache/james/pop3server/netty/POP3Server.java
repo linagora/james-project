@@ -25,11 +25,12 @@ import org.apache.james.protocols.lib.handler.HandlersPackage;
 import org.apache.james.protocols.lib.netty.AbstractProtocolAsyncServer;
 import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
 import org.apache.james.protocols.netty.AllButStartTlsLineChannelHandlerFactory;
-import org.apache.james.protocols.netty.BasicChannelUpstreamHandler;
+import org.apache.james.protocols.netty.BasicChannelInboundHandler;
 import org.apache.james.protocols.netty.ChannelHandlerFactory;
 import org.apache.james.protocols.netty.ProtocolMDCContextFactory;
 import org.apache.james.protocols.pop3.POP3Protocol;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
+
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 /**
  * NIO POP3 Server which use Netty
@@ -40,8 +41,8 @@ public class POP3Server extends AbstractProtocolAsyncServer implements POP3Serve
      * The configuration data to be passed to the handler
      */
     private final ProtocolConfiguration theConfigData = new POP3Configuration();
-    private BasicChannelUpstreamHandler coreHandler;
-    
+    private POP3Protocol protocol;
+
     @Override
     protected int getDefaultPort() {
         return 110;
@@ -75,8 +76,7 @@ public class POP3Server extends AbstractProtocolAsyncServer implements POP3Serve
     @Override
     protected void preInit() throws Exception {
         super.preInit();
-        POP3Protocol protocol = new POP3Protocol(getProtocolHandlerChain(), theConfigData);
-        coreHandler = new BasicChannelUpstreamHandler(new ProtocolMDCContextFactory.Standard(), protocol, getEncryption());
+        protocol = new POP3Protocol(getProtocolHandlerChain(), theConfigData);
     }
 
     @Override
@@ -85,8 +85,8 @@ public class POP3Server extends AbstractProtocolAsyncServer implements POP3Serve
     }
 
     @Override
-    protected ChannelUpstreamHandler createCoreHandler() {
-        return coreHandler; 
+    protected ChannelInboundHandlerAdapter createCoreHandler() {
+        return new BasicChannelInboundHandler(new ProtocolMDCContextFactory.Standard(), protocol, getEncryption());
     }
 
     @Override

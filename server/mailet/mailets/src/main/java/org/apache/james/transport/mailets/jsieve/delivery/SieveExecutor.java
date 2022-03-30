@@ -119,7 +119,7 @@ public class SieveExecutor {
         Preconditions.checkNotNull(recipient, "Recipient for mail to be spooled cannot be null.");
         Preconditions.checkNotNull(mail.getMessage(), "Mail message to be spooled cannot be null.");
         boolean isSieveNotification = AttributeUtils.getValueAndCastFromMail(mail, SIEVE_NOTIFICATION, Boolean.class).orElse(false);
-        return !isSieveNotification ? sieveMessage(recipient, mail) : false;
+        return !isSieveNotification && sieveMessage(recipient, mail);
     }
 
     private boolean sieveMessage(MailAddress recipient, Mail aMail) {
@@ -143,7 +143,7 @@ public class SieveExecutor {
                 userSieveInformation.getScriptInterpretationDate(), recipient);
             if (LOGGER.isDebugEnabled()) {
                 // This logging operation is potentially costly
-                LOGGER.debug("Evaluating " + aMailAdapter.toString() + " against \"" + recipient.asPrettyString() + "\"");
+                LOGGER.debug("Evaluating {} against \"{}\"", aMailAdapter.toString(), recipient.asPrettyString());
             }
             factory.evaluate(aMailAdapter, factory.parse(userSieveInformation.getScriptContent()));
         } catch (SieveException | ParseException ex) {
@@ -164,5 +164,6 @@ public class SieveExecutor {
             .build();
 
         mailetContext.sendMail(errorMail);
+        errorMail.dispose();
     }
 }

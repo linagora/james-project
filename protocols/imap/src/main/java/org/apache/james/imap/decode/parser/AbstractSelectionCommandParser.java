@@ -35,9 +35,12 @@ import org.apache.james.imap.message.request.AbstractMailboxSelectionRequest;
 import org.apache.james.imap.message.request.AbstractMailboxSelectionRequest.ClientSpecifiedUidValidity;
 import org.apache.james.mailbox.MessageUid;
 
+import com.google.common.base.CharMatcher;
+
 public abstract class AbstractSelectionCommandParser extends AbstractImapCommandParser {
     private static final String CONDSTORE = ImapConstants.SUPPORTS_CONDSTORE.asString();
     private static final String QRESYNC = ImapConstants.SUPPORTS_QRESYNC.asString();
+    private static final CharMatcher NUMERIC = CharMatcher.inRange('0', '9');
 
     public AbstractSelectionCommandParser(ImapCommand command, StatusResponseFactory statusResponseFactory) {
         super(command, statusResponseFactory);
@@ -52,13 +55,9 @@ public abstract class AbstractSelectionCommandParser extends AbstractImapCommand
         UidRange[] uidSet = null;
         UidRange[] knownUidSet = null;
         IdRange[] knownSequenceSet = null;
-        
-        char c = Character.UNASSIGNED;
-        try {
-            c = request.nextWordChar();
-        } catch (DecodingException e) {
-            // This is expected if the request has no options like CONDSTORE and QRESYNC
-        }
+
+        char c = request.nextWordCharLenient()
+            .orElse((char) Character.UNASSIGNED);
         
         // Ok an option was found
         if (c == '(') {
@@ -68,7 +67,7 @@ public abstract class AbstractSelectionCommandParser extends AbstractImapCommand
             switch (n) {
             case 'C':
                 // It starts with C so it should be CONDSTORE
-                request.consumeWord(StringMatcherCharacterValidator.ignoreCase(CONDSTORE));
+                request.consumeWord(StringMatcherCharacterValidator.ignoreCase(CONDSTORE), true);
                 condstore = true;
                 break;
             case 'Q':
@@ -93,15 +92,18 @@ public abstract class AbstractSelectionCommandParser extends AbstractImapCommand
                        
                     // Consume the SP
                     request.consumeChar(' ');
-                    uidSet = request.parseUidRange();
-                    
-                    // Check for *
-                    checkUidRanges(uidSet, false);
+                    if (NUMERIC.matches(request.nextChar())) {
+                        uidSet = request.parseUidRange();
+                        // Check for *
+                        checkUidRanges(uidSet, false);
+                    }
                     
                     nc = request.nextChar();
-                    if (nc == ' ')  {
+                    if (nc == ' ') {
                         request.consumeChar(' ');
-                        
+                    }
+                    nc = request.nextChar();
+                    if (nc == '(') {
                         // This is enclosed in () so remove (
                         request.consumeChar('(');
                         knownSequenceSet = request.parseIdRange();

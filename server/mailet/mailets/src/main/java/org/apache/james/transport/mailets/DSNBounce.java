@@ -23,7 +23,6 @@ import static org.apache.james.transport.mailets.remote.delivery.Bouncer.DELIVER
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -58,7 +57,6 @@ import org.apache.james.transport.mailets.redirect.NotifyMailetsMessage;
 import org.apache.james.transport.mailets.redirect.RedirectNotify;
 import org.apache.james.transport.mailets.redirect.SpecialAddress;
 import org.apache.james.transport.mailets.redirect.TypeCode;
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
 import org.apache.james.transport.mailets.utils.MimeMessageUtils;
 import org.apache.james.transport.util.Patterns;
 import org.apache.james.transport.util.RecipientsUtils;
@@ -80,6 +78,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import scala.collection.mutable.StringBuilder;
 
 /**
  * <p>
@@ -165,7 +165,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
 
     private static final ImmutableSet<String> CONFIGURABLE_PARAMETERS = ImmutableSet.of("debug", "passThrough", "messageString", "attachment", "sender", "prefix", "action", "defaultStatus");
     private static final List<MailAddress> RECIPIENT_MAIL_ADDRESSES = ImmutableList.of(SpecialAddress.REVERSE_PATH);
-    private static final List<InternetAddress> TO_INTERNET_ADDRESSES = ImmutableList.of(SpecialAddress.REVERSE_PATH.toInternetAddress());
+    private static final List<InternetAddress> TO_INTERNET_ADDRESSES = ImmutableList.of(SpecialAddress.REVERSE_PATH.toInternetAddress().get());
 
     private static final String LOCALHOST = "127.0.0.1";
     private static final Pattern DIAG_PATTERN = Patterns.compilePatternUncheckedException("^\\d{3}\\s.*$");
@@ -198,10 +198,8 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
         // allowedInitParameters
         checkInitParameters(getAllowedInitParameters());
 
-        if (getInitParameters().isStatic()) {
-            if (getInitParameters().isDebug()) {
-                LOGGER.debug(getInitParameters().asString());
-            }
+        if (getInitParameters().isStatic() && getInitParameters().isDebug()) {
+            LOGGER.debug(getInitParameters().asString());
         }
         messageString = getInitParameter("messageString",
                 "Hi. This is the James mail server at [machine].\nI'm afraid I wasn't able to deliver your message to the following addresses.\nThis is a permanent error; I've given up. Sorry it didn't work out.  Below\nI include the list of recipients and the reason why I was unable to deliver\nyour message.\n");
@@ -361,7 +359,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
     private String getDateHeader(Mail originalMail) throws MessagingException {
         String[] date = originalMail.getMessage().getHeader(RFC2822Headers.DATE);
         if (date == null) {
-            return dateFormatter.format(LocalDateTime.now());
+            return dateFormatter.format(ZonedDateTime.now());
         }
         return date[0];
     }
@@ -474,7 +472,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
     }
 
     private MimeBodyPart createDSN(Mail originalMail) throws MessagingException {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
 
         appendReportingMTA(buffer);
         buffer.append("Received-From-MTA: dns; " + originalMail.getRemoteHost())
@@ -506,7 +504,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
         return bodyPart;
     }
 
-    private void appendReportingMTA(StringBuffer buffer) {
+    private void appendReportingMTA(StringBuilder buffer) {
         try {
             buffer.append("Reporting-MTA: dns; " + dns.getHostName(dns.getLocalHost()))
                 .append(LINE_BREAK);
@@ -515,7 +513,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
         }
     }
 
-    private void appendRecipient(StringBuffer buffer, MailAddress mailAddress, String deliveryError, Date lastUpdated) {
+    private void appendRecipient(StringBuilder buffer, MailAddress mailAddress, String deliveryError, Date lastUpdated) {
         buffer.append(LINE_BREAK);
         buffer.append("Final-Recipient: rfc822; " + mailAddress.toString()).append(LINE_BREAK);
         buffer.append("Action: ").append(action.asString().toLowerCase(Locale.US)).append(LINE_BREAK);
@@ -558,10 +556,5 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
         }
         part.setDisposition("Attachment");
         return part;
-    }
-
-    @Override
-    public MimeMessageModifier getMimeMessageModifier(Mail newMail, Mail originalMail) throws MessagingException {
-        return new MimeMessageModifier(newMail.getMessage());
     }
 }

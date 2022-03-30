@@ -34,10 +34,9 @@ import org.apache.james.modules.data.CassandraJmapModule;
 import org.apache.james.modules.data.CassandraRecipientRewriteTableModule;
 import org.apache.james.modules.data.CassandraSieveRepositoryModule;
 import org.apache.james.modules.data.CassandraUsersRepositoryModule;
+import org.apache.james.modules.data.CassandraVacationModule;
 import org.apache.james.modules.eventstore.CassandraEventStoreModule;
-import org.apache.james.modules.mailbox.BlobStoreAPIModule;
 import org.apache.james.modules.mailbox.CassandraBlobStoreDependenciesModule;
-import org.apache.james.modules.mailbox.CassandraBlobStoreModule;
 import org.apache.james.modules.mailbox.CassandraBucketModule;
 import org.apache.james.modules.mailbox.CassandraDeletedMessageVaultModule;
 import org.apache.james.modules.mailbox.CassandraMailboxModule;
@@ -69,8 +68,8 @@ import org.apache.james.modules.server.MailboxRoutesModule;
 import org.apache.james.modules.server.MailboxesExportRoutesModule;
 import org.apache.james.modules.server.MessagesRoutesModule;
 import org.apache.james.modules.server.SieveRoutesModule;
-import org.apache.james.modules.server.SwaggerRoutesModule;
 import org.apache.james.modules.server.TaskManagerModule;
+import org.apache.james.modules.server.VacationRoutesModule;
 import org.apache.james.modules.server.WebAdminMailOverWebModule;
 import org.apache.james.modules.server.WebAdminReIndexingTaskSerializationModule;
 import org.apache.james.modules.server.WebAdminServerModule;
@@ -90,6 +89,7 @@ public class CassandraJamesServerMain implements JamesServerMain {
     public static final Module WEBADMIN = Modules.combine(
         new CassandraRoutesModule(),
         new DataRoutesModules(),
+        new VacationRoutesModule(),
         new DeletedMessageVaultRoutesModule(),
         new DLPRoutesModule(),
         new InconsistencyQuotasSolvingRoutesModule(),
@@ -101,7 +101,6 @@ public class CassandraJamesServerMain implements JamesServerMain {
         new MailQueueRoutesModule(),
         new MailRepositoriesRoutesModule(),
         new SieveRoutesModule(),
-        new SwaggerRoutesModule(),
         new WebAdminServerModule(),
         new WebAdminReIndexingTaskSerializationModule(),
         new MessagesRoutesModule(),
@@ -109,6 +108,7 @@ public class CassandraJamesServerMain implements JamesServerMain {
 
     public static final Module PROTOCOLS = Modules.combine(
         new CassandraJmapModule(),
+        new CassandraVacationModule(),
         new IMAPServerModule(),
         new LMTPServerModule(),
         new ManageSieveServerModule(),
@@ -119,12 +119,9 @@ public class CassandraJamesServerMain implements JamesServerMain {
         new JmapEventBusModule(),
         WEBADMIN);
 
-    public static final Module PLUGINS = Modules.combine(
-        new CassandraQuotaMailingModule());
+    public static final Module PLUGINS = new CassandraQuotaMailingModule();
 
-    private static final Module BLOB_MODULE = Modules.combine(
-        new BlobStoreAPIModule(),
-        new BlobExportMechanismModule());
+    private static final Module BLOB_MODULE = new BlobExportMechanismModule();
 
     private static final Module CASSANDRA_EVENT_STORE_JSON_SERIALIZATION_DEFAULT_MODULE = binder ->
         binder.bind(new TypeLiteral<Set<DTOModule<?, ? extends org.apache.james.json.DTO>>>() {}).annotatedWith(Names.named(EventNestedTypes.EVENT_NESTED_TYPES_INJECTION_NAME))
@@ -153,14 +150,14 @@ public class CassandraJamesServerMain implements JamesServerMain {
         new TikaMailboxModule(),
         new SpamAssassinListenerModule());
 
-    public static Module REQUIRE_TASK_MANAGER_MODULE = Modules.combine(
+    public static final Module REQUIRE_TASK_MANAGER_MODULE = Modules.combine(
         CASSANDRA_SERVER_CORE_MODULE,
         CASSANDRA_MAILBOX_MODULE,
         PROTOCOLS,
         PLUGINS,
         new DKIMMailetModule());
 
-    protected static Module ALL_BUT_JMX_CASSANDRA_MODULE = Modules.combine(
+    protected static final Module ALL_BUT_JMX_CASSANDRA_MODULE = Modules.combine(
         new MailetProcessingModule(),
         new CassandraBucketModule(),
         new CassandraBlobStoreModule(),
@@ -170,6 +167,8 @@ public class CassandraJamesServerMain implements JamesServerMain {
     );
 
     public static void main(String[] args) throws Exception {
+        ExtraProperties.initialize();
+
         CassandraJamesServerConfiguration configuration = CassandraJamesServerConfiguration.builder()
             .useWorkingDirectoryEnvProperty()
             .build();
@@ -184,6 +183,7 @@ public class CassandraJamesServerMain implements JamesServerMain {
     public static GuiceJamesServer createServer(CassandraJamesServerConfiguration configuration) {
         return GuiceJamesServer.forConfiguration(configuration)
             .combineWith(ALL_BUT_JMX_CASSANDRA_MODULE)
+            .combineWith(BlobStoreModulesChooser.chooseModules(configuration.getBlobStoreConfiguration()))
             .combineWith(SearchModuleChooser.chooseModules(configuration.searchConfiguration()))
             .combineWith(new UsersRepositoryModuleChooser(new CassandraUsersRepositoryModule())
                 .chooseModules(configuration.getUsersRepositoryImplementation()));

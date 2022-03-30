@@ -42,14 +42,12 @@ public class MDCBuilder {
 
     public static <T> T withMdc(MDCBuilder mdcBuilder, Supplier<T> answerSupplier) {
         try (Closeable closeable = mdcBuilder.build()) {
-            try {
-                return answerSupplier.get();
-            } catch (RuntimeException e) {
-                LOGGER.error("Got error, logging its context", e);
-                throw e;
-            }
+            return answerSupplier.get();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (RuntimeException e) {
+            LOGGER.error("Got error, logging its context", e);
+            throw e;
         }
     }
 
@@ -148,11 +146,13 @@ public class MDCBuilder {
 
     @VisibleForTesting
     Map<String, String> buildContextMap() {
+        ImmutableList<MDCBuilder> nested = nestedBuilder.build();
+        if (nested.isEmpty()) {
+            return contextMap.build();
+        }
+
         ImmutableMap.Builder<String, String> result = ImmutableMap.builder();
-
-        nestedBuilder.build()
-            .forEach(mdcBuilder -> result.putAll(mdcBuilder.buildContextMap()));
-
+        nested.forEach(mdcBuilder -> result.putAll(mdcBuilder.buildContextMap()));
         return result
             .putAll(contextMap.build())
             .build();

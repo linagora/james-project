@@ -28,12 +28,12 @@
 <section name="Requirements">
 
   <subsection name="Java Virtual Machine">
-  
-    <p>James 3.6.0 requires a Java Runtime Environment. Java version 1.11 is required to run the
+
+    <p>James 3.7.0 requires a Java Runtime Environment. Java version 11 is required to run the
        James application. The exact JREs available depends on the platform. In addition, the environment variable JAVA_HOME should be set to
        the JRE home directory before running James.</p>
     
-    <p>James 3.6.0 has been successfully tested on OpenJDK 1.11</p>
+    <p>James 3.7.0 has been successfully tested on OpenJDK 11</p>
   
   </subsection>
   
@@ -72,8 +72,8 @@
   </section>
 
   <section name="Build instructions">
-      <p>Checkout code from the chosen version on <a href="https://github.com/apache/james-project/tree/james-project-3.6.0">
-          GitHub</a>. Follow <a href="https://github.com/apache/james-project/blob/james-project-3.6.0/README.adoc">README instructions</a> about compilation.</p>
+      <p>Checkout code from the chosen version on <a href="https://github.com/apache/james-project/tree/james-project-3.7.0">
+          GitHub</a>. Follow <a href="https://github.com/apache/james-project/blob/james-project-3.7.0/README.adoc">README instructions</a> about compilation.</p>
 
       <ul>Using these instructions, you can build the following images:
           <li>Guice + JPA + Lucene</li>
@@ -164,7 +164,7 @@
       
     <p>Running <code>$ ./james help</code> help will provide the list of commands you can invoke. </p>
     
-    <p>Once started, you'll see in the log file (./logs/james-server.log) that 
+    <p>Once started, you'll see in the log file (./log/wrapper.log) that 
        James is running. This means that Spring has loaded James and is now waiting for a request.</p>
   
   </subsection>
@@ -326,7 +326,7 @@ a OK LOGIN completed.
 closed
       </source>
     
-    <p>Trace out James actions in ./logs/james-server.log.</p>
+    <p>Trace out James actions in ./log/wrapper.log.</p>
     
     <p>Actions that will be taken by James on incoming mail are configured in
        the mailet pipe line (./conf/mailetcontainer.xml). Look at it if you want to

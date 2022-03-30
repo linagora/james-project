@@ -22,6 +22,7 @@ package org.apache.james.transport.mailets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import javax.inject.Inject;
 import javax.mail.MessagingException;
@@ -34,8 +35,6 @@ import org.apache.james.transport.mailets.redirect.InitParameters;
 import org.apache.james.transport.mailets.redirect.ProcessRedirectNotify;
 import org.apache.james.transport.mailets.redirect.RedirectMailetInitParameters;
 import org.apache.james.transport.mailets.redirect.RedirectNotify;
-import org.apache.james.transport.mailets.redirect.TypeCode;
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
 import org.apache.james.transport.mailets.utils.MimeMessageUtils;
 import org.apache.james.transport.util.MailAddressUtils;
 import org.apache.james.transport.util.RecipientsUtils;
@@ -323,7 +322,7 @@ public class Redirect extends GenericMailet implements RedirectNotify {
 
     @Override
     public InitParameters getInitParameters() {
-        return RedirectMailetInitParameters.from(this, Optional.empty(), Optional.of(TypeCode.BODY));
+        return RedirectMailetInitParameters.from(this, Optional.empty());
     }
 
     @Override
@@ -346,15 +345,14 @@ public class Redirect extends GenericMailet implements RedirectNotify {
         // allowedInitParameters
         checkInitParameters(getAllowedInitParameters());
 
-        if (getInitParameters().isStatic()) {
-            if (getInitParameters().isDebug()) {
-                LOGGER.debug(getInitParameters().asString());
-            }
+        if (getInitParameters().isStatic()
+                && getInitParameters().isDebug()) {
+            LOGGER.debug(getInitParameters().asString());
         }
     }
 
     @Override
-    public String getMessage(Mail originalMail) throws MessagingException {
+    public String getMessage(Mail originalMail) {
         return getInitParameters().getMessage();
     }
 
@@ -377,7 +375,7 @@ public class Redirect extends GenericMailet implements RedirectNotify {
         return builder.build();
     }
 
-    private String getRecipientsOrTo() throws MessagingException {
+    private String getRecipientsOrTo() {
         return getInitParameter("recipients", getInitParameter("to"));
     }
 
@@ -401,7 +399,7 @@ public class Redirect extends GenericMailet implements RedirectNotify {
                     .extract(Optional.of(toOrRecipients)));
     }
 
-    private String getToOrRecipients() throws MessagingException {
+    private String getToOrRecipients() {
         return getInitParameter("to", getInitParameter("recipients"));
     }
 
@@ -441,13 +439,7 @@ public class Redirect extends GenericMailet implements RedirectNotify {
     }
 
     private Optional<MailAddress> retrieveReversePath() throws MessagingException {
-        Optional<MailAddress> reversePath = getReversePath();
-        if (reversePath.isPresent()) {
-            if (MailAddressUtils.isUnalteredOrReversePathOrSender(reversePath.get())) {
-                return Optional.empty();
-            }
-        }
-        return reversePath;
+        return getReversePath().filter(Predicate.not(MailAddressUtils::isUnalteredOrReversePathOrSender));
     }
 
     @Override
@@ -464,11 +456,6 @@ public class Redirect extends GenericMailet implements RedirectNotify {
     @Override
     public Optional<String> getSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
         return new MimeMessageUtils(newMail.getMessage()).subjectWithPrefix(subjectPrefix, originalMail, getInitParameters().getSubject());
-    }
-
-    @Override
-    public MimeMessageModifier getMimeMessageModifier(Mail newMail, Mail originalMail) throws MessagingException {
-        return new MimeMessageModifier(newMail.getMessage());
     }
 
     @Override

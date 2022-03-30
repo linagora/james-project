@@ -29,16 +29,22 @@ object SetError {
   case class SetErrorDescription(description: String) extends AnyVal
 
   val invalidArgumentValue: SetErrorType = "invalidArguments"
+  val invalidPropertiesValue: SetErrorType = "invalidProperties"
   val serverFailValue: SetErrorType = "serverFail"
   val invalidPatchValue: SetErrorType = "invalidPatch"
   val notFoundValue: SetErrorType = "notFound"
+  val overQuotaValue: SetErrorType = "overQuota"
   val forbiddenValue: SetErrorType = "forbidden"
   val stateMismatchValue: SetErrorType = "stateMismatch"
   val mdnAlreadySentValue: SetErrorType = "mdnAlreadySent"
   val forbiddenFromValue: SetErrorType = "forbiddenFrom"
+  val tooLargeValue: SetErrorType = "tooLarge"
 
   def invalidArguments(description: SetErrorDescription, properties: Option[Properties] = None): SetError =
     SetError(invalidArgumentValue, description, properties)
+
+  def invalidProperties(description: SetErrorDescription, properties: Option[Properties] = None): SetError =
+    SetError(invalidPropertiesValue, description, properties)
 
   def serverFail(description: SetErrorDescription): SetError =
     SetError(serverFailValue, description, None)
@@ -49,17 +55,24 @@ object SetError {
   def invalidPatch(description: SetErrorDescription): SetError =
     SetError(invalidPatchValue, description, None)
 
-  def forbidden(description: SetErrorDescription, properties: Properties): SetError =
-    SetError(forbiddenValue, description, Some(properties))
+  def forbidden(description: SetErrorDescription, properties: Option[Properties] = None): SetError =
+    SetError(forbiddenValue, description, properties)
 
   def stateMismatch(description: SetErrorDescription, properties: Properties): SetError =
     SetError(stateMismatchValue, description, Some(properties))
 
   def mdnAlreadySent(description: SetErrorDescription): SetError =
-    SetError(SetError.mdnAlreadySentValue,description, None)
+    SetError(SetError.mdnAlreadySentValue, description, None)
+
+  def overQuota(description: SetErrorDescription): SetError =
+    SetError(SetError.overQuotaValue, description, None)
 
   def forbiddenFrom(description: SetErrorDescription): SetError =
-    SetError(SetError.forbiddenFromValue,description, None)
+    SetError(SetError.forbiddenFromValue, description, None)
+
+  def tooLarge(description: SetErrorDescription): SetError = {
+    SetError(SetError.tooLargeValue, description, None)
+  }
 }
 
 case class SetError(`type`: SetErrorType, description: SetErrorDescription, properties: Option[Properties])

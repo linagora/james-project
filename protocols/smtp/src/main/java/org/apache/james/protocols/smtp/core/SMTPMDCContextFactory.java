@@ -28,7 +28,8 @@ import org.apache.james.protocols.api.ProtocolSession;
 import org.apache.james.protocols.netty.ProtocolMDCContextFactory;
 import org.apache.james.protocols.smtp.SMTPSession;
 import org.apache.james.util.MDCBuilder;
-import org.jboss.netty.channel.ChannelHandlerContext;
+
+import io.netty.channel.ChannelHandlerContext;
 
 public class SMTPMDCContextFactory implements ProtocolMDCContextFactory {
 
@@ -47,8 +48,8 @@ public class SMTPMDCContextFactory implements ProtocolMDCContextFactory {
 
     private MDCBuilder from(Object o) {
         return Optional.ofNullable(o)
-            .filter(object -> object instanceof SMTPSession)
-            .map(object -> (SMTPSession) object)
+            .filter(SMTPSession.class::isInstance)
+            .map(SMTPSession.class::cast)
             .map(SMTPMDCContextFactory::forSMTPSession)
             .orElse(MDCBuilder.create());
     }

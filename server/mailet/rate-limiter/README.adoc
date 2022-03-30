@@ -1,0 +1,184 @@
+= Rate limiting for Apache James
+
+This maven module provide a James extension allowing one to enforce rate limiting for Apache James email processing.
+
+== Running rate limiting with the memory implementation
+
+ - 1. Compile this project.
+ - 2. Place the generated "jar with dependencies" in James `extensions-jars` folder.
+ - 3. Configure James to use the memory implementation for Rate Limiting by putting the following content within
+`extension.properties`:
+
+----
+guice.extension.module=org.apache.james.rate.limiter.memory.MemoryRateLimiterModule
+----
+
+ - 4. Use the rate limiting mailets within `mailetcontainer.xml`
+
+We provide a sample `docker-compose` demonstrating this setup.
+
+== Mailets
+
+=== PerSenderRateLimit
+
+*PerSenderRateLimit* allows defining and enforcing rate limits for the sender of matching emails.
+
+This allows writing rules like:
+
+ - A sender can send 10 emails per hour
+ - A sender can send email to a total of 20 recipients per hour
+ - A sender can send 100 MB of emails (total computed taking only the email size into account) per hour
+ - A sender can send 200 MB of emails (total computed taking each recipient copies into account) per hour
+
+Depending on its position and the matcher it is being combined with, those rate limiting rules could be applied to
+submitted emails, received emails or emitted email being relayed to third parties.
+
+Here are supported configuration parameters:
+
+ - *keyPrefix*: An optional key prefix to apply to rate limiting. Choose distinct values if you specify
+ this mailet twice within your `mailetcontainer.xml` file. Defaults to none.
+ - *exceededProcessor*: Processor to which emails whose rate is exceeded should be redirected to. Defaults to error.
+ Use this to customize the behaviour upon exceeded rate.
+ - *duration*: Duration during which the rate limiting shall be applied. Compulsory, must be a valid duration of at least one second. Supported units includes s (second), m (minute), h (hour), d (day).
+ - *precision*: Defines the time precision that will be used to approximate the sliding window. A lower duration increases precision but requests more computing power. The precision must be greater than 1 second. Optional, default to duration means fixed window counters. Supported units includes s (second), m (minute), h (hour), d (day).
+ - *count*: Count of emails allowed for a given sender during duration. Optional, if unspecified this rate limit is not applied.
+ - *recipients*: Count of recipients allowed for a given sender during duration. Optional, if unspecified this rate limit is not applied.
+ - *size*: Size of emails allowed for a given sender during duration (each email count one time, regardless of recipient count). Optional, if unspecified this rate limit is not applied. Supported units : B ( 2^0 ), K ( 2^10 ), M ( 2^20 ), G ( 2^30 ), defaults to B.
+ - *totalSize*: Size of emails allowed for a given sender during duration (each recipient of the email email count one time). Optional, if unspecified this rate limit is not applied. Supported units : B ( 2^0 ), K ( 2^10 ), M ( 2^20 ), G ( 2^30 ), defaults to B. Note that
+   totalSize is limited in increments of 2exp(31) - ~2 billions: sending a 10MB file to more than 205 recipients will be rejected if this parameter is enabled.
+
+
+For instance, to apply all the examples given above:
+
+----
+<mailet matcher="All" class="PerSenderRateLimit">
+    <keyPrefix>myPrefix</keyPrefix>
+    <duration>1h</duration>
+    <precision>1h</precision>
+    <count>10</count>
+    <recipients>20</recipients>
+    <size>100M</size>
+    <totalSize>200M</totalSize>
+    <exceededProcessor>tooMuchMails</exceededProcessor>
+</mailet>
+----
+
+When the rate is exceeded, all mails will be moved to processor *tooMuchMails* which send a bounce message notifies that user exceeded the rate limit.
+
+=== GlobalRateLimit
+
+*GlobalRateLimit* allows defining and enforcing rate limits for all users.
+
+This allows writing rules like:
+
+- All users can send 100 emails per hour
+- All users can send email to a total of 200 recipients per hour
+- All users can send 1000 MB of emails (total computed taking only the email size into account) per hour
+- All users can send 2000 MB of emails (total computed taking each recipient copies into account) per hour
+
+Depending on its position and the matcher it is being combined with, those rate limiting rules could be applied to
+submitted emails, received emails or emitted email being relayed to third parties.
+
+Here are supported configuration parameters:
+
+- *keyPrefix*: An optional key prefix to apply to rate limiting. Choose distinct values if you specify
+this mailet twice within your `mailetcontainer.xml` file. Defaults to none.
+- *exceededProcessor*: Processor to which emails whose rate is exceeded should be redirected to. Defaults to error.
+Use this to customize the behaviour upon exceeded rate.
+- *duration*: Duration during which the rate limiting shall be applied. Compulsory, must be a valid duration of at least one second. Supported units includes s (second), m (minute), h (hour), d (day).
+- *precision*: Defines the time precision that will be used to approximate the sliding window. A lower duration increases precision but requests more computing power. The precision must be greater than 1 second. Optional, default to duration means fixed window counters. Supported units includes s (second), m (minute), h (hour), d (day).
+- *count*: Count of emails allowed for all users during duration. Optional, if unspecified this rate limit is not applied.
+- *recipients*: Count of recipients allowed for all users during duration. Optional, if unspecified this rate limit is not applied.
+- *size*: Size of emails allowed for all users during duration (each email count one time, regardless of recipient count). Optional, if unspecified this rate limit is not applied. Supported units : B ( 2^0 ), K ( 2^10 ), M ( 2^20 ), G ( 2^30 ), defaults to B.
+- *totalSize*: Size of emails allowed for all users during duration (each recipient of the email count one time). Optional, if unspecified this rate limit is not applied. Supported units : B ( 2^0 ), K ( 2^10 ), M ( 2^20 ), G ( 2^30 ), defaults to B. Note that
+totalSize is limited in increments of 2exp(31) - ~2 billions: sending a 10MB file to more than 205 recipients will be rejected if this parameter is enabled.
+
+
+For instance, to apply all the examples given above:
+
+----
+<mailet matcher="All" class="GlobalRateLimit">
+    <keyPrefix>myPrefix</keyPrefix>
+    <duration>1h</duration>
+    <precision>1h</precision>
+    <count>100</count>
+    <recipients>200</recipients>
+    <size>1000M</size>
+    <totalSize>2000M</totalSize>
+    <exceededProcessor>tooMuchMails</exceededProcessor>
+</mailet>
+----
+
+When the rate is exceeded, all mails will be moved to processor *tooMuchMails* which send a bounce message notifies that user exceeded the rate limit.
+
+=== PerRecipientRateLimitMailet
+
+*PerRecipientRateLimitMailet* allows defining and enforcing rate limits for the recipients of matching emails.
+
+This allows writing rules like:
+
+- A recipient can receive 10 emails per hour
+- A recipient can receive 100 MB of emails per hour
+
+Depending on its position and the matcher it is being combined with, those rate limiting rules could be applied to
+submitted emails, received emails or emitted email being relayed to third parties.
+
+Here are supported configuration parameters:
+
+- *keyPrefix*: An optional key prefix to apply to rate limiting. Choose distinct values if you specify
+this mailet twice within your `mailetcontainer.xml` file. Defaults to none.
+- *exceededProcessor*: Processor to which emails whose rate is exceeded should be redirected to. Defaults to error.
+Use this to customize the behaviour upon exceeded rate.
+- *duration*: Duration during which the rate limiting shall be applied. Compulsory, must be a valid duration of at least one second. Supported units includes s (second), m (minute), h (hour), d (day).
+- *precision*: Defines the time precision that will be used to approximate the sliding window. A lower duration increases precision but requests more computing power. The precision must be greater than 1 second. Optional, default to duration means fixed window counters. Supported units includes s (second), m (minute), h (hour), d (day).
+- *count*: Count of emails allowed for a given recipient during duration. Optional, if unspecified this rate limit is not applied.
+- *size*: Size of emails allowed for a given recipient during duration. Optional, if unspecified this rate limit is not applied. Supported units : B ( 2^0 ), K ( 2^10 ), M ( 2^20 ), G ( 2^30 ), defaults to B.
+
+
+For instance, to apply all the examples given above:
+
+----
+<mailet matcher="All" class="PerRecipientRateLimitMailet">
+    <keyPrefix>myPrefix</keyPrefix>
+    <duration>1h</duration>
+    <precision>1h</precision>
+    <count>10</count>
+    <size>100M</size>
+    <exceededProcessor>tooMuchMails</exceededProcessor>
+</mailet>
+----
+
+When the rate is exceeded, a new mail with recipients that are exceeded recipients will be moved to processor *tooMuchMails* which send a bounce message notifies that the rate limit exceeded.
+
+=== Throttling
+
+It's possible to combine RateLimit mailet with `Requeue` mailet to allow for a (very basic) throttler and smoothing the traffic to the expected rate.
+The throttler work by re-enqueue mail.
+
+The supported configuration parameters for the `Requeue` mailet are:
+
+- *queue*: a Mail Queue name (optional, default to spool).
+- *processor*: a target processor (optional, defaults to root).
+- *delay*: a delay when en-queueing mail (optional, defaults to none). Supported units include: s (second), m (minute), h (hour), d (day).
+- *consume*: a processor to which current email should be redirected to (optional, defaults to ghost).
+
+For instance, throttle senders to 10 mails per hour, smoothing the traffic as required:
+
+----
+<processor name="root">
+    <mailet matcher="All" class="PerSenderRateLimit">
+        <duration>1h</duration>
+        <count>10</count>
+        <exceededProcessor>tooMuchEmails</exceededProcessor>
+    </mailet>
+    <!-- Go to transport for instance -->
+</processor>
+
+<processor name="tooMuchEmails">
+    <mailet matcher="All" class="Requeue">
+        <queue>spool</spool>
+        <processor>root</processor>
+        <delay>1h</delay>
+    </mailet>
+</processor>
+----

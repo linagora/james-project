@@ -21,35 +21,27 @@ package org.apache.james.protocols.netty;
 import java.util.Optional;
 
 import javax.inject.Inject;
-import javax.net.ssl.SSLContext;
 
 import org.apache.james.protocols.api.Encryption;
 import org.apache.james.protocols.api.Protocol;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.util.HashedWheelTimer;
 
 import com.google.common.base.Preconditions;
+
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.DefaultEventLoopGroup;
 
 
 /**
  * Generic NettyServer 
  */
 public class NettyServer extends AbstractAsyncServer {
-
     public static class Factory {
-
-        private final HashedWheelTimer hashedWheelTimer;
-
         private Protocol protocol;
         private Optional<Encryption> secure;
         private Optional<ChannelHandlerFactory> frameHandlerFactory;
 
         @Inject
-        public Factory(HashedWheelTimer hashedWheelTimer) {
-            this.hashedWheelTimer = hashedWheelTimer;
+        public Factory() {
             secure = Optional.empty();
             frameHandlerFactory = Optional.empty();
         }
@@ -74,38 +66,42 @@ public class NettyServer extends AbstractAsyncServer {
             Preconditions.checkState(protocol != null, "'protocol' is mandatory");
             return new NettyServer(protocol, 
                     secure.orElse(null),
-                    frameHandlerFactory.orElse(new LineDelimiterBasedChannelHandlerFactory(AbstractChannelPipelineFactory.MAX_LINE_LENGTH)),
-                    hashedWheelTimer);
+                    frameHandlerFactory.orElse(new LineDelimiterBasedChannelHandlerFactory(AbstractChannelPipelineFactory.MAX_LINE_LENGTH)));
         }
     }
 
     protected final Encryption secure;
     protected final Protocol protocol;
     private final ChannelHandlerFactory frameHandlerFactory;
-    private final HashedWheelTimer hashedWheelTimer;
-
-    private ExecutionHandler eHandler;
-    
-    private ChannelUpstreamHandler coreHandler;
-
     private int maxCurConnections;
-
     private int maxCurConnectionsPerIP;
    
-    private NettyServer(Protocol protocol, Encryption secure, ChannelHandlerFactory frameHandlerFactory, HashedWheelTimer hashedWheelTimer) {
+    private NettyServer(Protocol protocol, Encryption secure, ChannelHandlerFactory frameHandlerFactory) {
         this.protocol = protocol;
         this.secure = secure;
         this.frameHandlerFactory = frameHandlerFactory;
-        this.hashedWheelTimer = hashedWheelTimer;
     }
     
-    protected ChannelUpstreamHandler createCoreHandler() {
-        return new BasicChannelUpstreamHandler(new ProtocolMDCContextFactory.Standard(), protocol, secure);
+    public void setMaxConcurrentConnections(int maxCurConnections) {
+        if (isBound()) {
+            throw new IllegalStateException("Server running already");
+        }
+        this.maxCurConnections = maxCurConnections;
+    }
+
+    public void setMaxConcurrentConnectionsPerIP(int maxCurConnectionsPerIP) {
+        if (isBound()) {
+            throw new IllegalStateException("Server running already");
+        }
+        this.maxCurConnectionsPerIP = maxCurConnectionsPerIP;
+    }
+
+    protected ChannelInboundHandlerAdapter createCoreHandler() {
+        return new BasicChannelInboundHandler(new ProtocolMDCContextFactory.Standard(), protocol, secure);
     }
     
     @Override
     public synchronized void bind() throws Exception {
-        coreHandler = createCoreHandler();
         super.bind();
     }
 
@@ -114,35 +110,19 @@ public class NettyServer extends AbstractAsyncServer {
     }
 
     @Override
-    protected ChannelPipelineFactory createPipelineFactory(ChannelGroup group) {
+    protected AbstractChannelPipelineFactory createPipelineFactory() {
 
         return new AbstractSSLAwareChannelPipelineFactory(
             getTimeout(),
             maxCurConnections,
             maxCurConnectionsPerIP,
-            group,
-            secure != null ? secure.getEnabledCipherSuites() : null,
-            eHandler,
+            secure,
             getFrameHandlerFactory(),
-            hashedWheelTimer) {
+            new DefaultEventLoopGroup(16)) {
 
             @Override
-            protected ChannelUpstreamHandler createHandler() {
-                return coreHandler;
-            }
-
-            @Override
-            protected boolean isSSLSocket() {
-                return getSSLContext() != null && secure != null && !secure.isStartTLS();
-            }
-
-            @Override
-            protected SSLContext getSSLContext() {
-                if (secure != null) {
-                    return secure.getContext();
-                } else  {
-                    return null;
-                }
+            protected ChannelInboundHandlerAdapter createHandler() {
+                return createCoreHandler();
             }
         };
 

@@ -24,20 +24,25 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.StringTokenizer;
 
+import javax.mail.internet.AddressException;
+
+import org.apache.james.core.MailAddress;
 import org.apache.james.core.Username;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.Capability;
 import org.apache.james.imap.api.message.request.ImapRequest;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
-import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.AuthenticateRequest;
 import org.apache.james.imap.message.request.IRAuthenticateRequest;
 import org.apache.james.imap.message.response.AuthenticateResponse;
+import org.apache.james.jwt.OidcJwtTokenVerifier;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.protocols.api.OIDCSASLParser;
 import org.apache.james.util.MDCBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,19 +54,23 @@ import com.google.common.collect.ImmutableList;
  */
 public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateRequest> implements CapabilityImplementingProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticateProcessor.class);
-    private static final String PLAIN = "PLAIN";
-    
-    public AuthenticateProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
-        super(AuthenticateRequest.class, next, mailboxManager, factory, metricFactory);
+    private static final String AUTH_TYPE_PLAIN = "PLAIN";
+    private static final String AUTH_TYPE_OAUTHBEARER = "OAUTHBEARER";
+    private static final String AUTH_TYPE_XOAUTH2 = "XOAUTH2";
+    private static final List<Capability> OAUTH_CAPABILITIES = ImmutableList.of(Capability.of("AUTH=" + AUTH_TYPE_OAUTHBEARER), Capability.of("AUTH=" + AUTH_TYPE_XOAUTH2));
+
+    public AuthenticateProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
+                                 MetricFactory metricFactory) {
+        super(AuthenticateRequest.class, mailboxManager, factory, metricFactory);
     }
 
     @Override
     protected void processRequest(AuthenticateRequest request, ImapSession session, final Responder responder) {
         final String authType = request.getAuthType();
-        if (authType.equalsIgnoreCase(PLAIN)) {
+
+        if (authType.equalsIgnoreCase(AUTH_TYPE_PLAIN)) {
             // See if AUTH=PLAIN is allowed. See IMAP-304
-            if (session.isPlainAuthDisallowed() && session.isTLSActive() == false) {
+            if (session.isPlainAuthDisallowed()) {
                 no(request, responder, HumanReadableText.DISABLED_LOGIN);
             } else {
                 if (request instanceof IRAuthenticateRequest) {
@@ -70,15 +79,22 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
                 } else {
                     responder.respond(new AuthenticateResponse());
                     session.pushLineHandler((requestSession, data) -> {
-                        // cut of the CRLF
-                        String initialClientResponse = new String(data, 0, data.length - 2, StandardCharsets.US_ASCII);
-
-                        doPlainAuth(initialClientResponse, requestSession, request, responder);
-
+                        doPlainAuth(extractInitialClientResponse(data), requestSession, request, responder);
                         // remove the handler now
                         requestSession.popLineHandler();
                     });
                 }
+            }
+        } else if (authType.equalsIgnoreCase(AUTH_TYPE_OAUTHBEARER) || authType.equalsIgnoreCase(AUTH_TYPE_XOAUTH2)) {
+            if (request instanceof IRAuthenticateRequest) {
+                IRAuthenticateRequest irRequest = (IRAuthenticateRequest) request;
+                doOAuth(irRequest.getInitialClientResponse(), session, request, responder);
+            } else {
+                responder.respond(new AuthenticateResponse());
+                session.pushLineHandler((requestSession, data) -> {
+                    doOAuth(extractInitialClientResponse(data), requestSession, request, responder);
+                    requestSession.popLineHandler();
+                });
             }
         } else {
             LOGGER.debug("Unsupported authentication mechanism '{}'", authType);
@@ -140,11 +156,14 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
         List<Capability> caps = new ArrayList<>();
         // Only ounce AUTH=PLAIN if the session does allow plain auth or TLS is active.
         // See IMAP-304
-        if (session.isPlainAuthDisallowed()  == false || session.isTLSActive()) {
+        if (!session.isPlainAuthDisallowed()) {
             caps.add(Capability.of("AUTH=PLAIN"));
         }
         // Support for SASL-IR. See RFC4959
         caps.add(Capability.of("SASL-IR"));
+        if (session.supportsOAuth()) {
+            caps.addAll(OAUTH_CAPABILITIES);
+        }
         return ImmutableList.copyOf(caps);
     }
 
@@ -155,4 +174,32 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
             .addToContext("authType", request.getAuthType())
             .build();
     }
+
+    private void doOAuth(String initialResponse, ImapSession session, ImapRequest request, Responder responder) {
+        if (!session.supportsOAuth()) {
+            no(request, responder, HumanReadableText.UNSUPPORTED_AUTHENTICATION_MECHANISM);
+        } else {
+            OIDCSASLParser.parse(initialResponse)
+                .flatMap(oidcInitialResponseValue -> session.oidcSaslConfiguration()
+                    .flatMap(configuration -> new OidcJwtTokenVerifier().verifyAndExtractClaim(oidcInitialResponseValue.getToken(), configuration.getJwksURL(), configuration.getClaim())))
+                .flatMap(this::extractUserFromClaim)
+                .ifPresentOrElse(username -> authSuccess(username, session, request, responder),
+                    () -> manageFailureCount(session, request, responder, HumanReadableText.AUTHENTICATION_FAILED));
+        }
+        session.stopDetectingCommandInjection();
+    }
+
+    private Optional<Username> extractUserFromClaim(String claimValue) {
+        try {
+            return Optional.of(Username.fromMailAddress(new MailAddress(claimValue)));
+        } catch (AddressException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static String extractInitialClientResponse(byte[] data) {
+        // cut of the CRLF
+        return new String(data, 0, data.length - 2, StandardCharsets.US_ASCII);
+    }
+
 }

@@ -34,8 +34,6 @@ import org.apache.james.dnsservice.api.DNSService;
 import org.apache.james.dnsservice.library.netmatcher.NetMatcher;
 import org.apache.mailet.Experimental;
 import org.apache.mailet.Mail;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -51,8 +49,6 @@ import org.slf4j.LoggerFactory;
  */
 @Experimental
 public class NetworkIsInWhitelist extends AbstractSQLWhitelistMatcher {
-    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkIsInWhitelist.class);
-
     private DNSService dns;
     private String selectNetworks;
 
@@ -87,15 +83,11 @@ public class NetworkIsInWhitelist extends AbstractSQLWhitelistMatcher {
             String recipientUser = recipientMailAddress.getLocalPart().toLowerCase(Locale.US);
             String recipientHost = recipientMailAddress.getDomain().asString();
 
-            if (conn == null) {
-                conn = datasource.getConnection();
-            }
+            conn = datasource.getConnection();
 
             List<String> nets = new ArrayList<>();
             try {
-                if (selectStmt == null) {
-                    selectStmt = conn.prepareStatement(selectNetworks);
-                }
+                selectStmt = conn.prepareStatement(selectNetworks);
                 selectStmt.setString(1, recipientUser);
                 selectStmt.setString(2, recipientHost);
                 selectRS = selectStmt.executeQuery();
@@ -128,8 +120,7 @@ public class NetworkIsInWhitelist extends AbstractSQLWhitelistMatcher {
             }
             return matched;
         } catch (SQLException sqle) {
-            LOGGER.error("Error accessing database", sqle);
-            throw new MessagingException("Exception thrown", sqle);
+            throw new MessagingException("Error accessing database", sqle);
         } finally {
             theJDBCUtil.closeJDBCConnection(conn);
         }

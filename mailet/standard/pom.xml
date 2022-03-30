@@ -23,14 +23,14 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>apache-mailet</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../</relativePath>
     </parent>
 
     <artifactId>apache-mailet-standard</artifactId>
     <packaging>jar</packaging>
 
-    <name>Apache James :: Standard Mailets</name>
+    <name>Apache James :: Mailet :: Standard</name>
     <description>Apache James Standard Mailets is a rich collection of general purpose mailets
         with limited dependencies. These mailets can be used in any mailet container.</description>
     <url>http://james.apache.org/mailet/standard/</url>
@@ -122,6 +122,18 @@
             <plugin>
                 <groupId>${james.groupId}</groupId>
                 <artifactId>mailetdocs-maven-plugin</artifactId>
+                <version>${project.version}</version>
+                <configuration>
+                    <outputDirectory>target/mailetdocs</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>mailetdocs</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -17,22 +17,20 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>apache-mailet</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../</relativePath>
     </parent>
 
     <artifactId>apache-mailet-amqp</artifactId>
     <packaging>jar</packaging>
 
-    <name>Apache James :: AMQP Mailet</name>
+    <name>Apache James :: Mailet :: AMQP</name>
     <description>Provides a mailet forwarding mail attributes over AMQP</description>
     <inceptionYear>2021</inceptionYear>
 
@@ -127,6 +125,18 @@
             <plugin>
                 <groupId>${james.groupId}</groupId>
                 <artifactId>mailetdocs-maven-plugin</artifactId>
+                <version>${project.version}</version>
+                <configuration>
+                    <outputDirectory>target/mailetdocs</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>mailetdocs</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

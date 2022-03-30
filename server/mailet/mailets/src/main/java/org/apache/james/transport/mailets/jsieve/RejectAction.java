@@ -29,6 +29,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.core.MailAddress;
+import org.apache.james.lifecycle.api.LifecycleUtil;
 import org.apache.james.mdn.MDN;
 import org.apache.james.mdn.MDNReport;
 import org.apache.james.mdn.action.mode.DispositionActionMode;
@@ -80,7 +81,7 @@ public class RejectAction implements MailAction {
      * @throws MessagingException
      */
     public void execute(ActionReject anAction, Mail aMail, ActionContext context) throws MessagingException {
-        ActionUtils.detectAndHandleLocalLooping(aMail, context, "reject");
+        ActionUtils.detectAndHandleLocalLooping(aMail, "reject");
 
         // Create the MDN part
         StringBuilder humanText = new StringBuilder(128);
@@ -132,19 +133,25 @@ public class RejectAction implements MailAction {
 
         // Send the message
         MimeMessage reply = (MimeMessage) aMail.getMessage().reply(false);
-        reply.setFrom(soleRecipient.toInternetAddress());
+        soleRecipient.toInternetAddress()
+            .ifPresent(Throwing.<Address>consumer(reply::setFrom).sneakyThrow());
         reply.setContent(multipart);
         reply.saveChanges();
         Address[] recipientAddresses = reply.getAllRecipients();
         if (recipientAddresses != null) {
-            context.post(MailImpl.builder()
+            MailImpl mail = MailImpl.builder()
                 .name(MailImpl.getId())
                 .addRecipients(Arrays.stream(recipientAddresses)
-                    .map(address -> (InternetAddress) address)
+                    .map(InternetAddress.class::cast)
                     .map(Throwing.function(MailAddress::new))
                     .collect(ImmutableList.toImmutableList()))
                 .mimeMessage(reply)
-                .build());
+                .build();
+            try {
+                context.post(mail);
+            } finally {
+                LifecycleUtil.dispose(mail);
+            }
         } else {
             LOGGER.info("Unable to send reject MDN. Could not determine the recipient.");
         }

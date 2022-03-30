@@ -28,8 +28,10 @@ import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.james.jmap.JMAPConfiguration;
 import org.apache.james.jmap.draft.JMAPDraftConfiguration;
 import org.apache.james.jmap.draft.methods.GetMessageListMethod;
+import org.apache.james.jmap.pushsubscription.PushClientConfiguration;
 import org.apache.james.modules.mailbox.FastRetryBackoffModule;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
@@ -51,6 +53,8 @@ public class TestJMAPServerModule extends AbstractModule {
         @Override
         protected void configure() {
             bindConstant().annotatedWith(Names.named(GetMessageListMethod.MAXIMUM_LIMIT)).to(maximumLimit);
+
+            bind(PushClientConfiguration.class).toInstance(PushClientConfiguration.UNSAFE_DEFAULT());
         }
     }
 
@@ -103,7 +107,7 @@ public class TestJMAPServerModule extends AbstractModule {
                 .keystore("keystore")
                 .keystoreType("JKS")
                 .secret("james72laBalle")
-                .jwtPublicKeyPem(Optional.of(PUBLIC_PEM_KEY));
+                .jwtPublicKeyPem(ImmutableList.of(PUBLIC_PEM_KEY));
     }
 
     @Override

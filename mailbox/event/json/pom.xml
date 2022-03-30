@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>apache-james-mailbox</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -59,7 +59,7 @@
         <dependency>
             <groupId>com.beachape</groupId>
             <artifactId>enumeratum_${scala.base}</artifactId>
-            <version>1.6.1</version>
+            <version>1.7.0</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.play</groupId>
@@ -101,7 +101,7 @@
             </plugin>
             <plugin>
                 <groupId>io.github.evis</groupId>
-                <artifactId>scalafix-maven-plugin</artifactId>
+                <artifactId>scalafix-maven-plugin_2.13</artifactId>
                 <configuration>
                     <config>${project.parent.parent.basedir}/.scalafix.conf</config>
                 </configuration>

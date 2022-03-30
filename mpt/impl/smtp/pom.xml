@@ -22,16 +22,17 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>apache-james-mpt</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>apache-james-mpt-smtp</artifactId>
     <packaging>pom</packaging>
-    <name>Apache James MPT SMTP</name>
+    <name>Apache James :: MPT :: SMTP</name>
 
     <modules>
         <module>cassandra</module>
+        <module>cassandra-pulsar</module>
         <module>cassandra-rabbitmq-object-storage</module>
         <module>core</module>
     </modules>

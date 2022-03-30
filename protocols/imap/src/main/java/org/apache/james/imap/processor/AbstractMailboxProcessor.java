@@ -47,7 +47,7 @@ import org.apache.james.imap.message.response.FetchResponse;
 import org.apache.james.imap.message.response.FlagsResponse;
 import org.apache.james.imap.message.response.RecentResponse;
 import org.apache.james.imap.message.response.VanishedResponse;
-import org.apache.james.imap.processor.base.AbstractChainedProcessor;
+import org.apache.james.imap.processor.base.AbstractProcessor;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
@@ -61,7 +61,6 @@ import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.MessageRange.Type;
-import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.metrics.api.TimeMetric;
 import org.slf4j.Logger;
@@ -71,7 +70,7 @@ import com.github.fge.lambdas.Throwing;
 
 import reactor.core.publisher.Flux;
 
-public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends AbstractChainedProcessor<R> {
+public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends AbstractProcessor<R> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractMailboxProcessor.class);
 
     public static final String IMAP_PREFIX = "IMAP-";
@@ -79,9 +78,9 @@ public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends Ab
     private final StatusResponseFactory factory;
     private final MetricFactory metricFactory;
 
-    public AbstractMailboxProcessor(Class<R> acceptableClass, ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+    public AbstractMailboxProcessor(Class<R> acceptableClass, MailboxManager mailboxManager, StatusResponseFactory factory,
                                     MetricFactory metricFactory) {
-        super(acceptableClass, next);
+        super(acceptableClass);
         this.mailboxManager = mailboxManager;
         this.factory = factory;
         this.metricFactory = metricFactory;
@@ -534,49 +533,27 @@ public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends Ab
     /**
      * Send VANISHED responses if needed. 
      */
-    protected void respondVanished(SelectedMailbox selectedMailbox, List<MessageRange> ranges, long changedSince, MailboxMetaData metaData, Responder responder) throws MailboxException {
-        // RFC5162 4.2. Server Implementations Storing Minimal State
-        //  
-        //      A server that stores the HIGHESTMODSEQ value at the time of the last
-        //      EXPUNGE can omit the VANISHED response when a client provides a
-        //      MODSEQ value that is equal to, or higher than, the current value of
-        //      this datum, that is, when there have been no EXPUNGEs.
-        //
-        //      A client providing message sequence match data can reduce the scope
-        //      as above.  In the case where there have been no expunges, the server
-        //      can ignore this data.
-        if (metaData.getHighestModSeq().asLong() > changedSince) {
-            SearchQuery.Builder searchQuery = SearchQuery.builder();
-            SearchQuery.UidRange[] nRanges = new SearchQuery.UidRange[ranges.size()];
-            Set<MessageUid> vanishedUids = new HashSet<>();
-            for (int i = 0; i < ranges.size(); i++) {
-                MessageRange r = ranges.get(i);
-                SearchQuery.UidRange nr;
-                if (r.getType() == Type.ONE) {
-                    nr = new SearchQuery.UidRange(r.getUidFrom());
-                } else {
-                    nr = new SearchQuery.UidRange(r.getUidFrom(), r.getUidTo());
-                }
-                MessageUid from = nr.getLowValue();
-                MessageUid to = nr.getHighValue();
-                while (from.compareTo(to) <= 0) {
-                    MessageUid copy = from;
-                    selectedMailbox.msn(from).fold(
-                        () -> vanishedUids.add(copy),
-                        msn -> {
-                            // ignore still there
-                            return true;
-                        });
-                    from = from.next();
-                }
-                nRanges[i] = nr;
-
+    protected void respondVanished(SelectedMailbox selectedMailbox, List<MessageRange> ranges, Responder responder) throws MailboxException {
+        Set<MessageUid> vanishedUids = new HashSet<>();
+        for (MessageRange range : ranges) {
+            MessageUid from = range.getUidFrom();
+            MessageUid to = range.getUidTo();
+            while (from.compareTo(to) <= 0) {
+                MessageUid copy = from;
+                selectedMailbox.msn(from).fold(
+                    () -> vanishedUids.add(copy),
+                    msn -> {
+                        // ignore still there
+                        return true;
+                    });
+                from = from.next();
             }
-            UidRange[] vanishedIdRanges = uidRanges(MessageRange.toRanges(vanishedUids));
+
+        }
+        UidRange[] vanishedIdRanges = uidRanges(MessageRange.toRanges(vanishedUids));
+        if (vanishedIdRanges.length > 0) {
             responder.respond(new VanishedResponse(vanishedIdRanges, true));
         }
-        
-        
     }
     
     

@@ -26,6 +26,7 @@ import static org.apache.james.mailets.configuration.Constants.LOCALHOST_IP;
 import static org.apache.james.mailets.configuration.Constants.PASSWORD;
 import static org.apache.james.mailets.configuration.Constants.awaitAtMostOneMinute;
 import static org.apache.james.mailets.configuration.MailetConfiguration.LOCAL_DELIVERY;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
@@ -47,6 +48,7 @@ import org.apache.james.transport.matchers.All;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.FakeSmtp;
 import org.apache.james.utils.SMTPMessageSender;
+import org.apache.james.utils.SMTPSendingException;
 import org.apache.james.utils.TestIMAPClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
@@ -100,7 +102,7 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
                 .putProcessor(CommonProcessors.bounces()))
             .withSmtpConfiguration(SmtpConfiguration.builder()
                 .doNotVerifyIdentity()
-                .build())
+                .withAutorizedAddresses("0.0.0.0/0.0.0.0"))
             .build(temporaryFolder);
         jamesServer.start();
 
@@ -116,6 +118,38 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
     }
 
     @Test
+    void shouldRejectInvalidAddressesUponSubmission(@TempDir File temporaryFolder) throws Exception {
+        /*
+        a..b@domain.com triggered a parsing error within javax.mail, the exception was ignored and substituted with null,
+        resulting in a NPE in RemoteDelivery. Instead we now reject it as part of SMTP reception emails we cannot handle.
+        This could be used to make the delivery of all remote recipients fail while local recipient succeeds.
+         */
+        InMemoryDNSService inMemoryDNSService = new InMemoryDNSService()
+            .registerMxRecord(JAMES_ANOTHER_DOMAIN, fakeSmtp.getContainer().getContainerIp());
+
+        jamesServer = TemporaryJamesServer.builder()
+            .withBase(SMTP_ONLY_MODULE)
+            .withOverrides(binder -> binder.bind(DNSService.class).toInstance(inMemoryDNSService))
+            .withMailetContainer(TemporaryJamesServer.simpleMailetContainerConfiguration()
+                .putProcessor(directResolutionTransport())
+                .putProcessor(CommonProcessors.bounces()))
+            .withSmtpConfiguration(SmtpConfiguration.builder()
+                .doNotVerifyIdentity()
+                .withAutorizedAddresses("0.0.0.0/0.0.0.0"))
+            .build(temporaryFolder);
+        jamesServer.start();
+
+        dataProbe = jamesServer.getProbe(DataProbeImpl.class);
+        dataProbe.addDomain(DEFAULT_DOMAIN);
+        dataProbe.addUser(FROM, PASSWORD);
+
+        assertThatThrownBy(() -> messageSender.connect(LOCALHOST_IP, jamesServer.getProbe(SmtpGuiceProbe.class).getSmtpPort())
+            .sendMessage(FROM, "to..user@" + JAMES_ANOTHER_DOMAIN))
+            .isInstanceOf(SMTPSendingException.class)
+            .hasMessageContaining("Error upon step RCPT: 553 5.1.3 Syntax error in recipient address");
+    }
+
+    @Test
     void directResolutionShouldFailoverOnSecondMxWhenFirstMxFailed(@TempDir File temporaryFolder) throws Exception {
         InMemoryDNSService inMemoryDNSService = new InMemoryDNSService()
             .registerRecord(JAMES_ANOTHER_DOMAIN, ADDRESS_EMPTY_LIST, JAMES_ANOTHER_MX_DOMAINS, RECORD_EMPTY_LIST)
@@ -128,6 +162,8 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
             .withMailetContainer(TemporaryJamesServer.simpleMailetContainerConfiguration()
                 .putProcessor(directResolutionTransport())
                 .putProcessor(CommonProcessors.bounces()))
+            .withSmtpConfiguration(SmtpConfiguration.builder()
+                .withAutorizedAddresses("0.0.0.0/0.0.0.0"))
             .build(temporaryFolder);
         jamesServer.start();
 
@@ -154,6 +190,8 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
             .withMailetContainer(TemporaryJamesServer.simpleMailetContainerConfiguration()
                 .putProcessor(transport())
                 .putProcessor(CommonProcessors.bounces()))
+            .withSmtpConfiguration(SmtpConfiguration.builder()
+                .withAutorizedAddresses("0.0.0.0/0.0.0.0"))
             .build(temporaryFolder);
         jamesServer.start();
 
@@ -182,6 +220,8 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
             .withMailetContainer(TemporaryJamesServer.simpleMailetContainerConfiguration()
                 .putProcessor(transport())
                 .putProcessor(CommonProcessors.bounces()))
+            .withSmtpConfiguration(SmtpConfiguration.builder()
+                .withAutorizedAddresses("0.0.0.0/0.0.0.0"))
             .build(temporaryFolder);
         jamesServer.start();
 
@@ -219,6 +259,8 @@ public class DirectResolutionRemoteDeliveryIntegrationTest {
                     .addMailet(MailetConfiguration.remoteDeliveryBuilder()
                         .matcher(All.class)))
                 .putProcessor(CommonProcessors.bounces()))
+            .withSmtpConfiguration(SmtpConfiguration.builder()
+                .withAutorizedAddresses("0.0.0.0/0.0.0.0"))
             .build(temporaryFolder);
         jamesServer.start();
 

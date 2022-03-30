@@ -329,7 +329,7 @@ class DLPConfigurationRoutesTest {
                 .body("statusCode", is(HttpStatus.BAD_REQUEST_400))
                 .body("type", is("InvalidArgument"))
                 .body("message", is("Invalid arguments supplied in the user request"))
-                .body("details", is("Domain can not be empty nor contain `@` nor `/`"));
+                .body("details", is("Domain parts ASCII chars must be a-z A-Z 0-9 - or _"));
         }
 
         @Test
@@ -646,7 +646,7 @@ class DLPConfigurationRoutesTest {
                 .body("statusCode", is(HttpStatus.BAD_REQUEST_400))
                 .body("type", is("InvalidArgument"))
                 .body("message", is("Invalid arguments supplied in the user request"))
-                .body("details", is("Domain can not be empty nor contain `@` nor `/`"));
+                .body("details", is("Domain parts ASCII chars must be a-z A-Z 0-9 - or _"));
         }
     }
 
@@ -859,14 +859,14 @@ class DLPConfigurationRoutesTest {
                 .body("statusCode", is(HttpStatus.BAD_REQUEST_400))
                 .body("type", is("InvalidArgument"))
                 .body("message", is("Invalid arguments supplied in the user request"))
-                .body("details", is("Domain can not be empty nor contain `@` nor `/`"));
+                .body("details", is("Domain parts ASCII chars must be a-z A-Z 0-9 - or _"));
         }
     }
     
     @Nested
     class DefineFetch {
         @Test
-        public void fetchShouldBeOK() throws Exception {
+        void fetchShouldBeOK() {
             storeRules();
 
             String jsonAsString =
@@ -893,7 +893,7 @@ class DLPConfigurationRoutesTest {
         }
 
         @Test
-        public void fetchOnUnknownDomainShouldBe404() throws Exception {
+        void fetchOnUnknownDomainShouldBe404() {
             storeRules();
 
             when()
@@ -907,7 +907,7 @@ class DLPConfigurationRoutesTest {
         }
 
         @Test
-        public void fetchOnUnknownDomainAndRuleShouldBe404() throws Exception {
+        void fetchOnUnknownDomainAndRuleShouldBe404() {
             when()
                 .get("strange.com/rules/666")
             .then()
@@ -919,7 +919,7 @@ class DLPConfigurationRoutesTest {
         }
 
         @Test
-        public void fetchOnUnknownRuleIdShouldBe404() throws Exception {
+        void fetchOnUnknownRuleIdShouldBe404() {
             storeRules();
 
             when()

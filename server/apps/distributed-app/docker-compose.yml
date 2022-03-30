@@ -9,8 +9,7 @@ services:
       - tika
       - rabbitmq
       - s3
-    entrypoint: bash -c "java -Dworking.directory=/root/ -Dlogback.configurationFile=/root/conf/logback.xml -jar james-server.jar"
-    image: apache/james:distributed-3.6.0
+    image: apache/james:distributed-latest
     container_name: james
     hostname: james.local
     ports:

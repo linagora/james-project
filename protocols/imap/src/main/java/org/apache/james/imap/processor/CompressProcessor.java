@@ -25,23 +25,24 @@ import java.util.List;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.Capability;
+import org.apache.james.imap.api.message.response.StatusResponse;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
-import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.CompressRequest;
-import org.apache.james.imap.processor.base.AbstractChainedProcessor;
+import org.apache.james.imap.message.response.ImmutableStatusResponse;
+import org.apache.james.imap.processor.base.AbstractProcessor;
 import org.apache.james.util.MDCBuilder;
 
 import com.google.common.collect.ImmutableList;
 
-public class CompressProcessor extends AbstractChainedProcessor<CompressRequest> implements CapabilityImplementingProcessor {
+public class CompressProcessor extends AbstractProcessor<CompressRequest> implements CapabilityImplementingProcessor {
     private static final String ALGO = "DEFLATE";
     private static final List<Capability> CAPA = ImmutableList.of(Capability.of(ImapConstants.COMPRESS_COMMAND.getName() + "=" + ALGO));
     private final StatusResponseFactory factory;
     private static final String COMPRESSED = "COMPRESSED";
 
-    public CompressProcessor(ImapProcessor next, StatusResponseFactory factory) {
-        super(CompressRequest.class, next);
+    public CompressProcessor(StatusResponseFactory factory) {
+        super(CompressRequest.class);
         this.factory = factory;
     }
 
@@ -55,9 +56,9 @@ public class CompressProcessor extends AbstractChainedProcessor<CompressRequest>
                 if (request.getAlgorithm().equalsIgnoreCase(ALGO) == false) {
                     responder.respond(factory.taggedBad(request.getTag(), request.getCommand(), HumanReadableText.ILLEGAL_ARGUMENTS));
                 } else {
-                    responder.respond(factory.taggedOk(request.getTag(), request.getCommand(), HumanReadableText.DEFLATE_ACTIVE));
+                    StatusResponse response = factory.taggedOk(request.getTag(), request.getCommand(), HumanReadableText.DEFLATE_ACTIVE);
 
-                    if (session.startCompression()) {
+                    if (session.startCompression((ImmutableStatusResponse) response)) {
                         session.setAttribute(COMPRESSED, true);
                     }
                 }

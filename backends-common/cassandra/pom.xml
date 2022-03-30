@@ -24,11 +24,11 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-backends-common</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>apache-james-backends-cassandra</artifactId>
-    <name>Apache James Cassandra backend</name>
+    <name>Apache James :: Backends Common :: Cassandra</name>
 
     <properties>
         <cassandra.driver.version>3.11.0</cassandra.driver.version>
@@ -73,7 +73,16 @@
                     <groupId>io.netty</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.github.jnr</groupId>
+                    <artifactId>jnr-posix</artifactId>
+                </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jnr</groupId>
+            <artifactId>jnr-posix</artifactId>
+            <version>3.1.8</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

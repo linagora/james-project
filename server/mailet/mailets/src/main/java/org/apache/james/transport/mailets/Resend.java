@@ -22,6 +22,7 @@ package org.apache.james.transport.mailets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import javax.inject.Inject;
 import javax.mail.MessagingException;
@@ -34,7 +35,6 @@ import org.apache.james.transport.mailets.redirect.InitParameters;
 import org.apache.james.transport.mailets.redirect.ProcessRedirectNotify;
 import org.apache.james.transport.mailets.redirect.RedirectMailetInitParameters;
 import org.apache.james.transport.mailets.redirect.RedirectNotify;
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
 import org.apache.james.transport.mailets.utils.MimeMessageUtils;
 import org.apache.james.transport.util.MailAddressUtils;
 import org.apache.james.transport.util.RecipientsUtils;
@@ -339,10 +339,9 @@ public class Resend extends GenericMailet implements RedirectNotify {
         // allowedInitParameters
         checkInitParameters(getAllowedInitParameters());
 
-        if (getInitParameters().isStatic()) {
-            if (getInitParameters().isDebug()) {
-                LOGGER.debug(getInitParameters().asString());
-            }
+        if (getInitParameters().isStatic()
+                && getInitParameters().isDebug()) {
+            LOGGER.debug(getInitParameters().asString());
         }
     }
 
@@ -408,13 +407,7 @@ public class Resend extends GenericMailet implements RedirectNotify {
 
     @Override
     public Optional<MailAddress> getReversePath(Mail originalMail) throws MessagingException {
-        Optional<MailAddress> reversePath = getReversePath();
-        if (reversePath.isPresent()) {
-            if (MailAddressUtils.isUnalteredOrReversePathOrSender(reversePath.get())) {
-                return Optional.empty();
-            }
-        }
-        return reversePath;
+        return getReversePath().filter(Predicate.not(MailAddressUtils::isUnalteredOrReversePathOrSender));
     }
 
     @Override
@@ -431,11 +424,6 @@ public class Resend extends GenericMailet implements RedirectNotify {
     @Override
     public Optional<String> getSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
         return new MimeMessageUtils(newMail.getMessage()).subjectWithPrefix(subjectPrefix, originalMail, getInitParameters().getSubject());
-    }
-
-    @Override
-    public MimeMessageModifier getMimeMessageModifier(Mail newMail, Mail originalMail) throws MessagingException {
-        return new MimeMessageModifier(newMail.getMessage());
     }
 
     @Override

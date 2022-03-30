@@ -18,48 +18,45 @@
  ****************************************************************/
 package org.apache.james.protocols.netty;
 
-import static org.jboss.netty.channel.Channels.pipeline;
-
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-import org.jboss.netty.util.HashedWheelTimer;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
- * Abstract base class for {@link ChannelPipelineFactory} implementations
+ * Abstract base class for {@link ChannelInitializer} implementations
  */
-public abstract class AbstractChannelPipelineFactory implements ChannelPipelineFactory {
+@ChannelHandler.Sharable
+public abstract class AbstractChannelPipelineFactory<C extends SocketChannel> extends ChannelInitializer<C> {
     public static final int MAX_LINE_LENGTH = 8192;
 
     protected final ConnectionLimitUpstreamHandler connectionLimitHandler;
     protected final ConnectionPerIpLimitUpstreamHandler connectionPerIpLimitHandler;
-    private final HashedWheelTimer timer;
-    private final ChannelGroupHandler groupHandler;
     private final int timeout;
-    private final ExecutionHandler eHandler;
     private final ChannelHandlerFactory frameHandlerFactory;
-    
-    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp, ChannelGroup channels,
-                                          ExecutionHandler eHandler, ChannelHandlerFactory frameHandlerFactory,
-                                          HashedWheelTimer hashedWheelTimer) {
+    private final EventExecutorGroup eventExecutorGroup;
+
+    public AbstractChannelPipelineFactory(ChannelHandlerFactory frameHandlerFactory, EventExecutorGroup eventExecutorGroup) {
+        this(0, 0, 0, frameHandlerFactory, eventExecutorGroup);
+    }
+
+    public AbstractChannelPipelineFactory(int timeout, int maxConnections, int maxConnectsPerIp,
+                                          ChannelHandlerFactory frameHandlerFactory, EventExecutorGroup eventExecutorGroup) {
         this.connectionLimitHandler = new ConnectionLimitUpstreamHandler(maxConnections);
         this.connectionPerIpLimitHandler = new ConnectionPerIpLimitUpstreamHandler(maxConnectsPerIp);
-        this.groupHandler = new ChannelGroupHandler(channels);
         this.timeout = timeout;
-        this.eHandler = eHandler;
         this.frameHandlerFactory = frameHandlerFactory;
-        this.timer = hashedWheelTimer;
+        this.eventExecutorGroup = eventExecutorGroup;
     }
     
     
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
+    protected void initChannel(C channel) throws Exception {
         // Create a default pipeline implementation.
-        ChannelPipeline pipeline = pipeline();
-        pipeline.addLast(HandlerConstants.GROUP_HANDLER, groupHandler);
+        ChannelPipeline pipeline = channel.pipeline();
 
         pipeline.addLast(HandlerConstants.CONNECTION_LIMIT_HANDLER, connectionLimitHandler);
 
@@ -67,28 +64,21 @@ public abstract class AbstractChannelPipelineFactory implements ChannelPipelineF
 
         
         // Add the text line decoder which limit the max line length, don't strip the delimiter and use CRLF as delimiter
-        pipeline.addLast(HandlerConstants.FRAMER, frameHandlerFactory.create(pipeline));
+        pipeline.addLast(eventExecutorGroup, HandlerConstants.FRAMER, frameHandlerFactory.create(pipeline));
        
         // Add the ChunkedWriteHandler to be able to write ChunkInput
         pipeline.addLast(HandlerConstants.CHUNK_HANDLER, new ChunkedWriteHandler());
-        pipeline.addLast(HandlerConstants.TIMEOUT_HANDLER, new TimeoutHandler(timer, timeout));
+        pipeline.addLast(HandlerConstants.TIMEOUT_HANDLER, new TimeoutHandler(timeout));
 
-        if (eHandler != null) {
-            pipeline.addLast(HandlerConstants.EXECUTION_HANDLER, eHandler);
-        }
-        
-        pipeline.addLast(HandlerConstants.CORE_HANDLER, createHandler());
-
-
-        return pipeline;
+        pipeline.addLast(eventExecutorGroup, HandlerConstants.CORE_HANDLER, createHandler());
     }
 
     
     /**
-     * Create the core {@link ChannelUpstreamHandler} to use
+     * Create the core {@link ChannelInboundHandlerAdapter} to use
      *
      * @return coreHandler
      */
-    protected abstract ChannelUpstreamHandler createHandler();
+    protected abstract ChannelInboundHandlerAdapter createHandler();
 
 }

@@ -152,7 +152,7 @@ layout: howTo
                 <p>First let's retrieve a valid configuration:</p>
 
                 <pre><code>$ git clone https://github.com/apache/james-project
-$ cp -rf james-project/dockerfiles/run/guice/jpa/destination/conf conf
+$ cp -rf james-project/server/apps/jpa-app/sample-configuration conf
 $ mv keystore conf/keystore</code></pre>
 
                 <p>Modify all protocol configuration files to match your keystore password (imapserver.xml, lmtpserver.xml, managesieveserver.xml, pop3server.xml, smtpserver.xml).</p>
@@ -216,6 +216,8 @@ docker exec james_run java -jar /root/james-cli.jar AddUser user@domain.tld secr
                 <header class="major">
                     <h2><b>Additional features</b></h2>
                 </header>
+
+                <p>Check this example on <a href="https://github.com/apache/james-project/tree/master/examples/imap-autoconf">Mail user agents autoconfiguration</a>.</p>
 
                 <p>James is a large project with many features. You can go further and complete your installation with
                 an <a href="http://james.apache.org/server/config-antispam.html">AntiSpam system</a>, or set up

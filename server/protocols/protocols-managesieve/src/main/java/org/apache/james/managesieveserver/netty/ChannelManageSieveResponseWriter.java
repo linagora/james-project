@@ -20,24 +20,55 @@
 package org.apache.james.managesieveserver.netty;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.handler.stream.ChunkedStream;
+import org.apache.james.protocols.api.CommandDetectionSession;
 
-public class ChannelManageSieveResponseWriter {
+import io.netty.channel.Channel;
+import io.netty.handler.stream.ChunkedStream;
+
+public class ChannelManageSieveResponseWriter implements CommandDetectionSession {
     private final Channel channel;
+    private String cumulation = null;
+    private boolean needsCommandInjectionDetection = true;
 
     public ChannelManageSieveResponseWriter(Channel channel) {
         this.channel = channel;
     }
 
-    public void write(String response) throws IOException {
-        if (channel.isConnected()) {
+    public void write(String response) {
+        if (channel.isActive()) {
             InputStream in = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
-            channel.write(new ChunkedStream(in));
+            channel.writeAndFlush(new ChunkedStream(in));
         }
+    }
+
+    @Override
+    public boolean needsCommandInjectionDetection() {
+        return needsCommandInjectionDetection;
+    }
+
+    @Override
+    public void startDetectingCommandInjection() {
+        needsCommandInjectionDetection = true;
+    }
+
+    @Override
+    public void stopDetectingCommandInjection() {
+        needsCommandInjectionDetection = false;
+    }
+
+    public void resetCumulation() {
+        cumulation = null;
+    }
+
+    public String cumulate(String s) {
+        if (cumulation == null || cumulation.equals("\r\n")) {
+            cumulation = s;
+        } else {
+            cumulation += s;
+        }
+        return cumulation;
     }
 }

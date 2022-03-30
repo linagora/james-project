@@ -25,8 +25,10 @@ import java.util.Optional;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.james.core.Username;
 import org.apache.james.imap.api.ImapSessionState;
+import org.apache.james.imap.message.response.ImmutableStatusResponse;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.protocols.api.CommandDetectionSession;
+import org.apache.james.protocols.api.OidcSASLConfiguration;
 
 /**
  * Encapsulates all state held for an ongoing Imap session, which commences when
@@ -155,7 +157,7 @@ public interface ImapSession extends CommandDetectionSession {
      * 
      * @return true if the encryption of the session was successfully
      */
-    boolean startTLS();
+    boolean startTLS(ImmutableStatusResponse startTlsResponse);
 
     /**
      * Return true if the session is bound to a TLS encrypted socket.
@@ -191,7 +193,7 @@ public interface ImapSession extends CommandDetectionSession {
      * 
      * @return success
      */
-    boolean startCompression();
+    boolean startCompression(ImmutableStatusResponse response);
 
     /**
      * Push in a new {@link ImapLineHandler} which is called for the next line received
@@ -209,10 +211,19 @@ public interface ImapSession extends CommandDetectionSession {
     boolean supportMultipleNamespaces();
     
     /**
-     * Return true if the login / authentication via plain username / password is
-     * disallowed
+     * Return true if SSL is required when Authenticating
      */
-    boolean isPlainAuthDisallowed();
+    boolean isSSLRequired();
+
+    /**
+     * Return true if the login / authentication via plain username / password is
+     * enabled
+     */
+    boolean isPlainAuthEnabled();
+
+    boolean supportsOAuth();
+
+    Optional<OidcSASLConfiguration> oidcSaslConfiguration();
 
     default void setMailboxSession(MailboxSession mailboxSession) {
         setAttribute(MAILBOX_SESSION_ATTRIBUTE_SESSION_KEY, mailboxSession);
@@ -226,5 +237,13 @@ public interface ImapSession extends CommandDetectionSession {
         return Optional.ofNullable(getMailboxSession())
             .map(MailboxSession::getUser)
             .orElse(null);
+    }
+
+    default boolean isPlainAuthDisallowed() {
+        return !isPlainAuthEnabled() || isAuthenticatingNonEncryptedWhenRequiredSSL();
+    }
+
+    default boolean isAuthenticatingNonEncryptedWhenRequiredSSL() {
+        return isSSLRequired() && !isTLSActive();
     }
 }

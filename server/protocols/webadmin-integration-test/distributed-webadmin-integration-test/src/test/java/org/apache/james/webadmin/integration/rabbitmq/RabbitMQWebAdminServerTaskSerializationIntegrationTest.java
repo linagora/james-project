@@ -344,6 +344,7 @@ class RabbitMQWebAdminServerTaskSerializationIntegrationTest {
             .body("type", is("reprocessing-one"))
             .body("additionalInformation.repositoryPath", is(mailRepositoryUrl.asString()))
             .body("additionalInformation.targetQueue", is(notNullValue()))
+            .body("additionalInformation.consume", is(notNullValue()))
             .body("additionalInformation.mailKey", is(mailKey))
             .body("additionalInformation.targetProcessor", is(nullValue()));
     }
@@ -751,7 +752,7 @@ class RabbitMQWebAdminServerTaskSerializationIntegrationTest {
             .body("additionalInformation.gcedBlobCount", is(0))
             .body("additionalInformation.errorCount", is(0))
             .body("additionalInformation.bloomFilterExpectedBlobCount", is(1000000))
-            .body("additionalInformation.bloomFilterAssociatedProbability", is(0.8F));
+            .body("additionalInformation.bloomFilterAssociatedProbability", is(0.01F));
     }
 
     private MailboxAdded createMailboxAdded() {

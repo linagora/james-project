@@ -52,14 +52,13 @@ public class JamesDataCmdHandler extends DataCmdHandler {
     @Override
     protected SMTPResponse doDATA(SMTPSession session, String argument) {
         try {
-            MimeMessageInputStreamSource mmiss = new MimeMessageInputStreamSource(MailImpl.getId());
+            MimeMessageInputStreamSource mmiss = MimeMessageInputStreamSource.create(MailImpl.getId());
             session.setAttachment(SMTPConstants.DATA_MIMEMESSAGE_STREAMSOURCE, mmiss, State.Transaction);
         } catch (Exception e) {
             LOGGER.warn("Error creating mimemessagesource for incoming data", e);
             return new SMTPResponse(SMTPRetCode.LOCAL_ERROR, "Unexpected error preparing to receive DATA.");
         }
 
-        // out = new PipedOutputStream(messageIn);
         session.pushLineHandler(getLineHandler());
 
         return new SMTPResponse(SMTPRetCode.DATA_READY, "Ok Send data ending with <CRLF>.<CRLF>");

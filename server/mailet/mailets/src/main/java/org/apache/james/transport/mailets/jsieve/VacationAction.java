@@ -28,6 +28,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 
 import org.apache.james.core.MailAddress;
+import org.apache.james.lifecycle.api.LifecycleUtil;
 import org.apache.james.server.core.MailImpl;
 import org.apache.jsieve.mail.Action;
 import org.apache.jsieve.mail.optional.ActionVacation;
@@ -49,12 +50,10 @@ public class VacationAction implements MailAction {
                 context.getScriptActivationDate().toLocalDate(),
                 context.getScriptInterpretationDate().toLocalDate()))
             .intValue();
-        if (isStillInVacation(actionVacation, dayDifference)) {
-            if (isValidForReply(mail, actionVacation, context)) {
-                if (!isMailingList(mail)) {
-                    sendVacationNotification(mail, actionVacation, context);
-                }
-            }
+        if (isStillInVacation(actionVacation, dayDifference)
+                && isValidForReply(mail, actionVacation, context)
+                && !isMailingList(mail)) {
+            sendVacationNotification(mail, actionVacation, context);
         }
     }
 
@@ -66,12 +65,17 @@ public class VacationAction implements MailAction {
             .subject(actionVacation.getSubject())
             .build();
 
-        context.post(MailImpl.builder()
+        MailImpl replyMail = MailImpl.builder()
             .name(MailImpl.getId())
             .sender(vacationReply.getSender())
             .addRecipients(vacationReply.getRecipients())
             .mimeMessage(vacationReply.getMimeMessage())
-            .build());
+            .build();
+        try {
+            context.post(replyMail);
+        } finally {
+            LifecycleUtil.dispose(replyMail);
+        }
     }
 
     private boolean isStillInVacation(ActionVacation actionVacation, int dayDifference) {
@@ -82,18 +86,18 @@ public class VacationAction implements MailAction {
         Set<MailAddress> currentMailAddresses = ImmutableSet.copyOf(mail.getRecipients());
         Set<MailAddress> allowedMailAddresses = Stream
             .concat(
-                actionVacation.getAddresses().stream().map(s -> retrieveAddressFromString(s, context)),
+                actionVacation.getAddresses().stream().flatMap(this::retrieveAddressFromString),
                 Stream.of(context.getRecipient()))
             .collect(ImmutableSet.toImmutableSet());
         return !Sets.intersection(currentMailAddresses, allowedMailAddresses).isEmpty();
     }
 
-    private MailAddress retrieveAddressFromString(String address, ActionContext context) {
+    private Stream<MailAddress> retrieveAddressFromString(String address) {
         try {
-            return new MailAddress(address);
+            return Stream.of(new MailAddress(address));
         } catch (AddressException e) {
             LOGGER.warn("Mail address {} was not well formatted : {}", address, e.getLocalizedMessage());
-            return null;
+            return Stream.empty();
         }
     }
 

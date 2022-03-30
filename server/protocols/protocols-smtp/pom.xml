@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-server</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -76,6 +76,16 @@
         <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>james-server-filesystem-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
+            <artifactId>james-server-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
+            <artifactId>james-server-jwt</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -174,7 +184,7 @@
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
+            <artifactId>netty-handler</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
@@ -187,6 +197,11 @@
         <dependency>
             <groupId>org.apache.james.jspf</groupId>
             <artifactId>apache-jspf-resolver</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mock-server</groupId>
+            <artifactId>mockserver-netty</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -207,4 +222,25 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!--https://issues.apache.org/jira/browse/JAMES-3724-->
+                        <james.ligecycle.leak.detection.mode>testing</james.ligecycle.leak.detection.mode>
+                        <!--https://netty.io/wiki/reference-counted-objects.html#best-practices-to-avoid-leaks -->
+                        <io.netty.leakDetection.level>PARANOID</io.netty.leakDetection.level>
+                    </systemPropertyVariables>
+                    <argLine>-Xms512m -Xmx1024m</argLine>
+                    <reuseForks>true</reuseForks>
+                    <!-- Fail tests longer than 20 minutes, prevent form random locking tests -->
+                    <forkedProcessTimeoutInSeconds>1200</forkedProcessTimeoutInSeconds>
+                    <excludedGroups>unstable</excludedGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

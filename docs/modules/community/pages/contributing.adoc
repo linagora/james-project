@@ -29,10 +29,9 @@ To report a bug, please use the appropriate Bug Tracker JIRA link according to t
 * https://issues.apache.org/jira/browse/JSIEVE[jSieve]
 * https://issues.apache.org/jira/browse/JSPF[jSPF]
 * https://issues.apache.org/jira/browse/JDKIM[jDKIM]
-* https://issues.apache.org/jira/browse/HUPA[Hupa]
 
 Once you are logged on the appropriate JIRA page, click on the red Create button, then complete the different fields
-as accurately as possible, so that any user can reproduce the reported bug. Also note that all your information must be
+as accurately as possible, so that any user can reproduce the reported bug. Also, note that all your information must be
 readable (use markdown).
 
 Then, you have to click on Create to submit your bug.
@@ -47,7 +46,7 @@ Specific details about security in James can be found here.
 == Documentation
 
 Documentation is an easy way to get on board! Check out the
-https://issues.apache.org/jira/issues/?jql=project%20%3D%20JAMES%20AND%20resolution%20%3D%20Unresolved%20AND%20labels%20%3D%20documentation%20ORDER%20BY%20priority%20DESC%2C%20updated%20DESC[~documentation]
+link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20JAMES%20AND%20resolution%20%3D%20Unresolved%20AND%20labels%20%3D%20documentation%20ORDER%20BY%20priority%20DESC%2C%20updated%20DESC[~documentation]
 label on JIRA to get some ideas.
 Report on JIRA the typos you spot, the information you miss, and any improvement you can think of.
 The next step is to contribute the documentation changes via https://github.com/apache/james-project/tree/master/docs/modules[Git].
@@ -63,14 +62,41 @@ Each of the Apache James projects has its own documentation maintained with the 
 the documentation can be further committed in the https://git-wip-us.apache.org/repos/asf/james-site.git[site module]
 which will be automatically published via gitpubsub to http://james.apache.org[Apache James web site].
 
+== Idea or design proposals
+
+People can submit ideas, features or design changes proposals by discussing it through the
+xref:mailing-lists.adoc[mailing lists].
+
+Structuring design changes are tracked by link:https://github.com/joelparkerhenderson/architecture-decision-record[ADRs]
+(Architecture Decision Records). A discussion on the mailing list getting a consensus of the community can be the object
+of the writing of an ADR to confirm the change agreed upon. The Project Member Committee will take care of maintaining such
+records but anyone should feel free to help on such a task by proposing ADRs related to his work.
+
+ADRs *MUST* be submitted under the folder `src/adr` via a pull request. The standards used for writing an ADR are
+described in the https://github.com/apache/james-project/blob/master/src/adr/0001-record-architecture-decisions.md[first ADR]
+written for the Apache James project.
+
+The number of the ADR should be incremental. If another ADR gets merged concurrently, the committer is responsible for
+updating its number accordingly.
+
+When the ADR reaches a consensus within the community and is accepted, it can be merged and goes into effect.
+
+An ADR can't be removed after being accepted and merged. However, a new ADR can supersede a previous one. This is so
+we are able to keep track on all the decisions being made regarding the project.
+
 == How to contribute some code?
+
+We encourage discussions prior code contributions on the xref:mailing-lists.adoc[mailing lists]. For significant design
+changes the writing of xref:#_idea_or_design_proposals[ADRs] is encouraged.
+
+Your code contribution *must* be backed by a xref:_reporting_bugs[JIRA ticket].
 
 * Clone the source code of the project from its link:git://git.apache.org/james-project.git[apache git repository] or its
 https://github.com/apache/james-project[Github]
 * Create your branch and name it with the JIRA ticket number.
-* Create a Pull Request with your branch name and prefix its different commits with the same name.
-
-Alternatively you can create a patch as xref:_code_patches[outlined below], and attach it to the JIRA ticket.
+* Create a Pull Request on Github with your branch name and prefix its different commits with the same name.
+* A build will be started for your work on the link:https://ci-builds.apache.org/job/james/job/ApacheJames/[Apache CI].
+* Active contributors will review your work, and merge it.
 
 A valid commit comment might be:
 
@@ -79,6 +105,8 @@ JAMES-2285 My awesome commit title
 
 Here is some more details about what my commit does, and the rationals of the choice I took.
 ```
+
+Alternatively you can create a patch as xref:_code_patches[outlined below], and attach it to the JIRA ticket.
 
 === Licenses
 
@@ -100,26 +128,15 @@ Additional ideas are more than welcome. Don't hesitate to discuss that with us!
 While we are glad to accept contributions to documentation from anyone, in almost any format, because its much better
 than none, please consider these guidelines to help us to assimilate your contribution.
 
-Submissions to the James project must follow the coding conventions outlined in this document. James developers are
-asked to follow coding conventions already present in the code. (For example, if the existing code has the bracket on
-the same line as the if statement, then all subsequent code should also follow that convention.) Anything not explicitly
-mentioned in this document should adhere to the official
-https://www.oracle.com/java/technologies/javase/codeconventions-contents.html[Java Coding Conventions].
+Submissions to the James project must follow the coding conventions outlined in the
+link:https://github.com/apache/james-project/blob/master/checkstyle.xml[checkstyle document], which runs
+upon `mvn compile` and all phases which depend on `compile`. Not respecting it will halt the build, and means
+your contribution would not be
+acceptable.
+
 
 *Developers who commit code that does not follow the coding conventions outlined in this document will be responsible
-for fixing their own code.*
-
-. Your code should pass our https://github.com/apache/james-project/blob/master/checkstyle.xml[checkstyle] which runs
-upon `mvn compile` and all phases which depend on `compile`.
-. Extra spaces between parentheses are not allowed:
-
-```
-  if (foo) > Good
-
-  or
-
-  if ( foo ) > Bad
-```
+for fixing their own code.* `.
 
 [start=3]
 . Four spaces. *No tabs.* Period.
@@ -132,8 +149,8 @@ GREATLY appreciated as this will help to improve the James project.
 . Your change set *MUST* be covered by tests. We also strongly appreciate integration tests.
 . We also  require the following best practice regarding maven and the *pom.xml*:
 
-** Define your dependency versions in james-project pom.xml. This structurally ensures all projects get the same v
-ersion, and that there is no version clashes.
+** Define your dependency versions in james-project pom.xml. This structurally ensures all projects get the same version,
+and that there is no version clashes.
 ** Don't use _org.apache.james_ groupId for internal dependencies. Use _${james.groupId}_. If not, you break the policies
 for automatic sorting, as well as make it more ambiguous. One exception is apache-mime4j-* artifacts which share the
 james groupId despite living in a different repository.
@@ -153,6 +170,10 @@ sometimes remove whitespaces which may not be desirable.
 
 === Code patches
 
+While we definitely prefer receiving contributions under the form of xref:#_how_to_contribute_some_code[Github pull requests],
+in order to still be vendor neutral on the contribution process, we do accept submission of patches, in a process described
+below.
+
 Patches should be attached to the corresponding JIRA issue.
 
 Always use diff -u to generate patches, so we can apply them using 'patch'.
@@ -168,22 +189,3 @@ will solve the problem. Note any bug numbers your patch addresses.
 The reason for these rules is so that committers can easily see what you are trying to achieve, it is their
 responsibility to manage the code and review submissions, if you make it easy for them to see what you are doing your
 patch is more likely to be committed quickly.
-
-== Idea or design proposals
-
-People can submit ideas, features or design changes proposals by discussing it through the
-xref:mailing-lists.adoc[mailing lists] and/or submitting an ADR (Architecture Decision Record). A discussion
-on the mailing list getting a consensus of the community can be the object of the writing of an ADR to confirm the
-change agreed upon.
-
-ADRs *MUST* be submitted under the folder `src/adr` via a pull request. The standards used for writing an ADR are
-described in the https://github.com/apache/james-project/blob/master/src/adr/0001-record-architecture-decisions.md[first ADR]
-written for the Apache James project.
-
-The number of the ADR should be incremental. If an other ADR gets merged concurrently, the committer is responsible for
-updating its number accordingly.
-
-When the ADR reaches a consensus within the community and is accepted, it can be merged and goes into effect.
-
-An ADR can't be removed after being accepted and merged. However, a new ADR can supersede a previous one. This is so
-we are able to keep track on all the decisions being made regarding the project.

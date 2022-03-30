@@ -52,7 +52,7 @@ public abstract class AbstractSenderAuthIdentifyVerificationRcptHook implements 
     public HookResult doRcpt(SMTPSession session, MaybeSender sender, MailAddress rcpt) {
         if (session.getUsername() != null) {
             // Check if the sender address is the same as the user which was used to authenticate.
-            // Its important to ignore case here to fix JAMES-837. This is save todo because if the handler is called
+            // Its important to ignore case here to fix JAMES-837. This is save to do because if the handler is called
             // the user was already authenticated
 
             if (isAnonymous(sender)
@@ -80,7 +80,6 @@ public abstract class AbstractSenderAuthIdentifyVerificationRcptHook implements 
 
         Username authUser = session.getUsername();
         Username sender = getUser(maybeSender.get());
-        Username username = getUser(maybeSender.get());
 
         return isSenderAllowed(authUser, sender);
     }

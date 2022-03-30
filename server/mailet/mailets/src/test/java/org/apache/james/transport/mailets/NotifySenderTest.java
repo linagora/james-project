@@ -39,7 +39,7 @@ import org.apache.mailet.base.test.FakeMailetConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class NotifySenderTest {
+class NotifySenderTest {
 
     private static final String MAILET_NAME = "mailetName";
 
@@ -98,7 +98,7 @@ public class NotifySenderTest {
                 .build();
         notifySender.init(mailetConfig);
 
-        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.SENDER.toInternetAddress());
+        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.SENDER.toInternetAddress().get());
     }
 
     @Test
@@ -110,7 +110,7 @@ public class NotifySenderTest {
                 .build();
         notifySender.init(mailetConfig);
 
-        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.SENDER.toInternetAddress());
+        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.SENDER.toInternetAddress().get());
     }
 
     @Test
@@ -122,7 +122,7 @@ public class NotifySenderTest {
                 .build();
         notifySender.init(mailetConfig);
 
-        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.UNALTERED.toInternetAddress());
+        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.UNALTERED.toInternetAddress().get());
     }
 
     @Test
@@ -134,7 +134,7 @@ public class NotifySenderTest {
                 .build();
         notifySender.init(mailetConfig);
 
-        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.FROM.toInternetAddress());
+        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.FROM.toInternetAddress().get());
     }
 
     @Test
@@ -146,27 +146,53 @@ public class NotifySenderTest {
                 .build();
         notifySender.init(mailetConfig);
 
-        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.SENDER.toInternetAddress());
+        assertThat(notifySender.getTo()).containsOnly(SpecialAddress.SENDER.toInternetAddress().get());
     }
 
     @Test
-    void notifySenderShouldAddPrefixToSubjectWhenPrefixIsConfigured() throws Exception {
+    void notifySenderShouldNotAddPrefixToSubjectOfInFlightMailWhenPrefixIsConfigured() throws Exception {
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
-                .mailetName(MAILET_NAME)
-                .mailetContext(fakeMailContext)
-                .setProperty("prefix", "pre")
-                .build();
+            .mailetName(MAILET_NAME)
+            .mailetContext(fakeMailContext)
+            .setProperty("prefix", "pre")
+            .build();
         notifySender.init(mailetConfig);
 
         FakeMail mail = FakeMail.builder()
-                .name(MAILET_NAME)
-                .sender(MailAddressFixture.ANY_AT_JAMES)
-                .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
-                    .setSubject("My subject"))
-                .build();
+            .name(MAILET_NAME)
+            .sender(MailAddressFixture.ANY_AT_JAMES)
+            .recipient(MailAddressFixture.ANY_AT_JAMES2)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setSubject("My subject"))
+            .build();
 
         notifySender.service(mail);
 
-        assertThat(mail.getMessage().getSubject()).isEqualTo("pre My subject");
+        assertThat(mail.getMessage().getSubject()).isEqualTo("My subject");
+    }
+
+    @Test
+    void notifySenderShouldAddPrefixToSubjectOfSentEmailWhenPrefixIsConfigured() throws Exception {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .mailetName(MAILET_NAME)
+            .mailetContext(fakeMailContext)
+            .setProperty("prefix", "pre")
+            .build();
+        notifySender.init(mailetConfig);
+
+        FakeMail mail = FakeMail.builder()
+            .name(MAILET_NAME)
+            .sender(MailAddressFixture.ANY_AT_JAMES)
+            .recipient(MailAddressFixture.ANY_AT_JAMES2)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setSubject("My subject"))
+            .build();
+
+        notifySender.service(mail);
+
+        assertThat(fakeMailContext.getSentMails())
+            .first()
+            .extracting(s -> s.getSubject().get())
+            .isEqualTo("pre My subject");
     }
 }

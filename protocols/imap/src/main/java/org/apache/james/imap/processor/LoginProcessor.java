@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.Capability;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
-import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.LoginRequest;
 import org.apache.james.mailbox.MailboxManager;
@@ -39,30 +38,28 @@ import com.google.common.collect.ImmutableList;
  * Processes a <code>LOGIN</code> command.
  */
 public class LoginProcessor extends AbstractAuthProcessor<LoginRequest> implements CapabilityImplementingProcessor {
-
     private static final List<Capability> LOGINDISABLED_CAPS = ImmutableList.of(Capability.of("LOGINDISABLED"));
     
-    public LoginProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
-        super(LoginRequest.class, next, mailboxManager, factory, metricFactory);
+    public LoginProcessor(MailboxManager mailboxManager, StatusResponseFactory factory, MetricFactory metricFactory) {
+        super(LoginRequest.class, mailboxManager, factory, metricFactory);
     }
 
     @Override
     protected void processRequest(LoginRequest request, ImapSession session, Responder responder) {
-            // check if the login is allowed with LOGIN command. See IMAP-304
-            if (session.isPlainAuthDisallowed() && session.isTLSActive() == false) {
-                no(request, responder, HumanReadableText.DISABLED_LOGIN);
-            } else {
-                doAuth(noDelegation(request.getUserid(), request.getPassword()),
-                    session, request, responder, HumanReadableText.INVALID_LOGIN);
-            }
+        // check if the login is allowed with LOGIN command. See IMAP-304
+        if (session.isPlainAuthDisallowed()) {
+            no(request, responder, HumanReadableText.DISABLED_LOGIN);
+        } else {
+            doAuth(noDelegation(request.getUserid(), request.getPassword()),
+                session, request, responder, HumanReadableText.INVALID_LOGIN);
+        }
     }
 
     @Override
     public List<Capability> getImplementedCapabilities(ImapSession session) {
         // Announce LOGINDISABLED if plain auth / login is deactivated and the session is not using
         // TLS. See IMAP-304
-        if (session.isPlainAuthDisallowed() && session.isTLSActive() == false) {
+        if (session.isPlainAuthDisallowed()) {
             return LOGINDISABLED_CAPS;
         }
         return Collections.emptyList();

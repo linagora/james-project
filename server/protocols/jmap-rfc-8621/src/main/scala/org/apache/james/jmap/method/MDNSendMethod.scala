@@ -23,6 +23,7 @@ import eu.timepit.refined.auto._
 import javax.annotation.PreDestroy
 import javax.inject.Inject
 import javax.mail.internet.MimeMessage
+import org.apache.james.jmap.api.model.Identity
 import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, JMAP_CORE, JMAP_MAIL, JMAP_MDN}
 import org.apache.james.jmap.core.Invocation
 import org.apache.james.jmap.core.Invocation._
@@ -32,7 +33,7 @@ import org.apache.james.jmap.mail.MDNSend.MDN_ALREADY_SENT_FLAG
 import org.apache.james.jmap.mail._
 import org.apache.james.jmap.method.EmailSubmissionSetMethod.LOGGER
 import org.apache.james.jmap.routes.{ProcessingContext, SessionSupplier}
-import org.apache.james.lifecycle.api.Startable
+import org.apache.james.lifecycle.api.{LifecycleUtil, Startable}
 import org.apache.james.mailbox.model.{FetchGroup, MessageResult}
 import org.apache.james.mailbox.{MailboxSession, MessageIdManager}
 import org.apache.james.mdn.fields.{ExtensionField, FinalRecipient, OriginalRecipient, Text}
@@ -76,7 +77,9 @@ class MDNSendMethod @Inject()(serializer: MDNSerializer,
                          invocation: InvocationWithContext,
                          mailboxSession: MailboxSession,
                          request: MDNSendRequest): SFlux[InvocationWithContext] =
-    identityResolver.resolveIdentityId(request.identityId, mailboxSession)
+    request.identityId.validate
+      .fold(e => SMono.error(new IllegalArgumentException("The IdentityId cannot be found", e)),
+      id => identityResolver.resolveIdentityId(id, mailboxSession))
       .flatMap(maybeIdentity => maybeIdentity.map(identity => create(identity, request, mailboxSession, invocation.processingContext))
         .getOrElse(SMono.error(IdentityIdNotFoundException("The IdentityId cannot be found"))))
       .flatMapMany(createdResults => {
@@ -146,13 +149,19 @@ class MDNSendMethod @Inject()(serializer: MDNSerializer,
       mdnRelatedMessageResultAlready <- validateMDNNotAlreadySent(mdnRelatedMessageResult)
       messageRelated = parseAsMessage(mdnRelatedMessageResultAlready)
       mailAndResponseAndId <- buildMailAndResponse(identity, session.getUser.asString(), requestEntry, messageRelated)
-      _ <- Try(queue.enQueue(mailAndResponseAndId._1)).toEither
+      _ <- Try(enqueue(mailAndResponseAndId._1)).toEither
     } yield {
       MDNSendCreateSuccess(
         mdnCreationId = mdnSendCreationId,
         createResponse = mailAndResponseAndId._2,
         forEmailId = mdnRelatedMessageResultAlready.getMessageId)
     }
+
+  private def enqueue(mail: MailImpl): Unit = try {
+    queue.enQueue(mail)
+  } finally {
+    LifecycleUtil.dispose(mail)
+  }
 
   private def retrieveRelatedMessageResult(session: MailboxSession, requestEntry: MDNSendCreateRequest): Either[MDNSendNotFoundException, MessageResult] =
     messageIdManager.getMessage(requestEntry.forEmailId.originalMessageId, FetchGroup.FULL_CONTENT, session)

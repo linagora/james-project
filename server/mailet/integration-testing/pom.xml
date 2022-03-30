@@ -23,14 +23,14 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-server</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>james-server-mailets-integration-testing</artifactId>
     <packaging>jar</packaging>
 
-    <name>Apache James :: Server :: Mailets Integration Testing</name>
+    <name>Apache James :: Server :: Mailet :: Integration Testing</name>
 
     <dependencies>
         <dependency>
@@ -72,6 +72,11 @@
         <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>james-server-memory-app</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
+            <artifactId>james-server-rate-limiter</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -133,12 +138,12 @@
         <dependency>
             <groupId>org.xmlunit</groupId>
             <artifactId>xmlunit-core</artifactId>
-            <version>2.6.3</version>
+            <version>2.8.4</version>
         </dependency>
         <dependency>
             <groupId>org.xmlunit</groupId>
             <artifactId>xmlunit-matchers</artifactId>
-            <version>2.6.3</version>
+            <version>2.8.4</version>
         </dependency>
     </dependencies>
 

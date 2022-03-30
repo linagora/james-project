@@ -20,7 +20,6 @@
 package org.apache.james.transport.mailets;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Map;
 
@@ -39,7 +38,6 @@ import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.transport.mailets.remote.delivery.Bouncer;
 import org.apache.james.transport.mailets.remote.delivery.DeliveryRunnable;
 import org.apache.james.transport.mailets.remote.delivery.RemoteDeliveryConfiguration;
-import org.apache.james.transport.mailets.remote.delivery.RemoteDeliverySocketFactory;
 import org.apache.mailet.Mail;
 import org.apache.mailet.base.GenericMailet;
 import org.slf4j.Logger;
@@ -83,6 +81,12 @@ import com.google.common.collect.HashMultimap;
  * <li><b>connectionTimeout</b> (optional) - an Integer for the Socket connection timeout in milliseconds. Default is 60000</li>
  * <li><b>bounceProcessor</b> (optional) - a String containing the name of the mailet processor to pass messages that cannot
  * be delivered to for DSN bounce processing. Default is to send a traditional message containing the bounce details.</li>
+ * <li><b>onSuccess</b> (optional) - if specified, this processor is called for each email successfully sent to remote third parties.</li>
+ *
+ * When using bounceProcessor or onSuccess processors, take special care of error handling (see onMailetException and onMatcherException)
+ * to avoid confusing situations. Also remember that on partial delivery, both processors will be used: <code>onSuccess</code> with successfull recipients,
+ * and <code>bounceProcessor</code> with failed recipients.
+ *
  * <li><b>startTLS</b> (optional) - a Boolean (true/false) indicating whether the STARTTLS command (if supported by the server)
  * to switch the connection to a TLS-protected connection before issuing any login commands. Default is false.</li>
  * <li><b>sslEnable</b> (optional) - a Boolean (true/false) indicating whether to use SSL to connect and use the SSL port unless
@@ -166,13 +170,6 @@ public class RemoteDelivery extends GenericMailet {
     public void init() throws MessagingException {
         configuration = new RemoteDeliveryConfiguration(getMailetConfig(), domainList);
         queue = queueFactory.createQueue(configuration.getOutGoingQueueName());
-        try {
-            if (configuration.isBindUsed()) {
-                RemoteDeliverySocketFactory.setBindAdress(configuration.getBindAddress());
-            }
-        } catch (UnknownHostException e) {
-            LOGGER.error("Invalid bind setting ({}): ", configuration.getBindAddress(), e);
-        }
         deliveryRunnable = new DeliveryRunnable(queue,
             configuration,
             dnsServer,

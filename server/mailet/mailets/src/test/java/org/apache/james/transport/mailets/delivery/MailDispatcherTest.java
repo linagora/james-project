@@ -20,11 +20,13 @@
 package org.apache.james.transport.mailets.delivery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -45,8 +47,12 @@ import org.apache.mailet.base.test.FakeMailContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.reactivestreams.Publisher;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.ArrayListMultimap;
+
+import reactor.core.publisher.Mono;
 
 class MailDispatcherTest {
     private static final String TEST_HEADER_NAME = "X-HEADER";
@@ -62,6 +68,7 @@ class MailDispatcherTest {
     public void setUp() throws Exception {
         fakeMailContext = FakeMailContext.defaultContext();
         mailStore = mock(MailStore.class);
+        when(mailStore.storeMail(any(), any())).thenReturn(Mono.empty());
     }
 
     @Test
@@ -132,7 +139,7 @@ class MailDispatcherTest {
             .mailStore(mailStore)
             .consume(true)
             .build();
-        doThrow(new MessagingException())
+        doReturn(Mono.error(new MessagingException()))
             .when(mailStore)
             .storeMail(any(MailAddress.class), any(Mail.class));
 
@@ -330,6 +337,90 @@ class MailDispatcherTest {
         assertThat(mail.getMessage().getHeader(TEST_HEADER_NAME)).containsOnly(headerValue);
     }
 
+    @Test
+    void errorsShouldBeIgnoredWhenConfigIsProvided() throws Exception {
+        MailDispatcher testee = MailDispatcher.builder()
+            .mailetContext(fakeMailContext)
+            .mailStore(mailStore)
+            .onMailetException("ignore")
+            .build();
+
+        doReturn(Mono.error(new MessagingException()))
+            .when(mailStore)
+            .storeMail(any(MailAddress.class), any(Mail.class));
+
+        FakeMail mail = FakeMail.builder()
+            .name("name")
+            .sender(MailAddressFixture.OTHER_AT_JAMES)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setMultipartWithBodyParts(
+                    MimeMessageBuilder.bodyPartBuilder()
+                        .data("toto")))
+            .recipients(MailAddressFixture.ANY_AT_JAMES)
+            .state("state")
+            .build();
+
+        testee.dispatch(mail);
+
+        assertThat(fakeMailContext.getSentMails()).isEmpty();
+    }
+
+    @Test
+    void errorShouldFlowToTheErrorProcessor() throws Exception {
+        MailDispatcher testee = MailDispatcher.builder()
+            .mailetContext(fakeMailContext)
+            .mailStore(mailStore)
+            .onMailetException("errorProcessor1")
+            .build();
+
+        doReturn(Mono.error(new MessagingException()))
+            .when(mailStore)
+            .storeMail(any(MailAddress.class), any(Mail.class));
+
+        FakeMail mail = FakeMail.builder()
+            .name("name")
+            .sender(MailAddressFixture.OTHER_AT_JAMES)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setMultipartWithBodyParts(
+                    MimeMessageBuilder.bodyPartBuilder()
+                        .data("toto")))
+            .recipients(MailAddressFixture.ANY_AT_JAMES)
+            .state("state")
+            .build();
+
+        testee.dispatch(mail);
+
+        assertThat(fakeMailContext.getSentMails()).hasSize(1)
+            .allSatisfy(sentMail -> assertThat(sentMail.getState()).isEqualTo("errorProcessor1"));
+    }
+
+    @Test
+    void dispatchShouldThrowWhenOnMailetExceptionIsPropagate() throws Exception {
+        MailDispatcher testee = MailDispatcher.builder()
+            .mailetContext(fakeMailContext)
+            .mailStore(mailStore)
+            .onMailetException("propagate")
+            .build();
+
+        doReturn(Mono.error(new MessagingException()))
+            .when(mailStore)
+            .storeMail(any(MailAddress.class), any(Mail.class));
+
+        FakeMail mail = FakeMail.builder()
+            .name("name")
+            .sender(MailAddressFixture.OTHER_AT_JAMES)
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder()
+                .setMultipartWithBodyParts(
+                    MimeMessageBuilder.bodyPartBuilder()
+                        .data("toto")))
+            .recipients(MailAddressFixture.ANY_AT_JAMES)
+            .state("state")
+            .build();
+
+        assertThatThrownBy(()-> testee.dispatch(mail))
+            .isInstanceOf(Exception.class);
+    }
+
     public static class AccumulatorHeaderMailStore implements MailStore {
         private final ArrayListMultimap<MailAddress, String[]> headerValues;
         private final String headerName;
@@ -340,11 +431,13 @@ class MailDispatcherTest {
         }
 
         @Override
-        public void storeMail(MailAddress recipient, Mail mail) throws MessagingException {
-            String[] header = mail.getMessage().getHeader(headerName);
-            if (header != null) {
-                headerValues.put(recipient, header);
-            }
+        public Publisher<Void> storeMail(MailAddress recipient, Mail mail) {
+            return Mono.fromRunnable(Throwing.runnable(() -> {
+                String[] header = mail.getMessage().getHeader(headerName);
+                if (header != null) {
+                    headerValues.put(recipient, header);
+                }
+            }));
         }
 
         public Collection<String[]> getHeaderValues(MailAddress recipient) {

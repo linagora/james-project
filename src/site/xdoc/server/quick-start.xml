@@ -69,7 +69,7 @@ Step 3: Understand James Features
 #################################
 
 Persistence
-- Mailbox is for users' Inbox, Sent Items, Trash... folders - Mailbox persistence is configured in spring-beans.xml (by default jpa, you set the database connection properties in database.properties - can also be maildir=file). We think to move this config out-of spring-beans.xml.
+- Mailbox is for users' Inbox, Sent Items, Trash... folders - Mailbox persistence is configured in spring-beans.xml (by default jpa, you set the database connection properties in database.properties). We think to move this config out-of spring-beans.xml.
 - Mailrepositorystore is for spam, error,... mails, so nothing to do with users visible mails. Available mailstore persistence are defined in mailstore.xml. Each has an URL prefix (file, db, dbfile,...) that can be used in mailetcontainer.xml to define where to store spam,... mails (exemple: file://var/mail/error/).
 - Domain persistence is configured in domainlist.xml
 - Users persistence is configured in usersrepository.xml
@@ -123,7 +123,7 @@ Step 5: Start
 $ cd bin
 $ ./james start 
   * !! you need libc6 installed on Linux !! - sudo apt-get install libc6-i386 libc6-dev-i386 on ubuntu
-  * You can see log result in the log/james-server.log file.
+  * You can see log result in the log/wrapper.log file.
 
 Step 6: Create Domains and Users
 ################################
@@ -189,7 +189,7 @@ Step 8: Manage
 Step 9: Monitor
 ###############
 
-  * Monitor the ./log/james-server.log log file.
+  * Monitor the ./log/wrapper.log log file.
 
   * Monitor via JMX (launch any JMX client and connect to URL=service:jmx:rmi:///jndi/rmi://localhost:9999/jmxrmi)
 
@@ -202,7 +202,6 @@ Step 9: Monitor
     +-spam
 
     store
-    +-maildir
     +-derby
     +-jackrabbit
     +-activemq

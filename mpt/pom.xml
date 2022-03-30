@@ -23,14 +23,14 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-project</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>apache-james-mpt</artifactId>
 
     <packaging>pom</packaging>
 
-    <name>Apache James MPT</name>
+    <name>Apache James :: MPT</name>
     <description>Functional test framework specialised for the ASCII line-base protocols common in mail.</description>
     <url>http://james.apache.org/mpt/</url>
     <inceptionYear>2008</inceptionYear>

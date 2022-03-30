@@ -35,7 +35,6 @@ import org.apache.james.transport.mailets.redirect.NotifyMailetsMessage;
 import org.apache.james.transport.mailets.redirect.ProcessRedirectNotify;
 import org.apache.james.transport.mailets.redirect.RedirectNotify;
 import org.apache.james.transport.mailets.redirect.SpecialAddress;
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
 import org.apache.james.transport.mailets.utils.MimeMessageUtils;
 import org.apache.james.transport.util.RecipientsUtils;
 import org.apache.james.transport.util.ReplyToUtils;
@@ -130,7 +129,7 @@ public class Bounce extends GenericMailet implements RedirectNotify {
     private static final ImmutableSet<String> CONFIGURABLE_PARAMETERS = ImmutableSet.of(
             "debug", "passThrough", "fakeDomainCheck", "inline", "attachment", "message", "notice", "sender", "sendingAddress", "prefix", "attachError");
     private static final List<MailAddress> RECIPIENTS = ImmutableList.of(SpecialAddress.REVERSE_PATH);
-    private static final List<InternetAddress> TO = ImmutableList.of(SpecialAddress.REVERSE_PATH.toInternetAddress());
+    private static final List<InternetAddress> TO = SpecialAddress.REVERSE_PATH.toInternetAddress().stream().collect(ImmutableList.toImmutableList());
     private final DNSService dns;
 
     @Inject
@@ -168,10 +167,8 @@ public class Bounce extends GenericMailet implements RedirectNotify {
         // allowedInitParameters
         checkInitParameters(getAllowedInitParameters());
 
-        if (getInitParameters().isStatic()) {
-            if (getInitParameters().isDebug()) {
-                LOGGER.debug(getInitParameters().asString());
-            }
+        if (getInitParameters().isStatic() && getInitParameters().isDebug()) {
+            LOGGER.debug(getInitParameters().asString());
         }
     }
 
@@ -249,17 +246,12 @@ public class Bounce extends GenericMailet implements RedirectNotify {
         }
     }
 
-    private void passThrough(Mail originalMail) throws MessagingException {
+    private void passThrough(Mail originalMail) {
         if (getInitParameters().isDebug()) {
             LOGGER.debug("Processing a bounce request for a message with an empty reverse-path.  No bounce will be sent.");
         }
         if (!getInitParameters().getPassThrough()) {
             originalMail.setState(Mail.GHOST);
         }
-    }
-
-    @Override
-    public MimeMessageModifier getMimeMessageModifier(Mail newMail, Mail originalMail) throws MessagingException {
-        return new MimeMessageModifier(originalMail.getMessage());
     }
 }

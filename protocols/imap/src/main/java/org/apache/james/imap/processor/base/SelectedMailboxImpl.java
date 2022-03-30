@@ -26,12 +26,12 @@ import static io.vavr.Predicates.instanceOf;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
@@ -61,8 +61,10 @@ import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.UpdatedFlags;
 
+import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -75,6 +77,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
 
 
     private static final Void VOID = null;
+    private static final Flag UNINTERESTING_FLAGS = Flag.RECENT;
 
     @VisibleForTesting
     static class ApplicableFlags {
@@ -126,10 +129,9 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
     private final UidMsnConverter uidMsnConverter;
     private final Set<MessageUid> recentUids = new TreeSet<>();
     private final Set<MessageUid> flagUpdateUids = new TreeSet<>();
-    private final Flags.Flag uninterestingFlag = Flags.Flag.RECENT;
     private final Set<MessageUid> expungedUids = new TreeSet<>();
     private final Object applicableFlagsLock = new Object();
-
+    private final AtomicReference<EventListener> idleEventListener = new AtomicReference<>();
     private boolean recentUidRemoved = false;
     private boolean isDeletedByOtherSession = false;
     private boolean sizeChanged = false;
@@ -161,6 +163,16 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
             .collect(ImmutableList.toImmutableList())
             .block();
         uidMsnConverter.addAll(uids);
+    }
+
+    @Override
+    public void registerIdle(EventListener idle) {
+        idleEventListener.set(idle);
+    }
+
+    @Override
+    public void unregisterIdle() {
+        idleEventListener.set(null);
     }
 
     @Override
@@ -263,16 +275,12 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
         final Iterator<Flags.Flag> it = updated.modifiedSystemFlags().iterator();
         if (it.hasNext()) {
             final Flags.Flag flag = it.next();
-            if (flag.equals(uninterestingFlag)) {
-                result = false;
-            } else {
-                result = true;
-            }
+            result = !flag.equals(UNINTERESTING_FLAGS);
         } else {
             result = false;
         }
         // See if we need to check the user flags
-        if (result == false) {
+        if (!result) {
             final Iterator<String> userIt = updated.userFlagIterator();
             result = userIt.hasNext();
         }
@@ -338,8 +346,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
         // copy the TreeSet to fix possible
         // java.util.ConcurrentModificationException
         // See IMAP-278
-        return Collections.unmodifiableSet(new TreeSet<>(flagUpdateUids));
-        
+        return ImmutableSortedSet.copyOf(flagUpdateUids);
     }
 
     @Override
@@ -347,8 +354,7 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
         // copy the TreeSet to fix possible
         // java.util.ConcurrentModificationException
         // See IMAP-278
-        return Collections.unmodifiableSet(new TreeSet<>(expungedUids));
-        
+        return ImmutableSortedSet.copyOf(expungedUids);
     }
 
     @Override
@@ -373,11 +379,12 @@ public class SelectedMailboxImpl implements SelectedMailbox, EventListener {
     
     @Override
     public synchronized void event(Event event) {
-
         if (event instanceof MailboxEvent) {
             MailboxEvent mailboxEvent = (MailboxEvent) event;
             mailboxEvent(mailboxEvent);
         }
+        Optional.ofNullable(idleEventListener.get())
+            .ifPresent(Throwing.<EventListener>consumer(listener -> listener.event(event)).sneakyThrow());
     }
 
     private void mailboxEvent(MailboxEvent mailboxEvent) {

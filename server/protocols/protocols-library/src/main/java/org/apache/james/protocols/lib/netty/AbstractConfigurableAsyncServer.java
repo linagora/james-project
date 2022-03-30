@@ -26,7 +26,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Executor;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -43,22 +42,24 @@ import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.lifecycle.api.Configurable;
+import org.apache.james.protocols.api.ClientAuth;
 import org.apache.james.protocols.api.Encryption;
 import org.apache.james.protocols.lib.jmx.ServerMBean;
 import org.apache.james.protocols.netty.AbstractAsyncServer;
+import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
 import org.apache.james.protocols.netty.ChannelHandlerFactory;
-import org.apache.james.util.concurrent.JMXEnabledThreadPoolExecutor;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.util.HashedWheelTimer;
+import org.apache.james.util.concurrent.NamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import nl.altindag.ssl.SSLFactory;
 import nl.altindag.ssl.util.PemUtils;
+
 
 /**
  * Abstract base class for Servers for all James Servers
@@ -82,17 +83,8 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     public static final String HELLO_NAME = "helloName";
 
     public static final int DEFAULT_MAX_EXECUTOR_COUNT = 16;
-    
-    // By default, use the Sun X509 algorithm that comes with the Sun JCE
-    // provider for SSL
-    // certificates
-    private static final String defaultX509algorithm = "SunX509";
-
-    // The X.509 certificate algorithm
-    private String x509Algorithm = defaultX509algorithm;
 
     private FileSystem fileSystem;
-    private HashedWheelTimer timer;
 
     private boolean enabled;
 
@@ -100,6 +92,8 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
     private boolean useStartTLS;
     private boolean useSSL;
+
+    private ClientAuth clientAuth;
 
     protected int connectionLimit;
 
@@ -112,18 +106,20 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
     private String secret;
 
+    private String truststore;
+    private String truststoreType;
+    private char[] truststoreSecret;
+
     protected Encryption encryption;
 
-    protected String jmxName;
 
     private String[] enabledCipherSuites;
 
     private final ConnectionCountHandler countHandler = new ConnectionCountHandler();
 
-    private ExecutionHandler executionHandler = null;
     private ChannelHandlerFactory frameHandlerFactory;
 
-    private int maxExecutorThreads;
+    private EventExecutorGroup executorGroup;
 
     private MBeanServer mbeanServer;
 
@@ -132,11 +128,6 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
     @Inject
     public final void setFileSystem(FileSystem filesystem) {
         this.fileSystem = filesystem;
-    }
-
-    @Inject
-    public void setHashWheelTimer(HashedWheelTimer timer) {
-        this.timer = timer;
     }
 
     protected void registerMBean() {
@@ -199,8 +190,8 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         int ioWorker = config.getInt("ioWorkerCount", DEFAULT_IO_WORKER_COUNT);
         setIoWorkerCount(ioWorker);
 
-        maxExecutorThreads = config.getInt("maxExecutorCount", DEFAULT_MAX_EXECUTOR_COUNT);
-
+        executorGroup = new DefaultEventExecutorGroup(config.getInt("maxExecutorCount", DEFAULT_MAX_EXECUTOR_COUNT),
+            NamedThreadFactory.withName(jmxName));
         
         configureHelloName(config);
 
@@ -245,6 +236,12 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         useStartTLS = config.getBoolean("tls.[@startTLS]", false);
         useSSL = config.getBoolean("tls.[@socketTLS]", false);
 
+        if (config.getProperty("tls.clientAuth") != null || config.getKeys("tls.clientAuth").hasNext()) {
+            clientAuth = ClientAuth.NEED;
+        } else {
+            clientAuth = ClientAuth.NONE;
+        }
+
         if (useSSL && useStartTLS) {
             throw new ConfigurationException("startTLS is only supported when using plain sockets");
         }
@@ -259,11 +256,19 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
                 throw new ConfigurationException("keystore or (privateKey and certificates) needs to get configured");
             }
             secret = config.getString("tls.secret", null);
-            x509Algorithm = config.getString("tls.algorithm", defaultX509algorithm);
+
+            truststore = config.getString("tls.clientAuth.truststore", null);
+            truststoreType = config.getString("tls.clientAuth.truststoreType", "JKS");
+            truststoreSecret = config.getString("tls.clientAuth.truststoreSecret", "").toCharArray();
+            LOGGER.info("TLS enabled with auth {} using truststore {}", clientAuth, truststore);
         }
 
         doConfigure(config);
 
+    }
+
+    protected EventExecutorGroup getExecutorGroup() {
+        return executorGroup;
     }
 
     @PostConstruct
@@ -273,7 +278,6 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
             buildSSLContext();
             preInit();
-            executionHandler = createExecutionHandler();
             frameHandlerFactory = createFrameHandlerFactory();
             bind();
             port = retrieveFirstBindedPort();
@@ -309,10 +313,7 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         if (isEnabled()) {
             unbind();
             postDestroy();
-
-            if (executionHandler != null) {
-                executionHandler.releaseExternalResources();
-            }
+            executorGroup.shutdownGracefully();
 
             unregisterMBean();
         }
@@ -421,12 +422,22 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
 
                     sslFactoryBuilder.withIdentityMaterial(keyManager);
                 }
+
+                if (clientAuth != null) {
+                    if (truststore != null) {
+                        sslFactoryBuilder.withTrustMaterial(
+                            fileSystem.getFile(truststore).toPath(),
+                            truststoreSecret,
+                            truststoreType);
+                    }
+                }
+
                 SSLContext context = sslFactoryBuilder.build().getSslContext();
 
                 if (useStartTLS) {
-                    encryption = Encryption.createStartTls(context, enabledCipherSuites);
+                    encryption = Encryption.createStartTls(context, enabledCipherSuites, clientAuth);
                 } else {
-                    encryption = Encryption.createTls(context, enabledCipherSuites);
+                    encryption = Encryption.createTls(context, enabledCipherSuites, clientAuth);
                 }
             } finally {
                 if (fis != null) {
@@ -468,19 +479,6 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         return connectionLimit;
     }
 
-    protected String getThreadPoolJMXPath() {
-        return "org.apache.james:type=server,name=" + jmxName + ",sub-type=threadpool";
-    }
-    
-    @Override
-    protected Executor createBossExecutor() {
-        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), getDefaultJMXName() + "-boss");
-    }
-
-    @Override
-    protected Executor createWorkerExecutor() {
-        return JMXEnabledThreadPoolExecutor.newCachedThreadPool(getThreadPoolJMXPath(), getDefaultJMXName() + "-worker");
-    }
 
     /**
      * Return the default name of the the server in JMX if none is configured
@@ -489,10 +487,6 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
      * @return defaultJmxName
      */
     protected abstract String getDefaultJMXName();
-
-    protected String[] getEnabledCipherSuites() {
-        return enabledCipherSuites;
-    }
 
     @Override
     public boolean isStarted() {
@@ -548,56 +542,24 @@ public abstract class AbstractConfigurableAsyncServer extends AbstractAsyncServe
         super.configureBootstrap(bootstrap);
         
         // enable tcp keep-alives
-        bootstrap.setOption("child.keepAlive", true);
+        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
     }
     
-    /**
-     * Create a new {@link ExecutionHandler} which is used to execute IO-Bound handlers
-     * 
-     * @return ehandler
-     */
-    protected ExecutionHandler createExecutionHandler() {
-        return new ExecutionHandler(new JMXEnabledOrderedMemoryAwareThreadPoolExecutor(maxExecutorThreads, 0, 0, getThreadPoolJMXPath(), getDefaultJMXName() + "-executor"));
-    }
-
     protected abstract ChannelHandlerFactory createFrameHandlerFactory();
 
-    /**
-     * Return the {@link ExecutionHandler} or null if non should be used. Be sure you call {@link #createExecutionHandler()} before
-     * 
-     * @return ehandler
-     */
-    protected ExecutionHandler getExecutionHandler() {
-        return executionHandler;
-    }
-    
     protected ChannelHandlerFactory getFrameHandlerFactory() {
         return frameHandlerFactory;
     }
 
-    protected abstract ChannelUpstreamHandler createCoreHandler();
+    protected abstract ChannelInboundHandlerAdapter createCoreHandler();
     
     @Override
-    protected ChannelPipelineFactory createPipelineFactory(ChannelGroup group) {
-        return new AbstractExecutorAwareChannelPipelineFactory(getTimeout(), connectionLimit, connPerIP, group,
-            enabledCipherSuites, getExecutionHandler(), getFrameHandlerFactory(), timer) {
-            @Override
-            protected SSLContext getSSLContext() {
-                if (getEncryption() == null) {
-                    return null;
-                } else {
-                    return getEncryption().getContext();
-                }
-            }
+    protected AbstractChannelPipelineFactory createPipelineFactory() {
+        return new AbstractExecutorAwareChannelPipelineFactory(getTimeout(), connectionLimit, connPerIP,
+            getEncryption(), getFrameHandlerFactory(), getExecutorGroup()) {
 
             @Override
-            protected boolean isSSLSocket() {
-                return getEncryption() != null && !getEncryption().isStartTLS();
-            }
-
-
-            @Override
-            protected ChannelUpstreamHandler createHandler() {
+            protected ChannelInboundHandlerAdapter createHandler() {
                 return AbstractConfigurableAsyncServer.this.createCoreHandler();
 
             }

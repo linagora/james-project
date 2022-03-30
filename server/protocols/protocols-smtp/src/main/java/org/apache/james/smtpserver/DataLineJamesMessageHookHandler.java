@@ -84,7 +84,8 @@ public class DataLineJamesMessageHookHandler implements DataLineFilter, Extensib
             // 46 is "."
             // Stream terminated
             if (line.length == 3 && line[0] == 46) {
-                try (Closeable closeable = SMTPMDCContextFactory.forSession(session).build()) {
+                String mailName = MailImpl.getId();
+                try (Closeable closeable = SMTPMDCContextFactory.forSession(session).addToContext("mail", mailName).build()) {
                     out.flush();
                     out.close();
 
@@ -92,7 +93,7 @@ public class DataLineJamesMessageHookHandler implements DataLineFilter, Extensib
                     MaybeSender sender = session.getAttachment(SMTPSession.SENDER, State.Transaction).orElse(MaybeSender.nullSender());
 
                     MailImpl mail = MailImpl.builder()
-                        .name(MailImpl.getId())
+                        .name(mailName)
                         .sender(sender)
                         .addRecipients(recipientCollection)
                         .build();
@@ -170,11 +171,9 @@ public class DataLineJamesMessageHookHandler implements DataLineFilter, Extensib
                 return executeJamesMessageHooks(session, mail);
 
             } finally {
-                // Dispose the mail object and remove it
-                if (mail != null) {
-                    LifecycleUtil.dispose(mail);
-                    mail = null;
-                }
+                // Dispose the mail object and remove it\
+                LifecycleUtil.dispose(mail);
+                mail = null;
                 // do the clean up
                 session.resetState();
             }

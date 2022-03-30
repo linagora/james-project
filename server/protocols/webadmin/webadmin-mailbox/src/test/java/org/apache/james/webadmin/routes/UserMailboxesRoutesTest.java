@@ -173,7 +173,7 @@ class UserMailboxesRoutesTest {
                     taskManager,
                     ImmutableSet.of(new UserMailboxesRoutes.UserReIndexingTaskRegistration(reIndexer))),
                 new TasksRoutes(taskManager, new JsonTransformer(),
-                    DTOConverter.of(WebAdminUserReindexingTaskAdditionalInformationDTO.serializationModule(mailboxIdFactory),
+                    DTOConverter.of(WebAdminUserReindexingTaskAdditionalInformationDTO.serializationModule(),
                         ClearMailboxContentTaskAdditionalInformationDTO.SERIALIZATION_MODULE)))
             .start();
 
@@ -1444,8 +1444,7 @@ class UserMailboxesRoutesTest {
     }
 
     @Nested
-    class UserReprocessing {
-        static final int BATCH_SIZE = 1;
+    class UserReIndexing {
         static final int SEARCH_SIZE = 1;
 
         @RegisterExtension
@@ -1961,7 +1960,7 @@ class UserMailboxesRoutesTest {
                     .get(taskId + "/await");
 
                 assertThat(mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount())
-                    .isEqualTo(0);
+                    .isZero();
             }
 
             @Test

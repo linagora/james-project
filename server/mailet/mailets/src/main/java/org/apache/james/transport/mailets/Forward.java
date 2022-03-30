@@ -36,7 +36,6 @@ import org.apache.james.transport.mailets.redirect.ProcessRedirectNotify;
 import org.apache.james.transport.mailets.redirect.RedirectMailetInitParameters;
 import org.apache.james.transport.mailets.redirect.RedirectNotify;
 import org.apache.james.transport.mailets.redirect.TypeCode;
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
 import org.apache.james.transport.util.RecipientsUtils;
 import org.apache.james.transport.util.ReplyToUtils;
 import org.apache.james.transport.util.SenderUtils;
@@ -115,7 +114,7 @@ public class Forward extends GenericMailet implements RedirectNotify {
 
     @Override
     public InitParameters getInitParameters() {
-        return RedirectMailetInitParameters.from(this, Optional.of(TypeCode.NONE), Optional.empty());
+        return RedirectMailetInitParameters.from(this, Optional.of(TypeCode.NONE));
     }
 
     @Override
@@ -138,10 +137,8 @@ public class Forward extends GenericMailet implements RedirectNotify {
         // allowedInitParameters
         checkInitParameters(getAllowedInitParameters());
 
-        if (getInitParameters().isStatic()) {
-            if (getInitParameters().isDebug()) {
-                LOGGER.debug(getInitParameters().asString());
-            }
+        if (getInitParameters().isStatic() && getInitParameters().isDebug()) {
+            LOGGER.debug(getInitParameters().asString());
         }
     }
 
@@ -237,11 +234,6 @@ public class Forward extends GenericMailet implements RedirectNotify {
     @Override
     public Optional<String> getSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
         return Optional.empty();
-    }
-
-    @Override
-    public MimeMessageModifier getMimeMessageModifier(Mail newMail, Mail originalMail) throws MessagingException {
-        return new MimeMessageModifier(newMail.getMessage());
     }
 
     @Override

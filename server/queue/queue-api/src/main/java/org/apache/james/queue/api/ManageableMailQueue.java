@@ -22,6 +22,8 @@ import java.time.ZonedDateTime;
 import java.util.Iterator;
 import java.util.Optional;
 
+import org.apache.james.lifecycle.api.LifecycleUtil;
+import org.apache.james.mime4j.dom.Disposable;
 import org.apache.mailet.Mail;
 
 /**
@@ -59,7 +61,11 @@ public interface ManageableMailQueue extends MailQueue {
 
     /**
      * Remove all mails from the queue that match
-     * 
+     *
+     * The intent of remove is to allow operators to clear some emails from the mailqueue
+     * in an emergency situation such as a DOS attempt or a configuration error which creates a mail loop
+     * or a bounce loop
+     *
      * @param type
      * @param value
      * @return count the count of all removed mails
@@ -101,7 +107,7 @@ public interface ManageableMailQueue extends MailQueue {
     /**
      * Represent a View over a queue {@link MailQueue.MailQueueItem}
      */
-    class DefaultMailQueueItemView implements MailQueueItemView {
+    class DefaultMailQueueItemView implements MailQueueItemView, Disposable {
 
         private final Mail mail;
         private final Optional<ZonedDateTime> nextDelivery;
@@ -125,6 +131,11 @@ public interface ManageableMailQueue extends MailQueue {
 
         public Optional<ZonedDateTime> getNextDelivery() {
             return nextDelivery;
+        }
+
+        @Override
+        public void dispose() {
+            LifecycleUtil.dispose(mail);
         }
     }
 

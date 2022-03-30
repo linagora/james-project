@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-server</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -71,9 +71,9 @@
         <module>protocols/webadmin-mailqueue</module>
         <module>protocols/webadmin-mailrepository</module>
         <module>protocols/webadmin-rabbitmq-mailqueue</module>
-        <module>protocols/webadmin-swagger</module>
         <module>queue/activemq</module>
         <module>queue/memory</module>
+        <module>queue/pulsar</module>
         <module>queue/rabbitmq</module>
         <module>sieve-file</module>
         <module>sieve-jpa</module>
@@ -242,11 +242,6 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>james-server-guice-webadmin-swagger</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-jmap-rfc-8621</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -274,6 +269,11 @@
             <dependency>
                 <groupId>${james.groupId}</groupId>
                 <artifactId>queue-memory-guice</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>queue-pulsar-guice</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

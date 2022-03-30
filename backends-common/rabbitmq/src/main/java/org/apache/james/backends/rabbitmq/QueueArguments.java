@@ -30,12 +30,17 @@ public class QueueArguments {
             return this;
         }
 
+        public Builder queueTTL(long queueTTL) {
+            arguments.put("x-expires", queueTTL);
+            return this;
+        }
+
         public ImmutableMap<String, Object> build() {
             return arguments.build();
         }
     }
 
-    public static ImmutableMap<String, Object> NO_ARGUMENTS = ImmutableMap.of();
+    public static final ImmutableMap<String, Object> NO_ARGUMENTS = ImmutableMap.of();
 
     public static Builder builder() {
         return new Builder();

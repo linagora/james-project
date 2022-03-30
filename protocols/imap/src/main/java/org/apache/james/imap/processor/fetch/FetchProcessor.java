@@ -30,7 +30,6 @@ import org.apache.james.imap.api.message.FetchData;
 import org.apache.james.imap.api.message.FetchData.Item;
 import org.apache.james.imap.api.message.IdRange;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
-import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.api.process.SelectedMailbox;
 import org.apache.james.imap.message.request.FetchRequest;
@@ -61,9 +60,9 @@ import reactor.core.publisher.Flux;
 public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
     private static final Logger LOGGER = LoggerFactory.getLogger(FetchProcessor.class);
 
-    public FetchProcessor(ImapProcessor next, MailboxManager mailboxManager, StatusResponseFactory factory,
+    public FetchProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
             MetricFactory metricFactory) {
-        super(FetchRequest.class, next, mailboxManager, factory, metricFactory);
+        super(FetchRequest.class, mailboxManager, factory, metricFactory);
     }
 
     @Override
@@ -112,7 +111,7 @@ public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
             if (vanished) {
                 // TODO: From the QRESYNC RFC it seems ok to send the VANISHED responses after the FETCH Responses. 
                 //       If we do so we could prolly save one mailbox access which should give use some more speed up
-                respondVanished(session.getSelected(), ranges, changedSince, metaData.get(), responder);
+                respondVanished(session.getSelected(), ranges, responder);
             }
             processMessageRanges(session, mailbox, ranges, fetch, useUids, mailboxSession, responder);
 

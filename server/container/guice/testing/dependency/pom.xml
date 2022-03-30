@@ -22,14 +22,14 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-server-guice-testing</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>james-server-guice-custom-mailets-dependency</artifactId>
 
-    <name>Apache James :: Server :: Guice :: Mailet :: Custom testing mailets :: dependency</name>
-    <description>Dependency not part of James classpath that custom mailets can depends on</description>
+    <name>Apache James :: Server :: Guice :: Mailet :: Custom testing mailets :: Dependency</name>
+    <description>Dependency not part of James classpath that custom mailets can depend on</description>
 
     <dependencies>
         <dependency>

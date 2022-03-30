@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.james</groupId>
         <artifactId>james-server</artifactId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -135,7 +135,6 @@
         <dependency>
             <groupId>eu.timepit</groupId>
             <artifactId>refined_${scala.base}</artifactId>
-            <version>0.9.27</version>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>
@@ -154,6 +153,25 @@
             <groupId>net.javacrumbs.json-unit</groupId>
             <artifactId>json-unit-assertj</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mock-server</groupId>
+            <artifactId>mockserver-netty</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-common</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-handler</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -176,7 +194,7 @@
         <dependency>
             <groupId>org.typelevel</groupId>
             <artifactId>cats-core_${scala.base}</artifactId>
-            <version>2.6.1</version>
+            <version>2.7.0</version>
         </dependency>
     </dependencies>
     <build>
@@ -191,7 +209,7 @@
             </plugin>
             <plugin>
                 <groupId>io.github.evis</groupId>
-                <artifactId>scalafix-maven-plugin</artifactId>
+                <artifactId>scalafix-maven-plugin_2.13</artifactId>
                 <configuration>
                     <config>${project.parent.parent.basedir}/.scalafix.conf</config>
                 </configuration>

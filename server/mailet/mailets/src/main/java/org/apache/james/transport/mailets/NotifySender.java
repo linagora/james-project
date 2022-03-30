@@ -36,7 +36,6 @@ import org.apache.james.transport.mailets.redirect.NotifyMailetsMessage;
 import org.apache.james.transport.mailets.redirect.ProcessRedirectNotify;
 import org.apache.james.transport.mailets.redirect.RedirectNotify;
 import org.apache.james.transport.mailets.redirect.SpecialAddress;
-import org.apache.james.transport.mailets.utils.MimeMessageModifier;
 import org.apache.james.transport.mailets.utils.MimeMessageUtils;
 import org.apache.james.transport.util.RecipientsUtils;
 import org.apache.james.transport.util.ReplyToUtils;
@@ -175,10 +174,9 @@ public class NotifySender extends GenericMailet implements RedirectNotify {
         // allowedInitParameters
         checkInitParameters(getAllowedInitParameters());
 
-        if (getInitParameters().isStatic()) {
-            if (getInitParameters().isDebug()) {
-                LOGGER.debug(getInitParameters().asString());
-            }
+        if (getInitParameters().isStatic()
+                && getInitParameters().isDebug()) {
+            LOGGER.debug(getInitParameters().asString());
         }
     }
 
@@ -204,11 +202,17 @@ public class NotifySender extends GenericMailet implements RedirectNotify {
                     .allowedSpecials(ALLOWED_SPECIALS)
                     .getSpecialAddress(to.get());
             if (specialAddress.isPresent()) {
-                return ImmutableList.of(specialAddress.get().toInternetAddress());
+                return specialAddress
+                    .flatMap(MailAddress::toInternetAddress)
+                    .map(ImmutableList::of)
+                    .orElse(ImmutableList.of());
             }
             LOGGER.info("\"to\" parameter ignored, set to sender");
         }
-        return ImmutableList.of(SpecialAddress.SENDER.toInternetAddress());
+        return SpecialAddress.SENDER
+            .toInternetAddress()
+            .map(ImmutableList::of)
+            .orElse(ImmutableList.of());
     }
 
     @Override
@@ -251,11 +255,6 @@ public class NotifySender extends GenericMailet implements RedirectNotify {
     @Override
     public Optional<String> getSubjectPrefix(Mail newMail, String subjectPrefix, Mail originalMail) throws MessagingException {
         return new MimeMessageUtils(originalMail.getMessage()).subjectWithPrefix(subjectPrefix);
-    }
-
-    @Override
-    public MimeMessageModifier getMimeMessageModifier(Mail newMail, Mail originalMail) throws MessagingException {
-        return new MimeMessageModifier(originalMail.getMessage());
     }
 
     @Override
