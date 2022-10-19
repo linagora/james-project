@@ -94,11 +94,13 @@ public class S3BlobStoreDAO implements BlobStoreDAO, Startable, Closeable {
     private final BucketNameResolver bucketNameResolver;
     private final S3AsyncClient client;
     private final BlobId.Factory blobIdFactory;
+    private final S3BlobStoreConfiguration configuration;
 
     @Inject
     S3BlobStoreDAO(S3BlobStoreConfiguration configuration, BlobId.Factory blobIdFactory) {
         this.blobIdFactory = blobIdFactory;
-        AwsS3AuthConfiguration authConfiguration = configuration.getSpecificAuthConfiguration();
+        this.configuration = configuration;
+        AwsS3AuthConfiguration authConfiguration = this.configuration.getSpecificAuthConfiguration();
 
         S3Configuration pathStyleAccess = S3Configuration.builder()
             .pathStyleAccessEnabled(true)
@@ -107,10 +109,7 @@ public class S3BlobStoreDAO implements BlobStoreDAO, Startable, Closeable {
         client = S3AsyncClient.builder()
             .credentialsProvider(StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(authConfiguration.getAccessKeyId(), authConfiguration.getSecretKey())))
-            .httpClientBuilder(NettyNioAsyncHttpClient.builder()
-                .tlsTrustManagersProvider(getTrustManagerProvider(configuration.getSpecificAuthConfiguration()))
-                .maxConcurrency(configuration.getHttpConcurrency())
-                .maxPendingConnectionAcquires(10_000))
+            .httpClientBuilder(httpClientBuilder(configuration))
             .endpointOverride(authConfiguration.getEndpoint())
             .region(configuration.getRegion().asAws())
             .serviceConfiguration(pathStyleAccess)
@@ -120,6 +119,17 @@ public class S3BlobStoreDAO implements BlobStoreDAO, Startable, Closeable {
             .prefix(configuration.getBucketPrefix())
             .namespace(configuration.getNamespace())
             .build();
+    }
+
+    private NettyNioAsyncHttpClient.Builder httpClientBuilder(S3BlobStoreConfiguration configuration) {
+        NettyNioAsyncHttpClient.Builder result = NettyNioAsyncHttpClient.builder()
+            .tlsTrustManagersProvider(getTrustManagerProvider(configuration.getSpecificAuthConfiguration()))
+            .maxConcurrency(configuration.getHttpConcurrency())
+            .maxPendingConnectionAcquires(10_000);
+        configuration.getWriteTimeout().ifPresent(result::writeTimeout);
+        configuration.getReadTimeout().ifPresent(result::readTimeout);
+        configuration.getConnectionTimeout().ifPresent(result::connectionTimeout);
+        return result;
     }
 
     private TlsTrustManagersProvider getTrustManagerProvider(AwsS3AuthConfiguration configuration) {
@@ -159,17 +169,21 @@ public class S3BlobStoreDAO implements BlobStoreDAO, Startable, Closeable {
     public InputStream read(BucketName bucketName, BlobId blobId) throws ObjectStoreIOException, ObjectNotFoundException {
         BucketName resolvedBucketName = bucketNameResolver.resolve(bucketName);
 
-
         return ReactorUtils.toInputStream(getObject(resolvedBucketName, blobId)
             .onErrorMap(NoSuchBucketException.class, e -> new ObjectNotFoundException("Bucket not found " + resolvedBucketName.asString(), e))
-            .onErrorMap(NoSuchKeyException.class, e -> new ObjectNotFoundException("Blob not found " + resolvedBucketName.asString(), e))
+            .onErrorMap(NoSuchKeyException.class, e -> new ObjectNotFoundException("Blob not found " + blobId.asString() + " in bucket " + resolvedBucketName.asString(), e))
             .block()
             .flux);
     }
 
     @Override
     public Publisher<InputStream> readReactive(BucketName bucketName, BlobId blobId) {
-        return Mono.just(read(bucketName, blobId));
+        BucketName resolvedBucketName = bucketNameResolver.resolve(bucketName);
+
+        return getObject(resolvedBucketName, blobId)
+            .onErrorMap(NoSuchBucketException.class, e -> new ObjectNotFoundException("Bucket not found " + resolvedBucketName.asString(), e))
+            .onErrorMap(NoSuchKeyException.class, e -> new ObjectNotFoundException("Blob not found " + blobId.asString() + " in bucket " + resolvedBucketName.asString(), e))
+            .map(res -> ReactorUtils.toInputStream(res.flux));
     }
 
     private static class FluxResponse {
@@ -207,7 +221,8 @@ public class S3BlobStoreDAO implements BlobStoreDAO, Startable, Closeable {
                         response.flux = Flux.from(publisher);
                         response.supportingCompletableFuture.complete(response);
                     }
-                }));
+                }))
+            .switchIfEmpty(Mono.error(() -> new ObjectStoreIOException("Request was unexpectedly canceled, no GetObjectResponse")));
     }
 
 
@@ -218,11 +233,12 @@ public class S3BlobStoreDAO implements BlobStoreDAO, Startable, Closeable {
         return Mono.fromFuture(() ->
                 client.getObject(
                     builder -> builder.bucket(resolvedBucketName.asString()).key(blobId.asString()),
-                    new MinimalCopyBytesResponseTransformer()))
+                    new MinimalCopyBytesResponseTransformer(configuration, blobId)))
             .onErrorMap(NoSuchBucketException.class, e -> new ObjectNotFoundException("Bucket not found " + resolvedBucketName.asString(), e))
-            .onErrorMap(NoSuchKeyException.class, e -> new ObjectNotFoundException("Blob not found " + resolvedBucketName.asString(), e))
+            .onErrorMap(NoSuchKeyException.class, e -> new ObjectNotFoundException("Blob not found " + blobId.asString() + " in bucket " + resolvedBucketName.asString(), e))
             .publishOn(Schedulers.parallel())
-            .map(BytesWrapper::asByteArray);
+            .map(BytesWrapper::asByteArrayUnsafe)
+            .onErrorMap(e -> e.getCause() instanceof OutOfMemoryError, Throwable::getCause);
     }
 
     @Override

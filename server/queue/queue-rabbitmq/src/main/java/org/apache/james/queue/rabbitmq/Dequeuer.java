@@ -32,6 +32,7 @@ import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.queue.rabbitmq.view.api.DeleteCondition;
 import org.apache.james.queue.rabbitmq.view.api.MailQueueView;
 import org.apache.james.queue.rabbitmq.view.cassandra.CassandraMailQueueBrowser;
+import org.apache.james.util.ReactorUtils;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,11 +52,11 @@ class Dequeuer {
 
     private static class RabbitMQMailQueueItem implements MailQueue.MailQueueItem {
 
-        private final Consumer<Boolean> ack;
+        private final Consumer<CompletionStatus> ack;
         private final EnqueueId enqueueId;
         private final Mail mail;
 
-        private RabbitMQMailQueueItem(Consumer<Boolean> ack, MailWithEnqueueId mailWithEnqueueId) {
+        private RabbitMQMailQueueItem(Consumer<CompletionStatus> ack, MailWithEnqueueId mailWithEnqueueId) {
             this.ack = ack;
             this.enqueueId = mailWithEnqueueId.getEnqueueId();
             this.mail = mailWithEnqueueId.getMail();
@@ -71,7 +72,7 @@ class Dequeuer {
         }
 
         @Override
-        public void done(boolean success) {
+        public void done(CompletionStatus success) {
             ack.accept(success);
         }
 
@@ -108,29 +109,46 @@ class Dequeuer {
 
     private Mono<RabbitMQMailQueueItem> filterIfDeleted(RabbitMQMailQueueItem item) {
         return mailQueueView.isPresent(item.getEnqueueId())
-            .handle((isPresent, sink) -> {
+            .<RabbitMQMailQueueItem>handle((isPresent, sink) -> {
                 if (isPresent) {
                     sink.next(item);
                 } else {
-                    item.done(true);
+                    item.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
                     sink.complete();
                 }
-            });
+            })
+            .onErrorResume(e -> Mono.fromRunnable(() -> {
+                LOGGER.error("Failure to see if {} was deleted", item.enqueueId.asUUID(), e);
+                item.done(MailQueue.MailQueueItem.CompletionStatus.RETRY);
+            })
+                .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
+                .then(Mono.error(e)));
     }
 
     private Mono<RabbitMQMailQueueItem> loadItem(AcknowledgableDelivery response) {
         return loadMail(response)
-            .map(mailWithEnqueueId -> new RabbitMQMailQueueItem(ack(response, mailWithEnqueueId), mailWithEnqueueId));
+            .map(mailWithEnqueueId -> new RabbitMQMailQueueItem(ack(response, mailWithEnqueueId), mailWithEnqueueId))
+            .onErrorResume(e -> {
+                LOGGER.error("Failed to load email, requeue corresponding message", e);
+                response.nack(REQUEUE);
+                return Mono.empty();
+            });
     }
 
-    private ThrowingConsumer<Boolean> ack(AcknowledgableDelivery response, MailWithEnqueueId mailWithEnqueueId) {
+    private ThrowingConsumer<MailQueue.MailQueueItem.CompletionStatus> ack(AcknowledgableDelivery response, MailWithEnqueueId mailWithEnqueueId) {
         return success -> {
-            if (success) {
-                dequeueMetric.increment();
-                response.ack();
-                mailQueueView.delete(DeleteCondition.withEnqueueId(mailWithEnqueueId.getEnqueueId(), mailWithEnqueueId.getBlobIds()));
-            } else {
-                response.nack(REQUEUE);
+            switch (success) {
+                case SUCCESS:
+                    dequeueMetric.increment();
+                    response.ack();
+                    mailQueueView.delete(DeleteCondition.withEnqueueId(mailWithEnqueueId.getEnqueueId(), mailWithEnqueueId.getBlobIds()));
+                    break;
+                case RETRY:
+                    response.nack(REQUEUE);
+                    break;
+                case REJECT:
+                    response.nack(!REQUEUE);
+                    break;
             }
         };
     }

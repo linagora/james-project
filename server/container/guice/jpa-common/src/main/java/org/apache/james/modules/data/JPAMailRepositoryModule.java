@@ -22,7 +22,7 @@ package org.apache.james.modules.data;
 import org.apache.commons.configuration2.BaseHierarchicalConfiguration;
 import org.apache.james.mailrepository.api.MailRepositoryUrlStore;
 import org.apache.james.mailrepository.api.Protocol;
-import org.apache.james.mailrepository.file.FileMailRepository;
+import org.apache.james.mailrepository.jpa.JPAMailRepository;
 import org.apache.james.mailrepository.jpa.JPAMailRepositoryUrlStore;
 import org.apache.james.mailrepository.memory.MailRepositoryStoreConfiguration;
 
@@ -40,8 +40,8 @@ public class JPAMailRepositoryModule extends AbstractModule {
 
         bind(MailRepositoryStoreConfiguration.Item.class)
             .toProvider(() -> new MailRepositoryStoreConfiguration.Item(
-                ImmutableList.of(new Protocol("file")),
-                FileMailRepository.class.getName(),
+                ImmutableList.of(new Protocol("jpa")),
+                JPAMailRepository.class.getName(),
                 new BaseHierarchicalConfiguration()));
     }
 }

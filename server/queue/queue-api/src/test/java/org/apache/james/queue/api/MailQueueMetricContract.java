@@ -46,6 +46,7 @@ import com.github.fge.lambdas.Throwing;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @ExtendWith(MailQueueMetricExtension.class)
 public interface MailQueueMetricContract extends MailQueueContract {
@@ -66,9 +67,9 @@ public interface MailQueueMetricContract extends MailQueueContract {
         Flux.from(getMailQueue().deQueue())
             .take(times)
             .flatMap(x -> Mono.fromCallable(() -> {
-                x.done(true);
+                x.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
                 return x;
-            }))
+            }).subscribeOn(Schedulers.elastic()))
             .blockLast();
     }
 

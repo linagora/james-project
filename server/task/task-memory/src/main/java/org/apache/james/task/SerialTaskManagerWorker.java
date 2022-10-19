@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.MDCStructuredLogger;
+import org.apache.james.util.ReactorUtils;
 import org.apache.james.util.concurrent.NamedThreadFactory;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -68,7 +70,7 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
     @Override
     public Mono<Task.Result> executeTask(TaskWithId taskWithId) {
         if (!cancelledTasks.remove(taskWithId.getId())) {
-            Mono<Task.Result> taskMono = Mono.fromCallable(() -> runWithMdc(taskWithId, listener)).subscribeOn(taskExecutor);
+            Mono<Task.Result> taskMono = runWithMdc(taskWithId, listener).subscribeOn(taskExecutor);
             CompletableFuture<Task.Result> future = taskMono.toFuture();
             runningTask.set(Tuples.of(taskWithId.getId(), future));
 
@@ -76,38 +78,37 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
                 () -> pollAdditionalInformation(taskWithId).subscribe(),
                 ignored -> Mono.fromFuture(future)
                     .onErrorResume(exception -> Mono.from(handleExecutionError(taskWithId, listener, exception))
-                            .thenReturn(Task.Result.PARTIAL)),
+                        .thenReturn(Task.Result.PARTIAL)),
                 Disposable::dispose);
         } else {
-            return Mono.from(listener.cancelled(taskWithId.getId(), taskWithId.getTask().details()))
+            return Mono.from(listener.cancelled(taskWithId.getId(), taskWithId.getTask().detailsReactive()))
                 .then(Mono.empty());
         }
     }
 
     private Publisher<Void> handleExecutionError(TaskWithId taskWithId, Listener listener, Throwable exception) {
         if (exception instanceof CancellationException) {
-            return listener.cancelled(taskWithId.getId(), taskWithId.getTask().details());
+            return listener.cancelled(taskWithId.getId(), taskWithId.getTask().detailsReactive());
         } else {
-            return listener.failed(taskWithId.getId(), taskWithId.getTask().details(), exception);
+            return listener.failed(taskWithId.getId(), taskWithId.getTask().detailsReactive(), exception);
         }
     }
 
     private Flux<TaskExecutionDetails.AdditionalInformation> pollAdditionalInformation(TaskWithId taskWithId) {
-        return Mono.fromCallable(() -> taskWithId.getTask().details())
+        return Mono.from(taskWithId.getTask().detailsReactive())
             .delayElement(pollingInterval, Schedulers.parallel())
             .repeat()
             .handle(publishIfPresent())
-            .flatMap(information -> Mono.from(listener.updated(taskWithId.getId(), information)).thenReturn(information), DEFAULT_CONCURRENCY);
+            .flatMap(information -> Mono.from(listener.updated(taskWithId.getId(), Mono.just(information))).thenReturn(information), DEFAULT_CONCURRENCY);
     }
 
 
-    private Task.Result runWithMdc(TaskWithId taskWithId, Listener listener) {
-        return MDCBuilder.withMdc(
-            MDCBuilder.create()
-                .addToContext(Task.TASK_ID, taskWithId.getId().asString())
-                .addToContext(Task.TASK_TYPE, taskWithId.getTask().type().asString())
-                .addToContext(Task.TASK_DETAILS, taskWithId.getTask().details().toString()),
-            () -> run(taskWithId, listener).block());
+    private Mono<Task.Result> runWithMdc(TaskWithId taskWithId, Listener listener) {
+        return run(taskWithId, listener)
+            .contextWrite(ReactorUtils.context("task",
+                MDCBuilder.create()
+                    .addToContext(Task.TASK_ID, taskWithId.getId().asString())
+                    .addToContext(Task.TASK_TYPE, taskWithId.getTask().type().asString())));
     }
 
     private Mono<Task.Result> run(TaskWithId taskWithId, Listener listener) {
@@ -115,8 +116,13 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
             .then(runTask(taskWithId, listener))
             .onErrorResume(this::isCausedByInterruptedException, e -> cancelled(taskWithId, listener))
             .onErrorResume(Exception.class, e -> {
-                LOGGER.error("Error while running task {}", taskWithId.getId(), e);
-                return Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().details(), e)).thenReturn(Task.Result.PARTIAL);
+                MDCStructuredLogger.forLogger(LOGGER)
+                    .field("taskId", taskWithId.getId().asString())
+                    .field("taskType", taskWithId.getTask().type().asString())
+                    .log(logger -> logger.error("Error while running task {}", taskWithId.getId(), e));
+
+                return Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().detailsReactive(), e))
+                    .thenReturn(Task.Result.PARTIAL);
             });
     }
 
@@ -125,24 +131,29 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
             return true;
         }
         return Stream.iterate(e, t -> t.getCause() != null, Throwable::getCause)
-            .anyMatch(t -> t instanceof InterruptedException);
+            .anyMatch(InterruptedException.class::isInstance);
     }
 
     private Mono<Task.Result> cancelled(TaskWithId taskWithId, Listener listener) {
         TaskId id = taskWithId.getId();
-        Optional<TaskExecutionDetails.AdditionalInformation> details = taskWithId.getTask().details();
-
-        return Mono.from(listener.cancelled(id, details))
+        return Mono.from(listener.cancelled(id, taskWithId.getTask().detailsReactive()))
             .thenReturn(Task.Result.PARTIAL);
     }
 
     private Mono<Task.Result> runTask(TaskWithId taskWithId, Listener listener) {
         return Mono.fromCallable(() -> taskWithId.getTask().run())
+            .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
             .doOnNext(result -> result
-                .onComplete(any -> Mono.from(listener.completed(taskWithId.getId(), result, taskWithId.getTask().details())).block())
+                .onComplete(any -> Mono.from(listener.completed(taskWithId.getId(), result, taskWithId.getTask().detailsReactive()))
+                    .subscribe())
                 .onFailure(() -> {
-                    LOGGER.error("Task was partially performed. Check logs for more details. Taskid : " + taskWithId.getId());
-                    Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().details())).block();
+                    MDCStructuredLogger.forLogger(LOGGER)
+                        .field("taskId", taskWithId.getId().asString())
+                        .field("taskType", taskWithId.getTask().type().asString())
+                        .log(logger -> logger.error("Task was partially performed. Check logs for more details. Taskid : {}", taskWithId.getId()));
+
+                    Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().detailsReactive()))
+                        .subscribe();
                 }));
     }
 
@@ -155,12 +166,14 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
     }
 
     @Override
-    public Publisher<Void> fail(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation, String errorMessage, Throwable reason) {
-        return listener.failed(taskId, additionalInformation, errorMessage, reason);
+    public Publisher<Void> fail(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher, String errorMessage, Throwable reason) {
+        return listener.failed(taskId, additionalInformationPublisher, Optional.ofNullable(errorMessage), Optional.ofNullable(reason));
     }
 
     @Override
     public void close() {
+        Optional.ofNullable(runningTask.get())
+            .ifPresent(task -> cancelTask(task.getT1()));
         taskExecutor.dispose();
     }
 }

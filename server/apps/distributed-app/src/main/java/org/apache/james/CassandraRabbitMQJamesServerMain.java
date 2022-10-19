@@ -31,6 +31,7 @@ import org.apache.james.modules.DistributedTaskManagerModule;
 import org.apache.james.modules.DistributedTaskSerializationModule;
 import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.MailetProcessingModule;
+import org.apache.james.modules.TasksCleanupTaskSerializationModule;
 import org.apache.james.modules.blobstore.BlobStoreCacheModulesChooser;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
 import org.apache.james.modules.blobstore.BlobStoreModulesChooser;
@@ -64,7 +65,6 @@ import org.apache.james.modules.queue.rabbitmq.RabbitMQModule;
 import org.apache.james.modules.server.DKIMMailetModule;
 import org.apache.james.modules.server.DLPRoutesModule;
 import org.apache.james.modules.server.DataRoutesModules;
-import org.apache.james.modules.server.ElasticSearchMetricReporterModule;
 import org.apache.james.modules.server.InconsistencyQuotasSolvingRoutesModule;
 import org.apache.james.modules.server.JMXServerModule;
 import org.apache.james.modules.server.JmapTasksModule;
@@ -80,10 +80,11 @@ import org.apache.james.modules.server.VacationRoutesModule;
 import org.apache.james.modules.server.WebAdminMailOverWebModule;
 import org.apache.james.modules.server.WebAdminReIndexingTaskSerializationModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 import org.apache.james.modules.vault.DeletedMessageVaultRoutesModule;
 import org.apache.james.modules.webadmin.CassandraRoutesModule;
 import org.apache.james.modules.webadmin.InconsistencySolvingRoutesModule;
+import org.apache.james.modules.webadmin.TasksCleanupRoutesModule;
+import org.apache.james.vault.VaultConfiguration;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Module;
@@ -96,7 +97,6 @@ public class CassandraRabbitMQJamesServerMain implements JamesServerMain {
         new CassandraRoutesModule(),
         new DataRoutesModules(),
         new VacationRoutesModule(),
-        new DeletedMessageVaultRoutesModule(),
         new DLPRoutesModule(),
         new InconsistencyQuotasSolvingRoutesModule(),
         new InconsistencySolvingRoutesModule(),
@@ -107,6 +107,7 @@ public class CassandraRabbitMQJamesServerMain implements JamesServerMain {
         new MailQueueRoutesModule(),
         new MailRepositoriesRoutesModule(),
         new SieveRoutesModule(),
+        new TasksCleanupRoutesModule(),
         new WebAdminServerModule(),
         new WebAdminReIndexingTaskSerializationModule(),
         new MessagesRoutesModule(),
@@ -142,17 +143,15 @@ public class CassandraRabbitMQJamesServerMain implements JamesServerMain {
         new CassandraRecipientRewriteTableModule(),
         new CassandraSessionModule(),
         new CassandraSieveRepositoryModule(),
-        new ElasticSearchMetricReporterModule(),
+        new TasksCleanupTaskSerializationModule(),
         BLOB_MODULE,
         CASSANDRA_EVENT_STORE_JSON_SERIALIZATION_DEFAULT_MODULE);
 
     public static final Module CASSANDRA_MAILBOX_MODULE = Modules.combine(
         new CassandraConsistencyTaskSerializationModule(),
         new CassandraMailboxModule(),
-        new CassandraDeletedMessageVaultModule(),
         new MailboxModule(),
-        new TikaMailboxModule(),
-        new SpamAssassinListenerModule());
+        new TikaMailboxModule());
 
     public static final Module REQUIRE_TASK_MANAGER_MODULE = Modules.combine(
         new MailetProcessingModule(),
@@ -194,6 +193,18 @@ public class CassandraRabbitMQJamesServerMain implements JamesServerMain {
             .combineWith(BlobStoreCacheModulesChooser.chooseModules(blobStoreConfiguration))
             .combineWith(SearchModuleChooser.chooseModules(searchConfiguration))
             .combineWith(new UsersRepositoryModuleChooser(new CassandraUsersRepositoryModule())
-                .chooseModules(configuration.getUsersRepositoryImplementation()));
+                .chooseModules(configuration.getUsersRepositoryImplementation()))
+            .combineWith(chooseDeletedMessageVault(configuration.getVaultConfiguration()));
+    }
+
+    private static Module chooseDeletedMessageVault(VaultConfiguration vaultConfiguration) {
+        if (vaultConfiguration.isEnabled()) {
+            return Modules.combine(
+                new CassandraDeletedMessageVaultModule(),
+                new DeletedMessageVaultRoutesModule());
+        }
+        return binder -> {
+
+        };
     }
 }

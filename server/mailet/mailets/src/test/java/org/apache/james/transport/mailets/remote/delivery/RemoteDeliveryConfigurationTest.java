@@ -29,6 +29,7 @@ import java.util.Properties;
 
 import org.apache.james.core.Domain;
 import org.apache.james.domainlist.api.DomainList;
+import org.apache.mailet.ProcessingState;
 import org.apache.mailet.base.test.FakeMailetConfig;
 import org.assertj.core.data.MapEntry;
 import org.junit.jupiter.api.Test;
@@ -231,7 +232,7 @@ class RemoteDeliveryConfigurationTest {
             .build();
 
         assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).getBounceProcessor())
-            .isNull();
+            .isEmpty();
     }
 
     @Test
@@ -242,7 +243,7 @@ class RemoteDeliveryConfigurationTest {
             .build();
 
         assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).getBounceProcessor())
-            .isEqualTo(value);
+            .contains(new ProcessingState(value));
     }
 
     @Test
@@ -313,6 +314,41 @@ class RemoteDeliveryConfigurationTest {
             .build();
 
         assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).isSSLEnable()).isFalse();
+    }
+
+    @Test
+    void isVerifyServerIdentityShouldBeTrueByDefault() {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .build();
+
+        assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).isVerifyServerIdentity()).isTrue();
+    }
+
+    @Test
+    void isVerifyServerIdentityShouldBeTrueIfSpecified() {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .setProperty(RemoteDeliveryConfiguration.VERIFY_SERVER_IDENTITY, "true")
+            .build();
+
+        assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).isVerifyServerIdentity()).isTrue();
+    }
+
+    @Test
+    void isVerifyServerIdentityShouldBeFalseIfSpecified() {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .setProperty(RemoteDeliveryConfiguration.VERIFY_SERVER_IDENTITY, "false")
+            .build();
+
+        assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).isVerifyServerIdentity()).isFalse();
+    }
+    
+    @Test
+    void isVerifyServerIdentityShouldBeTrueIfParsingException() {
+        FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
+            .setProperty(RemoteDeliveryConfiguration.VERIFY_SERVER_IDENTITY, "invalid")
+            .build();
+
+        assertThat(new RemoteDeliveryConfiguration(mailetConfig, mock(DomainList.class)).isVerifyServerIdentity()).isTrue();
     }
 
     @Test
@@ -758,6 +794,7 @@ class RemoteDeliveryConfigurationTest {
 
         assertThat(properties)
             .containsOnly(MapEntry.entry("mail.smtp.ssl.enable", "false"),
+                MapEntry.entry("mail.smtp.ssl.checkserveridentity", "true"),
                 MapEntry.entry("mail.smtp.sendpartial", "false"),
                 MapEntry.entry("mail.smtp.ehlo", "true"),
                 MapEntry.entry("mail.smtp.connectiontimeout", "60000"),
@@ -776,6 +813,7 @@ class RemoteDeliveryConfigurationTest {
             .setProperty(RemoteDeliveryConfiguration.SENDPARTIAL, "true")
             .setProperty(RemoteDeliveryConfiguration.CONNECTIONTIMEOUT, String.valueOf(connectionTimeout))
             .setProperty(RemoteDeliveryConfiguration.START_TLS, "true")
+            .setProperty(RemoteDeliveryConfiguration.VERIFY_SERVER_IDENTITY, "false")
             .setProperty(RemoteDeliveryConfiguration.HELO_NAME, helo)
             .build();
 
@@ -784,6 +822,7 @@ class RemoteDeliveryConfigurationTest {
 
         assertThat(properties)
             .containsOnly(MapEntry.entry("mail.smtp.ssl.enable", "false"),
+                MapEntry.entry("mail.smtp.ssl.checkserveridentity", "false"),
                 MapEntry.entry("mail.smtp.sendpartial", "true"),
                 MapEntry.entry("mail.smtp.ehlo", "true"),
                 MapEntry.entry("mail.smtp.connectiontimeout", String.valueOf(connectionTimeout)),
@@ -802,6 +841,7 @@ class RemoteDeliveryConfigurationTest {
             .setProperty(RemoteDeliveryConfiguration.SENDPARTIAL, "true")
             .setProperty(RemoteDeliveryConfiguration.CONNECTIONTIMEOUT, String.valueOf(connectionTimeout))
             .setProperty(RemoteDeliveryConfiguration.START_TLS, "true")
+            .setProperty(RemoteDeliveryConfiguration.VERIFY_SERVER_IDENTITY, "false")
             .setProperty(RemoteDeliveryConfiguration.HELO_NAME, helo)
             .setProperty(RemoteDeliveryConfiguration.GATEWAY, "gateway.domain.com")
             .setProperty(RemoteDeliveryConfiguration.GATEWAY_USERNAME, "user")
@@ -813,6 +853,7 @@ class RemoteDeliveryConfigurationTest {
 
         assertThat(properties)
             .containsOnly(MapEntry.entry("mail.smtp.ssl.enable", "false"),
+                MapEntry.entry("mail.smtp.ssl.checkserveridentity", "false"),
                 MapEntry.entry("mail.smtp.sendpartial", "true"),
                 MapEntry.entry("mail.smtp.ehlo", "true"),
                 MapEntry.entry("mail.smtp.connectiontimeout", String.valueOf(connectionTimeout)),
@@ -836,6 +877,7 @@ class RemoteDeliveryConfigurationTest {
 
         assertThat(properties)
             .containsOnly(MapEntry.entry("mail.smtps.ssl.enable", "true"),
+                MapEntry.entry("mail.smtps.ssl.checkserveridentity", "true"),
                 MapEntry.entry("mail.smtps.sendpartial", "false"),
                 MapEntry.entry("mail.smtps.ehlo", "true"),
                 MapEntry.entry("mail.smtps.connectiontimeout", "60000"),
@@ -851,6 +893,7 @@ class RemoteDeliveryConfigurationTest {
         int connectionTimeout = 1856;
         FakeMailetConfig mailetConfig = FakeMailetConfig.builder()
             .setProperty(RemoteDeliveryConfiguration.SSL_ENABLE, "true")
+            .setProperty(RemoteDeliveryConfiguration.VERIFY_SERVER_IDENTITY, "false")
             .setProperty(RemoteDeliveryConfiguration.SENDPARTIAL, "true")
             .setProperty(RemoteDeliveryConfiguration.CONNECTIONTIMEOUT, String.valueOf(connectionTimeout))
             .setProperty(RemoteDeliveryConfiguration.START_TLS, "false")
@@ -862,6 +905,7 @@ class RemoteDeliveryConfigurationTest {
 
         assertThat(properties)
             .containsOnly(MapEntry.entry("mail.smtps.ssl.enable", "true"),
+                MapEntry.entry("mail.smtps.ssl.checkserveridentity", "false"),
                 MapEntry.entry("mail.smtps.sendpartial", "true"),
                 MapEntry.entry("mail.smtps.ehlo", "true"),
                 MapEntry.entry("mail.smtps.connectiontimeout", String.valueOf(connectionTimeout)),

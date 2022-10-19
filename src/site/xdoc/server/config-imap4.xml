@@ -80,6 +80,19 @@
         <dd>Set the maximum simultaneous incoming connections for this service</dd>
         <dt><strong>handler.connectionLimitPerIP</strong></dt>
         <dd>Set the maximum simultaneous incoming connections per IP for this service</dd>
+        <dt><strong>concurrentRequests</strong></dt>
+        <dd>Maximum number of IMAP requests executed simultaneously. Past that limit requests are queued. Defaults to 20.
+            Negative values deactivate this feature, leading to unbounded concurrency.</dd>
+        <dt><strong>maxQueueSize</strong></dt>
+        <dd>Upper bound to the IMAP throttler queue. Upon burst, requests that cannot be queued are rejected and not executed.
+            Integer, defaults to 4096, must be positive, 0 means no queue.</dd>
+        <dt><strong>handler.proxyRequired</strong></dt>
+        <dd>
+          Enables proxy support for this service for incoming connections. HAProxy's protocol
+          (https://www.haproxy.org/download/2.7/doc/proxy-protocol.txt) is used and might be compatible
+          with other proxies (e.g. traefik). If enabled, it is *required* to initiate the connection
+          using HAProxy's proxy protocol.
+        </dd>
         <dt><strong>handler.handlerchain</strong></dt>
         <dd>This loads the core CommandHandlers. Only remove this if you really 
              know what you are doing</dd>
@@ -107,10 +120,6 @@
         <dd>Set the maximum count of IO threads. IO threads are responsible for receiving incoming IMAP messages and framing them
           (split line by line). IO threads also take care of compression and SSL encryption. Their tasks are short-lived and non-blocking.
               Optional integer, defaults to 2 times the count of CPUs.</dd>
-
-        <dt><strong>maxExecutorCount</strong></dt>
-        <dd>Set the maximum count of worker threads. Worker threads takes care of potentially blocking tasks like decoding IMAP requests
-              (litterals can be buffered to temporary files) or executing IMAP commands. Optional integer, defaults to 16.</dd>
 
         <dt><strong>ignoreIDLEUponProcessing</strong></dt>
         <dd>true or false - Allow disabling the heartbeat handler. Defaults to true.</dd>

@@ -19,7 +19,7 @@ advanced users.
  - [Basic Monitoring](#Basic_Monitoring)
  - [Cassandra table level configuration](#Cassandra_table_level_configuration)
  - [Deleted Messages Vault](#Deleted_Messages_Vault)
- - [ElasticSearch Indexing](#Elasticsearch_Indexing)
+ - [OpenSearch Indexing](#Opensearch_Indexing)
  - [Mailbox Event Bus](#Mailbox_Event_Bus)
  - [Mail Processing](#Mail_Processing)
  - [Mail Queue](#Mail_Queue)
@@ -35,7 +35,7 @@ In order to achieve this goal, this product leverages the following technologies
 
  - **Cassandra** for meta-data storage
  - **ObjectStorage** (S3) for binary content storage
- - **ElasticSearch** for search
+ - **OpenSearch** for search
  - **RabbitMQ** for messaging
 
 A [docker-compose](https://github.com/apache/james-project/blob/master/server/apps/distributed-app/docker-compose.yml) file is 
@@ -73,9 +73,6 @@ Read this page for [explanations on metrics](metrics.html).
 
 Here is a list of [available metric boards](https://github.com/apache/james-project/tree/master/grafana-reporting)
 
-Configuration of [ElasticSearch metric exporting](config-elasticsearch.html) allows a direct display within 
-[Grafana](https://grafana.com/)
-
 Monitoring these graphs on a regular basis allows diagnosing early some performance issues. 
 
 If some metrics seem abnormally slow despite in depth database performance tuning, feedback is appreciated as well on 
@@ -91,7 +88,7 @@ Here is related [webadmin documentation](manage-webadmin.html#HealthCheck)
 Here are the available checks alongside the insight they offer:
 
  - **Cassandra backend**: Cassandra storage. Ensure queries can be executed on the connection James uses.
- - **ElasticSearch Backend**: ElasticSearch storage. Triggers an ElasticSearch health request on indices James uses.
+ - **OpenSearch Backend**: OpenSearch storage. Triggers an OpenSearch health request on indices James uses.
  - **EventDeadLettersHealthCheck**: EventDeadLetters checking.
  - **RabbitMQ backend**: RabbitMQ messaging. Verifies an open connection and an open channel are well available.
  - **Guice application lifecycle**: Ensures James Guice successfully started, and is up. Logs should contain 
@@ -148,6 +145,10 @@ WebAdmin exposes all utilities for
 or 
 [reprocessing a single mail in a mail repository](manage-webadmin.html#Reprocessing_a_specific_mail_from_a_mail_repository).
 
+In order to prevent unbounded processing that could consume unbounded resources. We can provide a CRON with `limit` parameter.
+Ex: 10 reprocessed per minute
+Note that it only support the reprocessing all mails.
+
 Also, one can decide to 
 [delete all the mails of a mail repository](manage-webadmin.html#Removing_all_mails_from_a_mail_repository) 
 or [delete a single mail of a mail repository](manage-webadmin.html#Removing_a_mail_from_a_mail_repository).
@@ -179,7 +180,7 @@ Mailbox listeners can register themselves on this event bus system to be called 
 allowing to do different kind of extra operations on the system, like:
 
  - Current quota calculation
- - Message indexation with ElasticSearch
+ - Message indexation with OpenSearch
  - Mailbox annotations cleanup
  - Ham/spam reporting to SpamAssassin
  - ...
@@ -209,15 +210,18 @@ An easy way to solve this is just to trigger then the
 [redeliver all events](manage-webadmin.html#Redeliver_all_events) task. It will start 
 reprocessing all the failed events registered in event dead letters.
 
+In order to prevent unbounded processing that could consume unbounded resources. We can provide a CRON with `limit` parameter.
+Ex: 10 redelivery per minute
+
 If for some other reason you don't need to redeliver all events, you have more fine-grained operations allowing you to
 [redeliver group events](manage-webadmin.html#Redeliver_group_events) or even just
 [redeliver a single event](manage-webadmin.html#Redeliver_a_single_event).
 
-## ElasticSearch Indexing
+## OpenSearch Indexing
 
-A projection of messages is maintained in ElasticSearch via a listener plugged into the mailbox event bus in order to enable search features.
+A projection of messages is maintained in OpenSearch via a listener plugged into the mailbox event bus in order to enable search features.
 
-You can find more information about ElasticSearch configuration [here](config-elasticsearch.html).
+You can find more information about OpenSearch configuration [here](config-opensearch.html).
 
 ### Usual troubleshooting procedures
 
@@ -225,7 +229,7 @@ As explained in the [Mailbox Event Bus](#Mailbox_Event_Bus) section, processing 
 
 Currently, an administrator can monitor indexation failures through `ERROR` log review. You can as well
 [list failed events](manage-webadmin.html#Listing_failed_events) by looking with the group called 
-`org.apache.james.mailbox.elasticsearch.v7.events.ElasticSearchListeningMessageSearchIndex$ElasticSearchListeningMessageSearchIndexGroup`.
+`org.apache.james.mailbox.opensearch.events.OpenSearchListeningMessageSearchIndex$OpenSearchListeningMessageSearchIndexGroup`.
 A first on-the-fly solution could be to just 
 [redeliver those group events with event dead letter](#Mailbox_Event_Bus).
 
@@ -240,7 +244,7 @@ or even just [reIndex a single mail](manage-webadmin.html#ReIndexing_a_single_ma
 When checking the result of a reIndexing task, you might have failed reprocessed mails. You can still use the task ID to
 [reprocess previously failed reIndexing mails](manage-webadmin.html#Fixing_previously_failed_ReIndexing).
 
-### On the fly ElasticSearch Index setting update
+### On the fly OpenSearch Index setting update
 
 Sometimes you might need to update index settings. Cases when an administrator might want to update index settings include:
 
@@ -261,8 +265,8 @@ from the old index to the new one (this actively relies on `_source` field being
  - Now that the migration to the new index is done, you can 
 [drop the old index](https://www.elastic.co/guide/en/elasticsearch/reference/6.3/indices-delete-index.html)
  - You might want as well modify the James configuration file 
-[elasticsearch.properties](https://github.com/apache/james-project/blob/master/server/apps/distributed-app/sample-configuration/elasticsearch.properties)
-by setting the parameter `elasticsearch.index.mailbox.name` to the name of your new index. This is to avoid that James 
+[opensearch.properties](https://github.com/apache/james-project/blob/master/server/apps/distributed-app/sample-configuration/opensearch.properties)
+by setting the parameter `opensearch.index.mailbox.name` to the name of your new index. This is to avoid that James 
 re-creates index upon restart
 
 _Note_: keep in mind that reindexing can be a very long operation depending on the volume of mails you have stored.

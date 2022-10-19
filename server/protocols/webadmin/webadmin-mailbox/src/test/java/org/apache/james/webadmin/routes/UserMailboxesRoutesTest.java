@@ -55,9 +55,10 @@ import java.util.stream.IntStream;
 
 import javax.mail.Flags;
 
-import org.apache.james.backends.es.v7.DockerElasticSearchExtension;
-import org.apache.james.backends.es.v7.ElasticSearchIndexer;
-import org.apache.james.backends.es.v7.ReactorElasticSearchClient;
+import org.apache.james.backends.opensearch.DockerOpenSearchExtension;
+import org.apache.james.backends.opensearch.OpenSearchIndexer;
+import org.apache.james.backends.opensearch.ReactorOpenSearchClient;
+import org.apache.james.backends.opensearch.WriteAliasName;
 import org.apache.james.core.Username;
 import org.apache.james.json.DTOConverter;
 import org.apache.james.mailbox.MailboxManager;
@@ -66,15 +67,6 @@ import org.apache.james.mailbox.MailboxSessionUtil;
 import org.apache.james.mailbox.MessageIdManager;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageUid;
-import org.apache.james.mailbox.elasticsearch.v7.IndexAttachments;
-import org.apache.james.mailbox.elasticsearch.v7.MailboxElasticSearchConstants;
-import org.apache.james.mailbox.elasticsearch.v7.MailboxIdRoutingKeyFactory;
-import org.apache.james.mailbox.elasticsearch.v7.MailboxIndexCreationUtil;
-import org.apache.james.mailbox.elasticsearch.v7.events.ElasticSearchListeningMessageSearchIndex;
-import org.apache.james.mailbox.elasticsearch.v7.json.MessageToElasticSearchJson;
-import org.apache.james.mailbox.elasticsearch.v7.query.CriterionConverter;
-import org.apache.james.mailbox.elasticsearch.v7.query.QueryConverter;
-import org.apache.james.mailbox.elasticsearch.v7.search.ElasticSearchSearcher;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxExistsException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
@@ -96,6 +88,15 @@ import org.apache.james.mailbox.model.MessageResult;
 import org.apache.james.mailbox.model.ThreadId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.mailbox.model.search.MailboxQuery;
+import org.apache.james.mailbox.opensearch.IndexAttachments;
+import org.apache.james.mailbox.opensearch.MailboxIdRoutingKeyFactory;
+import org.apache.james.mailbox.opensearch.MailboxIndexCreationUtil;
+import org.apache.james.mailbox.opensearch.MailboxOpenSearchConstants;
+import org.apache.james.mailbox.opensearch.events.OpenSearchListeningMessageSearchIndex;
+import org.apache.james.mailbox.opensearch.json.MessageToOpenSearchJson;
+import org.apache.james.mailbox.opensearch.query.CriterionConverter;
+import org.apache.james.mailbox.opensearch.query.QueryConverter;
+import org.apache.james.mailbox.opensearch.search.OpenSearchSearcher;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.extractor.DefaultTextExtractor;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -1448,7 +1449,8 @@ class UserMailboxesRoutesTest {
         static final int SEARCH_SIZE = 1;
 
         @RegisterExtension
-        DockerElasticSearchExtension elasticSearch = new DockerElasticSearchExtension();
+        DockerOpenSearchExtension openSearch = new DockerOpenSearchExtension(
+            new DockerOpenSearchExtension.DeleteAllIndexDocumentsCleanupStrategy(new WriteAliasName("mailboxWriteAlias")));
 
         private InMemoryMailboxManager mailboxManager;
         private ListeningMessageSearchIndex searchIndex;
@@ -1456,9 +1458,9 @@ class UserMailboxesRoutesTest {
 
         @BeforeEach
         void setUp() throws Exception {
-            ReactorElasticSearchClient client = MailboxIndexCreationUtil.prepareDefaultClient(
-                elasticSearch.getDockerElasticSearch().clientProvider().get(),
-                elasticSearch.getDockerElasticSearch().configuration());
+            ReactorOpenSearchClient client = MailboxIndexCreationUtil.prepareDefaultClient(
+                openSearch.getDockerOpenSearch().clientProvider().get(),
+                openSearch.getDockerOpenSearch().configuration());
 
             InMemoryMessageId.Factory messageIdFactory = new InMemoryMessageId.Factory();
             MailboxIdRoutingKeyFactory routingKeyFactory = new MailboxIdRoutingKeyFactory();
@@ -1469,14 +1471,14 @@ class UserMailboxesRoutesTest {
                 .inVmEventBus()
                 .defaultAnnotationLimits()
                 .defaultMessageParser()
-                .listeningSearchIndex(preInstanciationStage -> new ElasticSearchListeningMessageSearchIndex(
+                .listeningSearchIndex(preInstanciationStage -> new OpenSearchListeningMessageSearchIndex(
                     preInstanciationStage.getMapperFactory(),
                     ImmutableSet.of(),
-                    new ElasticSearchIndexer(client,
-                        MailboxElasticSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS),
-                    new ElasticSearchSearcher(client, new QueryConverter(new CriterionConverter()), SEARCH_SIZE,
-                        MailboxElasticSearchConstants.DEFAULT_MAILBOX_READ_ALIAS, routingKeyFactory),
-                    new MessageToElasticSearchJson(new DefaultTextExtractor(), ZoneId.of("Europe/Paris"), IndexAttachments.YES),
+                    new OpenSearchIndexer(client,
+                        MailboxOpenSearchConstants.DEFAULT_MAILBOX_WRITE_ALIAS),
+                    new OpenSearchSearcher(client, new QueryConverter(new CriterionConverter()), SEARCH_SIZE,
+                        MailboxOpenSearchConstants.DEFAULT_MAILBOX_READ_ALIAS, routingKeyFactory),
+                    new MessageToOpenSearchJson(new DefaultTextExtractor(), ZoneId.of("Europe/Paris"), IndexAttachments.YES),
                     preInstanciationStage.getSessionProvider(), routingKeyFactory, messageIdFactory))
                 .noPreDeletionHooks()
                 .storeQuotaManager()

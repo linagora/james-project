@@ -59,7 +59,7 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>apache-james-backends-es-v7</artifactId>
+            <artifactId>apache-james-backends-opensearch</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -77,7 +77,7 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>apache-james-mailbox-elasticsearch-v7</artifactId>
+            <artifactId>apache-james-mailbox-opensearch</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -170,10 +170,6 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-guice-elasticsearch</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${james.groupId}</groupId>
             <artifactId>james-server-guice-es-resporter</artifactId>
         </dependency>
         <dependency>
@@ -204,15 +200,15 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-guice-mailbox-plugin-spamassassin</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${james.groupId}</groupId>
             <artifactId>james-server-guice-mailet</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>james-server-guice-managedsieve</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
+            <artifactId>james-server-guice-opensearch</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -286,11 +282,6 @@
         <dependency>
             <groupId>${james.groupId}</groupId>
             <artifactId>james-server-webadmin-rabbitmq</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${james.groupId}</groupId>
-            <artifactId>metrics-es-reporter-v7</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -418,6 +409,7 @@
                             <jvmFlag>-Dworking.directory=/root/</jvmFlag>
                             <!-- Prevents Logjam (CVE-2015-4000) -->
                             <jvmFlag>-Djdk.tls.ephemeralDHKeySize=2048</jvmFlag>
+                            <jvmFlag>-Dextra.props=/root/conf/jvm.properties</jvmFlag>
                         </jvmFlags>
                         <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
                         <volumes>

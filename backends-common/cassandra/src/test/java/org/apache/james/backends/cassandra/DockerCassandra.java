@@ -20,13 +20,11 @@
 package org.apache.james.backends.cassandra;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.james.backends.cassandra.init.ClusterFactory;
 import org.apache.james.backends.cassandra.init.KeyspaceFactory;
-import org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration;
 import org.apache.james.backends.cassandra.init.configuration.ClusterConfiguration;
 import org.apache.james.backends.cassandra.init.configuration.KeyspaceConfiguration;
 import org.apache.james.util.Host;
@@ -38,14 +36,16 @@ import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.images.builder.dockerfile.DockerfileBuilder;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.EventsCmd;
 import com.github.dockerjava.api.model.Event;
 import com.github.dockerjava.api.model.EventType;
 import com.google.common.collect.ImmutableMap;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public class DockerCassandra {
 
@@ -56,40 +56,34 @@ public class DockerCassandra {
      * This process is done by using the default user provided by docker cassandra, it has the capability of creating roles,
      * keyspaces, and granting permissions to those entities.
      */
-    public static class CassandraResourcesManager {
-
+    public static class CassandraResourcesManager implements Closeable {
         private static final String CASSANDRA_SUPER_USER = "cassandra";
         private static final String CASSANDRA_SUPER_USER_PASSWORD = "cassandra";
 
-        private final DockerCassandra cassandra;
+        private final CqlSession privilegedCluster;
 
         private CassandraResourcesManager(DockerCassandra cassandra) {
-            this.cassandra = cassandra;
+            privilegedCluster = ClusterFactory.createWithoutKeyspace(cassandra.superUserConfigurationBuilder().build());
         }
 
-        public void initializeKeyspace(KeyspaceConfiguration configuration) {
-            try (Cluster privilegedCluster = ClusterFactory.create(cassandra.superUserConfigurationBuilder().build(),
-                    CassandraConsistenciesConfiguration.DEFAULT)) {
-                provisionNonPrivilegedUser(privilegedCluster);
-                KeyspaceFactory.createKeyspace(configuration, privilegedCluster);
-                grantPermissionToTestingUser(privilegedCluster, configuration.getKeyspace());
-            }
+        @Override
+        public void close() {
+            privilegedCluster.closeAsync();
         }
 
-        private void provisionNonPrivilegedUser(Cluster privilegedCluster) {
-            try (Session session = privilegedCluster.newSession()) {
-                session.execute("CREATE ROLE IF NOT EXISTS " + CASSANDRA_TESTING_USER + " WITH PASSWORD = '" + CASSANDRA_TESTING_PASSWORD + "' AND LOGIN = true");
-            }
+        public Mono<Void> initializeKeyspace(KeyspaceConfiguration configuration) {
+            return KeyspaceFactory.createKeyspace(configuration, privilegedCluster)
+                .then(grantPermissionToTestingUser(configuration.getKeyspace()));
         }
 
-        private void grantPermissionToTestingUser(Cluster privilegedCluster, String keyspace) {
-            try (Session session = privilegedCluster.newSession()) {
-                session.execute("GRANT CREATE ON KEYSPACE " + keyspace + " TO " + CASSANDRA_TESTING_USER);
-                session.execute("GRANT SELECT ON KEYSPACE " + keyspace + " TO " + CASSANDRA_TESTING_USER);
-                session.execute("GRANT MODIFY ON KEYSPACE " + keyspace + " TO " + CASSANDRA_TESTING_USER);
-                // some tests require dropping in setups
-                session.execute("GRANT DROP ON KEYSPACE " + keyspace + " TO " + CASSANDRA_TESTING_USER);
-            }
+        public Mono<Void> provisionNonPrivilegedUser() {
+            return Mono.from(privilegedCluster.executeReactive("CREATE ROLE IF NOT EXISTS " + CASSANDRA_TESTING_USER + " WITH PASSWORD = '" + CASSANDRA_TESTING_PASSWORD + "' AND LOGIN = true"))
+                .then();
+        }
+
+        private Mono<Void> grantPermissionToTestingUser(String keyspace) {
+            return Mono.from(privilegedCluster.executeReactive("GRANT ALL PERMISSIONS ON KEYSPACE " + keyspace + " TO " + CASSANDRA_TESTING_USER))
+                .then();
         }
     }
 
@@ -158,7 +152,7 @@ public class DockerCassandra {
 
             @Override
             public void onError(Throwable throwable) {
-                logger.error("event stream failure",throwable);
+                logger.error("event stream failure", throwable);
             }
 
             @Override
@@ -166,7 +160,7 @@ public class DockerCassandra {
             }
 
             @Override
-            public void close() throws IOException {
+            public void close() {
             }
         });
         boolean doNotDeleteImageAfterUsage = false;
@@ -176,11 +170,16 @@ public class DockerCassandra {
                     additionalSteps.applyStep(builder
                         .from("cassandra:3.11.10")
                         .env("CASSANDRA_CONFIG", "/etc/cassandra")
-                        .run("echo \"-Xms" + CASSANDRA_MEMORY + "M\" >> " + JVM_OPTIONS)
-                        .run("echo \"-Xmx" + CASSANDRA_MEMORY + "M\" >> " + JVM_OPTIONS)
-                        .run("sed", "-i", "s/auto_snapshot: true/auto_snapshot: false/g", "/etc/cassandra/cassandra.yaml")
-                        .run("echo 'authenticator: PasswordAuthenticator' >> /etc/cassandra/cassandra.yaml")
-                        .run("echo 'authorizer: org.apache.cassandra.auth.CassandraAuthorizer' >> /etc/cassandra/cassandra.yaml"))
+                        .run("echo \"-Xms" + CASSANDRA_MEMORY + "M\" >> " + JVM_OPTIONS
+                            + "&& echo \"-Xmx" + CASSANDRA_MEMORY + "M\" >> " + JVM_OPTIONS
+                            + "&& echo \"-Dcassandra.skip_wait_for_gossip_to_settle=0\" >> " + JVM_OPTIONS
+                            + "&& echo \"-Dcassandra.load_ring_state=false\" >> " + JVM_OPTIONS
+                            + "&& echo \"-Dcassandra.initial_token=1 \" >> " + JVM_OPTIONS
+                            + "&& echo \"-Dcassandra.num_tokens=nil \" >> " + JVM_OPTIONS
+                            + "&& echo \"-Dcassandra.allocate_tokens_for_local_replication_factor=nil \" >> " + JVM_OPTIONS
+                            + "&& sed -i 's/auto_snapshot: true/auto_snapshot: false/g' /etc/cassandra/cassandra.yaml"
+                            + "&& echo 'authenticator: PasswordAuthenticator' >> /etc/cassandra/cassandra.yaml"
+                            + "&& echo 'authorizer: org.apache.cassandra.auth.CassandraAuthorizer' >> /etc/cassandra/cassandra.yaml"))
                         .build()))
             .withTmpFs(ImmutableMap.of("/var/lib/cassandra", "rw,noexec,nosuid,size=200m"))
             .withExposedPorts(CASSANDRA_PORT)
@@ -196,8 +195,14 @@ public class DockerCassandra {
     public void start() {
         if (!cassandraContainer.isRunning()) {
             cassandraContainer.start();
-            administrator().initializeKeyspace(mainKeyspaceConfiguration());
-            administrator().initializeKeyspace(cacheKeyspaceConfiguration());
+            try (CassandraResourcesManager resourcesManager = administrator()) {
+                resourcesManager.provisionNonPrivilegedUser()
+                    .then(Flux.merge(
+                        resourcesManager.initializeKeyspace(mainKeyspaceConfiguration()),
+                        resourcesManager.initializeKeyspace(cacheKeyspaceConfiguration()))
+                        .then())
+                    .block();
+            }
         }
     }
 

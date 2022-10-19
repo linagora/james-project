@@ -19,9 +19,8 @@
 
 package org.apache.james.mailbox.cassandra.mail;
 
-import static org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration.ConsistencyChoice;
-import static org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration.ConsistencyChoice.STRONG;
-import static org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration.ConsistencyChoice.WEAK;
+import static org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles.ConsistencyChoice.STRONG;
+import static org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles.ConsistencyChoice.WEAK;
 import static org.apache.james.blob.api.BlobStore.StoragePolicy.SIZE_BASED;
 import static org.apache.james.util.ReactorUtils.DEFAULT_CONCURRENCY;
 
@@ -40,6 +39,7 @@ import javax.mail.Flags.Flag;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
+import org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.mailbox.ApplicableFlagBuilder;
@@ -59,6 +59,7 @@ import org.apache.james.mailbox.model.MailboxCounters;
 import org.apache.james.mailbox.model.MessageMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.MailboxReactorUtils;
 import org.apache.james.mailbox.store.mail.MessageMapper;
@@ -105,6 +106,7 @@ public class CassandraMessageMapper implements MessageMapper {
     private final CassandraDeletedMessageDAO deletedMessageDAO;
     private final BlobStore blobStore;
     private final CassandraConfiguration cassandraConfiguration;
+    private final BatchSizes batchSizes;
     private final RecomputeMailboxCountersService recomputeMailboxCountersService;
     private final SecureRandom secureRandom;
     private final int reactorConcurrency;
@@ -116,7 +118,7 @@ public class CassandraMessageMapper implements MessageMapper {
                                   CassandraMailboxRecentsDAO mailboxRecentDAO, CassandraApplicableFlagDAO applicableFlagDAO,
                                   CassandraIndexTableHandler indexTableHandler, CassandraFirstUnseenDAO firstUnseenDAO,
                                   CassandraDeletedMessageDAO deletedMessageDAO, BlobStore blobStore, CassandraConfiguration cassandraConfiguration,
-                                  RecomputeMailboxCountersService recomputeMailboxCountersService) {
+                                  BatchSizes batchSizes, RecomputeMailboxCountersService recomputeMailboxCountersService) {
         this.uidProvider = uidProvider;
         this.modSeqProvider = modSeqProvider;
         this.messageDAO = messageDAO;
@@ -132,6 +134,7 @@ public class CassandraMessageMapper implements MessageMapper {
         this.deletedMessageDAO = deletedMessageDAO;
         this.blobStore = blobStore;
         this.cassandraConfiguration = cassandraConfiguration;
+        this.batchSizes = batchSizes;
         this.recomputeMailboxCountersService = recomputeMailboxCountersService;
         this.secureRandom = new SecureRandom();
         this.reactorConcurrency = evaluateReactorConcurrency();
@@ -255,7 +258,7 @@ public class CassandraMessageMapper implements MessageMapper {
 
         Limit limit = Limit.from(limitAsInt);
         return limit.applyOnFlux(messageIdDAO.retrieveMessages(mailboxId, messageRange, limit))
-            .flatMap(metadata -> toMailboxMessage(metadata, ftype), cassandraConfiguration.getMessageReadChunkSize())
+            .flatMap(metadata -> toMailboxMessage(metadata, ftype), batchSizes.forFetchType(ftype))
             .sort(Comparator.comparing(MailboxMessage::getUid));
     }
 
@@ -500,7 +503,7 @@ public class CassandraMessageMapper implements MessageMapper {
         }
     }
 
-    private ConsistencyChoice chooseReadConsistencyUponWrites() {
+    private JamesExecutionProfiles.ConsistencyChoice chooseReadConsistencyUponWrites() {
         if (cassandraConfiguration.isMessageWriteStrongConsistency()) {
             return STRONG;
         }

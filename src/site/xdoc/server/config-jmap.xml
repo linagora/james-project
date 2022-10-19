@@ -76,7 +76,7 @@
 
                     <dt><strong>view.email.query.enabled</strong></dt>
                     <dd>Optional boolean. Defaults to false.</dd>
-                    <dd>Should simple Email/query be resolved against a Cassandra projection, or should we resolve them against ElasticSearch?
+                    <dd>Should simple Email/query be resolved against a Cassandra projection, or should we resolve them against OpenSearch?
                         This enables a higher resilience, but the projection needs to be correctly populated.</dd>
 
                     <dt><strong>user.provisioning.enabled</strong></dt>
@@ -184,6 +184,12 @@
                 <p>You can further help your clients by publishing extra SRV records.</p>
 
                 <pre><code>_jmap._tcp.domain.tld. 3600        IN    SRV    0 1 443 jmap.domain.tld.</code></pre>
+            </subsection>
+
+            <subsection name="Reverse-proxy set up">
+                <p>James implementation adds the value of <code>X-Real-IP</code> header as part of the logging MDC.</p>
+
+                <p>This allows for reverse proxies to cary other the IP address of the client down to the JMAP server for diagnostic purpose.</p>
             </subsection>
         </section>
 

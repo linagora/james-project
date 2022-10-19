@@ -39,6 +39,7 @@ import org.apache.james.blob.api.Store;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.blob.mail.MimeMessageStore;
 import org.apache.james.blob.memory.MemoryBlobStoreDAO;
+import org.apache.james.junit.categories.Unstable;
 import org.apache.james.queue.api.DelayedMailQueueContract;
 import org.apache.james.queue.api.DelayedManageableMailQueueContract;
 import org.apache.james.queue.api.MailQueue;
@@ -57,6 +58,7 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -68,9 +70,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import scala.jdk.javaapi.OptionConverters;
 
+@Tag(Unstable.TAG)
 @ExtendWith(DockerPulsarExtension.class)
 public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricContract, ManageableMailQueueContract, DelayedMailQueueContract, DelayedManageableMailQueueContract {
 
+    int MAX_CONCURRENCY = 10;
     PulsarMailQueue mailQueue;
 
     private HashBlobId.Factory blobIdFactory;
@@ -78,7 +82,7 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
     private MailQueueItemDecoratorFactory factory;
     private MailQueueName mailQueueName;
     private MailQueueMetricExtension.MailQueueMetricTestSystem metricTestSystem;
-    private PulsarConfiguration config;
+    private PulsarConfiguration pulsarConfiguration;
     private ActorSystem system;
     private MemoryBlobStoreDAO memoryBlobStore;
 
@@ -98,7 +102,7 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
         mailQueue.close();
         system.terminate();
     }
@@ -106,7 +110,7 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
     @Override
     public void awaitRemove() {
         try {
-            Thread.sleep(100);
+            Thread.sleep(50);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -118,15 +122,21 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
     }
 
     @Override
+    public int getMailQueueMaxConcurrency() {
+        return MAX_CONCURRENCY;
+    }
+
+    @Override
     public ManageableMailQueue getManageableMailQueue() {
         return mailQueue;
     }
 
     public PulsarMailQueue newInstance(DockerPulsarExtension.DockerPulsar pulsar) {
-        config = pulsar.getConfiguration();
+        pulsarConfiguration = pulsar.getConfiguration();
+        int enqueueBufferSize = 10;
+        int requeueBufferSize = 10;
         return new PulsarMailQueue(
-                mailQueueName,
-                config,
+                new PulsarMailQueueConfiguration(mailQueueName, pulsarConfiguration, MAX_CONCURRENCY, enqueueBufferSize, requeueBufferSize),
                 blobIdFactory,
                 mimeMessageStore,
                 factory,
@@ -231,7 +241,7 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
                 .build());
 
         MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
-        mailQueueItem.done(true);
+        mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
 
         assertThat(mailQueueItem.getMail().getName())
                 .isEqualTo(expectedName);
@@ -247,7 +257,11 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
         enQueue(defaultMail()
                 .name("name2")
                 .build());
+        enQueue(defaultMail()
+                .name("name3")
+                .build());
 
+        //this won't delete the mail from the store until we try a dequeue
         getManageableMailQueue().remove(ManageableMailQueue.Type.Name, "name2");
 
         awaitRemove();
@@ -256,10 +270,9 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
                 .toIterable()
                 .extracting(ManageableMailQueue.MailQueueItemView::getMail)
                 .extracting(Mail::getName)
-                .containsExactly("name1");
+                .containsExactly("name1", "name3");
 
-        MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
-        mailQueueItem.done(true);
+        Flux.from(getMailQueue().deQueue()).take(2).doOnNext(Throwing.consumer(x -> x.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS))).blockLast();
         Awaitility.await().untilAsserted(this::assertThatStoreIsEmpty);
     }
 
@@ -284,7 +297,7 @@ public class PulsarMailQueueTest implements MailQueueContract, MailQueueMetricCo
                 .build());
 
         MailQueue.MailQueueItem mailQueueItem = Flux.from(getMailQueue().deQueue()).blockFirst();
-        mailQueueItem.done(true);
+        mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
 
         Awaitility.await().untilAsserted(this::assertThatStoreIsEmpty);
 

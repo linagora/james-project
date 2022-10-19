@@ -97,6 +97,7 @@ import com.google.common.collect.ImmutableSet;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
 
@@ -250,6 +251,11 @@ public class StoreMailboxManager implements MailboxManager {
     }
 
     @Override
+    public MailboxSession loginAsOtherUser(Username thisUserId, Username otherUserId) throws MailboxException {
+        return sessionProvider.loginAsOtherUser(thisUserId, otherUserId);
+    }
+
+    @Override
     public void logout(MailboxSession session) {
         sessionProvider.logout(session);
     }
@@ -355,7 +361,11 @@ public class StoreMailboxManager implements MailboxManager {
                         } else {
                             return createMailboxesForPath(mailboxSession, sanitizedMailboxPath).takeLast(1).next();
                         }
-                    });
+                    })
+                    .retryWhen(Retry.backoff(5, Duration.ofMillis(100))
+                        .modifyErrorFilter(old -> old.and(e -> !(e instanceof MailboxException)))
+                        .jitter(0.5)
+                        .maxBackoff(Duration.ofSeconds(1)));
             } catch (MailboxNameException e) {
                 return Mono.error(e);
             }
@@ -445,6 +455,19 @@ public class StoreMailboxManager implements MailboxManager {
                 return mailbox;
             }).sneakyThrow())
             .flatMap(mailbox -> doDeleteMailbox(mailboxMapper, mailbox, session))));
+    }
+
+    @Override
+    public Mono<Mailbox> deleteMailboxReactive(MailboxId mailboxId, MailboxSession session) {
+        LOGGER.info("deleteMailbox {}", mailboxId);
+        MailboxMapper mailboxMapper = mailboxSessionMapperFactory.getMailboxMapper(session);
+
+        return mailboxMapper.executeReactive(mailboxMapper.findMailboxById(mailboxId)
+            .map(Throwing.<Mailbox, Mailbox>function(mailbox -> {
+                assertIsOwner(session, mailbox.generateAssociatedPath());
+                return mailbox;
+            }).sneakyThrow())
+            .flatMap(mailbox -> doDeleteMailbox(mailboxMapper, mailbox, session)));
     }
 
     @Override
@@ -709,6 +732,7 @@ public class StoreMailboxManager implements MailboxManager {
         Mono<List<Mailbox>> mailboxesMono = searchMailboxes(expression, session, Right.Lookup).collectList();
 
         return mailboxesMono
+            .publishOn(Schedulers.parallel())
             .flatMapMany(mailboxes -> Flux.fromIterable(mailboxes)
                 .filter(expression::matches)
                 .transform(metadataTransformation(fetchType, session, mailboxes)))
@@ -996,5 +1020,12 @@ public class StoreMailboxManager implements MailboxManager {
         MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
         return block(mapper.findMailboxByPath(mailboxPath)
             .flatMap(mailbox -> mapper.hasChildren(mailbox, session.getPathDelimiter())));
+    }
+
+    @Override
+    public Publisher<Boolean> hasChildrenReactive(MailboxPath mailboxPath, MailboxSession session) {
+        MailboxMapper mapper = mailboxSessionMapperFactory.getMailboxMapper(session);
+        return mapper.findMailboxByPath(mailboxPath)
+            .flatMap(mailbox -> mapper.hasChildren(mailbox, session.getPathDelimiter()));
     }
 }

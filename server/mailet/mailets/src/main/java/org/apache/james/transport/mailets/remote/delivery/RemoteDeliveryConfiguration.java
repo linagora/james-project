@@ -29,6 +29,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.queue.api.MailQueueName;
 import org.apache.mailet.MailetConfig;
+import org.apache.mailet.ProcessingState;
 import org.apache.mailet.base.MailetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,7 @@ public class RemoteDeliveryConfiguration {
     public static final String GATEWAY = "gateway";
     public static final String SSL_ENABLE = "sslEnable";
     public static final String START_TLS = "startTLS";
+    public static final String VERIFY_SERVER_IDENTITY = "verifyServerIdentity";
     public static final String BOUNCE_PROCESSOR = "bounceProcessor";
     public static final String SENDPARTIAL = "sendpartial";
     public static final String TIMEOUT = "timeout";
@@ -74,6 +76,7 @@ public class RemoteDeliveryConfiguration {
     private final boolean usePriority;
     private final boolean startTLS;
     private final boolean isSSLEnable;
+    private final boolean verifyServerIdentity;
     private final boolean isBindUsed;
     private final boolean sendPartial;
     private final int maxRetries;
@@ -84,23 +87,25 @@ public class RemoteDeliveryConfiguration {
     private final HeloNameProvider heloNameProvider;
     private final MailQueueName outGoingQueueName;
     private final String bindAddress;
-    private final String bounceProcessor;
+    private final Optional<ProcessingState> bounceProcessor;
     private final Collection<String> gatewayServer;
     private final String authUser;
     private final String authPass;
     private final Properties javaxAdditionalProperties;
-    private final Optional<String> onSuccess;
+    private final Optional<ProcessingState> onSuccess;
 
     public RemoteDeliveryConfiguration(MailetConfig mailetConfig, DomainList domainList) {
         isDebug = MailetUtil.getInitParameter(mailetConfig, DEBUG).orElse(false);
         startTLS = MailetUtil.getInitParameter(mailetConfig, START_TLS).orElse(false);
         isSSLEnable = MailetUtil.getInitParameter(mailetConfig, SSL_ENABLE).orElse(false);
+        verifyServerIdentity = MailetUtil.getInitParameter(mailetConfig, VERIFY_SERVER_IDENTITY).orElse(true);
         usePriority = MailetUtil.getInitParameter(mailetConfig, USE_PRIORITY).orElse(false);
         sendPartial = MailetUtil.getInitParameter(mailetConfig, SENDPARTIAL).orElse(false);
         outGoingQueueName = Optional.ofNullable(mailetConfig.getInitParameter(OUTGOING))
             .map(MailQueueName::of)
             .orElse(DEFAULT_OUTGOING_QUEUE_NAME);
-        bounceProcessor = mailetConfig.getInitParameter(BOUNCE_PROCESSOR);
+        bounceProcessor = Optional.ofNullable(mailetConfig.getInitParameter(BOUNCE_PROCESSOR))
+            .map(ProcessingState::new);
         bindAddress = mailetConfig.getInitParameter(BIND);
 
         DelaysAndMaxRetry delaysAndMaxRetry = computeDelaysAndMaxRetry(mailetConfig);
@@ -123,7 +128,8 @@ public class RemoteDeliveryConfiguration {
         }
         isBindUsed = bindAddress != null;
         javaxAdditionalProperties = computeJavaxProperties(mailetConfig);
-        onSuccess = Optional.ofNullable(mailetConfig.getInitParameter(ON_SUCCESS));
+        onSuccess = Optional.ofNullable(mailetConfig.getInitParameter(ON_SUCCESS))
+            .map(ProcessingState::new);
     }
 
     private Properties computeJavaxProperties(MailetConfig mailetConfig) {
@@ -236,6 +242,7 @@ public class RemoteDeliveryConfiguration {
         props.put("mail." + protocol + ".sendpartial", String.valueOf(sendPartial));
         props.put("mail." + protocol + ".localhost", heloNameProvider.getHeloName());
         props.put("mail." + protocol + ".starttls.enable", String.valueOf(startTLS));
+        props.put("mail." + protocol + ".ssl.checkserveridentity", String.valueOf(verifyServerIdentity));
         if (isBindUsed()) {
             props.put("mail." + protocol + ".localaddress", bindAddress);
         }
@@ -286,7 +293,7 @@ public class RemoteDeliveryConfiguration {
         return isBindUsed;
     }
 
-    public String getBounceProcessor() {
+    public Optional<ProcessingState> getBounceProcessor() {
         return bounceProcessor;
     }
 
@@ -300,6 +307,14 @@ public class RemoteDeliveryConfiguration {
 
     public boolean isSSLEnable() {
         return isSSLEnable;
+    }
+    
+    public boolean isVerifyServerIdentity() {
+        return verifyServerIdentity;
+    }
+    
+    public boolean isConnectByHostname() {
+        return (isSSLEnable() || isStartTLS()) && isVerifyServerIdentity();
     }
 
     public HeloNameProvider getHeloNameProvider() {
@@ -322,7 +337,7 @@ public class RemoteDeliveryConfiguration {
         return bindAddress;
     }
 
-    public Optional<String> getOnSuccess() {
+    public Optional<ProcessingState> getOnSuccess() {
         return onSuccess;
     }
 }

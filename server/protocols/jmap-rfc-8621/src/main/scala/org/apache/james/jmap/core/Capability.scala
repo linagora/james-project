@@ -26,7 +26,7 @@ import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.string.Uri
-import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, EMAIL_SUBMISSION, JAMES_QUOTA, JAMES_SHARES, JMAP_CORE, JMAP_MAIL, JMAP_MDN, JMAP_VACATION_RESPONSE, JMAP_WEBSOCKET}
+import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, EMAIL_SUBMISSION, JAMES_IDENTITY_SORTORDER, JAMES_QUOTA, JAMES_SHARES, JMAP_CORE, JMAP_MAIL, JMAP_MDN, JMAP_QUOTA, JMAP_VACATION_RESPONSE, JMAP_WEBSOCKET}
 import org.apache.james.jmap.core.CoreCapabilityProperties.CollationAlgorithm
 import org.apache.james.jmap.core.MailCapability.EmailQuerySortOption
 import org.apache.james.jmap.core.UnsignedInt.{UnsignedInt, UnsignedIntConstraint}
@@ -48,7 +48,9 @@ object CapabilityIdentifier {
   val EMAIL_SUBMISSION: CapabilityIdentifier = "urn:ietf:params:jmap:submission"
   val JMAP_WEBSOCKET: CapabilityIdentifier = "urn:ietf:params:jmap:websocket"
   val JAMES_QUOTA: CapabilityIdentifier = "urn:apache:james:params:jmap:mail:quota"
+  val JMAP_QUOTA: CapabilityIdentifier = "urn:ietf:params:jmap:quota"
   val JAMES_SHARES: CapabilityIdentifier = "urn:apache:james:params:jmap:mail:shares"
+  val JAMES_IDENTITY_SORTORDER: CapabilityIdentifier = "urn:apache:james:params:jmap:mail:identity:sortorder"
   val JMAP_MDN: CapabilityIdentifier = "urn:ietf:params:jmap:mdn"
 }
 
@@ -217,6 +219,19 @@ case object QuotaCapabilityFactory extends CapabilityFactory {
   override def create(urlPrefixes: UrlPrefixes): Capability = QuotaCapability()
 }
 
+final case class IdentitySortOrderCapabilityProperties() extends CapabilityProperties {
+  override def jsonify(): JsObject = Json.obj()
+}
+
+final case class IdentitySortOrderCapability(properties: IdentitySortOrderCapabilityProperties = IdentitySortOrderCapabilityProperties(),
+                                             identifier: CapabilityIdentifier = JAMES_IDENTITY_SORTORDER) extends Capability
+
+case object IdentitySortOrderCapabilityFactory extends CapabilityFactory {
+  override def id(): CapabilityIdentifier = JAMES_IDENTITY_SORTORDER
+
+  override def create(urlPrefixes: UrlPrefixes): Capability = IdentitySortOrderCapability()
+}
+
 final case class SharesCapabilityProperties() extends CapabilityProperties {
   override def jsonify(): JsObject = Json.obj()
 }
@@ -255,3 +270,16 @@ case object VacationResponseCapabilityFactory extends CapabilityFactory {
 
 final case class VacationResponseCapability(properties: VacationResponseCapabilityProperties = VacationResponseCapabilityProperties(),
                                             identifier: CapabilityIdentifier = JMAP_VACATION_RESPONSE) extends Capability
+
+final case class JmapQuotaCapability(properties: JmapQuotaCapabilityProperties = JmapQuotaCapabilityProperties(),
+                                     identifier: CapabilityIdentifier = JMAP_QUOTA) extends Capability
+
+final case class JmapQuotaCapabilityProperties() extends CapabilityProperties {
+  override def jsonify(): JsObject = Json.obj()
+}
+
+case object JmapQuotaCapabilityFactory extends CapabilityFactory {
+  override def id(): CapabilityIdentifier = JMAP_QUOTA
+
+  override def create(urlPrefixes: UrlPrefixes): Capability = JmapQuotaCapability()
+}

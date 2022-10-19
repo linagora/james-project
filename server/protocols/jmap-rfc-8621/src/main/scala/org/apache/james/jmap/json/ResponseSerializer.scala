@@ -60,7 +60,7 @@ object ResponseSerializer {
     ) (core.Invocation.apply _)
 
   private implicit val invocationWrite: Writes[Invocation] = (invocation: Invocation) =>
-    Json.arr(invocation.methodName, invocation.arguments, invocation.methodCallId)
+    JsArray(Seq(JsString(invocation.methodName.value.value), invocation.arguments.value, JsString(invocation.methodCallId.value.value)))
   private implicit val statusWrite: Writes[HttpResponseStatus] = status => JsNumber(status.code())
 
   // RequestObject
@@ -96,10 +96,10 @@ object ResponseSerializer {
   val webSocketPropertiesWrites: OWrites[WebSocketCapabilityProperties] = Json.writes[WebSocketCapabilityProperties]
 
   private implicit val setCapabilityWrites: Writes[Set[_ <: Capability]] =
-    (set: Set[_ <: Capability]) => {
-      set.foldLeft(JsObject.empty)((jsObject, capability) =>
-        jsObject.+(capability.identifier.value, capability.properties.jsonify))
-    }
+    (set: Set[_ <: Capability]) =>
+      JsObject(set
+        .map(capability => (capability.identifier().value, capability.properties().jsonify()))
+        .toMap)
 
   private implicit val capabilitiesWrites: Writes[Capabilities] = capabilities => setCapabilityWrites.writes(capabilities.capabilities)
 

@@ -26,18 +26,17 @@ import java.util.concurrent.TimeoutException;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.core.healthcheck.Result;
 import org.apache.james.lifecycle.api.Startable;
-import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 public class PeriodicalHealthChecks implements Startable {
@@ -48,12 +47,7 @@ public class PeriodicalHealthChecks implements Startable {
     private Disposable disposable;
 
     @Inject
-    PeriodicalHealthChecks(Set<HealthCheck> healthChecks, PeriodicalHealthChecksConfiguration configuration) {
-        this.healthChecks = healthChecks;
-        this.configuration = configuration;
-    }
-
-    PeriodicalHealthChecks(Set<HealthCheck> healthChecks, Scheduler scheduler, PeriodicalHealthChecksConfiguration configuration) {
+    PeriodicalHealthChecks(@Named("resolved-checks") Set<HealthCheck> healthChecks, PeriodicalHealthChecksConfiguration configuration) {
         this.healthChecks = healthChecks;
         this.configuration = configuration;
     }
@@ -67,7 +61,7 @@ public class PeriodicalHealthChecks implements Startable {
                 DEFAULT_CONCURRENCY)
             .doOnNext(this::logResult)
             .onErrorContinue(this::logError)
-            .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
+            .subscribeOn(Schedulers.parallel())
             .subscribe();
     }
 

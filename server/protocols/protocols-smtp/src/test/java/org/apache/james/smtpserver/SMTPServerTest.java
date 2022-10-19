@@ -58,6 +58,7 @@ import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.domainlist.lib.DomainListConfiguration;
 import org.apache.james.domainlist.memory.MemoryDomainList;
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.mailbox.Authorizator;
 import org.apache.james.mailrepository.api.MailRepositoryStore;
 import org.apache.james.mailrepository.api.Protocol;
 import org.apache.james.mailrepository.memory.MailRepositoryStoreConfiguration;
@@ -294,6 +295,7 @@ public class SMTPServerTest {
             .put(binder -> binder.bind(UsersRepository.class).toInstance(usersRepository))
             .put(binder -> binder.bind(MetricFactory.class).to(RecordingMetricFactory.class))
             .put(binder -> binder.bind(UserEntityValidator.class).toInstance(UserEntityValidator.NOOP))
+            .put(binder -> binder.bind(Authorizator.class).toInstance((userId, otherUserId) -> Authorizator.AuthorizationState.ALLOWED))
             .build();
     }
 
@@ -801,7 +803,6 @@ public class SMTPServerTest {
 
         smtpProtocol.sendCommand(heloCommand, fictionalDomain);
         smtpProtocol.setSender(mail);
-        smtpProtocol.addRecipient(rcpt);
 
         // this should give a 501 code cause the helo/ehlo could not resolved
         assertThat(smtpProtocol.getReplyCode())
@@ -873,7 +874,6 @@ public class SMTPServerTest {
 
             smtpProtocol1.sendCommand("helo", helo1);
             smtpProtocol1.setSender(mail);
-            smtpProtocol1.addRecipient(rcpt);
 
             // this should give a 501 code cause the helo not equal reverse of
             // ip
@@ -1151,7 +1151,6 @@ public class SMTPServerTest {
 
             smtpProtocol1.sendCommand("ehlo", ehlo1);
             smtpProtocol1.setSender(mail);
-            smtpProtocol1.addRecipient(rcpt);
 
             // this should give a 501 code cause the ehlo not equals reverse of
             // ip
@@ -1293,7 +1292,6 @@ public class SMTPServerTest {
 
         smtpProtocol.setSender(sender);
 
-        smtpProtocol.addRecipient("mail@sample.com");
         assertThat(smtpProtocol.getReplyCode())
             .as("expected 530 error")
             .isEqualTo(530);
@@ -1322,6 +1320,8 @@ public class SMTPServerTest {
         assertThat(smtpProtocol.getReplyCode())
             .as("authenticated")
             .isEqualTo(235);
+
+        smtpProtocol.setSender(sender);
 
         smtpProtocol.sendCommand("AUTH PLAIN");
         assertThat(smtpProtocol.getReplyCode())
@@ -1742,7 +1742,7 @@ public class SMTPServerTest {
         String userName = USER_LOCALHOST;
         String sender = USER_LOCALHOST;
 
-        smtpProtocol.setSender(sender);
+        //smtpProtocol.setSender(sender);
 
         usersRepository.addUser(Username.of(userName), "pwd");
 
@@ -1751,6 +1751,11 @@ public class SMTPServerTest {
         assertThat(smtpProtocol.getReplyCode())
             .as("authenticated")
             .isEqualTo(235);
+
+        smtpProtocol.setSender(sender);
+        assertThat(smtpProtocol.getReplyCode())
+            .as("authenticated.. not reject")
+            .isEqualTo(250);
 
         smtpProtocol.addRecipient("mail@sample.com");
         assertThat(smtpProtocol.getReplyCode())
@@ -1784,8 +1789,6 @@ public class SMTPServerTest {
         String sender = USER_LOCALHOST;
 
         smtpProtocol.setSender(sender);
-
-        smtpProtocol.addRecipient("mail@sample.com");
         assertThat(smtpProtocol.getReplyCode())
             .as("reject")
             .isEqualTo(554);

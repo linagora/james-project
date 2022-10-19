@@ -22,7 +22,7 @@ components to achieve basic logic. But what if our goals are more complex? What 
 Mailbox Listener is a component in James Mailbox System. Each time an action is applied on a mailbox(adding, deleting),
  or on an email(adding, deleting, updating flags...), then an event representing that action is generated and delivered 
  to all the Listeners that had been registered before. After receiving events, listeners retrieve information from the 
- events then execute their business (Indexing emails in ElasticSearch, updating quota of users, detecting spam emails...)
+ events then execute their business (Indexing emails in OpenSearch, updating quota of users, detecting spam emails...)
  
 **Mailbox Listeners** allow customizing the behaviour of James used as a Mail Delivery Agent (MDA). 
 
@@ -48,6 +48,11 @@ administrative features exposed over a REST API. This can allow you to write som
 interact with third party systems, do advance reporting... 
 
 [This example](custom-webadmin-route) shows how to write additional Webadmin routes!
+
+## Configure Custom Healthchecks
+
+[This example](custom-healthcheck) demonstrates how to write custom healthchecks for Apache James.
+This enables writing new custom healthcheck that fits your monitoring need.
 
 ## Write Custom James server assembly
 
@@ -75,3 +80,12 @@ Of course alternative technologies can be used.
 ## Auto-configuration of Mail User Agents
 
 [This example](imap-autoconf) demonstrates how to deploy auto-configuration for various mail user agents.
+
+## Custom metric exporters
+
+[This example](metrics-graphite) demonstrates how to set up custom metric exporters and demonstrate how to do so with Graphite.
+
+## HAProxy set up example
+
+[This example](proxy-smtp) demonstrate how to set up the proxy protocol to preserve client origin IP address despite the use
+of a proxy.

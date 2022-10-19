@@ -26,6 +26,7 @@ import static org.apache.james.backends.rabbitmq.Constants.DURABLE;
 import static org.apache.james.backends.rabbitmq.Constants.REQUEUE;
 import static reactor.core.publisher.Sinks.EmitFailureHandler.FAIL_FAST;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
@@ -38,6 +39,7 @@ import org.apache.james.task.TaskId;
 import org.apache.james.task.TaskManagerWorker;
 import org.apache.james.task.TaskWithId;
 import org.apache.james.task.WorkQueue;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,14 +148,17 @@ public class RabbitMQWorkQueue implements WorkQueue {
                 receiverProvider::createReceiver,
                 receiver -> receiver.consumeManualAck(QUEUE_NAME, new ConsumeOptions()),
                 Receiver::close)
-            .subscribeOn(Schedulers.boundedElastic())
+            .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
             .concatMap(this::executeTask)
             .subscribe();
     }
 
     private Mono<Task.Result> executeTask(AcknowledgableDelivery delivery) {
-        return Mono.fromCallable(() -> TaskId.fromString(delivery.getProperties().getHeaders().get(TASK_ID).toString()))
-            .flatMap(taskId -> deserialize(new String(delivery.getBody(), StandardCharsets.UTF_8), taskId)
+        return Mono.fromCallable(() -> delivery.getProperties().getHeaders())
+            .map(headers -> headers.get(TASK_ID))
+            .map(taskIdValue -> TaskId.fromString(taskIdValue.toString()))
+            .flatMap(taskId -> Mono.fromCallable(() -> new String(delivery.getBody(), StandardCharsets.UTF_8))
+                .flatMap(bodyValue -> deserialize(bodyValue, taskId))
                 .doOnNext(task -> delivery.ack())
                 .flatMap(task -> executeOnWorker(taskId, task)))
             .onErrorResume(error -> {
@@ -171,7 +176,7 @@ public class RabbitMQWorkQueue implements WorkQueue {
             .onErrorResume(error -> {
                 String errorMessage = String.format("Unable to deserialize submitted Task %s", taskId.asString());
                 LOGGER.error(errorMessage, error);
-                return Mono.from(worker.fail(taskId, Optional.empty(), errorMessage, error))
+                return Mono.from(worker.fail(taskId, Mono.empty(), errorMessage, error))
                     .then(Mono.empty());
             });
     }
@@ -181,7 +186,7 @@ public class RabbitMQWorkQueue implements WorkQueue {
             .onErrorResume(error -> {
                 String errorMessage = String.format("Unable to run submitted Task %s", taskId.asString());
                 LOGGER.warn(errorMessage, error);
-                return Mono.from(worker.fail(taskId, task.details(), errorMessage, error))
+                return Mono.from(worker.fail(taskId, task.detailsReactive(), errorMessage, error))
                     .then(Mono.empty());
             });
     }
@@ -246,6 +251,11 @@ public class RabbitMQWorkQueue implements WorkQueue {
 
     @Override
     public void close() {
+        try {
+            worker.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         Optional.ofNullable(receiverHandle).ifPresent(Disposable::dispose);
         Optional.ofNullable(sendCancelRequestsQueueHandle).ifPresent(Disposable::dispose);
         Optional.ofNullable(cancelRequestListenerHandle).ifPresent(Disposable::dispose);

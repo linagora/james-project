@@ -33,8 +33,8 @@ class KeyspaceCreationTest {
     @Nested
     class CreateWhenKeyspaceExists {
         @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(new CassandraExtension())
             .server(CassandraJamesServerMain::createServer)
             .overrideServerModule(binder -> binder.bind(ClusterConfiguration.class)
@@ -54,8 +54,8 @@ class KeyspaceCreationTest {
     @Nested
     class CreateWhenDoesNotExistAndHasRights {
         @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(new CassandraExtension())
             .server(CassandraJamesServerMain::createServer)
             .overrideServerModule(binder -> binder.bind(KeyspacesConfiguration.class).toInstance(KeyspacesConfiguration.builder()
@@ -81,8 +81,8 @@ class KeyspaceCreationTest {
     @Nested
     class CreateWhenDoesNotExistAndDoNotHaveRights {
         @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(new CassandraExtension())
             .server(CassandraJamesServerMain::createServer)
             .overrideServerModule(binder -> binder.bind(ClusterConfiguration.class)
@@ -108,8 +108,8 @@ class KeyspaceCreationTest {
     @Nested
     class StartWhenKeyspaceDoesNotExist {
         @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(new CassandraExtension())
             .server(CassandraJamesServerMain::createServer)
             .overrideServerModule(binder -> binder.bind(ClusterConfiguration.class)

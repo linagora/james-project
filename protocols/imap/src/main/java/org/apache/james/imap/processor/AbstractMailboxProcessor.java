@@ -100,10 +100,9 @@ public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends Ab
                             no(acceptableMessage, responder, HumanReadableText.DENIED_SHARED_MAILBOX);
                             return Mono.empty();
                         })
-                        .doOnEach(ReactorUtils.logOnError(e -> LOGGER.error("Unexpected error during IMAP processing", e)))
                         .onErrorResume(e -> {
                             no(acceptableMessage, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
-                            return Mono.empty();
+                            return ReactorUtils.logAsMono(() -> LOGGER.error("Unexpected error during IMAP processing", e));
                         }), mailboxSession)));
         } else {
             ImapResponseMessage response = factory.taggedNo(acceptableMessage.getTag(), acceptableMessage.getCommand(), HumanReadableText.INVALID_COMMAND);
@@ -170,7 +169,7 @@ public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends Ab
             }
         })
             .then(addFlagsResponses(session, selected, responder, useUid))
-            .doFinally(type -> selected.resetEvents());
+            .then(Mono.fromRunnable(selected::resetEvents));
     }
 
     private void addExpungedResponses(SelectedMailbox selected, Collection<MessageUid> expungedUids, ImapProcessor.Responder responder) {
@@ -396,13 +395,6 @@ public abstract class AbstractMailboxProcessor<R extends ImapRequest> extends Ab
 
     protected StatusResponseFactory getStatusResponseFactory() {
         return factory;
-    }
-
-    protected Optional<MessageManager> getSelectedMailbox(ImapSession session) throws MailboxException {
-        return Optional.ofNullable(session.getSelected())
-            .map(Throwing.<SelectedMailbox, MessageManager>function(selectedMailbox ->
-                getMailboxManager().getMailbox(selectedMailbox.getMailboxId(), session.getMailboxSession()))
-                .sneakyThrow());
     }
 
     protected Mono<MessageManager> getSelectedMailboxReactive(ImapSession session, Mono<MessageManager> ifEmpty) {

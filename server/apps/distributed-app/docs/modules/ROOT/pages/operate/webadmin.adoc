@@ -73,7 +73,7 @@ explanations.
 Supported health checks include:
 
 * *Cassandra backend*: Cassandra storage.
-* *ElasticSearch Backend*: ElasticSearch storage.
+* *OpenSearch Backend*: OpenSearch storage.
 * *EventDeadLettersHealthCheck*
 * *Guice application lifecycle*
 * *JPA Backend*: JPA storage.
@@ -1312,7 +1312,7 @@ Since this is a somewhat expensive operation, the task is throttled to one user
 per second. You may speed it up via `usersPerSecond=10` for example. But keep
 in mind that a high rate might overwhelm your database or blob store.
 
-*Scanning search only:* (unsupported for Lucene and ElasticSearch search implementations) +
+*Scanning search only:* (unsupported for Lucene and OpenSearch search implementations) +
 Some mail clients can add an `Expires` header (RFC 4021) to their messages.
 Instead of specifying an absolute age, you may choose to delete only such
 messages where the expiration date from this header lies in the past:
@@ -3427,8 +3427,10 @@ processing in. Defaults to the `state` field of each processed email.
 - `consume` (boolean defaulting to `true`) whether the reprocessing should consume the mail in its originating mail repository. Passing
 this value to `false` allows non destructive reprocessing as you keep a copy of the email in the mail repository and can be valuable
 when debugging.
+- `limit` (integer value. Optional, default is empty). It enables to limit the count of elements reprocessed.
+If unspecified the count of the processed elements is unbounded
 
-For instance:
+redeliver_group_events
 
 ....
 curl -XPATCH 'http://ip:port/mailRepositories/var%2Fmail%2Ferror%2F/mails?action=reprocess&processor=transport&queue=spool'
@@ -3808,10 +3810,34 @@ Response codes:
 * 204: Success
 * 400: Invalid group name or `insertionId`
 
+=== Deleting all events of a group
+
+....
+curl -XDELETE http://ip:port/events/deadLetter/groups/org.apache.james.mailbox.events.EventBusTestFixture$GroupA
+....
+
+Will delete all events of this group.
+
+Response codes:
+
+* 204: Success
+* 400: Invalid group name
+
 === Redeliver all events
 
 ....
-curl -XPOST http://ip:port/events/deadLetter?action=redeliver
+curl -XPOST http://ip:port/events/deadLetter?action=reDeliver
+....
+
+Additional query parameters are supported:
+
+- `limit` (integer value. Optional, default is empty). It enables to limit the count of elements redelivered.
+If unspecified the count of the processed elements is unbounded
+
+For instance:
+
+....
+curl -XPOST http://ip:port/events/deadLetter?action=reDeliver&limit=10
 ....
 
 Will create a task that will attempt to redeliver all events stored in
@@ -3829,12 +3855,23 @@ Response codes:
 === Redeliver group events
 
 ....
-curl -XPOST http://ip:port/events/deadLetter/groups/org.apache.james.mailbox.events.EventBusTestFixture$GroupA
+curl -XPOST http://ip:port/events/deadLetter/groups/org.apache.james.mailbox.events.EventBusTestFixture$GroupA?action=reDeliver
 ....
 
 Will create a task that will attempt to redeliver all events of a
 particular group stored in ``Event Dead Letter''. If successful,
 redelivered events will then be removed from ``Dead Letter''.
+
+Additional query parameters are supported:
+
+- `limit` (integer value. Optional, default is empty). It enables to limit the count of elements redelivered.
+If unspecified the count of the processed elements is unbounded
+
+For instance:
+
+....
+curl -XPOST http://ip:port/events/deadLetter/groups/org.apache.james.mailbox.events.EventBusTestFixture$GroupA?action=reDeliver&limit=10
+....
 
 link:#_endpoints_returning_a_task[More details about endpoints returning
 a task].

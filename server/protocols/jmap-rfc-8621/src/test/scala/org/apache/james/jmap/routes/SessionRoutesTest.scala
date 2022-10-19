@@ -149,7 +149,9 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |      "supportsPush": true,
                          |      "url": "ws://localhost/jmap/ws"
                          |    },
+                         |    "urn:apache:james:params:jmap:mail:identity:sortorder": {},
                          |    "urn:apache:james:params:jmap:mail:quota": {},
+                         |    "urn:ietf:params:jmap:quota": {},
                          |    "urn:apache:james:params:jmap:mail:shares": {},
                          |    "urn:ietf:params:jmap:vacationresponse":{}
                          |  },
@@ -186,6 +188,8 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |          "mayCreateTopLevelMailbox" : true
                          |        },
                          |        "urn:apache:james:params:jmap:mail:quota": {},
+                         |        "urn:ietf:params:jmap:quota": {},
+                         |        "urn:apache:james:params:jmap:mail:identity:sortorder": {},
                          |        "urn:apache:james:params:jmap:mail:shares": {},
                          |        "urn:ietf:params:jmap:vacationresponse":{}
                          |      }
@@ -197,6 +201,8 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |    "urn:ietf:params:jmap:core" : "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:ietf:params:jmap:mail" : "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:apache:james:params:jmap:mail:quota": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
+                         |    "urn:ietf:params:jmap:quota": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
+                         |    "urn:apache:james:params:jmap:mail:identity:sortorder": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:apache:james:params:jmap:mail:shares": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:ietf:params:jmap:vacationresponse": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401"
                          |  },

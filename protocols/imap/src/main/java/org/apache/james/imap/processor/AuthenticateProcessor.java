@@ -28,6 +28,7 @@ import java.util.StringTokenizer;
 
 import javax.mail.internet.AddressException;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.core.MailAddress;
 import org.apache.james.core.Username;
 import org.apache.james.imap.api.display.HumanReadableText;
@@ -98,10 +99,12 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
                 IRAuthenticateRequest irRequest = (IRAuthenticateRequest) request;
                 doOAuth(irRequest.getInitialClientResponse(), session, request, responder);
             } else {
-                responder.respond(new AuthenticateResponse());
-                session.pushLineHandler((requestSession, data) -> {
-                    doOAuth(extractInitialClientResponse(data), requestSession, request, responder);
-                    requestSession.popLineHandler();
+                session.executeSafely(() -> {
+                    responder.respond(new AuthenticateResponse());
+                    session.pushLineHandler((requestSession, data) -> {
+                        doOAuth(extractInitialClientResponse(data), requestSession, request, responder);
+                        requestSession.popLineHandler();
+                    });
                 });
             }
         } else {
@@ -116,7 +119,7 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
     protected void doPlainAuth(String initialClientResponse, ImapSession session, ImapRequest request, Responder responder) {
         AuthenticationAttempt authenticationAttempt = parseDelegationAttempt(initialClientResponse);
         if (authenticationAttempt.isDelegation()) {
-            doAuthWithDelegation(authenticationAttempt, session, request, responder, HumanReadableText.AUTHENTICATION_FAILED);
+            doAuthWithDelegation(authenticationAttempt, session, request, responder);
         } else {
             doAuth(authenticationAttempt, session, request, responder, HumanReadableText.AUTHENTICATION_FAILED);
         }
@@ -155,6 +158,7 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
         } catch (Exception e) {
             // Ignored - this exception in parsing will be dealt
             // with in the if clause below
+            LOGGER.info("Invalid syntax in AUTHENTICATE initial client response", e);
             return noDelegation(null, null);
         }
     }
@@ -187,12 +191,27 @@ public class AuthenticateProcessor extends AbstractAuthProcessor<AuthenticateReq
             no(request, responder, HumanReadableText.UNSUPPORTED_AUTHENTICATION_MECHANISM);
         } else {
             OIDCSASLParser.parse(initialResponse)
-                .flatMap(oidcInitialResponseValue -> session.oidcSaslConfiguration()
-                    .flatMap(configure -> validateToken(configure, oidcInitialResponseValue.getToken())))
-                .ifPresentOrElse(username -> authSuccess(username, session, request, responder),
-                    () -> manageFailureCount(session, request, responder, HumanReadableText.AUTHENTICATION_FAILED));
+                .flatMap(oidcInitialResponseValue -> session.oidcSaslConfiguration().map(configure -> Pair.of(oidcInitialResponseValue, configure)))
+                .ifPresentOrElse(pair -> doOAuth(pair.getLeft(), pair.getRight(), session, request, responder),
+                    () -> manageFailureCount(session, request, responder));
         }
         session.stopDetectingCommandInjection();
+    }
+
+    private void doOAuth(OIDCSASLParser.OIDCInitialResponse oidcInitialResponse, OidcSASLConfiguration oidcSASLConfiguration,
+                         ImapSession session, ImapRequest request, Responder responder) {
+        validateToken(oidcSASLConfiguration, oidcInitialResponse.getToken())
+            .ifPresentOrElse(authenticatedUser -> {
+                Username associatedUser = Username.of(oidcInitialResponse.getAssociatedUser());
+                if (!associatedUser.equals(authenticatedUser)) {
+                    doAuthWithDelegation(() -> getMailboxManager().loginAsOtherUser(
+                            authenticatedUser,
+                            associatedUser),
+                        session, request, responder);
+                } else {
+                    authSuccess(authenticatedUser, session, request, responder);
+                }
+            }, () -> manageFailureCount(session, request, responder));
     }
 
     private Optional<Username> validateToken(OidcSASLConfiguration oidcSASLConfiguration, String token) {

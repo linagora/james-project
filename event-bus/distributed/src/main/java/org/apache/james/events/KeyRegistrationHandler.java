@@ -19,6 +19,7 @@
 
 package org.apache.james.events;
 
+import static org.apache.james.backends.rabbitmq.Constants.ALLOW_QUORUM;
 import static org.apache.james.backends.rabbitmq.Constants.AUTO_DELETE;
 import static org.apache.james.backends.rabbitmq.Constants.EXCLUSIVE;
 import static org.apache.james.events.RabbitMQEventBus.EVENT_BUS_ID;
@@ -126,7 +127,7 @@ class KeyRegistrationHandler {
                 .durable(configuration.isEventBusNotificationDurabilityEnabled())
                 .exclusive(!EXCLUSIVE)
                 .autoDelete(AUTO_DELETE)
-                .arguments(configuration.workQueueArgumentsBuilder().build()))
+                .arguments(configuration.workQueueArgumentsBuilder(!ALLOW_QUORUM).build()))
             .timeout(TOPOLOGY_CHANGES_TIMEOUT)
             .map(AMQP.Queue.DeclareOk::getQueue)
             .retryWhen(Retry.backoff(retryBackoff.getMaxRetries(), retryBackoff.getFirstBackoff()).jitter(retryBackoff.getJitterFactor()))
@@ -162,6 +163,8 @@ class KeyRegistrationHandler {
     private Mono<Void> registerIfNeeded(RegistrationKey key, LocalListenerRegistry.LocalRegistration registration) {
         if (registration.isFirstListener()) {
             return registrationBinder.bind(key)
+                // Bind is potentially blocking
+                .subscribeOn(Schedulers.boundedElastic())
                 .timeout(TOPOLOGY_CHANGES_TIMEOUT)
                 .retryWhen(Retry.backoff(retryBackoff.getMaxRetries(), retryBackoff.getFirstBackoff()).jitter(retryBackoff.getJitterFactor()).scheduler(Schedulers.boundedElastic()));
         }

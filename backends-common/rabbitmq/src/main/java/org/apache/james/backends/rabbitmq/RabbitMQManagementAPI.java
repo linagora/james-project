@@ -125,6 +125,9 @@ public interface RabbitMQManagementAPI {
         @JsonProperty("consumer_details")
         List<ConsumerDetails> consumerDetails;
 
+        @JsonProperty("messages")
+        long queueLength;
+
         public String getName() {
             return name;
         }
@@ -151,6 +154,10 @@ public interface RabbitMQManagementAPI {
 
         public List<ConsumerDetails> getConsumerDetails() {
             return consumerDetails;
+        }
+
+        public long getQueueLength() {
+            return queueLength;
         }
     }
 
@@ -434,6 +441,12 @@ public interface RabbitMQManagementAPI {
 
     @RequestLine("GET /api/queues")
     List<MessageQueue> listQueues();
+
+    @RequestLine("GET /api/queues/{vhost}")
+    List<MessageQueue> listVhostQueues(@Param("vhost") String vhost);
+
+    @RequestLine("PUT /api/vhosts/{vhost}")
+    List<MessageQueue> addVhost(@Param("vhost") String vhost);
 
     @RequestLine(value = "GET /api/queues/{vhost}/{name}", decodeSlash = false)
     MessageQueueDetails queueDetails(@Param("vhost") String vhost, @Param("name") String name);

@@ -8,7 +8,7 @@
   "sender": "sender@localhost",
   "state": "state",
   "errorMessage": "an error",
-  "lastUpdated": 1473344752,
+  "lastUpdated": 1473344752.000000000,
   "attributes": {
     "att1": "{\"serializer\":\"StringSerializer\",\"value\":\"value\"}"
   },

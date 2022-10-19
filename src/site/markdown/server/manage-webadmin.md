@@ -99,7 +99,7 @@ Will return a list of healthChecks execution result, with an aggregated result:
 Supported health checks include:
 
  - **Cassandra backend**: Cassandra storage. Included in Cassandra Guice based products.
- - **ElasticSearch Backend**: ElasticSearch storage. Included in Cassandra Guice based products.
+ - **OpenSearch Backend**: OpenSearch storage. Included in Cassandra Guice based products.
  - **EventDeadLettersHealthCheck**: Included in all Guice products.
  - **Guice application lifecycle**: included in all Guice products.
  - **JPA Backend**: JPA storage. Included in JPA Guice based products.
@@ -3674,6 +3674,7 @@ failing, then the event will be stored in the "Event Dead Letter". This API allo
  - [Listing failed events](#Listing_failed_events)
  - [Getting event details](#Getting_event_details)
  - [Deleting an event](#Deleting_an_event)
+ - [Deleting all events of a group](#Deleting_all_events_of_a_group)
  - [Redeliver all events](#Redeliver_all_events)
  - [Redeliver group events](#Redeliver_group_events)
  - [Redeliver a single event](#Redeliver_a_single_event)
@@ -3743,10 +3744,23 @@ Response codes:
  - 204: Success
  - 400: Invalid group name or `insertionId`
 
+### Deleting all events of a group
+
+```
+curl -XDELETE http://ip:port/events/deadLetter/groups/org.apache.james.mailbox.events.EventBusTestFixture$GroupA
+```
+
+Will delete all events of this group.
+
+Response codes:
+
+- 204: Success
+- 400: Invalid group name
+
 ### Redeliver all events
 
 ```
-curl -XPOST http://ip:port/events/deadLetter?action=redeliver
+curl -XPOST http://ip:port/events/deadLetter?action=reDeliver
 ```
 
 Will create a task that will attempt to redeliver all events stored in "Event Dead Letter".

@@ -19,24 +19,17 @@
 
 package org.apache.james.cli.mailbox;
 
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.james.cli.WebAdminCli;
-import org.apache.james.httpclient.MailboxClient;
+import org.apache.james.webadmin.httpclient.feign.JamesFeignException;
 
-import feign.Response;
 import picocli.CommandLine;
 
 @CommandLine.Command(
     name = "create",
     description = "Create a new mailbox")
 public class MailboxCreateCommand implements Callable<Integer> {
-
-    public static final int CREATED_CODE = 204;
-    public static final int BAD_REQUEST_CODE = 400;
-    public static final int USERNAME_NOT_EXIST_CODE = 404;
 
     @CommandLine.ParentCommand MailboxCommand mailboxCommand;
 
@@ -49,21 +42,16 @@ public class MailboxCreateCommand implements Callable<Integer> {
     @Override
     public Integer call() {
         try {
-            MailboxClient mailboxClient = mailboxCommand.fullyQualifiedURL("/users");
-            Response rs = mailboxClient.createAMailbox(userName, mailboxName);
-            if (rs.status() == CREATED_CODE) {
-                mailboxCommand.out.println("The mailbox was created successfully.");
-                return WebAdminCli.CLI_FINISHED_SUCCEED;
-            } else if (rs.status() == BAD_REQUEST_CODE) {
-                mailboxCommand.err.println(IOUtils.toString(rs.body().asInputStream(), StandardCharsets.UTF_8));
-                return WebAdminCli.CLI_FINISHED_FAILED;
-            } else if (rs.status() == USERNAME_NOT_EXIST_CODE) {
-                mailboxCommand.err.println(IOUtils.toString(rs.body().asInputStream(), StandardCharsets.UTF_8));
-                return WebAdminCli.CLI_FINISHED_FAILED;
-            }
-            return WebAdminCli.CLI_FINISHED_FAILED;
+            mailboxCommand.fullyQualifiedURL("/users")
+                .createAMailbox(userName, mailboxName);
+            mailboxCommand.out.println("The mailbox was created successfully.");
+            return WebAdminCli.CLI_FINISHED_SUCCEED;
         } catch (Exception e) {
-            e.printStackTrace(mailboxCommand.err);
+            if (e instanceof JamesFeignException) {
+                mailboxCommand.err.println(e.getMessage());
+            } else {
+                e.printStackTrace(mailboxCommand.err);
+            }
             return WebAdminCli.CLI_FINISHED_FAILED;
         }
     }

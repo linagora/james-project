@@ -18,8 +18,8 @@
  ****************************************************************/
 package org.apache.james.mailbox.cassandra.mail;
 
-import static org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration.ConsistencyChoice.STRONG;
-import static org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration.ConsistencyChoice.WEAK;
+import static org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles.ConsistencyChoice.STRONG;
+import static org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles.ConsistencyChoice.WEAK;
 import static org.apache.james.blob.api.BlobStore.StoragePolicy.SIZE_BASED;
 import static org.apache.james.util.ReactorUtils.DEFAULT_CONCURRENCY;
 
@@ -33,7 +33,7 @@ import javax.mail.Flags;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
-import org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration.ConsistencyChoice;
+import org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
 import org.apache.james.mailbox.MessageManager;
@@ -48,6 +48,7 @@ import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.UpdatedFlags;
+import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
 import org.apache.james.mailbox.store.MailboxReactorUtils;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
@@ -88,11 +89,12 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
     private final AttachmentLoader attachmentLoader;
     private final BlobStore blobStore;
     private final CassandraConfiguration cassandraConfiguration;
+    private final BatchSizes batchSizes;
 
     public CassandraMessageIdMapper(MailboxMapper mailboxMapper, CassandraMailboxDAO mailboxDAO, CassandraAttachmentMapper attachmentMapper,
                                     CassandraMessageIdToImapUidDAO imapUidDAO, CassandraMessageIdDAO messageIdDAO,
                                     CassandraMessageDAO messageDAO, CassandraMessageDAOV3 messageDAOV3, CassandraIndexTableHandler indexTableHandler,
-                                    ModSeqProvider modSeqProvider, BlobStore blobStore, CassandraConfiguration cassandraConfiguration) {
+                                    ModSeqProvider modSeqProvider, BlobStore blobStore, CassandraConfiguration cassandraConfiguration, BatchSizes batchSizes) {
 
         this.mailboxMapper = mailboxMapper;
         this.mailboxDAO = mailboxDAO;
@@ -105,6 +107,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         this.attachmentLoader = new AttachmentLoader(attachmentMapper);
         this.blobStore = blobStore;
         this.cassandraConfiguration = cassandraConfiguration;
+        this.batchSizes = batchSizes;
     }
 
     @Override
@@ -118,8 +121,8 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
     public Flux<MailboxMessage> findReactive(Collection<MessageId> messageIds, FetchType fetchType) {
         return Flux.fromIterable(messageIds)
             .flatMap(messageId -> imapUidDAO.retrieve((CassandraMessageId) messageId, Optional.empty(), chooseReadConsistency()),
-                cassandraConfiguration.getMessageReadChunkSize())
-            .flatMap(metadata -> toMailboxMessage(metadata, fetchType), cassandraConfiguration.getMessageReadChunkSize())
+                batchSizes.forFetchType(fetchType))
+            .flatMap(metadata -> toMailboxMessage(metadata, fetchType), batchSizes.forFetchType(fetchType))
             .groupBy(MailboxMessage::getMailboxId)
             .flatMap(this::keepMessageIfMailboxExists, ReactorUtils.DEFAULT_CONCURRENCY);
     }
@@ -166,7 +169,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
             .block();
     }
 
-    public ConsistencyChoice chooseReadConsistency() {
+    public JamesExecutionProfiles.ConsistencyChoice chooseReadConsistency() {
         if (cassandraConfiguration.isMessageReadStrongConsistency()) {
             return STRONG;
         } else {
@@ -174,7 +177,7 @@ public class CassandraMessageIdMapper implements MessageIdMapper {
         }
     }
 
-    private ConsistencyChoice chooseReadConsistencyUponWrites() {
+    private JamesExecutionProfiles.ConsistencyChoice chooseReadConsistencyUponWrites() {
         if (cassandraConfiguration.isMessageWriteStrongConsistency()) {
             return STRONG;
         }

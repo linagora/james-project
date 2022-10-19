@@ -39,6 +39,12 @@ import javax.mail.internet.MimeMessage;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.pool2.BasePooledObjectFactory;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.PooledObject;
+import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.james.core.MailAddress;
 import org.apache.mailet.DsnParameters;
 import org.apache.mailet.HostAddress;
@@ -60,26 +66,49 @@ public class MailDelivrerToHost {
 
     private final RemoteDeliveryConfiguration configuration;
     private final Converter7Bit converter7Bit;
-    private final Session smtpSession;
-    private final Session smtpsSession;
+    private final ObjectPool<Session> smtpSessionPool;
+    private final ObjectPool<Session> smtpsSessionPool;
 
     public MailDelivrerToHost(RemoteDeliveryConfiguration remoteDeliveryConfiguration, MailetContext mailetContext) {
         this.configuration = remoteDeliveryConfiguration;
         this.converter7Bit = new Converter7Bit(mailetContext);
         if (configuration.isSSLEnable()) {
-            this.smtpSession = Session.getInstance(configuration.createFinalJavaxProperties());
-            this.smtpsSession = Session.getInstance(configuration.createFinalJavaxPropertiesWithSSL());
+            this.smtpSessionPool = createSessionPool(configuration.createFinalJavaxProperties());
+            this.smtpsSessionPool = createSessionPool(configuration.createFinalJavaxPropertiesWithSSL());
         } else {
-            this.smtpSession = Session.getInstance(configuration.createFinalJavaxProperties());
-            this.smtpsSession = this.smtpSession;
+            this.smtpSessionPool = createSessionPool(configuration.createFinalJavaxProperties());
+            this.smtpsSessionPool = smtpSessionPool;
         }
+    }
+
+    private ObjectPool<Session> createSessionPool(Properties defaultConfiguration) {
+        GenericObjectPoolConfig<Session> poolConfig = new GenericObjectPoolConfig<>();
+        poolConfig.setMaxTotal(-1); // unbounded pool, scales to match peak delivery thread concurrency
+        return new GenericObjectPool<>(new BasePooledObjectFactory<>() {
+            @Override
+            public Session create() {
+                // Since we modify session properties per delivery, each session must have its own properties
+                return Session.getInstance(new Properties(defaultConfiguration));
+            }
+
+            @Override
+            public PooledObject<Session> wrap(Session session) {
+                return new DefaultPooledObject<>(session);
+            }
+
+            @Override
+            public void passivateObject(PooledObject<Session> p) {
+                p.getObject().getProperties().clear(); // reset to default configuration
+            }
+        }, poolConfig);
     }
 
     public ExecutionResult tryDeliveryToHost(Mail mail, Collection<InternetAddress> addr, HostAddress outgoingMailServer) throws MessagingException {
         Session session = selectSession(outgoingMailServer);
         Properties props = getPropertiesForMail(mail, session);
-        LOGGER.debug("Attempting delivery of {} to host {} at {} from {}",
-            mail.getName(), outgoingMailServer.getHostName(), outgoingMailServer.getHost(), props.get(inContext(session, "mail.smtp.from")));
+        LOGGER.debug("Attempting delivery of {} with messageId {} to host {} at {} from {}",
+            mail.getName(), getMessageId(mail), outgoingMailServer.getHostName(),
+            outgoingMailServer.getHost(), props.get(inContext(session, "mail.smtp.from")));
 
         // Many of these properties are only in later JavaMail versions
         // "mail.smtp.ehlo"           //default true
@@ -97,24 +126,51 @@ public class MailDelivrerToHost {
             } else {
                 transport.sendMessage(adaptToTransport(mail.getMessage(), transport), addr.toArray(InternetAddress[]::new));
             }
-            LOGGER.debug("Mail ({})  sent successfully to {} at {} from {} for {}", mail.getName(), outgoingMailServer.getHostName(),
+            LOGGER.info("Mail ({}) with messageId {} sent successfully to {} at {} from {} for {}",
+                mail.getName(), getMessageId(mail), outgoingMailServer.getHostName(),
                 outgoingMailServer.getHost(), props.get(inContext(session, "mail.smtp.from")), mail.getRecipients());
         } finally {
             closeTransport(mail, outgoingMailServer, transport);
+            releaseSession(outgoingMailServer, session);
         }
         return ExecutionResult.success();
     }
 
-    private Session selectSession(HostAddress host) {
-        if (host.getProtocol().equalsIgnoreCase("smtps")) {
-            return smtpsSession;
-        } else {
-            return smtpSession;
+    private String getMessageId(Mail mail) {
+        try {
+            return mail.getMessage().getMessageID();
+        } catch (MessagingException e) {
+            LOGGER.debug("failed to extract messageId from message {}", mail.getName(), e);
+            return null;
+        }
+    }
+
+    private Session selectSession(HostAddress host) throws MessagingException {
+        try {
+            if (host.getProtocol().equalsIgnoreCase("smtps")) {
+                return smtpsSessionPool.borrowObject();
+            } else {
+                return smtpSessionPool.borrowObject();
+            }
+        } catch (Exception e) {
+            throw new MessagingException("could not create SMTP session for mail delivery", e);
+        }
+    }
+
+    private void releaseSession(HostAddress host, Session session) {
+        try {
+            if (host.getProtocol().equalsIgnoreCase("smtps")) {
+                smtpsSessionPool.returnObject(session);
+            } else {
+                smtpSessionPool.returnObject(session);
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Warning: failed to release SMTP session after mail delivery", e);
         }
     }
 
     private String inContext(Session session, String name) {
-        if (session.getProperties().containsKey("mail.smtps.ssl.enable")) {
+        if ("true".equals(session.getProperties().getProperty("mail.smtps.ssl.enable"))) {
             return name.replace("smtp", "smtps");
         } else {
             return name;
@@ -197,8 +253,10 @@ public class MailDelivrerToHost {
     private void connect(HostAddress outgoingMailServer, SMTPTransport transport) throws MessagingException {
         if (configuration.getAuthUser() != null) {
             transport.connect(outgoingMailServer.getHostName(), configuration.getAuthUser(), configuration.getAuthPass());
+        } else if (configuration.isConnectByHostname()) {
+            transport.connect(outgoingMailServer.getHostName(), null, null);
         } else {
-            transport.connect();
+            transport.connect(); // connect via IP address instead of host name
         }
     }
 

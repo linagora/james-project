@@ -42,12 +42,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 class JamesServerWithRetryConnectionTest {
     private static final long WAITING_TIME = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
 
-    private static final DockerElasticSearchExtension dockerElasticSearch = new DockerElasticSearchExtension();
+    private static final DockerOpenSearchExtension dockerOpenSearch = new DockerOpenSearchExtension();
     private static final CassandraExtension dockerCassandra = new CassandraExtension();
 
     @RegisterExtension
-    static JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-        .extension(dockerElasticSearch)
+    static JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+        .extension(dockerOpenSearch)
         .extension(dockerCassandra)
         .server(configuration -> CassandraJamesServerMain.createServer(configuration)
             .overrideWith(new TestJMAPServerModule()))
@@ -85,10 +85,10 @@ class JamesServerWithRetryConnectionTest {
     }
 
     @Test
-    void serverShouldRetryToConnectToElasticSearchWhenStartService(GuiceJamesServer server) throws Exception {
-        dockerElasticSearch.getDockerES().pause();
+    void serverShouldRetryToConnectToOpenSearchWhenStartService(GuiceJamesServer server) throws Exception {
+        dockerOpenSearch.getDockerES().pause();
 
-        waitToStartContainer(WAITING_TIME, dockerElasticSearch.getDockerES()::unpause);
+        waitToStartContainer(WAITING_TIME, dockerOpenSearch.getDockerES()::unpause);
 
         assertThatServerStartCorrectly(server);
     }

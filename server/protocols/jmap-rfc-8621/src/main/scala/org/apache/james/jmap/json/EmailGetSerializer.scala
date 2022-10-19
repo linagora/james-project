@@ -20,6 +20,7 @@
 package org.apache.james.jmap.json
 
 import eu.timepit.refined
+import eu.timepit.refined.auto._
 import org.apache.james.jmap.api.model.Size.Size
 import org.apache.james.jmap.api.model.{EmailAddress, EmailerName, Preview}
 import org.apache.james.jmap.core.Id.IdConstraint
@@ -69,7 +70,7 @@ object EmailGetSerializer {
   private implicit val cidWrites: Writes[Cid] = cid => JsString(cid.getValue)
   private implicit val nameWrites: Writes[Name] = Json.valueWrites[Name]
   private implicit val threadIdWrites: Writes[ThreadId] = Json.valueWrites[ThreadId]
-  private implicit val mailboxIdsWrites: Writes[MailboxIds] = ids => JsObject(ids.value.map(id => (id.serialize(), JsBoolean(true))))
+  private implicit val mailboxIdsWrites: Writes[MailboxIds] = ids => JsObject(ids.value.map(id => (id.serialize(), JsTrue)))
   private implicit val typeWrites: Writes[Type] = Json.valueWrites[Type]
   private implicit val charsetWrites: Writes[Charset] = Json.valueWrites[Charset]
   private implicit val dispositionWrites: Writes[Disposition] = Json.valueWrites[Disposition]
@@ -180,20 +181,36 @@ object EmailGetSerializer {
 
   def serializeChanges(changesResponse: EmailChangesResponse): JsObject = Json.toJson(changesResponse).as[JsObject]
 
-  def serialize(emailGetResponse: EmailGetResponse, properties: Properties, bodyProperties: Properties): JsValue =
-    Json.toJson(emailGetResponse)
-      .transform((__ \ "list").json.update {
-        case JsArray(underlying) => JsSuccess(JsArray(underlying.map(js => js.transform {
-          case jsonObject: JsObject =>
-           bodyPropertiesFilteringTransformation(bodyProperties)
-             .reads(properties.filter(jsonObject))
-          case js => JsSuccess(js)
-        }.fold(_ => JsArray(underlying), o => o))))
-        case jsValue => JsSuccess(jsValue)
-      }).get
+  def serialize(emailGetResponse: EmailGetResponse, properties: Properties, bodyProperties: Properties): JsValue = {
+    if (includesBodyProperties(properties)) {
+      val bodyTransformation = bodyPropertiesFilteringTransformation(bodyProperties)
+      Json.toJson(emailGetResponse)
+        .transform((__ \ "list").json.update {
+          case JsArray(underlying) => JsSuccess(JsArray(underlying.map(js => js.transform {
+            case jsonObject: JsObject => bodyTransformation.reads(properties.filter(jsonObject))
+            case js => JsSuccess(js)
+          }.fold(_ => JsArray(underlying), o => o))))
+          case jsValue => JsSuccess(jsValue)
+        }).get
+    } else
+      Json.toJson(emailGetResponse)
+        .transform((__ \ "list").json.update {
+          case JsArray(underlying) => JsSuccess(JsArray(underlying.map(js => js.transform {
+            case jsonObject: JsObject => JsSuccess(properties.filter(jsonObject))
+            case js => JsSuccess(js)
+          }.fold(_ => JsArray(underlying), o => o))))
+          case jsValue => JsSuccess(jsValue)
+        }).get
+  }
+
+  private def includesBodyProperties(properties: Properties): Boolean =
+    properties.contains("attachments") ||
+      properties.contains("bodyStructure") ||
+      properties.contains("textBody") ||
+      properties.contains("htmlBody")
 
   private def bodyPropertiesFilteringTransformation(bodyProperties: Properties): Reads[JsValue] = {
-    case serializedMailbox: JsObject =>
+    case serializedBody: JsObject =>
       val bodyPropertiesToRemove = EmailBodyPart.allowedProperties -- bodyProperties
       val noop: JsValue => JsValue = o => o
 
@@ -204,13 +221,13 @@ object EmailGetSerializer {
           bodyPropertiesFilteringTransformation(bodyPropertiesToRemove, "htmlBody"))
         .reduceLeftOption(_ compose _)
         .getOrElse(noop)
-        .apply(serializedMailbox))
+        .apply(serializedBody))
     case js => JsSuccess(js)
   }
 
   private def bodyPropertiesFilteringTransformation(properties: Properties, field: String): JsValue => JsValue =
   {
-    case JsObject(underlying) =>JsObject(underlying.map {
+    case JsObject(underlying) => JsObject(underlying.map {
       case (key, jsValue) if key.equals(field) => (field, removeFieldsRecursively(properties).apply(jsValue))
       case (key, jsValue) => (key, jsValue)
     })

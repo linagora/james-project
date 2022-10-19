@@ -35,7 +35,6 @@ import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.TestCassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
-import org.apache.james.mailbox.cassandra.mail.MailboxAggregateModule;
 import org.apache.james.mailbox.cassandra.quota.CassandraCurrentQuotaManager;
 import org.apache.james.mailbox.cassandra.quota.CassandraGlobalMaxQuotaDao;
 import org.apache.james.mailbox.cassandra.quota.CassandraPerDomainMaxQuotaDao;
@@ -66,7 +65,8 @@ import org.apache.james.metrics.tests.RecordingMetricFactory;
 import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
 import org.apache.james.mpt.host.JamesImapHostSystem;
-import org.apache.james.util.Host;
+
+import com.datastax.oss.driver.api.core.CqlSession;
 
 public class CassandraHostSystem extends JamesImapHostSystem {
 
@@ -77,13 +77,12 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         Feature.ANNOTATION_SUPPORT,
         Feature.MOD_SEQ_SEARCH);
 
-    private final Host cassandraHost;
+    private final CassandraCluster cassandra;
     private CassandraMailboxManager mailboxManager;
-    private CassandraCluster cassandra;
     private CassandraPerUserMaxQuotaManager perUserMaxQuotaManager;
     
-    public CassandraHostSystem(Host cassandraHost) {
-        this.cassandraHost = cassandraHost;
+    public CassandraHostSystem(CassandraCluster cluster) {
+        this.cassandra = cluster;
     }
 
     public CassandraCluster getCassandra() {
@@ -93,8 +92,7 @@ public class CassandraHostSystem extends JamesImapHostSystem {
     @Override
     public void beforeTest() throws Exception {
         super.beforeTest();
-        cassandra = CassandraCluster.create(MailboxAggregateModule.MODULE_WITH_QUOTA, cassandraHost);
-        com.datastax.driver.core.Session session = cassandra.getConf();
+        CqlSession session = cassandra.getConf();
         CassandraMessageId.Factory messageIdFactory = new CassandraMessageId.Factory();
         ThreadIdGuessingAlgorithm threadIdGuessingAlgorithm = new NaiveThreadIdGuessingAlgorithm();
         CassandraMailboxSessionMapperFactory mapperFactory = TestCassandraMailboxSessionMapperFactory.forTests(
@@ -134,12 +132,6 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         configure(new DefaultImapDecoderFactory().buildImapDecoder(),
                 new DefaultImapEncoderFactory().buildImapEncoder(),
                 DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, eventBus, subscriptionManager, quotaManager, quotaRootResolver, new DefaultMetricFactory()));
-    }
-
-    @Override
-    public void afterTest() throws Exception {
-        super.afterTest();
-        cassandra.close();
     }
 
     @Override
