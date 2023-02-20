@@ -264,6 +264,10 @@ public class SearchQuery {
         return new ModSeqCriterion(new NumericOperator(value, NumericComparator.EQUALS));
     }
 
+    public static Criterion hasMessageId(MessageId messageId) {
+        return new MessageIdCriterion(messageId);
+    }
+
     /**
      * Creates a filter matching messages with internal date after the given
      * date.
@@ -312,6 +316,24 @@ public class SearchQuery {
      */
     public static Criterion internalDateBefore(Date date, DateResolution dateResolution) {
         return new InternalDateCriterion(new DateOperator(DateComparator.BEFORE, date, dateResolution));
+    }
+
+    public static Criterion saveDateAfter(Date date, DateResolution dateResolution) {
+        return new SaveDateCriterion(new DateOperator(DateComparator.AFTER, date, dateResolution));
+    }
+
+    public static Criterion saveDateOn(Date date, DateResolution dateResolution) {
+        return new SaveDateCriterion(new DateOperator(DateComparator.ON, date, dateResolution));
+    }
+
+    public static Criterion saveDateBefore(Date date, DateResolution dateResolution) {
+        return new SaveDateCriterion(new DateOperator(DateComparator.BEFORE, date, dateResolution));
+    }
+
+    // Matches all messages in the mailbox when the underlying storage of
+    // that mailbox supports the save date attribute. RF: https://www.rfc-editor.org/rfc/rfc8514.html#page-4
+    public static Criterion saveDateSupported() {
+        return AllCriterion.all();
     }
 
     /**
@@ -1275,6 +1297,49 @@ public class SearchQuery {
     }
 
     /**
+     * Filters on the save date.
+     */
+    public static class SaveDateCriterion extends Criterion {
+
+        private final DateOperator operator;
+
+        public SaveDateCriterion(DateOperator operator) {
+            this.operator = operator;
+        }
+
+        /**
+         * Gets the search operation and value to be evaluated.
+         *
+         * @return the <code>Operator</code>, not null
+         */
+        public DateOperator getOperator() {
+            return operator;
+        }
+
+        @Override
+        public final int hashCode() {
+            return Objects.hashCode(operator);
+        }
+
+        @Override
+        public final boolean equals(Object obj) {
+            if (obj instanceof SaveDateCriterion) {
+                SaveDateCriterion that = (SaveDateCriterion) obj;
+
+                return Objects.equal(this.operator, that.operator);
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("operator", operator)
+                .toString();
+        }
+    }
+
+    /**
      * Filters on the mod-sequence of the messages.
      */
     public static class ModSeqCriterion extends Criterion {
@@ -1562,6 +1627,41 @@ public class SearchQuery {
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
+                .toString();
+        }
+    }
+
+    public static class MessageIdCriterion extends Criterion {
+        private final MessageId messageId;
+
+        public MessageIdCriterion(MessageId messageId) {
+            this.messageId = messageId;
+        }
+
+        public MessageId getMessageId() {
+            return messageId;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(messageId);
+        }
+
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof MessageIdCriterion) {
+                MessageIdCriterion that = (MessageIdCriterion) obj;
+
+                return Objects.equal(this.messageId, that.messageId);
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("messageId", messageId)
                 .toString();
         }
     }

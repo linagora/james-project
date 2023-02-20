@@ -312,7 +312,16 @@
             </roles>
             <timezone />
         </developer>
-    </developers>
+        <developer>
+            <id>jhelou</id>
+            <name>Jean Helou</name>
+            <email>jhelou@apache.org</email>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone />
+        </developer>
+     </developers>
 
     <contributors>
         <contributor>
@@ -588,40 +597,39 @@
 
         <james.groupId>org.apache.james</james.groupId>
         <james.protocols.groupId>${james.groupId}.protocols</james.protocols.groupId>
-        <activemq.version>5.17.1</activemq.version>
+        <activemq.version>5.17.3</activemq.version>
         <apache-mime4j.version>0.8.7</apache-mime4j.version>
         <apache.openjpa.version>3.2.0</apache.openjpa.version>
         <derby.version>10.14.2.0</derby.version>
-        <log4j2.version>2.17.2</log4j2.version>
+        <log4j2.version>2.19.0</log4j2.version>
         <javax.inject.version>1</javax.inject.version>
         <javax.activation.groupId>javax.activation</javax.activation.groupId>
         <javax.activation.artifactId>activation</javax.activation.artifactId>
-        <jsieve.version>0.7</jsieve.version>
+        <jsieve.version>0.8</jsieve.version>
         <spring.version>4.3.25.RELEASE</spring.version>
-        <activmq-artemis.version>2.22.0</activmq-artemis.version>
-        <apache-jspf-resolver.version>1.0.1</apache-jspf-resolver.version>
+        <activmq-artemis.version>2.27.1</activmq-artemis.version>
+        <apache-jspf-resolver.version>1.0.3</apache-jspf-resolver.version>
         <javamail.version>1.5.4</javamail.version>
         <javax-activation.version>1.1.1</javax-activation.version>
-        <slf4j.version>1.7.36</slf4j.version>
+        <slf4j.version>2.0.6</slf4j.version>
 
-        <dnsjava.version>3.5.1</dnsjava.version>
+        <dnsjava.version>3.5.2</dnsjava.version>
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
         <junit.platform.version>1.8.2</junit.platform.version>
         <junit.vintage.version>5.8.2</junit.vintage.version>
         <concurrent.version>1.3.4</concurrent.version>
         <xbean-spring.version>4.21</xbean-spring.version>
-        <netty.version>4.1.77.Final</netty.version>
+        <netty.version>4.1.86.Final</netty.version>
         <cucumber.version>2.4.0</cucumber.version>
 
         <pax-logging-api.version>1.6.4</pax-logging-api.version>
-        <jackson.version>2.13.3</jackson.version>
-        <jackson.databind.version>2.13.3</jackson.databind.version>
-        <feign.version>11.8</feign.version>
+        <jackson.version>2.14.1</jackson.version>
+        <jackson.databind.version>2.14.1</jackson.databind.version>
+        <feign.version>11.10</feign.version>
         <feign-form.version>3.8.0</feign-form.version>
         <jjwt.version>0.11.5</jjwt.version>
-        <metrics.version>4.2.9</metrics.version>
-        <testcontainers.version>1.17.2</testcontainers.version>
-        <assertj.version>3.3.0</assertj.version>
+        <metrics.version>4.2.15</metrics.version>
+        <testcontainers.version>1.17.6</testcontainers.version>
         <es.version>2.2.1</es.version>
         <es-reporter.version>6.0.0-RC3</es-reporter.version>
         <guava.version>31.1-jre</guava.version>
@@ -634,7 +642,7 @@
         <maven-plugin-api.version>3.8.5</maven-plugin-api.version>
         <maven-reporting-impl.version>3.1.0</maven-reporting-impl.version>
         <maven-reporting-api.version>3.0</maven-reporting-api.version>
-        <qdox.version>2.0.1</qdox.version>
+        <qdox.version>2.0.3</qdox.version>
         <javax.activation.groupId>javax.activation</javax.activation.groupId>
         <javax.activation.artifactId>activation</javax.activation.artifactId>
         <javax.persistence.version>1.0.2</javax.persistence.version>
@@ -642,17 +650,17 @@
         <lucene.version>3.6.2</lucene.version>
         <jasypt.version>1.9.3</jasypt.version>
         <guice.version>5.1.0</guice.version>
-        <logback.version>1.2.11</logback.version>
-        <tink.version>1.6.1</tink.version>
-        <lettuce.core.version>6.1.8.RELEASE</lettuce.core.version>
+        <logback.version>1.4.5</logback.version>
+        <tink.version>1.7.0</tink.version>
+        <lettuce.core.version>6.2.2.RELEASE</lettuce.core.version>
 
         <bouncycastle.version>1.70</bouncycastle.version>
 
         <scala.base>2.13</scala.base>
-        <scala.version>${scala.base}.8</scala.version>
+        <scala.version>${scala.base}.10</scala.version>
         <scalatestplus-play.version>5.0.0</scalatestplus-play.version>
         <doclint>none</doclint>
-        <jetty.version>9.4.46.v20220331</jetty.version>
+        <mockito.version>4.8.0</mockito.version>
     </properties>
 
     <dependencyManagement>
@@ -670,23 +678,23 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-backends-es-v7</artifactId>
+                <artifactId>apache-james-backends-jpa</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-backends-es-v7</artifactId>
+                <artifactId>apache-james-backends-jpa</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-backends-jpa</artifactId>
+                <artifactId>apache-james-backends-opensearch</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-backends-jpa</artifactId>
+                <artifactId>apache-james-backends-opensearch</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
@@ -763,17 +771,6 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-mailbox-elasticsearch-v7</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-mailbox-elasticsearch-v7</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>${james.groupId}</groupId>
                 <artifactId>apache-james-mailbox-event-json</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -812,6 +809,17 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
+                <artifactId>apache-james-mailbox-opensearch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>apache-james-mailbox-opensearch</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
                 <artifactId>apache-james-mailbox-quota-mailing</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -834,7 +842,7 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-mailbox-quota-search-elasticsearch-v7</artifactId>
+                <artifactId>apache-james-mailbox-quota-search-opensearch</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -852,11 +860,6 @@
                 <artifactId>apache-james-mailbox-scanning-search</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-mailbox-spamassassin</artifactId>
-                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
@@ -936,12 +939,12 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-spamassassin</artifactId>
+                <artifactId>apache-james-rspamd</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>apache-james-spamassassin</artifactId>
+                <artifactId>apache-james-rspamd</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
@@ -1650,6 +1653,11 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
+                <artifactId>james-server-mailrepository-blob</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-mailrepository-cassandra</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -1785,6 +1793,12 @@
                 <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-rate-limiter-redis</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>james-server-rate-limiter-redis</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
@@ -1929,6 +1943,11 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
+                <artifactId>james-webadmin-http-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
                 <artifactId>javax-mail-extension</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -2064,6 +2083,11 @@
                 <version>${jutf7.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.chuusai</groupId>
+                <artifactId>shapeless_2.13</artifactId>
+                <version>2.3.10</version>
+            </dependency>
+            <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
                 <version>${jackson.version}</version>
@@ -2096,7 +2120,7 @@
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
-                <version>3.1.0</version>
+                <version>3.1.2</version>
             </dependency>
             <dependency>
                 <groupId>com.github.dpaukov</groupId>
@@ -2168,11 +2192,6 @@
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.ibm.icu</groupId>
-                <artifactId>icu4j</artifactId>
-                <version>71.1</version>
-            </dependency>
-            <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
                 <version>2.7.0</version>
@@ -2190,30 +2209,12 @@
             <dependency>
                 <groupId>com.rabbitmq</groupId>
                 <artifactId>amqp-client</artifactId>
-                <version>5.14.2</version>
+                <version>5.16.0</version>
             </dependency>
             <dependency>
                 <groupId>com.sparkjava</groupId>
                 <artifactId>spark-core</artifactId>
-                <version>2.9.3</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.eclipse.jetty</groupId>
-                        <artifactId>jetty-server</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.eclipse.jetty</groupId>
-                        <artifactId>jetty-webapp</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.eclipse.jetty.websocket</groupId>
-                        <artifactId>websocket-server</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.eclipse.jetty.websocket</groupId>
-                        <artifactId>websocket-servlet</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>2.9.4</version>
             </dependency>
             <dependency>
                 <groupId>com.sun.activation</groupId>
@@ -2249,12 +2250,12 @@
             <dependency>
                 <groupId>com.typesafe.play</groupId>
                 <artifactId>play-json_${scala.base}</artifactId>
-                <version>2.9.2</version>
+                <version>2.9.3</version>
             </dependency>
             <dependency>
                 <groupId>com.unboundid</groupId>
                 <artifactId>unboundid-ldapsdk</artifactId>
-                <version>6.0.5</version>
+                <version>6.0.7</version>
             </dependency>
             <dependency>
                 <groupId>commons-beanutils</groupId>
@@ -2269,7 +2270,7 @@
             <dependency>
                 <groupId>commons-daemon</groupId>
                 <artifactId>commons-daemon</artifactId>
-                <version>1.3.1</version>
+                <version>1.3.3</version>
             </dependency>
             <dependency>
                 <groupId>commons-dbcp</groupId>
@@ -2290,7 +2291,7 @@
             <dependency>
                 <groupId>commons-net</groupId>
                 <artifactId>commons-net</artifactId>
-                <version>3.8.0</version>
+                <version>3.9.0</version>
             </dependency>
             <dependency>
                 <groupId>concurrent</groupId>
@@ -2305,7 +2306,7 @@
             <dependency>
                 <groupId>eu.timepit</groupId>
                 <artifactId>refined_${scala.base}</artifactId>
-                <version>0.9.29</version>
+                <version>0.10.1</version>
             </dependency>
             <dependency>
                 <groupId>io.cucumber</groupId>
@@ -2345,7 +2346,7 @@
             <dependency>
                 <groupId>io.github.hakky54</groupId>
                 <artifactId>sslcontext-kickstart-for-pem</artifactId>
-                <version>7.4.3</version>
+                <version>7.4.7</version>
             </dependency>
             <dependency>
                 <groupId>io.github.openfeign</groupId>
@@ -2397,7 +2398,7 @@
             <dependency>
                 <groupId>io.projectreactor</groupId>
                 <artifactId>reactor-bom</artifactId>
-                <version>2020.0.19</version>
+                <version>2022.0.1</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -2407,9 +2408,14 @@
                 <version>0.8.0</version>
             </dependency>
             <dependency>
+                <groupId>io.projectreactor.rabbitmq</groupId>
+                <artifactId>reactor-rabbitmq</artifactId>
+                <version>1.5.5</version>
+            </dependency>
+            <dependency>
                 <groupId>io.rest-assured</groupId>
                 <artifactId>rest-assured</artifactId>
-                <version>5.1.0</version>
+                <version>5.3.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -2455,12 +2461,12 @@
             <dependency>
                 <groupId>net.javacrumbs.json-unit</groupId>
                 <artifactId>json-unit-assertj</artifactId>
-                <version>2.35.0</version>
+                <version>2.36.0</version>
             </dependency>
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.10</version>
+                <version>3.10.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.activemq</groupId>
@@ -2471,11 +2477,7 @@
                         <groupId>org.springframework.osgi</groupId>
                         <artifactId>spring-osgi-core</artifactId>
                     </exclusion>
-                    <!-- exlude this, its only used in the authentication plugin which we don't use -->
-                    <exclusion>
-                        <groupId>com.ibm.icu</groupId>
-                        <artifactId>icu4j</artifactId>
-                    </exclusion>
+                    <!-- exclude this, it's only used in the authentication plugin which we don't use -->
                     <!-- exclude this, we don't use osgi yet -->
                     <exclusion>
                         <groupId>org.osgi</groupId>
@@ -2492,6 +2494,10 @@
                         <groupId>commons-logging</groupId>
                         <artifactId>commons-logging</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -2507,12 +2513,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.21</version>
+                <version>1.22</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-configuration2</artifactId>
-                <version>2.7</version>
+                <version>2.8.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -2527,8 +2533,13 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
+                <artifactId>commons-pool2</artifactId>
+                <version>2.11.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.9</version>
+                <version>1.10.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.derby</groupId>
@@ -2538,12 +2549,12 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.13</version>
+                <version>4.5.14</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.15</version>
+                <version>4.4.16</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.james</groupId>
@@ -2581,13 +2592,17 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j</artifactId>
+                <artifactId>log4j-api</artifactId>
                 <version>${log4j2.version}</version>
-                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
                 <version>${log4j2.version}</version>
             </dependency>
             <dependency>
@@ -2620,7 +2635,7 @@
             <dependency>
                 <groupId>org.apache.pdfbox</groupId>
                 <artifactId>pdfbox</artifactId>
-                <version>2.0.26</version>
+                <version>2.0.27</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -2646,7 +2661,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.22.0</version>
+                <version>3.23.1</version>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
@@ -2668,27 +2683,6 @@
                 <artifactId>bcprov-jdk15on</artifactId>
                 <version>${bouncycastle.version}</version>
             </dependency>
-            <!-- JETTY DEPENDENCIES -->
-            <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-server</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-webapp</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty.websocket</groupId>
-                <artifactId>websocket-server</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty.websocket</groupId>
-                <artifactId>websocket-servlet</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>org.hamcrest</groupId>
@@ -2703,7 +2697,12 @@
             <dependency>
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
-                <version>1.15.1</version>
+                <version>1.15.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.julienrf</groupId>
+                <artifactId>play-json-derived-codecs_${scala.base}</artifactId>
+                <version>10.1.0</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -2738,12 +2737,23 @@
             <dependency>
                 <groupId>org.mock-server</groupId>
                 <artifactId>mockserver-netty</artifactId>
-                <version>5.13.2</version>
+                <version>5.14.0</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
-                <version>4.6.0</version>
+                <version>${mockito.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-inline</artifactId>
+                <version>${mockito.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.scala-lang</groupId>
@@ -2758,12 +2768,12 @@
             <dependency>
                 <groupId>org.scalacheck</groupId>
                 <artifactId>scalacheck_${scala.base}</artifactId>
-                <version>1.16.0</version>
+                <version>1.17.0</version>
             </dependency>
             <dependency>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest_${scala.base}</artifactId>
-                <version>3.2.12</version>
+                <version>3.2.14</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -2876,7 +2886,7 @@
             <dependency>
                 <groupId>org.threeten</groupId>
                 <artifactId>threeten-extra</artifactId>
-                <version>1.7.0</version>
+                <version>1.7.2</version>
             </dependency>
             <dependency>
                 <groupId>pl.pragmatists</groupId>
@@ -3014,7 +3024,7 @@
                             <compilerPlugin>
                                 <groupId>org.scalameta</groupId>
                                 <artifactId>semanticdb-scalac_${scala.version}</artifactId>
-                                <version>4.4.32</version>
+                                <version>4.6.0</version>
                             </compilerPlugin>
                         </compilerPlugins>
                     </configuration>
@@ -3060,7 +3070,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>3.1.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -3242,12 +3252,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.12.0</version>
+                    <version>3.8.2</version>
                     <dependencies>
                         <dependency>
                             <groupId>org.apache.maven.wagon</groupId>
                             <artifactId>wagon-ssh</artifactId>
-                            <version>3.4.2</version>
+                            <version>3.5.2</version>
                         </dependency>
                     </dependencies>
                     <executions>
@@ -3266,7 +3276,8 @@
                     <configuration>
                         <systemPropertyVariables>
                             <!--https://issues.apache.org/jira/browse/JAMES-3724-->
-                            <james.ligecycle.leak.detection.mode>testing</james.ligecycle.leak.detection.mode>
+                            <james.lifecycle.leak.detection.mode>NONE</james.lifecycle.leak.detection.mode>
+                            <james.exit.on.startup.error>false</james.exit.on.startup.error>
                         </systemPropertyVariables>
                         <argLine>-Xms512m -Xmx1024m</argLine>
                         <reuseForks>true</reuseForks>
@@ -3537,7 +3548,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.29</version>
+                        <version>10.3.4</version>
                     </dependency>
                 </dependencies>
                 <executions>

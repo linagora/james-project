@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.net.ssl.SSLSession;
+
 import org.apache.james.core.Username;
 import org.apache.james.protocols.api.handler.LineHandler;
 
@@ -148,9 +150,23 @@ public interface ProtocolSession extends CommandDetectionSession {
 
     
     /**
-     * Return the {@link InetSocketAddress} of the remote peer
+     * Return the {@link InetSocketAddress} of the remote peer. If proxy support
+     * is enabled, then it returns the remote peer given by the proxy.
      */
     InetSocketAddress getRemoteAddress();
+
+    /**
+     * Sets the proxy information if proxying is enabled.
+     *
+     * @param proxyInformation proxy information including source and destination addresses
+     */
+    void setProxyInformation(ProxyInformation proxyInformation);
+
+    /**
+     * Gets the proxy information if proxying is enabled.
+     * @return
+     */
+    Optional<ProxyInformation> getProxyInformation();
 
     /**
      * Return the {@link InetSocketAddress} of the local bound address
@@ -204,6 +220,11 @@ public interface ProtocolSession extends CommandDetectionSession {
      * Return true if the starttls was started
      */
     boolean isTLSStarted();
+    
+    /**
+     * Return the {@link SSLSession} of this protocol session. Empty if it does not use SSL/TLS. 
+     */
+    Optional<SSLSession> getSSLSession();
     
     /**
      * Return the {@link ProtocolConfiguration}

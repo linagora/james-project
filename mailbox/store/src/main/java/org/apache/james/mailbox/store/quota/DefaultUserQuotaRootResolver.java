@@ -29,6 +29,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.SessionProvider;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Mailbox;
+import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -37,6 +38,7 @@ import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.mailbox.quota.QuotaRootDeserializer;
 import org.apache.james.mailbox.quota.UserQuotaRootResolver;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.util.ReactorUtils;
 import org.reactivestreams.Publisher;
 
 import com.google.common.base.Preconditions;
@@ -125,6 +127,18 @@ public class DefaultUserQuotaRootResolver implements UserQuotaRootResolver {
     @Override
     public Publisher<QuotaRoot> getQuotaRootReactive(MailboxPath mailboxPath) {
         return Mono.just(getQuotaRoot(mailboxPath));
+    }
+
+    @Override
+    public Publisher<QuotaRoot> listAllAccessibleQuotaRoots(Username username) {
+        MailboxSession session = sessionProvider.createSystemSession(username);
+
+        Flux<QuotaRoot> quotaRootListFromDelegatedMailboxes = factory.getMailboxMapper(session)
+            .findNonPersonalMailboxes(username, MailboxACL.Right.Read)
+            .flatMap(this::getQuotaRootReactive, ReactorUtils.DEFAULT_CONCURRENCY)
+            .distinct();
+
+        return Flux.concat(quotaRootListFromDelegatedMailboxes, Flux.just(forUser(username)));
     }
 
     @Override

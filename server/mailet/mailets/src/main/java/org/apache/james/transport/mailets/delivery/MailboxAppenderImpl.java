@@ -88,6 +88,7 @@ public class MailboxAppenderImpl implements MailboxAppender {
             .flatMap(mailbox -> Mono.from(mailbox.appendMessageReactive(
                 MessageManager.AppendCommand.builder()
                     .recent()
+                    .delivery()
                     .build(extractContent(mail)),
                 session)));
     }
@@ -130,12 +131,7 @@ public class MailboxAppenderImpl implements MailboxAppender {
     }
 
     private void closeProcessing(MailboxSession session) {
-        session.close();
-        try {
-            mailboxManager.logout(session);
-        } finally {
-            mailboxManager.endProcessingRequest(session);
-        }
+        mailboxManager.endProcessingRequest(session);
     }
 
 }

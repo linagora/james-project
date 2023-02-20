@@ -33,7 +33,7 @@ import java.util.Optional;
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraJamesServerConfiguration;
 import org.apache.james.CassandraJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.JamesServerBuilder;
 import org.apache.james.JamesServerExtension;
@@ -63,9 +63,9 @@ class CassandraSchemaVersionStartUpCheckTest {
         CassandraJamesServerConfiguration.builder()
             .workingDirectory(tmpDir)
             .configurationFromClasspath()
-            .searchConfiguration(SearchConfiguration.elasticSearch())
+            .searchConfiguration(SearchConfiguration.openSearch())
             .build())
-        .extension(new DockerElasticSearchExtension())
+        .extension(new DockerOpenSearchExtension())
         .extension(new CassandraExtension())
         .server(configuration -> CassandraJamesServerMain.createServer(configuration)
             .overrideWith(binder -> binder.bind(CassandraSchemaVersionDAO.class)

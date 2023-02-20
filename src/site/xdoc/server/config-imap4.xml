@@ -80,6 +80,19 @@
         <dd>Set the maximum simultaneous incoming connections for this service</dd>
         <dt><strong>handler.connectionLimitPerIP</strong></dt>
         <dd>Set the maximum simultaneous incoming connections per IP for this service</dd>
+        <dt><strong>concurrentRequests</strong></dt>
+        <dd>Maximum number of IMAP requests executed simultaneously. Past that limit requests are queued. Defaults to 20.
+            Negative values deactivate this feature, leading to unbounded concurrency.</dd>
+        <dt><strong>maxQueueSize</strong></dt>
+        <dd>Upper bound to the IMAP throttler queue. Upon burst, requests that cannot be queued are rejected and not executed.
+            Integer, defaults to 4096, must be positive, 0 means no queue.</dd>
+        <dt><strong>handler.proxyRequired</strong></dt>
+        <dd>
+          Enables proxy support for this service for incoming connections. HAProxy's protocol
+          (https://www.haproxy.org/download/2.7/doc/proxy-protocol.txt) is used and might be compatible
+          with other proxies (e.g. traefik). If enabled, it is *required* to initiate the connection
+          using HAProxy's proxy protocol.
+        </dd>
         <dt><strong>handler.handlerchain</strong></dt>
         <dd>This loads the core CommandHandlers. Only remove this if you really 
              know what you are doing</dd>
@@ -108,10 +121,6 @@
           (split line by line). IO threads also take care of compression and SSL encryption. Their tasks are short-lived and non-blocking.
               Optional integer, defaults to 2 times the count of CPUs.</dd>
 
-        <dt><strong>maxExecutorCount</strong></dt>
-        <dd>Set the maximum count of worker threads. Worker threads takes care of potentially blocking tasks like decoding IMAP requests
-              (litterals can be buffered to temporary files) or executing IMAP commands. Optional integer, defaults to 16.</dd>
-
         <dt><strong>ignoreIDLEUponProcessing</strong></dt>
         <dd>true or false - Allow disabling the heartbeat handler. Defaults to true.</dd>
       </dl>
@@ -121,6 +130,25 @@
             Please configure <code>auth.oidc</code> part to use this.</p>
         <p>We do supply an <a href="https://github.com/apache/james-project/tree/master/examples/oidc">example</a> of such a setup. It uses the
             <a href="https://www.keycloak.org/">Keycloack</a> OIDC provider, but usage of similar technologies is definitely doable.</p>
+    </subsection>
+
+    <subsection name="Extending IMAP">
+        <p><b>WARNING: </b>IMAP extension applies only for Guice based distributions</p>
+
+        <p>IMAP decoders, processors and encoder can be customized.</p>
+
+        <p>Check this <a href="https://github.com/apache/james-project/tree/master/examples/custom-imap">example</a>.</p>
+
+        <p>The following configuration properties are available for extentions:</p>
+        <dl>
+        <dt><strong>imapPackages</strong></dt>
+        <dd>Configure (union) of IMAP packages. IMAP packages bundles decoders (parsing IMAP commands) processors and encoders,
+            thus enable implementing new IMAP commands or replace existing IMAP processors. List of FQDNs, which can be located in
+            James extensions.</dd>
+        <dt><strong>customProperties</strong></dt>
+        <dd>Properties for custom extension. Each tag is a property entry, and holds a string under the form key=value.</dd>
+        </dl>
+
     </subsection>
 
     <subsection name="Mail user agents auto-configuration">

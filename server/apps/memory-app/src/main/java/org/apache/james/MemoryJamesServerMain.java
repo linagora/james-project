@@ -29,6 +29,7 @@ import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.MailetProcessingModule;
 import org.apache.james.modules.data.MemoryDataJmapModule;
 import org.apache.james.modules.data.MemoryDataModule;
+import org.apache.james.modules.data.MemoryDelegationStoreModule;
 import org.apache.james.modules.data.MemoryUsersRepositoryModule;
 import org.apache.james.modules.eventstore.MemoryEventStoreModule;
 import org.apache.james.modules.mailbox.MemoryMailboxModule;
@@ -57,7 +58,6 @@ import org.apache.james.modules.server.SieveRoutesModule;
 import org.apache.james.modules.server.TaskManagerModule;
 import org.apache.james.modules.server.VacationRoutesModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 import org.apache.james.modules.vault.DeletedMessageVaultModule;
 import org.apache.james.modules.vault.DeletedMessageVaultRoutesModule;
 import org.apache.james.webadmin.WebAdminConfiguration;
@@ -97,8 +97,7 @@ public class MemoryJamesServerMain implements JamesServerMain {
         new ManageSieveServerModule(),
         new POP3ServerModule(),
         new ProtocolHandlerModule(),
-        new SMTPServerModule(),
-        new SpamAssassinListenerModule());
+        new SMTPServerModule());
 
     public static final Module JMAP = Modules.combine(
         new JmapEventBusModule(),
@@ -109,6 +108,7 @@ public class MemoryJamesServerMain implements JamesServerMain {
 
     public static final Module IN_MEMORY_SERVER_MODULE = Modules.combine(
         new MailetProcessingModule(),
+        new MemoryDelegationStoreModule(),
         new BlobMemoryModule(),
         new DeletedMessageVaultModule(),
         new BlobExportMechanismModule(),

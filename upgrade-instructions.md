@@ -17,6 +17,203 @@ Changes to apply between 3.7.x and 3.8.x will be reported here.
 Change list:
 
 - [Adding authorized_users column to user table](#adding-authorized_users-column-to-user-table)
+- [Migration to Cassandra driver 4](#migration-to-cassandra-driver-4)
+- [Migration to OpenSearch](#migration-to-opensearch)
+- [Deleted message vault is now deactivated by default](#deleted-message-vault-is-now-deactivated-by-default)
+- [SortOrder addition in Identity](#sortorder-addition-in-identity)
+- [TLS host name verification is now enabled by default](#tls-host-name-verification-is-now-enabled-by-default)
+- [Blob Store AES upgraded to PBKDF2WithHmacSHA512](#blob-store-aes-upgraded-to-pbkdf2withhmacsha512)
+- [Adding saveDate column to messageIdTable and imapUidTable](#adding-savedate-column-to-messageidtable-and-imapuidtable)
+- [Adding the saveDate to the OpenSearch index](#adding-the-savedate-to-the-opensearch-index)
+- [Adding delegatedUser column to user_table](#adding-delegatedusers-column-to-user-table)
+- [DeletedMessageVaultHook should not be used on Cassandra based products](#deleted-message-vault-is-now-deactivated-by-default)
+
+### DeletedMessageVaultHook should not be used on Cassandra based products
+
+Date: 10/02/2023
+
+JIRA: https://issues.apache.org/jira/browse/JAMES-3882
+
+Concerned products: Distributed James, Cassandra James Server
+
+When the deleted message vault is enabled in Cassandra products, now the deleted messages are directly copied
+into the vault, asynchronously upon deletions. Configuring DeletedMessageVaultHook is thus no longer needed.
+
+### Adding delegated_users column to user table
+
+Date 05/01/2023
+
+JIRA: https://issues.apache.org/jira/browse/JAMES-3756
+
+Concerned product: Distributed James, Cassandra James Server
+
+Add `delegated_users` column to `user` tables in order to store delegated users that user has access to.
+
+In order to add this `delegated_users` column you need to run the following CQL commands:
+```
+ALTER TABLE james_keyspace.user ADD delegated_users set<text>;
+```
+
+### Adding the saveDate to the OpenSearch index
+
+Date 05/12/2022
+
+JIRA: https://issues.apache.org/jira/browse/JAMES-3754
+
+Concerned product: Distributed James, Cassandra James
+
+Add `saveDate` to James mailbox index to enable saveDate searching as part of IMAP SAVEDATE extension.
+
+We already have this field as part of newly created mappings, but we need to explicitly add this field to existing indices by doing:
+```
+curl -X PUT \
+  http://ip:port/mailbox_v1/_mapping \
+  -H 'Content-Type: application/json' \
+  -d "{
+	\"properties\": {
+		\"saveDate\": {
+			\"type\": \"date\",
+			\"format\": \"uuuu-MM-dd'T'HH:mm:ssX||uuuu-MM-dd'T'HH:mm:ssXXX||uuuu-MM-dd'T'HH:mm:ssXXXXX\"
+		}
+	}
+}"
+```
+
+### Adding saveDate column to messageIdTable and imapUidTable
+
+Date 01/12/2022
+
+JIRA: https://issues.apache.org/jira/browse/JAMES-3754
+
+Concerned product: Distributed James, Cassandra James Server
+
+Add `save_date` column to `messageIdTable` and `imapUidTable` tables in order to store saveDate data as part of IMAP SAVEDATE extension.
+
+In order to add this `messageIdTable` column you need to run the following CQL commands:
+```
+ALTER TABLE james_keyspace.messageIdTable ADD save_date timestamp;
+ALTER TABLE james_keyspace.imapUidTable ADD save_date timestamp;
+```
+
+### Blob Store AES upgraded to PBKDF2WithHmacSHA512
+
+Date: 06/10/2022
+
+PBKDF2WithHmacSHA1 was reported being a weak cryptographic set up. 
+
+As such we decided to rely on PBKDF2WithHmacSHA512 by default.
+
+Users having data encrypted with PBKDF2WithHmacSHA1 can configure it as a private key algorithm to
+access their data, in `blobstore.properties`:
+
+```
+encryption.aes.private.key.algorithm=PBKDF2WithHmacSHA1
+```
+
+We do not have a migration strategy for PBKDF2WithHmacSHA1 users to migrate to PBKDF2WithHmacSHA512.
+
+### TLS host name verification is now enabled by default
+
+Date: 06/10/2022
+
+JIRA: JAMES-3833
+
+When establishing an SMTPS or StartTLS connection during remote mail delivery, James will now check the remote server's host/domain name against its certificate (RFC 2595). If they do not match, the connection fails as a temporary delivery error.
+
+This prevents attackers from spoofing legitimate servers and intercepting mails. However, it may prevent James from connecting to servers that have strange certificates, no DNS entries, are reachable by IP address only, and similar edge cases.
+
+Users requiring such connectivity may disable this check within `mailetcontainer.xml` at the RemoteDelivery mailet configuration:
+
+```
+<verifyServerIdentity>false</verifyServerIdentity>
+```
+
+### SortOrder addition in Identity
+
+Date: 06/10/2022
+
+Concerned products: Distributed James, Cassandra James
+
+JIRA: https://issues.apache.org/jira/browse/JAMES-3831
+
+We added a `sortOrder` field to the identity object. Modification to the underlying Cassandra table is needed:
+
+```
+cqlsh:apache_james> ALTER TABLE custom_identity ADD sort_order int  ;
+```
+
+### Deleted message vault is now deactivated by default
+
+Date: 13/09/2022
+
+Concerned products: Distributed James, Cassandra James
+
+In order to limit Cassandra table count, amongst others, the deleted message vault is now 
+disabled by default.
+
+Users relying on it needs to enable it within `deletedMessageVault.properties` with the following 
+property:
+
+```
+enabled=true
+```
+
+### Removal of cassandra.properties chunk.size.message.read
+
+Date: 23/08/2022
+
+Concerned products: Distributed James, Cassandra James
+
+JIRA: https://issues.apache.org/jira/browse/JAMES-3809
+
+This setting was duplicated and do not account for the fetch type. Removed to avoid confusion.
+
+Use `batchsize.properties` configuration file instead.
+
+### Migration to OpenSearch
+
+Date: 01/08/2022
+
+Concerned products: Distributed James, Cassandra James
+
+ElasticSearch v7 being EOL and upper versions being moved to a non-OSI compliant license (java clients included),
+it's been decided to migrate to OpenSearch that is a fork of ElasticSearch 7.10 and using Apache v2 license.
+
+You should migrate your ElasticSearch servers from version 7 to OpenSearch 2.1 before upgrading James.
+
+Users can either perform a migration of their data from version 7 to OpenSearch (documentation
+[here](https://opensearch.org/docs/latest/upgrade-to/upgrade-to/)) or might start from an empty
+Opensearch v2.1 cluster and [reindex data](https://github.com/apache/james-project/blob/master/src/site/markdown/server/manage-webadmin.md#reindexing-all-mails).
+
+Keep in mind as well that the group listeners related to ElasticSearch changed names.
+You would need to manually delete the bindings from the event queues in RabbitMQ before restarting James.
+
+Configuration file was relocated to `opensearch.properties` and properties are now prefixed by `opensearch.` rather than
+`elasticsearch.`.
+
+Furthermore, implementation name that could be specified explicitly in `search.properties` has changed from `elasticsearch`
+to `opensearch`.
+
+### Migration to Cassandra driver 4
+
+Date: 07/06/2022
+
+Concerned product: Distributed James, Cassandra James Server
+
+Cassandra driver had been updated to its version 4, empowering better reactive chains,
+more frequent releases, more configuration options amongst other.
+
+Users need to be aware that Cassandra driver 4 no longer allow in depth programmatic
+configuration, and instead relies on its own configuration mechanisms.
+
+Especially, SSL, consistency levels, timeouts, slow logs, metrics are now only configurable
+through the mean of Cassandra driver native configuration. We dropped related options from the `cassandra.properties`
+file.
+
+You can find here an [example](https://github.com/apache/james-project/blob/master/server/apps/distributed-app/sample-configuration/cassandra-driver.conf) of what `conf/cassandra-driver-conf` looks like, with sane defaults.
+
+
+Formal driver documentation: https://docs.datastax.com/en/developer/java-driver/4.13/manual/core/configuration/
 
 ### Adding authorized_users column to user table
 
@@ -32,6 +229,18 @@ In order to add this `authorized_users` column you need to run the following CQL
 ```
 ALTER TABLE james_keyspace.user ADD authorized_users set<text>;
 ```
+
+## 3.7.3 version
+
+No specific operation to conduct from a 3.7.2 version.
+
+## 3.7.2 version
+
+No specific operation to conduct from a 3.7.1 version.
+
+## 3.7.1 version
+
+No specific operation to conduct from a 3.7.0 version.
 
 ## 3.7.0 version
 

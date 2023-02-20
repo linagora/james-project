@@ -38,8 +38,10 @@ import org.apache.james.imap.api.message.UidRange;
 import org.apache.james.mailbox.MessageSequenceNumber;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.ModSeq;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.UidValidity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -153,6 +155,7 @@ public interface StatusResponse extends ImapResponseMessage {
 
         /** RFC2060 <code>TRYCREATE</code> response code */
         private static final ResponseCode TRYCREATE = new ResponseCode("TRYCREATE");
+        private static final ResponseCode OVERQUOTA = new ResponseCode("OVERQUOTA");
 
         /** RFC5162 <code>CLOSED</code> response code */
         private static final ResponseCode CLOSED = new ResponseCode("CLOSED");
@@ -162,6 +165,10 @@ public interface StatusResponse extends ImapResponseMessage {
         public static ResponseCode appendUid(UidValidity uidValidity, UidRange[] uids) {
             String uidParam = formatRanges(uids);
             return new ResponseCode("APPENDUID", Arrays.asList(uidParam), uidValidity.asLong(), false);
+        }
+
+        public static ResponseCode mailboxId(MailboxId mailboxId) {
+            return new ResponseCode("MAILBOXID", ImmutableList.of(mailboxId.serialize()), NO_NUMBER, true);
         }
 
         /** RFC4315 <code>COPYUID</code> response code */
@@ -287,6 +294,10 @@ public interface StatusResponse extends ImapResponseMessage {
          */
         public static ResponseCode tryCreate() {
             return TRYCREATE;
+        }
+
+        public static ResponseCode overQuota() {
+            return OVERQUOTA;
         }
 
         /**

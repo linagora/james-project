@@ -18,7 +18,9 @@
  ****************************************************************/
 package org.apache.james.mailbox.cassandra.mail;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -43,14 +45,15 @@ public class AttachmentLoader {
     }
 
     public Mono<CassandraMailboxMessage> addAttachmentToMessage(Pair<ComposedMessageIdWithMetaData, MessageRepresentation> messageRepresentation,
+                                                                Optional<Date> saveDate,
                                                                 MessageMapper.FetchType fetchType) {
         return loadAttachments(messageRepresentation.getRight().getAttachments().stream(), fetchType)
-            .map(attachments -> messageRepresentation.getRight().toMailboxMessage(messageRepresentation.getLeft(), attachments))
+            .map(attachments -> messageRepresentation.getRight().toMailboxMessage(messageRepresentation.getLeft(), attachments, saveDate))
             .map(message -> new CassandraMailboxMessage(message, messageRepresentation.getRight().getHeaderId()));
     }
 
     private Mono<List<MessageAttachmentMetadata>> loadAttachments(Stream<MessageAttachmentRepresentation> messageAttachmentRepresentations, MessageMapper.FetchType fetchType) {
-        if (fetchType == MessageMapper.FetchType.BODY || fetchType == MessageMapper.FetchType.FULL) {
+        if (fetchType == MessageMapper.FetchType.FULL || fetchType == MessageMapper.FetchType.ATTACHMENTS_METADATA) {
             return getAttachments(messageAttachmentRepresentations.collect(ImmutableList.toImmutableList()));
         } else {
             return Mono.just(ImmutableList.of());

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.james.core.Username;
 import org.apache.james.mailbox.model.MailboxConstants;
@@ -81,6 +82,12 @@ public class MailboxSession {
      */
     public static long SYSTEM_SESSION_ID = 0L;
 
+    public static boolean isPrimaryAccount(MailboxSession mailboxSession) {
+        return mailboxSession.loggedInUser
+            .map(loggedInUser -> loggedInUser.equals(mailboxSession.getUser()))
+            .orElse(false);
+    }
+
     public enum SessionType {
         /**
          * Session was created via the System
@@ -98,18 +105,18 @@ public class MailboxSession {
     private final String personalSpace;
     private final SessionId sessionId;
     private final Username userName;
-    private boolean open = true;
+    private final Optional<Username> loggedInUser;
     private final List<Locale> localePreferences;
     private final Map<Object, Object> attributes;
     private final char pathSeparator;
     private final SessionType type;
 
-    public MailboxSession(SessionId sessionId, Username userName,
+    public MailboxSession(SessionId sessionId, Username userName, Optional<Username> loggedInUser,
                                 List<Locale> localePreferences, char pathSeparator, SessionType type) {
-        this(sessionId, userName, localePreferences, new ArrayList<>(), null, pathSeparator, type);
+        this(sessionId, userName, loggedInUser, localePreferences, new ArrayList<>(), null, pathSeparator, type);
     }
 
-    public MailboxSession(SessionId sessionId, Username userName,
+    public MailboxSession(SessionId sessionId, Username userName, Optional<Username> loggedInUser,
                           List<Locale> localePreferences, List<String> sharedSpaces, String otherUsersSpace, char pathSeparator, SessionType type) {
         this.sessionId = sessionId;
         this.userName = userName;
@@ -125,6 +132,7 @@ public class MailboxSession {
         this.localePreferences = localePreferences;
         this.attributes = new HashMap<>();
         this.pathSeparator = pathSeparator;
+        this.loggedInUser = loggedInUser;
     }
 
     /**
@@ -142,28 +150,16 @@ public class MailboxSession {
     }
 
     /**
-     * Is this session open?
-     * 
-     * @return true if the session is open, false otherwise
-     */
-    public boolean isOpen() {
-        return open;
-    }
-
-    /**
-     * Closes this session.
-     */
-    public void close() {
-        open = false;
-    }
-
-    /**
      * Gets the user executing this session.
      * 
      * @return not null
      */
     public Username getUser() {
         return userName;
+    }
+
+    public Optional<Username> getLoggedInUser() {
+        return loggedInUser;
     }
 
     /**
@@ -237,6 +233,6 @@ public class MailboxSession {
         String tab = " ";
 
         return "MailboxSession ( " + "sessionId = "
-            + this.sessionId + tab + "open = " + this.open + tab + " )";
+            + this.sessionId + " )";
     }
 }

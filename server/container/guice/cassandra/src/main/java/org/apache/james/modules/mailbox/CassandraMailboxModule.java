@@ -24,7 +24,6 @@ import javax.inject.Singleton;
 
 import org.apache.james.adapter.mailbox.UserRepositoryAuthenticator;
 import org.apache.james.backends.cassandra.components.CassandraModule;
-import org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionManager;
 import org.apache.james.blob.api.BlobReferenceSource;
 import org.apache.james.events.EventListener;
@@ -118,7 +117,7 @@ import org.apache.james.utils.MailboxManagerDefinition;
 import org.apache.mailbox.tools.indexer.MessageIdReIndexerImpl;
 import org.apache.mailbox.tools.indexer.ReIndexerImpl;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -230,6 +229,7 @@ public class CassandraMailboxModule extends AbstractModule {
             .addBinding().to(MailboxAnnotationListener.class);
         Multibinder.newSetBinder(binder(), EventListener.ReactiveGroupEventListener.class)
             .addBinding().to(DeleteMessageListener.class);
+        Multibinder.newSetBinder(binder(), DeleteMessageListener.DeletionCallback.class);
 
         bind(MailboxManager.class).annotatedWith(Names.named(MAILBOXMANAGER_NAME)).to(MailboxManager.class);
 
@@ -247,13 +247,11 @@ public class CassandraMailboxModule extends AbstractModule {
     CassandraACLMapper aclMapper(CassandraACLMapper.StoreV1 storeV1,
                                  CassandraUserMailboxRightsDAO userMailboxRightsDAO,
                                  CassandraACLDAOV2 cassandraACLDAOV2,
-                                 Session session,
-                                 CassandraConsistenciesConfiguration cassandraConsistenciesConfiguration,
+                                 CqlSession session,
                                  CassandraSchemaVersionManager cassandraSchemaVersionManager) {
         return new CassandraACLMapper(storeV1,
             new CassandraACLMapper.StoreV2(userMailboxRightsDAO, cassandraACLDAOV2,
-                new CassandraEventStore(new EventStoreDao(session, JsonEventSerializer.forModules(ACLModule.ACL_UPDATE).withoutNestedType(),
-                    cassandraConsistenciesConfiguration))),
+                new CassandraEventStore(new EventStoreDao(session, JsonEventSerializer.forModules(ACLModule.ACL_UPDATE).withoutNestedType()))),
             cassandraSchemaVersionManager);
     }
     

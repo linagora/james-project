@@ -25,6 +25,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+
 import org.apache.james.core.Username;
 import org.apache.james.events.InVMEventBus;
 import org.apache.james.events.MemoryEventDeadLetters;
@@ -36,9 +38,9 @@ import org.apache.james.mailbox.MailboxSessionUtil;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.acl.UnionMailboxACLResolver;
 import org.apache.james.mailbox.exception.BadCredentialsException;
+import org.apache.james.mailbox.exception.ForbiddenDelegationException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
-import org.apache.james.mailbox.exception.ForbiddenDelegationException;
 import org.apache.james.mailbox.exception.UserDoesNotExistException;
 import org.apache.james.mailbox.model.Mailbox;
 import org.apache.james.mailbox.model.MailboxACL;
@@ -58,6 +60,7 @@ import org.apache.james.mailbox.store.quota.QuotaComponents;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.store.search.SimpleMessageSearchIndex;
 import org.apache.james.metrics.tests.RecordingMetricFactory;
+import org.apache.james.utils.UpdatableTickingClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -102,7 +105,7 @@ class StoreMailboxManagerTest {
         StoreRightManager storeRightManager = new StoreRightManager(mockedMapperFactory, new UnionMailboxACLResolver(), eventBus);
 
         StoreMailboxAnnotationManager annotationManager = new StoreMailboxAnnotationManager(mockedMapperFactory, storeRightManager);
-        SessionProviderImpl sessionProvider = new SessionProviderImpl(authenticator, FakeAuthorizator.forUserAndAdmin(ADMIN, CURRENT_USER));
+        SessionProviderImpl sessionProvider = new SessionProviderImpl(authenticator, FakeAuthorizator.forGivenUserAndDelegatedUser(ADMIN, CURRENT_USER));
         QuotaComponents quotaComponents = QuotaComponents.disabled(sessionProvider, mockedMapperFactory);
         AttachmentContentLoader attachmentContentLoader = null;
         MessageSearchIndex index = new SimpleMessageSearchIndex(mockedMapperFactory, mockedMapperFactory, new DefaultTextExtractor(), attachmentContentLoader);
@@ -110,7 +113,7 @@ class StoreMailboxManagerTest {
         storeMailboxManager = new StoreMailboxManager(mockedMapperFactory, sessionProvider,
                 new JVMMailboxPathLocker(), new MessageParser(), messageIdFactory,
                 annotationManager, eventBus, storeRightManager, quotaComponents, index, MailboxManagerConfiguration.DEFAULT,
-                PreDeletionHooks.NO_PRE_DELETION_HOOK, threadIdGuessingAlgorithm);
+                PreDeletionHooks.NO_PRE_DELETION_HOOK, threadIdGuessingAlgorithm, new UpdatableTickingClock(Instant.now()));
     }
 
     @Test
@@ -165,56 +168,63 @@ class StoreMailboxManagerTest {
 
     @Test
     void loginShouldCreateSessionWhenGoodPassword() throws Exception {
-        MailboxSession expected = storeMailboxManager.login(CURRENT_USER, CURRENT_USER_PASSWORD);
+        MailboxSession expected = storeMailboxManager.authenticate(CURRENT_USER, CURRENT_USER_PASSWORD).withoutDelegation();
 
         assertThat(expected.getUser()).isEqualTo(CURRENT_USER);
     }
 
     @Test
     void loginShouldThrowWhenBadPassword() {
-        assertThatThrownBy(() -> storeMailboxManager.login(CURRENT_USER, BAD_PASSWORD))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(CURRENT_USER, BAD_PASSWORD).withoutDelegation())
             .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
     void loginAsOtherUserShouldNotCreateUserSessionWhenAdminWithBadPassword() {
-        assertThatThrownBy(() -> storeMailboxManager.loginAsOtherUser(ADMIN, BAD_PASSWORD, CURRENT_USER))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(ADMIN, BAD_PASSWORD).as(CURRENT_USER))
             .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
     void loginAsOtherUserShouldNotCreateUserSessionWhenNotAdmin() {
-        assertThatThrownBy(() -> storeMailboxManager.loginAsOtherUser(CURRENT_USER, CURRENT_USER_PASSWORD, UNKNOWN_USER))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(CURRENT_USER, CURRENT_USER_PASSWORD).as(UNKNOWN_USER))
             .isInstanceOf(ForbiddenDelegationException.class);
     }
 
     @Test
     void loginAsOtherUserShouldThrowBadCredentialWhenBadPasswordAndNotAdminUser() {
-        assertThatThrownBy(() -> storeMailboxManager.loginAsOtherUser(CURRENT_USER, BAD_PASSWORD, CURRENT_USER))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(CURRENT_USER, BAD_PASSWORD).as(CURRENT_USER))
             .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
     void loginAsOtherUserShouldThrowBadCredentialWhenBadPasswordNotAdminUserAndUnknownUser() {
-        assertThatThrownBy(() -> storeMailboxManager.loginAsOtherUser(CURRENT_USER, BAD_PASSWORD, UNKNOWN_USER))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(CURRENT_USER, BAD_PASSWORD).as(UNKNOWN_USER))
             .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
     void loginAsOtherUserShouldThrowBadCredentialsWhenBadPasswordAndUserDoesNotExists() {
-        assertThatThrownBy(() -> storeMailboxManager.loginAsOtherUser(ADMIN, BAD_PASSWORD, UNKNOWN_USER))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(ADMIN, BAD_PASSWORD).as(UNKNOWN_USER))
             .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
     void loginAsOtherUserShouldNotCreateUserSessionWhenDelegatedUserDoesNotExist() {
-        assertThatThrownBy(() -> storeMailboxManager.loginAsOtherUser(ADMIN, ADMIN_PASSWORD, UNKNOWN_USER))
+        assertThatThrownBy(() -> storeMailboxManager.authenticate(ADMIN, ADMIN_PASSWORD).as(UNKNOWN_USER))
             .isInstanceOf(UserDoesNotExistException.class);
     }
 
     @Test
     void loginAsOtherUserShouldCreateUserSessionWhenAdminWithGoodPassword() throws Exception {
-        MailboxSession expected = storeMailboxManager.loginAsOtherUser(ADMIN, ADMIN_PASSWORD, CURRENT_USER);
+        MailboxSession expected = storeMailboxManager.authenticate(ADMIN, ADMIN_PASSWORD).as(CURRENT_USER);
+
+        assertThat(expected.getUser()).isEqualTo(CURRENT_USER);
+    }
+
+    @Test
+    void loginAsOtherUserWithoutPasswordShouldCreateUserSession() throws MailboxException {
+        MailboxSession expected = storeMailboxManager.authenticate(ADMIN).as(CURRENT_USER);
 
         assertThat(expected.getUser()).isEqualTo(CURRENT_USER);
     }

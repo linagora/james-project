@@ -47,6 +47,7 @@ public class HumanReadableText {
     public static final HumanReadableText NO_MOD_SEQ = new HumanReadableText("org.apache.james.imap.NO_MOD_SEQ", "Sorry, this mailbox format doesn't support modsequences");
 
     public static final HumanReadableText UID_VALIDITY = new HumanReadableText("org.apache.james.imap.UID_VALIDITY", "UIDs valid");
+    public static final HumanReadableText OK = new HumanReadableText("org.apache.james.imap.Ok", "Ok");
 
     public static HumanReadableText permanentFlags(Flags flags) {
         String text;
@@ -83,6 +84,8 @@ public class HumanReadableText {
     public static final HumanReadableText FAILURE_MAIL_PARSE = new HumanReadableText("org.apache.james.imap.FAILURE_MAIL_PARSE", "failed. Mail cannot be parsed.");
 
     public static final HumanReadableText FAILURE_NO_SUCH_MAILBOX = new HumanReadableText("org.apache.james.imap.FAILURE_NO_SUCH_MAILBOX", "failed. No such mailbox.");
+
+    public static final HumanReadableText FAILURE_OVERQUOTA = new HumanReadableText("org.apache.james.imap.OVERQUOTA", "failed. Over quota.");
 
     public static final HumanReadableText FAILURE_NO_QUOTA_RESOURCE = new HumanReadableText("org.apache.james.imap.FAILURE_NO_SUCH_QUOTA_RESOURCE", "failed. No such quota resource.");
 
@@ -132,6 +135,7 @@ public class HumanReadableText {
 
     public static final HumanReadableText BAD_IO_ENCODING = new HumanReadableText("org.apache.james.imap.BAD_IO_ENCODING", "failed. Illegal encoding.");
     public static final HumanReadableText COMPLETED = new HumanReadableText("org.apache.james.imap.COMPLETED", "completed.");
+    public static final HumanReadableText REPLACE_READY = new HumanReadableText("org.apache.james.imap.REPLACE", "Replacement Message ready");
 
     public static final HumanReadableText INVALID_LOGIN = new HumanReadableText("org.apache.james.imap.INVALID_LOGIN", "failed. Invalid login/password.");
 

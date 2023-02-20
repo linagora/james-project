@@ -23,6 +23,10 @@ import org.apache.james.core.Username;
 import org.reactivestreams.Publisher;
 
 public interface DelegationStore {
+    interface Fluent {
+        Publisher<Void> forUser(Username baseUser);
+    }
+
     /**
      * @return Lists of the users authorized to impersonnate to baseUser.
      */
@@ -32,5 +36,18 @@ public interface DelegationStore {
 
     Publisher<Void> addAuthorizedUser(Username baseUser, Username userWithAccess);
 
+    default Fluent addAuthorizedUser(Username userWithAccess) {
+        return baseUser -> addAuthorizedUser(baseUser, userWithAccess);
+    }
+
     Publisher<Void> removeAuthorizedUser(Username baseUser, Username userWithAccess);
+
+    default Fluent removeAuthorizedUser(Username userWithAccess) {
+        return baseUser -> removeAuthorizedUser(baseUser, userWithAccess);
+    }
+
+    Publisher<Username> delegatedUsers(Username baseUser);
+
+    Publisher<Void> removeDelegatedUser(Username baseUser, Username delegatedToUser);
+
 }

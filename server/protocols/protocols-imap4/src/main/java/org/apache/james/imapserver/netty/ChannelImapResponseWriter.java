@@ -41,9 +41,14 @@ import io.netty.handler.stream.ChunkedStream;
  * {@link Channel}
  */
 public class ChannelImapResponseWriter implements ImapResponseWriter {
+    @FunctionalInterface
+    interface FlushCallback {
+        void run() throws IOException;
+    }
 
     private final Channel channel;
     private final boolean zeroCopy;
+    private FlushCallback flushCallback;
 
     public ChannelImapResponseWriter(Channel channel) {
         this(channel, true);
@@ -52,10 +57,17 @@ public class ChannelImapResponseWriter implements ImapResponseWriter {
     public ChannelImapResponseWriter(Channel channel, boolean zeroCopy) {
         this.channel = channel;
         this.zeroCopy = zeroCopy;
+        this.flushCallback = () -> {
+
+        };
+    }
+
+    public void setFlushCallback(FlushCallback flushCallback) {
+        this.flushCallback = flushCallback;
     }
 
     @Override
-    public void write(byte[] buffer) throws IOException {
+    public void write(byte[] buffer) {
         if (channel.isActive()) {
             channel.writeAndFlush(Unpooled.wrappedBuffer(buffer));
         }
@@ -63,6 +75,7 @@ public class ChannelImapResponseWriter implements ImapResponseWriter {
 
     @Override
     public void write(Literal literal) throws IOException {
+        flushCallback.run();
         if (channel.isActive()) {
             InputStream in = literal.getInputStream();
             if (in instanceof FileInputStream) {
@@ -82,6 +95,9 @@ public class ChannelImapResponseWriter implements ImapResponseWriter {
         }
     }
     
-    
+    public void flush() throws IOException {
+        flushCallback.run();
+        channel.flush();
+    }
 
 }

@@ -60,11 +60,54 @@ class DelegationStoreAuthorizatorTest {
     }
 
     @Test
+    void isAdministratorShouldReturnTrueWhenAdministrator() throws Exception {
+        assertThat(testee.isAdministrator(ADMIN_USER)).isTrue();
+    }
+
+    @Test
+    void isAdministratorShouldReturnFalseWhenNotAdministrator() throws Exception {
+        assertThat(testee.isAdministrator(OTHER_USER)).isFalse();
+    }
+
+    @Test
+    void isAdministratorShouldReturnFalseWhenWrongVirtualHosting() throws Exception {
+        assertThat(testee.isAdministrator(Username.of("a@b.com"))).isFalse();
+    }
+
+    @Test
+    void isAdministratorShouldReturnFalseWhenWrongVirtualHosting2() throws Exception {
+        MemoryUsersRepository usersRepository = MemoryUsersRepository.withVirtualHosting(null);
+        BaseHierarchicalConfiguration configuration = new BaseHierarchicalConfiguration();
+        configuration.addProperty("administratorId", "admin");
+        usersRepository.configure(configuration);
+        delegationStore = new MemoryDelegationStore();
+        testee = new DelegationStoreAuthorizator(delegationStore, usersRepository);
+
+        assertThat(testee.isAdministrator(OTHER_USER)).isFalse();
+    }
+
+    @Test
+    void canLoginAsOtherUserShouldReturnForbiddenWhenWrongVirtualHosting() throws Exception {
+        usersRepository.addUser(OTHER_USER, "secret");
+        assertThat(testee.canLoginAsOtherUser(Username.of("other_user@domain.tld"), OTHER_USER))
+            .isEqualTo(Authorizator.AuthorizationState.FORBIDDEN);
+    }
+
+    @Test
     void canLoginAsOtherUserShouldReturnAllowedWhenGivenUserIsDelegatedByOtherUser() throws Exception {
         usersRepository.addUser(OTHER_USER, "secret");
         Mono.from(delegationStore.addAuthorizedUser(OTHER_USER, GIVEN_USER)).block();
 
         assertThat(testee.canLoginAsOtherUser(GIVEN_USER, OTHER_USER)).isEqualTo(Authorizator.AuthorizationState.ALLOWED);
+    }
+
+    @Test
+    void canLoginAsOtherUserShouldReturnAllowedWhenGivenUserIsAdminWithWrongVirtualHosting() throws Exception {
+        Username accessor = Username.of("other_user@domain.tld");
+        usersRepository.addUser(OTHER_USER, "secret");
+        Mono.from(delegationStore.addAuthorizedUser(OTHER_USER, accessor)).block();
+
+        assertThat(testee.canLoginAsOtherUser(accessor, OTHER_USER)).isEqualTo(Authorizator.AuthorizationState.ALLOWED);
     }
 
     @Test

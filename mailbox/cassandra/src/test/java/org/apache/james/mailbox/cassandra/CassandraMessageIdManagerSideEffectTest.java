@@ -24,6 +24,8 @@ import java.util.Set;
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.CassandraClusterExtension;
 import org.apache.james.backends.cassandra.StatementRecorder;
+import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionDAO;
+import org.apache.james.backends.cassandra.versions.SchemaVersion;
 import org.apache.james.events.EventBus;
 import org.apache.james.mailbox.cassandra.mail.MailboxAggregateModule;
 import org.apache.james.mailbox.extension.PreDeletionHook;
@@ -49,6 +51,11 @@ class CassandraMessageIdManagerSideEffectTest extends AbstractMessageIdManagerSi
 
     @Test
     void setInMailboxesShouldLimitMailboxReads(CassandraCluster cassandra) throws Exception {
+        // Ensure the right schema version
+        CassandraSchemaVersionDAO schemaVersionDAO = new CassandraSchemaVersionDAO(cassandra.getConf());
+        schemaVersionDAO.truncateVersion().block();
+        schemaVersionDAO.updateVersion(new SchemaVersion(12)).block();
+
         givenUnlimitedQuota();
         MessageId messageId = testingData.persist(mailbox2.getMailboxId(), messageUid1, FLAGS, session);
 
@@ -59,10 +66,10 @@ class CassandraMessageIdManagerSideEffectTest extends AbstractMessageIdManagerSi
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(statementRecorder.listExecutedStatements(
-                StatementRecorder.Selector.preparedStatement("SELECT id,mailboxbase,uidvalidity,name FROM mailbox WHERE id=:id;")))
+                StatementRecorder.Selector.preparedStatement("SELECT id,mailboxbase,uidvalidity,name FROM mailbox WHERE id=:id")))
                 .hasSize(3); // an extra read is still performed
             softly.assertThat(statementRecorder.listExecutedStatements(
-                StatementRecorder.Selector.preparedStatement("SELECT acl,version FROM acl WHERE id=:id;")))
+                StatementRecorder.Selector.preparedStatement("SELECT * FROM aclv2 WHERE id=:id")))
                 .hasSize(2);
         });
     }

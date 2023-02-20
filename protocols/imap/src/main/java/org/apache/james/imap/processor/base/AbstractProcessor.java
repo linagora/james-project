@@ -19,6 +19,8 @@
 
 package org.apache.james.imap.processor.base;
 
+import java.util.List;
+
 import org.apache.james.imap.api.ImapConfiguration;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.process.ImapProcessor;
@@ -27,6 +29,8 @@ import org.apache.james.util.MDCBuilder;
 import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import reactor.core.publisher.Mono;
 
@@ -43,6 +47,10 @@ public abstract class AbstractProcessor<M extends ImapMessage> implements ImapPr
     @SuppressWarnings("unchecked")
     public Mono<Void> processReactive(ImapMessage message, Responder responder, ImapSession session) {
         M acceptableMessage = (M) message;
+        if (LOGGER.isDebugEnabled()) {
+            return doProcess(acceptableMessage, responder, session)
+                .contextWrite(ReactorUtils.context("imap-processor", mdc(acceptableMessage)));
+        }
         return initialLog(message)
             .then(doProcess(acceptableMessage, responder, session))
             .contextWrite(ReactorUtils.context("imap-processor", mdc(acceptableMessage)));
@@ -60,8 +68,12 @@ public abstract class AbstractProcessor<M extends ImapMessage> implements ImapPr
 
     }
 
-    public Class<M> acceptableClass() {
+    protected Class<M> acceptableClass() {
         return acceptableClass;
+    }
+
+    public List<Class<? extends M>> acceptableClasses() {
+        return ImmutableList.of(acceptableClass);
     }
 
     /**

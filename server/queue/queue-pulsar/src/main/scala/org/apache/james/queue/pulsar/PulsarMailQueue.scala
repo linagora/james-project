@@ -1,4 +1,4 @@
-/****************************************************************
+/** **************************************************************
  * Licensed to the Apache Software Foundation (ASF) under one   *
  * or more contributor license agreements.  See the NOTICE file *
  * distributed with this work for additional information        *
@@ -6,46 +6,18 @@
  * to you under the Apache License, Version 2.0 (the            *
  * "License"); you may not use this file except in compliance   *
  * with the License.  You may obtain a copy of the License at   *
- *                                                              *
- *   http://www.apache.org/licenses/LICENSE-2.0                 *
- *                                                              *
+ * *
+ * http://www.apache.org/licenses/LICENSE-2.0                 *
+ * *
  * Unless required by applicable law or agreed to in writing,   *
  * software distributed under the License is distributed on an  *
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       *
  * KIND, either express or implied.  See the License for the    *
  * specific language governing permissions and limitations      *
  * under the License.                                           *
- ****************************************************************/
+ * ************************************************************** */
 
 package org.apache.james.queue.pulsar
-
-import java.time.{Instant, ZonedDateTime, Duration => JavaDuration}
-import java.util.concurrent.TimeUnit
-import java.util.{Date, UUID}
-
-import javax.mail.MessagingException
-import javax.mail.internet.MimeMessage
-
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
-import scala.jdk.DurationConverters._
-import scala.math.Ordered.orderingToOrdered
-
-import org.apache.james.backends.pulsar.{PulsarConfiguration, PulsarReader}
-import org.apache.james.blob.api.{BlobId, ObjectNotFoundException, Store}
-import org.apache.james.blob.mail.MimeMessagePartsId
-import org.apache.james.core.{MailAddress, MaybeSender}
-import org.apache.james.metrics.api.{GaugeRegistry, MetricFactory}
-import org.apache.james.queue.api.MailQueue._
-import org.apache.james.queue.api._
-import org.apache.james.queue.pulsar.EnqueueId.EnqueueId
-import org.apache.james.server.core.MailImpl
-import org.apache.mailet._
-import org.apache.pulsar.client.admin.PulsarAdmin
-import org.apache.pulsar.client.admin.PulsarAdminException.NotFoundException
-import org.apache.pulsar.client.api.{Schema, SubscriptionInitialPosition, SubscriptionType}
-import org.reactivestreams.Publisher
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.{Flow, Keep, RunnableGraph, Sink, Source, SourceQueueWithComplete, StreamConverters}
@@ -55,8 +27,34 @@ import akka.{Done, NotUsed}
 import com.sksamuel.pulsar4s._
 import com.sksamuel.pulsar4s.akka.streams
 import com.sksamuel.pulsar4s.akka.streams.{CommittableMessage, Control}
-
+import org.apache.james.backends.pulsar.{PulsarClients, PulsarReader}
+import org.apache.james.blob.api.{BlobId, ObjectNotFoundException, Store}
+import org.apache.james.blob.mail.MimeMessagePartsId
+import org.apache.james.core.{MailAddress, MaybeSender}
+import org.apache.james.metrics.api.{GaugeRegistry, MetricFactory}
+import org.apache.james.queue.api.MailQueue.MailQueueItem.CompletionStatus
+import org.apache.james.queue.api.MailQueue._
+import org.apache.james.queue.api._
+import org.apache.james.queue.pulsar.EnqueueId.EnqueueId
+import org.apache.james.server.core.MailImpl
+import org.apache.mailet._
+import org.apache.pulsar.client.admin.PulsarAdminException.NotFoundException
+import org.apache.pulsar.client.api.{Schema, SubscriptionInitialPosition, SubscriptionType}
+import org.reactivestreams.Publisher
+import org.slf4j.LoggerFactory
 import play.api.libs.json._
+
+import java.time.{Instant, ZonedDateTime, Duration => JavaDuration}
+import java.util.concurrent.TimeUnit
+import java.util.{Date, UUID}
+import javax.mail.MessagingException
+import javax.mail.internet.MimeMessage
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
+import scala.jdk.DurationConverters._
+import scala.math.Ordered.orderingToOrdered
+import scala.util.Failure
 
 private[pulsar] object serializers {
   implicit val headerFormat: Format[Header] = Json.format[Header]
@@ -85,44 +83,41 @@ private[pulsar] object schemas {
  * A filter cannot remove messages that are enqueued after the call to the `remove` method.
  */
 class PulsarMailQueue(
-  name: MailQueueName,
-  config: PulsarConfiguration,
-  blobIdFactory: BlobId.Factory,
-  mimeMessageStore: Store[MimeMessage, MimeMessagePartsId],
-  mailQueueItemDecoratorFactory: MailQueueItemDecoratorFactory,
-  metricFactory: MetricFactory,
-  gaugeRegistry: GaugeRegistry,
-  system: ActorSystem
-) extends MailQueue with ManageableMailQueue {
+                       config: PulsarMailQueueConfiguration,
+                       pulsar: PulsarClients,
+                       blobIdFactory: BlobId.Factory,
+                       mimeMessageStore: Store[MimeMessage, MimeMessagePartsId],
+                       mailQueueItemDecoratorFactory: MailQueueItemDecoratorFactory,
+                       metricFactory: MetricFactory,
+                       gaugeRegistry: GaugeRegistry,
+                       system: ActorSystem
+                     ) extends MailQueue with ManageableMailQueue {
 
   import schemas._
   import serializers._
 
   type MessageAsJson = String
 
-  private val enqueueBufferSize = 10
-  private val requeueBufferSize = 10
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
   private val awaitTimeout = 10.seconds
 
-  gaugeRegistry.register(QUEUE_SIZE_METRIC_NAME_PREFIX + name, () => getSize)
-  private val dequeueMetrics = metricFactory.generate(DEQUEUED_METRIC_NAME_PREFIX + name.asString)
-  private val enqueueMetric = metricFactory.generate(ENQUEUED_METRIC_NAME_PREFIX + name.asString)
+  gaugeRegistry.register(QUEUE_SIZE_METRIC_NAME_PREFIX + config.name, () => getSize)
+  private val dequeueMetrics = metricFactory.generate(DEQUEUED_METRIC_NAME_PREFIX + config.name.asString)
+  private val enqueueMetric = metricFactory.generate(ENQUEUED_METRIC_NAME_PREFIX + config.name.asString)
 
   private implicit val implicitSystem: ActorSystem = system
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
   private implicit val implicitBlobIdFactory: BlobId.Factory = blobIdFactory
-  private implicit val client: PulsarAsyncClient = PulsarClient(config.brokerUri)
-  private val admin = {
-    val builder = PulsarAdmin.builder()
-    builder.serviceHttpUrl(config.adminUri).build()
-  }
+  private implicit val client: PulsarAsyncClient = pulsar.asyncClient
+  private val admin = pulsar.adminClient
 
-  private val outTopic = Topic(s"persistent://${config.namespace.asString}/James-${name.asString()}")
-  private val scheduledTopic = Topic(s"persistent://${config.namespace.asString}/${name.asString()}-scheduled")
-  private val filterTopic = Topic(s"persistent://${config.namespace.asString}/pmq-filter-${name.asString()}")
-  private val filterScheduledTopic = Topic(s"persistent://${config.namespace.asString}/pmq-filter-scheduled-${name.asString()}")
-  private val subscription = Subscription("subscription-" + name.asString())
-  private val scheduledSubscription = Subscription("scheduled-subscription-" + name.asString())
+  private val outTopic = Topic(s"persistent://${config.pulsar.namespace.asString}/James-${config.name.asString()}")
+  private val scheduledTopic = Topic(s"persistent://${config.pulsar.namespace.asString}/${config.name.asString()}-scheduled")
+  private val filterTopic = Topic(s"persistent://${config.pulsar.namespace.asString}/pmq-filter-${config.name.asString()}")
+  private val filterScheduledTopic = Topic(s"persistent://${config.pulsar.namespace.asString}/pmq-filter-scheduled-${config.name.asString()}")
+  private val subscription = Subscription("subscription-" + config.name.asString())
+  private val scheduledSubscription = Subscription("scheduled-subscription-" + config.name.asString())
 
   private val outTopicProducer = client.producer(ProducerConfig(outTopic, enableBatching = Some(false)))
   private val scheduledTopicProducer = client.producer(ProducerConfig(scheduledTopic, enableBatching = Some(false)))
@@ -178,7 +173,7 @@ class PulsarMailQueue(
    */
   private val enqueueFlow: RunnableGraph[SourceQueueWithComplete[(Mail, Duration, Promise[Done])]] =
     Source
-      .queue[(Mail, Duration, Promise[Done])](enqueueBufferSize, OverflowStrategy.backpressure)
+      .queue[(Mail, Duration, Promise[Done])](config.enqueueBufferSize, OverflowStrategy.backpressure, config.maxEnqueueConcurrency)
       .flatMapConcat(saveMail.tupled)
       .via(buildProducerMessage)
       .wireTap(_ => enqueueMetric.increment())
@@ -190,7 +185,7 @@ class PulsarMailQueue(
    * Scheduled messages go through this source when delay expires
    */
   private val requeueFlow: RunnableGraph[SourceQueueWithComplete[ProducerMessage[MessageAsJson]]] = Source
-    .queue[ProducerMessage[MessageAsJson]](requeueBufferSize, OverflowStrategy.backpressure)
+    .queue[ProducerMessage[MessageAsJson]](config.requeueBufferSize, OverflowStrategy.backpressure)
     .via(debugLogger("requeue"))
     .to(sinkOf(outTopicProducer))
 
@@ -213,7 +208,7 @@ class PulsarMailQueue(
   private val filterScheduledStage: ActorRef = system.actorOf(FilterStage.props)
   private val requeueMessage = Flow.apply[CommittableMessage[String]]
     .via(filteringFlow(filterScheduledStage))
-    .flatMapConcat{case (_,_,message) => Source.future(requeue.offer(ProducerMessage(message.message.value)).map(_ => message))}
+    .flatMapConcat { case (_, _, message) => Source.future(requeue.offer(ProducerMessage(message.message.value)).map(_ => message)) }
     .flatMapConcat(message => Source.future(message.ack(cumulative = false)))
     .toMat(Sink.ignore)(Keep.none)
 
@@ -230,7 +225,7 @@ class PulsarMailQueue(
     streams.committableSource(consumer)
       .via(filteringFlow(filterStage))
       .map { case (mail, partsId, message) => new PulsarMailQueueItem(mail, partsId, message) }
-      .map(mailQueueItemDecoratorFactory.decorate(_, name))
+      .map(mailQueueItemDecoratorFactory.decorate(_, config.name))
       .alsoTo(counter)
       // akka streams virtual publisher handles a subscription timeout to the
       // exposed publisher which will terminate the stream if the timeout is not
@@ -245,7 +240,7 @@ class PulsarMailQueue(
       .toMat(Sink.asPublisher[MailQueue.MailQueueItem](true).withAttributes(Attributes.inputBuffer(initial = 1, max = 1)))(Keep.both)
   }
 
-  private def filteringFlow(filterActor:ActorRef) = {
+  private def filteringFlow(filterActor: ActorRef) = {
     implicit val timeout: Timeout = Timeout(1, TimeUnit.SECONDS)
     Flow.apply[CommittableMessage[String]].map(message =>
       (Json.fromJson[MailMetadata](Json.parse(message.message.value)).get,
@@ -253,14 +248,16 @@ class PulsarMailQueue(
     ).ask[(Option[MailMetadata], Option[MimeMessagePartsId], CommittableMessage[String])](filterActor)
       .flatMapConcat {
         case (None, Some(partsId), committableMessage) =>
-          committableMessage.ack()
-          deleteMimeMessage(partsId)
-            .flatMapConcat(_ => Source.empty)
+          Source.lazyFuture(() => committableMessage.ack())
+            .flatMapConcat(_ =>
+              deleteMimeMessage(partsId)
+                .flatMapConcat(_ => Source.empty)
+            )
         case (Some(metadata), _, committableMessage) =>
           val partsId = metadata.partsId
           Source
             .fromPublisher(readMimeMessage(partsId))
-            .collect{ case Some(message) => message }
+            .collect { case Some(message) => message }
             .map(message => (readMail(metadata, message), partsId, committableMessage))
       }
   }
@@ -269,14 +266,20 @@ class PulsarMailQueue(
   class PulsarMailQueueItem(mail: Mail, partsId: MimeMessagePartsId, message: CommittableMessage[String]) extends MailQueueItem {
     override val getMail: Mail = mail
 
-    override def done(success: Boolean): Unit = {
-      if (success) {
+    override def done(success: CompletionStatus): Unit = success match {
+      case CompletionStatus.SUCCESS =>
         dequeueMetrics.increment()
         Await.ready(message.ack(cumulative = false), awaitTimeout)
-        deleteMimeMessage(partsId).run()
-      } else {
+        val eventualDone = deleteMimeMessage(partsId).run()
+
+        eventualDone.onComplete {
+          case Failure(e) => logger.error("Failed to delete parts {} for mail {}", partsId, mail.getName(), e)
+          case _ => logger.trace("Deleted parts {} for mail {}", partsId, mail.getName())
+        }
+      case CompletionStatus.RETRY =>
         Await.ready(message.nack(), awaitTimeout)
-      }
+      case CompletionStatus.REJECT =>
+        Await.ready(message.nack(), awaitTimeout)
     }
   }
 
@@ -294,13 +297,13 @@ class PulsarMailQueue(
   private val filtersCommandFlowControl: Control =
     filtersCommandFlow(
       filterTopic,
-      Subscription("filter-subscription-" + name.asString() + "-" + UUID.randomUUID().toString),
+      Subscription("filter-subscription-" + config.name.asString() + "-" + UUID.randomUUID().toString),
       filterStage
     ).run()
   private val scheduledFiltersCommandFlowControl: Control =
     filtersCommandFlow(
       filterScheduledTopic,
-      Subscription("filter-scheduled-subscription-" + name.asString() + "-" + UUID.randomUUID().toString),
+      Subscription("filter-scheduled-subscription-" + config.name.asString() + "-" + UUID.randomUUID().toString),
       filterScheduledStage
     ).run()
 
@@ -318,7 +321,7 @@ class PulsarMailQueue(
    *
    * @see [[FilterStage]]
    */
-  private def filtersCommandFlow(topic:Topic, filterSubscription: Subscription, filteringStage: ActorRef) = {
+  private def filtersCommandFlow(topic: Topic, filterSubscription: Subscription, filteringStage: ActorRef) = {
     val logInvalidFilterPayload = Flow.apply[JsResult[Filter]]
       .collectType[JsError]
       .map(error => "unable to parse filter" + Json.prettyPrint(JsError.toJson(error)))
@@ -345,7 +348,7 @@ class PulsarMailQueue(
   /**
    * @inheritdoc
    */
-  override val getName: MailQueueName = name
+  override val getName: MailQueueName = config.name
 
   /**
    * @inheritdoc
@@ -359,7 +362,7 @@ class PulsarMailQueue(
 
   private def syncEnqueue(mail: Mail, delay: Duration): Unit = {
     metricFactory.decorateSupplierWithTimerMetric(
-      ENQUEUED_TIMER_METRIC_NAME_PREFIX + name.asString,
+      ENQUEUED_TIMER_METRIC_NAME_PREFIX + config.name.asString,
       () => Await.result(internalEnqueue(mail, delay), awaitTimeout)
     )
   }
@@ -369,7 +372,7 @@ class PulsarMailQueue(
    */
   override def enqueueReactive(mail: Mail): Publisher[Void] = {
     metricFactory.decoratePublisherWithTimerMetric(
-      ENQUEUED_TIMER_METRIC_NAME_PREFIX + name.asString,
+      ENQUEUED_TIMER_METRIC_NAME_PREFIX + config.name.asString,
       Source.lazyFuture(() => internalEnqueue(mail, Duration.Undefined)).runWith(Sink.asPublisher[Void](fanout = true))
     )
   }
@@ -397,7 +400,6 @@ class PulsarMailQueue(
     scheduledConsumerControl.stop()
     filtersCommandFlowControl.stop()
     scheduledFiltersCommandFlowControl.stop()
-    client.close()
   }
 
   /**
@@ -530,8 +532,23 @@ class PulsarMailQueue(
     }
   }
 
-  private def publishFilter(producer:Producer[String])(filter:Filter): Unit ={
+  /**
+   * The publish filter implementation optimizes for the local/single instance case.
+   *
+   * This is reliant on the FilterStage implementation being able to deduplicate
+   * filters. The current implementation defined filters as value objects and stores
+   * them in a Set which will effectively dedpulicate them.
+   *
+   * @see org.apache.james.queue.pulsar.FilterStage.filters
+   * @param producer
+   * @param filter
+   */
+  private def publishFilter(producer: Producer[String])(filter: Filter): Unit = {
     import Filter._
+    // Optimizes for the local/single instance case, the duplicated filter
+    // received through pulsar will be eliminated by the filter stage as
+    // filters are stored in a set @see org.apache.james.queue.pulsar.FilterStage.filters
+    filterStage ! filter
     producer.send(Json.stringify(Json.toJson(filter)))
   }
 
@@ -565,13 +582,14 @@ class PulsarMailQueue(
           .bodyBlobId(blobIdFactory.from(metadata.bodyBlobId))
           .build()
         Source.fromPublisher(readMimeMessage(partsId))
-          .collect{ case Some(message) => message }
+          .collect { case Some(message) => message }
           .map(message => readMail(metadata, message))
       })
 
     new ManageableMailQueue.MailQueueIterator() {
       private val javaStream = browseableMails.runWith(StreamConverters.asJavaStream[Mail]())
       private val iterator = javaStream.iterator()
+
       /**
        * @inheritdoc
        */

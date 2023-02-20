@@ -6,6 +6,7 @@
   "modSeq": 42,
   "size": 25,
   "date": "2015-06-07T00:00:00+0200",
+  "saveDate": null,
   "mediaType": "plain",
   "subtype": "text",
   "userFlags": [
@@ -146,13 +147,15 @@
   "from": [
 	{
 	  "name": "Markus Koschany",
-	  "address": "apo@gambaru.de"
+	  "address": "apo@gambaru.de",
+	  "domain": "gambaru"
 	}
   ],
   "to": [
 	{
 	  "name": null,
-	  "address": "debian-security-announce@lists.debian.org"
+	  "address": "debian-security-announce@lists.debian.org",
+	  "domain": "lists.debian"
 	}
   ],
   "cc": [],

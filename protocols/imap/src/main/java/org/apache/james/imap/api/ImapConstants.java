@@ -71,6 +71,10 @@ public interface ImapConstants {
 
     Capability SUPPORTS_RFC3348 = Capability.of("CHILDREN");
 
+    Capability SUPPORTS_OBJECTID = Capability.of("OBJECTID");
+
+    Capability SUPPORTS_SAVEDATE = Capability.of("SAVEDATE");
+
     Capability SUPPORTS_I18NLEVEL_1 = Capability.of("I18NLEVEL=1");
 
     Capability SUPPORTS_NAMESPACES = Capability.of("NAMESPACE");
@@ -92,12 +96,14 @@ public interface ImapConstants {
     Capability SUPPORTS_ACL = Capability.of("ACL");
 
     Capability SUPPORTS_QUOTA = Capability.of("QUOTA");
+    Capability SUPPORTS_QUOTA_RES_STORAGE = Capability.of("QUOTA=RES-STORAGE");
+    Capability SUPPORTS_QUOTA_RES_MESSAGE = Capability.of("QUOTA=RES-MESSAGE");
 
     Capability SUPPORTS_MOVE = Capability.of("MOVE");
 
     Capability SUPPORTS_UIDPLUS = Capability.of("UIDPLUS");
 
-    Capability SUPPORTS_ANNOTATION = Capability.of("ANNOTATION");
+    Capability SUPPORTS_ANNOTATION = Capability.of("METADATA");
     
     String INBOX_NAME = "INBOX";
 
@@ -137,10 +143,15 @@ public interface ImapConstants {
 
     byte[] NAME_ATTRIBUTE_HAS_NO_CHILDREN = "\\HasNoChildren".getBytes(US_ASCII);
 
+    byte[] NAME_ATTRIBUTE_SUBSCRIBED = "\\Subscribed".getBytes(US_ASCII);
+
+    byte[] NAME_ATTRIBUTE_NON_EXISTENT = "\\NonExistent".getBytes(US_ASCII);
 
     char BACK_SLASH = '\\';
 
     String STATUS_UNSEEN = "UNSEEN";
+
+    String STATUS_MAILBOXID = "MAILBOXID";
 
     String STATUS_UIDVALIDITY = "UIDVALIDITY";
 
@@ -150,12 +161,21 @@ public interface ImapConstants {
 
     String STATUS_MESSAGES = "MESSAGES";
 
+    String STATUS_APPENDLIMIT = "APPENDLIMIT";
+
+    String STATUS_SIZE = "SIZE";
+
+    String STATUS_DELETED = "DELETED";
+
+    String STATUS_DELETED_STORAGE = "DELETED-STORAGE";
+
     String STATUS_HIGHESTMODSEQ = "HIGHESTMODSEQ";
 
     ImapCommand CAPABILITY_COMMAND = ImapCommand.anyStateCommand("CAPABILITY");
     ImapCommand COMPRESS_COMMAND = ImapCommand.anyStateCommand("COMPRESS");
     ImapCommand LOGOUT_COMMAND = ImapCommand.anyStateCommand("LOGOUT");
     ImapCommand NOOP_COMMAND = ImapCommand.anyStateCommand("NOOP");
+    ImapCommand ID_COMMAND = ImapCommand.anyStateCommand("ID");
 
     ImapCommand AUTHENTICATE_COMMAND = ImapCommand.nonAuthenticatedStateCommand("AUTHENTICATE");
     ImapCommand LOGIN_COMMAND = ImapCommand.nonAuthenticatedStateCommand("LOGIN");
@@ -188,8 +208,8 @@ public interface ImapConstants {
     ImapCommand GETQUOTAROOT_COMMAND = ImapCommand.authenticatedStateCommand("GETQUOTAROOT");
     ImapCommand SETQUOTA_COMMAND = ImapCommand.authenticatedStateCommand("SETQUOTA");
     // RFC-5464 IMAP Metadata (mailbox annotations)
-    ImapCommand GETANNOTATION_COMMAND = ImapCommand.authenticatedStateCommand("GETMETADATA");
-    ImapCommand SETANNOTATION_COMMAND = ImapCommand.authenticatedStateCommand("SETMETADATA");
+    ImapCommand GETMETDATA_COMMAND = ImapCommand.authenticatedStateCommand("GETMETADATA");
+    ImapCommand SETMETADATA_COMMAND = ImapCommand.authenticatedStateCommand("SETMETADATA");
 
     ImapCommand CHECK_COMMAND = ImapCommand.selectedStateCommand("CHECK");
     ImapCommand CLOSE_COMMAND = ImapCommand.selectedStateCommand("CLOSE");
@@ -200,6 +220,7 @@ public interface ImapConstants {
     ImapCommand SEARCH_COMMAND = ImapCommand.selectedStateCommand("SEARCH");
     ImapCommand STORE_COMMAND = ImapCommand.selectedStateCommand("STORE");
     ImapCommand UID_COMMAND = ImapCommand.selectedStateCommand("UID");
+    ImapCommand REPLACE_COMMAND = ImapCommand.selectedStateCommand("REPLACE");
 
     String ACL_RESPONSE_NAME = "ACL";
 
@@ -239,4 +260,7 @@ public interface ImapConstants {
     String STORAGE_QUOTA_RESOURCE = "STORAGE";
 
     String MESSAGE_QUOTA_RESOURCE = "MESSAGE";
+    String EMAILID = "EMAILID";
+    String THREADID = "THREADID";
+    String SAVEDATE = "SAVEDATE";
 }

@@ -22,6 +22,10 @@ add features to your SMTP server.
 Writing xref:extending/webadmin-routes.adoc[WebAdmin routes] enables to
 add features to the WebAdmin REST API.
 
+Writing xref:extending/imap.adoc[IMAP extensions].
+
+The link:https://github.com/apache/james-project/tree/master/examples[examples] are also a good reference.
+
 == Handling injections for your extensions
 
 === Injecting core components
@@ -81,7 +85,7 @@ However, to inject an interface into your extension, you will need additional in
 
 To to so:
 
- * 1. Given an interface defined in a additional JAR:
+ * 1. Given an interface defined in an additional JAR:
 
 ....
 public interface MyService {}
@@ -129,6 +133,25 @@ public class MyMailet extends GenericMailet {
 ....
 
 Note that overriding injection definitions of the Distributed Server for your injections is not supported.
+
+=== Starting your components
+
+Sometime you wish to 'start' your extensions. This can be achieved through defining your own `UserDefinedStartable`:
+
+```
+public class MyStartable implements UserDefinedStartable {
+    @Override
+    public void start() {
+        // Will be called
+    }
+}
+```
+
+Your startable then needs to be registered within `extensions.properties`:
+
+```
+guice.extension.startable=com.company.MyStartable
+```
 
 == Pre-packaged extensions
 

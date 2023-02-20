@@ -26,7 +26,9 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
+import org.apache.james.modules.AwsS3BlobStoreExtension;
 import org.apache.james.modules.protocols.SmtpGuiceProbe;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -36,9 +38,10 @@ class SMTPJamesServerTest {
 
     @RegisterExtension
     static JamesServerExtension testExtension = TestingSmtpRelayJamesServerBuilder.forConfiguration(c -> c)
-        .extension(new DockerElasticSearchExtension())
+        .extension(new DockerOpenSearchExtension())
         .extension(new CassandraExtension())
         .extension(new PulsarExtension())
+        .extension(new AwsS3BlobStoreExtension())
         .server(Main::createServer)
         .lifeCycle(JamesServerExtension.Lifecycle.PER_CLASS)
         .build();
@@ -56,6 +59,6 @@ class SMTPJamesServerTest {
         ByteBuffer byteBuffer = ByteBuffer.allocate(1000);
         socketChannel.read(byteBuffer);
         byte[] bytes = byteBuffer.array();
-        return new String(bytes, Charset.forName("UTF-8"));
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 }

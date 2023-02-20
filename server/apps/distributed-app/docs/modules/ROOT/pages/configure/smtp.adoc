@@ -54,6 +54,12 @@ this case, if no body is present, the value "localhost" will be used.
 | connectionLimitPerIP
 | Set the maximum simultaneous incoming connections per IP for this service.
 
+| proxyRequired
+| Enables proxy support for this service for incoming connections. HAProxy's protocol
+(https://www.haproxy.org/download/2.7/doc/proxy-protocol.txt) is used and might be compatible
+with other proxies (e.g. traefik). If enabled, it is *required* to initiate the connection
+using HAProxy's proxy protocol.
+
 | authRequired
 | (deprecated) use auth.announce instead.
 
@@ -111,6 +117,12 @@ Note that James always verifies the signature of the token even whether this con
 | auth.oidc.introspection.auth
 | Optional. Provide Authorization in header request when introspecting token.
 Eg: `Basic xyz`
+
+| auth.oidc.userinfo.url
+| Optional. An Userinfo URL will be called to validate the token (RF: OpenId.Core https://openid.net/specs/openid-connect-core-1_0.html).
+Only configure this when you want to validate the revocation token by the OIDC provider.
+Note that James always verifies the signature of the token even whether this configuration is provided or not.
+James will ignore check token by userInfo if the `auth.oidc.introspection.url` is already configured
 
 | authorizedAddresses
 | Authorize specific addresses/networks.

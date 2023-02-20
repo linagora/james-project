@@ -38,9 +38,19 @@ case class IdentityCreationRequest(name: Option[IdentityName],
                                    email: MailAddress,
                                    replyTo: Option[List[EmailAddress]],
                                    bcc: Option[List[EmailAddress]],
+                                   sortOrder: Option[Int] = None,
                                    textSignature: Option[TextSignature],
                                    htmlSignature: Option[HtmlSignature]) {
-  def asIdentity(id: IdentityId): Identity = Identity(id, name.getOrElse(IdentityName.DEFAULT), email, replyTo, bcc, textSignature.getOrElse(TextSignature.DEFAULT), htmlSignature.getOrElse(HtmlSignature.DEFAULT), mayDelete = MayDeleteIdentity(true))
+  def asIdentity(id: IdentityId): Identity = Identity(
+    id = id,
+    name = name.getOrElse(IdentityName.DEFAULT),
+    email = email,
+    replyTo = replyTo,
+    bcc = bcc,
+    textSignature = textSignature.getOrElse(TextSignature.DEFAULT),
+    htmlSignature = htmlSignature.getOrElse(HtmlSignature.DEFAULT),
+    mayDelete = MayDeleteIdentity(true),
+    sortOrder = sortOrder.getOrElse(Identity.DEFAULT_SORTORDER))
 }
 
 trait IdentityUpdate {
@@ -55,6 +65,9 @@ case class IdentityReplyToUpdate(replyTo: Option[List[EmailAddress]]) extends Id
 case class IdentityBccUpdate(bcc: Option[List[EmailAddress]]) extends IdentityUpdate {
   override def update(identity: Identity): Identity = identity.copy(bcc = bcc)
 }
+case class IdentitySortOrderUpdate(sortOrder: Int) extends IdentityUpdate {
+  override def update(identity: Identity): Identity = identity.copy(sortOrder = sortOrder)
+}
 case class IdentityTextSignatureUpdate(textSignature: TextSignature) extends IdentityUpdate {
   override def update(identity: Identity): Identity = identity.copy(textSignature = textSignature)
 }
@@ -64,11 +77,12 @@ case class IdentityHtmlSignatureUpdate(htmlSignature: HtmlSignature) extends Ide
 
 case class IdentityUpdateRequest(name: Option[IdentityNameUpdate] = None,
                                  replyTo: Option[IdentityReplyToUpdate] = None,
+                                 sortOrder: Option[IdentitySortOrderUpdate] = None,
                                  bcc: Option[IdentityBccUpdate] = None,
                                  textSignature: Option[IdentityTextSignatureUpdate] = None,
                                  htmlSignature: Option[IdentityHtmlSignatureUpdate] = None) extends IdentityUpdate {
   def update(identity: Identity): Identity =
-    List(name, replyTo, bcc, textSignature, htmlSignature)
+    List(name, replyTo, bcc, textSignature, htmlSignature, sortOrder)
       .flatten
       .foldLeft(identity)((acc, update) => update.update(acc))
 
@@ -111,10 +125,12 @@ class DefaultIdentitySupplier @Inject()(canSendFrom: CanSendFrom, usersRepositor
           bcc = None,
           textSignature = TextSignature.DEFAULT,
           htmlSignature = HtmlSignature.DEFAULT,
-          mayDelete = MayDeleteIdentity(false))))
+          mayDelete = MayDeleteIdentity(false),
+          sortOrder = Identity.DEFAULT_SORTORDER)))
 
-  def userCanSendFrom(username: Username, mailAddress: MailAddress): Boolean =
-    canSendFrom.userCanSendFrom(username, usersRepository.getUsername(mailAddress))
+  def userCanSendFrom(username: Username, mailAddress: MailAddress): SMono[Boolean] =
+    SMono.fromPublisher(canSendFrom.userCanSendFromReactive(username, usersRepository.getUsername(mailAddress)))
+      .map(boolean2Boolean(_))
 
   def isServerSetIdentity(username: Username, id: IdentityId): Boolean =
     listIdentities(username).map(_.id).contains(id)
@@ -130,11 +146,10 @@ class DefaultIdentitySupplier @Inject()(canSendFrom: CanSendFrom, usersRepositor
 // Using the custom identities we can stores deltas of the default (server-set) identities allowing to modify them.
 class IdentityRepository @Inject()(customIdentityDao: CustomIdentityDAO, identityFactory: DefaultIdentitySupplier) {
   def save(user: Username, creationRequest: IdentityCreationRequest): Publisher[Identity] =
-    if (identityFactory.userCanSendFrom(user, creationRequest.email)) {
-      customIdentityDao.save(user, creationRequest)
-    } else {
-      SMono.error(ForbiddenSendFromException(creationRequest.email))
-    }
+    identityFactory.userCanSendFrom(user, creationRequest.email)
+      .filter(bool => bool)
+      .flatMap(_ => SMono(customIdentityDao.save(user, creationRequest)))
+      .switchIfEmpty(SMono.error(ForbiddenSendFromException(creationRequest.email)))
 
   def list(user: Username): Publisher[Identity] =
     listServerSetIdentity(user)
@@ -171,11 +186,10 @@ class IdentityRepository @Inject()(customIdentityDao: CustomIdentityDAO, identit
         case (Some(_), Some(customIdentity)) => customIdentityDao.upsert(user, identityUpdateRequest.update(customIdentity))
         case (Some(serverSetIdentity), None) => SMono(customIdentityDao.save(user, identityId, identityUpdateRequest.asCreationRequest(serverSetIdentity.email)))
         case (None, Some(customIdentity)) =>
-          if (identityFactory.userCanSendFrom(user, customIdentity.email)) {
-            customIdentityDao.upsert(user, identityUpdateRequest.update(customIdentity))
-          } else {
-            SMono.error(IdentityNotFoundException(identityId))
-          }
+          identityFactory.userCanSendFrom(user, customIdentity.email)
+            .filter(bool => bool)
+            .switchIfEmpty(SMono.error(IdentityNotFoundException(identityId)))
+            .flatMap(_ => SMono(customIdentityDao.upsert(user, identityUpdateRequest.update(customIdentity))))
       }
       .`then`()
   }

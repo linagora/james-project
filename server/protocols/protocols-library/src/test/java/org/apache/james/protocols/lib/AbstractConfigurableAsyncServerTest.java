@@ -109,6 +109,7 @@ class AbstractConfigurableAsyncServerTest {
             return null;
         }
 
+
         // test accessors
 
         public int getConnPerIp () {

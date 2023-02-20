@@ -19,7 +19,10 @@
 
 package org.apache.james.modules.event;
 
+import static org.apache.james.events.NamingStrategy.MAILBOX_EVENT_NAMING_STRATEGY;
+
 import org.apache.james.backends.rabbitmq.SimpleConnectionPool;
+import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.event.json.MailboxEventSerializer;
 import org.apache.james.events.EventBus;
 import org.apache.james.events.EventBusId;
@@ -28,6 +31,7 @@ import org.apache.james.events.EventSerializer;
 import org.apache.james.events.KeyReconnectionHandler;
 import org.apache.james.events.NamingStrategy;
 import org.apache.james.events.RabbitMQEventBus;
+import org.apache.james.events.RabbitMQEventBusDeadLetterQueueHealthCheck;
 import org.apache.james.events.RegistrationKey;
 import org.apache.james.events.RetryBackoffConfiguration;
 import org.apache.james.mailbox.events.MailboxIdRegistrationKey;
@@ -46,7 +50,7 @@ public class RabbitMQEventBusModule extends AbstractModule {
         bind(MailboxEventSerializer.class).in(Scopes.SINGLETON);
         bind(EventSerializer.class).to(MailboxEventSerializer.class);
 
-        bind(NamingStrategy.class).toInstance(new NamingStrategy("mailboxEvent"));
+        bind(NamingStrategy.class).toInstance(MAILBOX_EVENT_NAMING_STRATEGY);
         bind(RabbitMQEventBus.class).in(Scopes.SINGLETON);
         bind(EventBus.class).to(RabbitMQEventBus.class);
 
@@ -63,6 +67,9 @@ public class RabbitMQEventBusModule extends AbstractModule {
         Multibinder<SimpleConnectionPool.ReconnectionHandler> reconnectionHandlerMultibinder = Multibinder.newSetBinder(binder(), SimpleConnectionPool.ReconnectionHandler.class);
         reconnectionHandlerMultibinder.addBinding().to(KeyReconnectionHandler.class);
         reconnectionHandlerMultibinder.addBinding().to(EventBusReconnectionHandler.class);
+
+        Multibinder.newSetBinder(binder(), HealthCheck.class)
+            .addBinding().to(RabbitMQEventBusDeadLetterQueueHealthCheck.class);
     }
 
     @ProvidesIntoSet

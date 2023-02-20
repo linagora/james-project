@@ -204,7 +204,6 @@ public class SearchProcessorTest {
         session.selected(selectedMailbox).block();
         when(selectedMailbox.isRecentUidRemoved()).thenReturn(false);
         when(selectedMailbox.isSizeChanged()).thenReturn(false);
-        when(selectedMailbox.getPath()).thenReturn(mailboxPath);
         when(selectedMailbox.flagUpdateUids()).thenReturn(Collections.<MessageUid>emptyList());
         when(selectedMailbox.getRecent()).thenReturn(new ArrayList<>());
     }
@@ -237,6 +236,12 @@ public class SearchProcessorTest {
         expectsGetSelectedMailbox();
         check(SearchKey.buildBefore(DAY_MONTH_YEAR), SearchQuery
                 .internalDateBefore(getDate(DAY, MONTH, YEAR), DateResolution.Day));
+    }
+
+    @Test
+    void testSAVEDBEFORE() throws Exception {
+        expectsGetSelectedMailbox();
+        check(SearchKey.buildSavedBefore(DAY_MONTH_YEAR), SearchQuery.saveDateBefore(getDate(DAY, MONTH, YEAR), DateResolution.Day));
     }
 
     @Test
@@ -328,6 +333,12 @@ public class SearchProcessorTest {
     }
 
     @Test
+    void testSAVEDON() throws Exception {
+        expectsGetSelectedMailbox();
+        check(SearchKey.buildSavedOn(DAY_MONTH_YEAR), SearchQuery.saveDateOn(getDate(DAY, MONTH, YEAR), DateResolution.Day));
+    }
+
+    @Test
     void testAND() throws Exception {
         expectsGetSelectedMailbox();
         List<SearchKey> keys = new ArrayList<>();
@@ -389,6 +400,19 @@ public class SearchProcessorTest {
         check(SearchKey.buildSince(DAY_MONTH_YEAR), SearchQuery.or(SearchQuery
                 .internalDateOn(getDate(DAY, MONTH, YEAR), DateResolution.Day), SearchQuery
                 .internalDateAfter(getDate(DAY, MONTH, YEAR), DateResolution.Day)));
+    }
+
+    @Test
+    void testSAVEDSINCE() throws Exception {
+        expectsGetSelectedMailbox();
+        check(SearchKey.buildSavedSince(DAY_MONTH_YEAR), SearchQuery.or(SearchQuery.saveDateOn(getDate(DAY, MONTH, YEAR), DateResolution.Day),
+            SearchQuery.saveDateAfter(getDate(DAY, MONTH, YEAR), DateResolution.Day)));
+    }
+
+    @Test
+    void testSAVEDATESUPPORTED() throws Exception {
+        expectsGetSelectedMailbox();
+        check(SearchKey.buildSaveDateSupported(), SearchQuery.saveDateSupported());
     }
 
     @Test

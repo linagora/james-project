@@ -34,6 +34,7 @@ import org.apache.james.events.Event;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.acl.ACLDiff;
+import org.apache.james.mailbox.events.MailboxEvents;
 import org.apache.james.mailbox.events.MailboxEvents.Added;
 import org.apache.james.mailbox.events.MailboxEvents.Expunged;
 import org.apache.james.mailbox.events.MailboxEvents.FlagsUpdated;
@@ -145,6 +146,11 @@ public class EventFactory {
     }
 
     @FunctionalInterface
+    public interface RequireIsDelivery<T> {
+        T isDelivery(boolean isDelivery);
+    }
+
+    @FunctionalInterface
     public interface RequireAclDiff<T> {
         T aclDiff(ACLDiff aclDiff);
     }
@@ -227,14 +233,16 @@ public class EventFactory {
         private final Username username;
         private final MailboxSession.SessionId sessionId;
         private final ImmutableSortedMap<MessageUid, MessageMetaData> metaData;
+        private final boolean isDelivery;
 
-        AddedFinalStage(Event.EventId eventId, MailboxPath path, MailboxId mailboxId, Username username, MailboxSession.SessionId sessionId, Map<MessageUid, MessageMetaData> metaData) {
+        AddedFinalStage(Event.EventId eventId, MailboxPath path, MailboxId mailboxId, Username username, MailboxSession.SessionId sessionId, Map<MessageUid, MessageMetaData> metaData, boolean isDelivery) {
             this.eventId = eventId;
             this.path = path;
             this.mailboxId = mailboxId;
             this.username = username;
             this.sessionId = sessionId;
             this.metaData = ImmutableSortedMap.copyOf(metaData);
+            this.isDelivery = isDelivery;
         }
 
         public Added build() {
@@ -244,7 +252,7 @@ public class EventFactory {
             Preconditions.checkNotNull(sessionId);
             Preconditions.checkNotNull(metaData);
 
-            return new Added(sessionId, username, path, mailboxId, metaData, eventId);
+            return new Added(sessionId, username, path, mailboxId, metaData, eventId, isDelivery);
         }
     }
 
@@ -420,8 +428,58 @@ public class EventFactory {
         }
     }
 
-    public static RequireMailboxEvent<RequireMetadata<AddedFinalStage>> added() {
-        return eventId -> user -> sessionId -> mailboxId -> path -> metaData -> new AddedFinalStage(eventId, path, mailboxId, user, sessionId, metaData);
+    public static class MailboxSubscribedFinalStage {
+        private final Event.EventId eventId;
+        private final MailboxPath path;
+        private final MailboxId mailboxId;
+        private final Username username;
+        private final MailboxSession.SessionId sessionId;
+
+        MailboxSubscribedFinalStage(Event.EventId eventId, MailboxPath path, MailboxId mailboxId, Username username, MailboxSession.SessionId sessionId) {
+            this.eventId = eventId;
+            this.path = path;
+            this.mailboxId = mailboxId;
+            this.username = username;
+            this.sessionId = sessionId;
+        }
+
+        public MailboxEvents.MailboxSubscribedEvent build() {
+            Preconditions.checkNotNull(path);
+            Preconditions.checkNotNull(mailboxId);
+            Preconditions.checkNotNull(username);
+            Preconditions.checkNotNull(sessionId);
+
+            return new MailboxEvents.MailboxSubscribedEvent(sessionId, username, path, mailboxId, eventId);
+        }
+    }
+
+    public static class MailboxUnSubscribedFinalStage {
+        private final Event.EventId eventId;
+        private final MailboxPath path;
+        private final MailboxId mailboxId;
+        private final Username username;
+        private final MailboxSession.SessionId sessionId;
+
+        MailboxUnSubscribedFinalStage(Event.EventId eventId, MailboxPath path, MailboxId mailboxId, Username username, MailboxSession.SessionId sessionId) {
+            this.eventId = eventId;
+            this.path = path;
+            this.mailboxId = mailboxId;
+            this.username = username;
+            this.sessionId = sessionId;
+        }
+
+        public MailboxEvents.MailboxUnsubscribedEvent build() {
+            Preconditions.checkNotNull(path);
+            Preconditions.checkNotNull(mailboxId);
+            Preconditions.checkNotNull(username);
+            Preconditions.checkNotNull(sessionId);
+
+            return new MailboxEvents.MailboxUnsubscribedEvent(sessionId, username, path, mailboxId, eventId);
+        }
+    }
+
+    public static RequireMailboxEvent<RequireMetadata<RequireIsDelivery<AddedFinalStage>>> added() {
+        return eventId -> user -> sessionId -> mailboxId -> path -> metaData -> isDelivery -> new AddedFinalStage(eventId, path, mailboxId, user, sessionId, metaData, isDelivery);
     }
 
     public static RequireMailboxEvent<RequireMetadata<ExpungedFinalStage>> expunged() {
@@ -436,7 +494,7 @@ public class EventFactory {
         return eventId -> user -> sessionId -> mailboxId -> oldPath -> newPath -> new MailboxRenamedFinalStage(eventId, oldPath, mailboxId, user, sessionId, newPath);
     }
 
-    public static  RequireMailboxEvent<RequireQuotaRoot<RequireMailboxACL<RequireQuotaCountValue<RequireQuotaSizeValue<MailboxDeletionFinalStage>>>>> mailboxDeleted() {
+    public static RequireMailboxEvent<RequireQuotaRoot<RequireMailboxACL<RequireQuotaCountValue<RequireQuotaSizeValue<MailboxDeletionFinalStage>>>>> mailboxDeleted() {
         return eventId -> user -> sessionId -> mailboxId -> path -> quotaRoot -> mailboxACL -> quotaCount -> quotaSize -> new MailboxDeletionFinalStage(
             eventId, path, mailboxACL, mailboxId, user, sessionId, quotaRoot, quotaCount, quotaSize);
     }
@@ -451,6 +509,14 @@ public class EventFactory {
 
     public static RequireEventId<RequireUser<RequireQuotaRoot<RequireQuotaCount<RequireQuotaSize<RequireInstant<QuotaUsageUpdatedFinalStage>>>>>> quotaUpdated() {
         return eventId -> user -> quotaRoot -> quotaCount -> quotaSize -> instant -> new QuotaUsageUpdatedFinalStage(eventId, user, quotaRoot, quotaCount, quotaSize, instant);
+    }
+
+    public static RequireMailboxEvent<MailboxSubscribedFinalStage> mailboxSubscribed() {
+        return eventId -> user -> sessionId -> mailboxId -> path -> new MailboxSubscribedFinalStage(eventId, path, mailboxId, user, sessionId);
+    }
+
+    public static RequireMailboxEvent<MailboxUnSubscribedFinalStage> mailboxUnSubscribed() {
+        return eventId -> user -> sessionId -> mailboxId -> path -> new MailboxUnSubscribedFinalStage(eventId, path, mailboxId, user, sessionId);
     }
 
     public static MessageMoveEvent.Builder moved() {

@@ -148,6 +148,8 @@ public interface MailboxManager extends RequestAware, RightManager, MailboxAnnot
 
     Publisher<MessageManager> getMailboxReactive(MailboxPath mailboxPath, MailboxSession session);
 
+    MessageManager getMailbox(Mailbox mailbox, MailboxSession session) throws MailboxException;
+
     /**
      * Creates a new mailbox. Any intermediary mailboxes missing from the
      * hierarchy should be created.
@@ -181,6 +183,10 @@ public interface MailboxManager extends RequestAware, RightManager, MailboxAnnot
      * @return the Mailbox when deleted
      */
     Mailbox deleteMailbox(MailboxId mailboxId, MailboxSession session) throws MailboxException;
+
+    default Mono<Mailbox> deleteMailboxReactive(MailboxId mailboxId, MailboxSession session) {
+        return Mono.fromCallable(() -> deleteMailbox(mailboxId, session));
+    }
 
     class MailboxRenamedResult {
         private final MailboxId mailboxId;
@@ -408,6 +414,8 @@ public interface MailboxManager extends RequestAware, RightManager, MailboxAnnot
 
     boolean hasChildren(MailboxPath mailboxPath, MailboxSession session) throws MailboxException;
 
+    Publisher<Boolean> hasChildrenReactive(MailboxPath mailboxPath, MailboxSession session);
+
     default <T> Mono<T> manageProcessing(Mono<T> toBeWrapped, MailboxSession mailboxSession) {
         return Mono.<T, Runnable>using(
             () -> {
@@ -417,4 +425,7 @@ public interface MailboxManager extends RequestAware, RightManager, MailboxAnnot
             c -> toBeWrapped,
             Runnable::run);
     }
+
+    MessageId.Factory getMessageIdFactory();
+
 }

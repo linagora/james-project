@@ -60,6 +60,11 @@ public class AttributeValue<T> {
         return new AttributeValue<>(value, Serializer.STRING_SERIALIZER);
     }
 
+    public static AttributeValue<byte[]> of(byte[] value) {
+        Preconditions.checkNotNull(value, "value should not be null");
+        return new AttributeValue<>(value, Serializer.BYTES_SERIALIZER);
+    }
+
     public static AttributeValue<Integer> of(Integer value) {
         Preconditions.checkNotNull(value, "value should not be null");
         return new AttributeValue<>(value, Serializer.INT_SERIALIZER);
@@ -102,18 +107,24 @@ public class AttributeValue<T> {
 
     public static <T> AttributeValue<Optional<AttributeValue<T>>> of(Optional<AttributeValue<T>> value) {
         Preconditions.checkNotNull(value, "value should not be null");
+        Preconditions.checkArgument(value.map(v -> v instanceof AttributeValue).orElse(true),
+            "value should be of type Optional<AttributeValue<T>> and was not");
         return new AttributeValue<>(value, new Serializer.OptionalSerializer<>());
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static AttributeValue<Collection<AttributeValue<?>>> of(Collection<AttributeValue<?>> value) {
         Preconditions.checkNotNull(value, "value should not be null");
+        Preconditions.checkArgument(value.stream().allMatch(entry -> entry instanceof AttributeValue),
+            "Expecting Collection<AttributeValue<?>: invalid typing.");
         return new AttributeValue<>(value, new Serializer.CollectionSerializer());
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static AttributeValue<Map<String, AttributeValue<?>>> of(Map<String, AttributeValue<?>> value) {
         Preconditions.checkNotNull(value, "value should not be null");
+        Preconditions.checkArgument(value.entrySet().stream().allMatch(entry -> (entry.getKey() instanceof String) && (entry.getValue() instanceof AttributeValue)),
+            "Expecting Map<String, AttributeValue<?>>: invalid typing.");
         return new AttributeValue<>(value, new Serializer.MapSerializer());
     }
 
@@ -130,6 +141,9 @@ public class AttributeValue<T> {
         }
         if (value instanceof String) {
             return of((String) value);
+        }
+        if (value instanceof byte[]) {
+            return of((byte[]) value);
         }
         if (value instanceof Integer) {
             return of((Integer) value);
@@ -173,15 +187,6 @@ public class AttributeValue<T> {
     public static AttributeValue<?> fromJsonString(String json) throws IOException {
         JsonNode tree = OBJECT_MAPPER.readTree(json);
         return fromJson(tree);
-    }
-
-    public static Optional<AttributeValue<?>> optionalFromJsonString(String json) {
-        try {
-            return Optional.of(fromJsonString(json));
-        } catch (IOException e) {
-            LOGGER.error("Error while deserializing '" + json + "'", e);
-            return Optional.empty();
-        }
     }
 
     public static AttributeValue<?> fromJson(JsonNode input) {
@@ -244,10 +249,8 @@ public class AttributeValue<T> {
         }
     }
 
-    //FIXME : poor performance
-    @SuppressWarnings("unchecked")
     public AttributeValue<T> duplicate() {
-        return (AttributeValue<T>) fromJson(toJson());
+        return new AttributeValue<>(serializer.duplicate(value), serializer);
     }
 
     public JsonNode toJson() {

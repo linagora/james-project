@@ -19,7 +19,10 @@
 
 package org.apache.james.events;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.deleteFrom;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.insertInto;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.selectFrom;
 import static org.apache.james.events.tables.CassandraEventDeadLettersGroupTable.GROUP;
 import static org.apache.james.events.tables.CassandraEventDeadLettersGroupTable.TABLE_NAME;
 
@@ -27,9 +30,8 @@ import javax.inject.Inject;
 
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.github.fge.lambdas.Throwing;
 
 import reactor.core.publisher.Flux;
@@ -39,22 +41,32 @@ public class CassandraEventDeadLettersGroupDAO {
     private final CassandraAsyncExecutor executor;
     private final PreparedStatement insertStatement;
     private final PreparedStatement selectAllStatement;
+    private final PreparedStatement deleteStatement;
 
     @Inject
-    CassandraEventDeadLettersGroupDAO(Session session) {
+    CassandraEventDeadLettersGroupDAO(CqlSession session) {
         this.executor = new CassandraAsyncExecutor(session);
         this.insertStatement = prepareInsertStatement(session);
         this.selectAllStatement = prepareSelectStatement(session);
+        this.deleteStatement = prepareDeleteStatement(session);
     }
 
-    private PreparedStatement prepareInsertStatement(Session session) {
-        return session.prepare(QueryBuilder.insertInto(TABLE_NAME)
-            .value(GROUP, bindMarker(GROUP)));
+    private PreparedStatement prepareInsertStatement(CqlSession session) {
+        return session.prepare(insertInto(TABLE_NAME)
+            .value(GROUP, bindMarker(GROUP))
+            .build());
     }
 
-    private PreparedStatement prepareSelectStatement(Session session) {
-        return session.prepare(QueryBuilder.select(GROUP)
-            .from(TABLE_NAME));
+    private PreparedStatement prepareSelectStatement(CqlSession session) {
+        return session.prepare(selectFrom(TABLE_NAME)
+            .column(GROUP)
+            .build());
+    }
+
+    private PreparedStatement prepareDeleteStatement(CqlSession session) {
+        return session.prepare(deleteFrom(TABLE_NAME)
+            .whereColumn(GROUP).isEqualTo(bindMarker(GROUP))
+            .build());
     }
 
     Mono<Void> storeGroup(Group group) {
@@ -65,5 +77,10 @@ public class CassandraEventDeadLettersGroupDAO {
     Flux<Group> retrieveAllGroups() {
         return executor.executeRows(selectAllStatement.bind())
             .map(Throwing.function(row -> Group.deserialize(row.getString(GROUP))));
+    }
+
+    Mono<Void> deleteGroup(Group group) {
+        return executor.executeVoid(deleteStatement.bind()
+            .setString(GROUP, group.asString()));
     }
 }

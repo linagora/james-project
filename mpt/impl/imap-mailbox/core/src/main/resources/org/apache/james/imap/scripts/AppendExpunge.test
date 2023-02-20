@@ -17,7 +17,7 @@
 # under the License.                                           #
 ################################################################
 C: 10 CREATE appendexpunge
-S: 10 OK CREATE completed.
+S: 10 OK \[MAILBOXID \(.+\)\] CREATE completed.
 
 C: a001 STATUS appendexpunge (MESSAGES)
 S: \* STATUS "appendexpunge" \(MESSAGES 0\)
@@ -67,6 +67,7 @@ S: \* STATUS "appendexpunge" \(MESSAGES 3\)
 S: A005 OK STATUS completed.
 
 C: A006 SELECT appendexpunge
+S: \* OK \[MAILBOXID \(.+\)\] Ok
 S: \* FLAGS \(\\Answered \\Deleted \\Draft \\Flagged \\Seen\)
 S: \* 3 EXISTS
 S: \* \d+ RECENT

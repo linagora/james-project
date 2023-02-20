@@ -44,6 +44,7 @@ import org.apache.james.jmap.draft.{JmapGuiceProbe, MessageIdProbe}
 import org.apache.james.jmap.http.UserCredential
 import org.apache.james.jmap.rfc8621.contract.DownloadContract.accountId
 import org.apache.james.jmap.rfc8621.contract.Fixture.{ACCEPT_RFC8621_VERSION_HEADER, ACCOUNT_ID, ANDRE, ANDRE_ACCOUNT_ID, ANDRE_PASSWORD, BOB, BOB_PASSWORD, DOMAIN, authScheme, baseRequestSpecBuilder}
+import org.apache.james.jmap.rfc8621.contract.probe.DelegationProbe
 import org.apache.james.mailbox.FlagsBuilder
 import org.apache.james.mailbox.MessageManager.AppendCommand
 import org.apache.james.mailbox.model.MailboxACL.Right
@@ -152,8 +153,14 @@ trait EmailSetMethodContract {
   @ParameterizedTest
   @ValueSource(strings = Array(
     """"header:aheader": " a value"""",
+    """"header:aheader:all": [" a value"]""",
+    """"header:aheader:all": []""",
+    """"header:aheader:all": [" abc", " def"]""",
     """"header:aheader:asRaw": " a value"""",
     """"header:aheader:asText": "a value"""",
+    """"header:aheader:asText:all": []""",
+    """"header:aheader:asText:all": ["abc"]""",
+    """"header:aheader:asText:all": ["abc", "def"]""",
     """"header:aheader:asDate": "2020-10-29T06:39:04Z"""",
     """"header:aheader:asAddresses": [{"email": "rcpt1@apache.org"}, {"email": "rcpt2@apache.org"}]""",
     """"header:aheader:asURLs": ["url1", "url2"]""",
@@ -325,6 +332,56 @@ trait EmailSetMethodContract {
            |    "description": "To was already defined by convenience headers"
            |  }
            |}""".stripMargin)
+  }
+
+  @Test
+  def emailSetCreateShouldPositionMissingDateAndMessageId(server: GuiceJamesServer): Unit = {
+    val bobPath = MailboxPath.inbox(BOB)
+    val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
+
+    val request =
+      s"""{
+         |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+         |  "methodCalls": [
+         |    ["Email/set", {
+         |      "accountId": "$ACCOUNT_ID",
+         |      "create": {
+         |        "aaaaaa":{
+         |          "mailboxIds": {
+         |             "${mailboxId.serialize}": true
+         |          },
+         |          "to": [{"email": "rcpt1@apache.org"}, {"email": "rcpt2@apache.org"}],
+         |          "from": [{"email": "${BOB.asString}"}]
+         |        }
+         |      }
+         |    }, "c1"],
+         |    ["Email/get",
+         |     {
+         |       "accountId": "$ACCOUNT_ID",
+         |       "ids": ["#aaaaaa"],
+         |       "properties": ["sentAt", "messageId"]
+         |     },
+         |     "c2"]]
+         |}""".stripMargin
+
+    val response = `given`
+      .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+      .body(request)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .inPath("methodResponses[1][1].list.[0].sentAt")
+      .isEqualTo("\"${json-unit.ignore}\"")
+    assertThatJson(response)
+      .inPath("methodResponses[1][1].list.[0].messageId")
+      .isEqualTo("[\"${json-unit.ignore}\"]")
   }
 
   @Test
@@ -1409,7 +1466,7 @@ trait EmailSetMethodContract {
            |  },
            |  "subject": "World domination",
            |  "bodyValues": {
-           |    "2": {
+           |    "3": {
            |      "value": "$htmlBody",
            |      "isEncodingProblem": false,
            |      "isTruncated": false
@@ -1572,7 +1629,7 @@ trait EmailSetMethodContract {
            |  },
            |  "subject": "World domination",
            |  "bodyValues": {
-           |    "2": {
+           |    "3": {
            |      "value": "$htmlBody",
            |      "isEncodingProblem": false,
            |      "isTruncated": false
@@ -2365,15 +2422,15 @@ trait EmailSetMethodContract {
            |  ],
            |  "htmlBody": [
            |    {
-           |      "partId": "3",
-           |      "blobId": "${messageId}_3",
+           |      "partId": "4",
+           |      "blobId": "${messageId}_4",
            |      "size": 166,
            |      "type": "text/html",
            |      "charset": "UTF-8"
            |    }
            |  ],
            |  "bodyValues": {
-           |    "3": {
+           |    "4": {
            |      "value": "$htmlBody",
            |      "isEncodingProblem": false,
            |      "isTruncated": false
@@ -2803,8 +2860,8 @@ trait EmailSetMethodContract {
            |  ],
            |  "htmlBody": [
            |    {
-           |      "partId": "4",
-           |      "blobId": "${messageId}_4",
+           |      "partId": "5",
+           |      "blobId": "${messageId}_5",
            |      "size": 166,
            |      "type": "text/html",
            |      "charset": "UTF-8"
@@ -2829,7 +2886,7 @@ trait EmailSetMethodContract {
            |    }
            |  ],
            |  "bodyValues": {
-           |    "4": {
+           |    "5": {
            |      "value": "$htmlBody",
            |      "isEncodingProblem": false,
            |      "isTruncated": false
@@ -2971,10 +3028,10 @@ trait EmailSetMethodContract {
            |            "type": "multipart/alternative",
            |            "subParts": [
            |              {
-           |                "type": "text/html"
+           |                "type": "text/plain"
            |              },
            |              {
-           |                "type": "text/plain"
+           |                "type": "text/html"
            |              }
            |            ]
            |          },
@@ -3115,10 +3172,10 @@ trait EmailSetMethodContract {
            |        "type":"multipart/alternative",
            |        "subParts": [
            |          {
-           |            "type":"text/html"
+           |            "type":"text/plain"
            |          },
            |          {
-           |            "type":"text/plain"
+           |            "type":"text/html"
            |          }
            |        ]
            |      },
@@ -3255,10 +3312,10 @@ trait EmailSetMethodContract {
            |        "type":"multipart/alternative",
            |        "subParts": [
            |          {
-           |            "type":"text/html"
+           |            "type":"text/plain"
            |          },
            |          {
-           |            "type":"text/plain"
+           |            "type":"text/html"
            |          }
            |        ]
            |      },
@@ -3401,10 +3458,10 @@ trait EmailSetMethodContract {
            |            "type":"multipart/alternative",
            |            "subParts": [
            |              {
-           |                "type":"text/html"
+           |                "type":"text/plain"
            |              },
            |              {
-           |                "type":"text/plain"
+           |                "type":"text/html"
            |              }
            |            ]
            |          }
@@ -3515,22 +3572,22 @@ trait EmailSetMethodContract {
            |            "charset": "us-ascii",
            |            "subParts": [
            |              {
-           |                "type": "text/html",
+           |                "type": "text/plain",
            |                "charset": "UTF-8"
            |              },
            |              {
-           |                "type": "text/plain",
+           |                "type": "text/html",
            |                "charset": "UTF-8"
            |              }
            |            ]
            |          },
            |          "bodyValues": {
-           |            "2": {
+           |            "3": {
            |              "value": "$htmlBody",
            |              "isEncodingProblem": false,
            |              "isTruncated": false
            |            },
-           |            "3": {
+           |            "2": {
            |              "value": "I have the most brilliant plan. Let me tell you all about it. What we do is, we",
            |              "isEncodingProblem": false,
            |              "isTruncated": false
@@ -3677,10 +3734,10 @@ trait EmailSetMethodContract {
            |            "type": "multipart/alternative",
            |            "subParts": [
            |              {
-           |                "type": "text/html"
+           |                "type": "text/plain"
            |              },
            |              {
-           |                "type": "text/plain"
+           |                "type": "text/html"
            |              }
            |            ]
            |          },
@@ -6997,7 +7054,7 @@ trait EmailSetMethodContract {
          |      "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
          |      "create": {
          |        "K39": {
-         |          "mailboxIds": {"$id1":true}
+         |          "mailboxIds": {"${id1.serialize()}":true}
          |        }
          |      }
          |    }, "c1"]]
@@ -7093,6 +7150,114 @@ trait EmailSetMethodContract {
            |		}, "c1"]
            |	]
            |}""".stripMargin)
+  }
+
+  @Test
+  def bobShouldBeAbleToUpdateEmailInAndreMailboxWhenDelegated(server: GuiceJamesServer): Unit = {
+    val message: Message = Fixture.createTestMessage
+    val flags: Flags = new Flags(Flags.Flag.ANSWERED)
+    val path = MailboxPath.inbox(ANDRE)
+    server.getProbe(classOf[MailboxProbeImpl]).createMailbox(path)
+    val messageId: MessageId = server.getProbe(classOf[MailboxProbeImpl]).appendMessage(ANDRE.asString(), path, AppendCommand.builder()
+      .withFlags(flags)
+      .build(message))
+      .getMessageId
+
+    server.getProbe(classOf[DelegationProbe]).addAuthorizedUser(ANDRE, BOB)
+
+    val request =
+      s"""{
+         |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+         |  "methodCalls": [
+         |    ["Email/set", {
+         |      "accountId": "$ANDRE_ACCOUNT_ID",
+         |      "update": {
+         |        "${messageId.serialize}":{
+         |          "keywords": {
+         |             "music": true
+         |          }
+         |        }
+         |      }
+         |    }, "c1"],
+         |    ["Email/get",
+         |     {
+         |       "accountId": "$ANDRE_ACCOUNT_ID",
+         |       "ids": ["${messageId.serialize}"],
+         |       "properties": ["keywords"]
+         |     },
+         |     "c2"]]
+         |}""".stripMargin
+
+    val response = `given`
+      .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+      .body(request)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .inPath("methodResponses[1][1].list[0]")
+      .isEqualTo(String.format(
+        """{
+          |   "id":"%s",
+          |   "keywords": {
+          |     "music": true
+          |   }
+          |}
+      """.stripMargin, messageId.serialize))
+  }
+
+  @Test
+  def bobShouldNotBeAbleToUpdateEmailInAndreMailboxWhenNotDelegated(server: GuiceJamesServer): Unit = {
+    val message: Message = Fixture.createTestMessage
+    val flags: Flags = new Flags(Flags.Flag.ANSWERED)
+    val path = MailboxPath.inbox(ANDRE)
+    server.getProbe(classOf[MailboxProbeImpl]).createMailbox(path)
+    val messageId: MessageId = server.getProbe(classOf[MailboxProbeImpl]).appendMessage(ANDRE.asString(), path, AppendCommand.builder()
+      .withFlags(flags)
+      .build(message))
+      .getMessageId
+
+    val request =
+      s"""{
+         |	"using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+         |	"methodCalls": [
+         |		["Email/set", {
+         |			"accountId": "$ANDRE_ACCOUNT_ID",
+         |			"update": {
+         |				"${messageId.serialize}": {
+         |					"keywords": {
+         |						"music": true
+         |					}
+         |				}
+         |			}
+         |		}, "c1"]
+         |	]
+         |}""".stripMargin
+
+    val response = `given`
+      .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+      .body(request)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .inPath("methodResponses[0][1]")
+      .isEqualTo(
+        """{
+          |	"type": "accountNotFound"
+          |}""".stripMargin)
   }
 
   private def buildTestMessage = {

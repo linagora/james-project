@@ -43,7 +43,11 @@ import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.queue.api.RawMailQueueItemDecoratorFactory;
 import org.apache.james.queue.memory.MemoryMailQueueFactory;
 import org.apache.james.util.MimeMessageUtil;
+import org.apache.james.util.streams.Limit;
 import org.apache.james.webadmin.service.ReprocessingService.Configuration;
+import org.apache.mailet.Attribute;
+import org.apache.mailet.AttributeName;
+import org.apache.mailet.AttributeValue;
 import org.apache.mailet.base.test.FakeMail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +68,7 @@ class ReprocessingServiceTest {
     private static final MailQueueName SPOOL = MailQueueName.of("spool");
     private static final Consumer<MailKey> NOOP_CONSUMER = key -> { };
     private static final Optional<String> NO_TARGET_PROCESSOR = Optional.empty();
+    private static final Optional<Integer> NO_MAX_RETRIES = Optional.empty();
     private static final byte[] MESSAGE_BYTES = "header: value \r\n".getBytes(UTF_8);
     public static final boolean CONSUME = true;
 
@@ -108,7 +113,7 @@ class ReprocessingServiceTest {
         repository.store(mail2);
         repository.store(mail3);
 
-        reprocessingService.reprocess(PATH, KEY_2, new ReprocessingService.Configuration(SPOOL, NO_TARGET_PROCESSOR, CONSUME));
+        reprocessingService.reprocess(PATH, KEY_2, new ReprocessingService.Configuration(SPOOL, NO_TARGET_PROCESSOR, Optional.empty(), CONSUME, Limit.unlimited()));
 
         assertThat(queueFactory.getQueue(SPOOL).get().browse())
             .toIterable()
@@ -123,7 +128,7 @@ class ReprocessingServiceTest {
         repository.store(mail2);
         repository.store(mail3);
 
-        reprocessingService.reprocess(PATH, KEY_2, new ReprocessingService.Configuration(SPOOL, NO_TARGET_PROCESSOR, CONSUME));
+        reprocessingService.reprocess(PATH, KEY_2, new ReprocessingService.Configuration(SPOOL, NO_TARGET_PROCESSOR, Optional.empty(), CONSUME, Limit.unlimited()));
 
         assertThat(repository.list()).toIterable()
             .containsOnly(KEY_1, KEY_3);
@@ -136,7 +141,7 @@ class ReprocessingServiceTest {
         repository.store(mail2);
         repository.store(mail3);
 
-        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, CONSUME), NOOP_CONSUMER);
+        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, NO_MAX_RETRIES, CONSUME, Limit.unlimited()), NOOP_CONSUMER).block();
 
         assertThat(repository.list()).toIterable()
             .isEmpty();
@@ -149,12 +154,77 @@ class ReprocessingServiceTest {
         repository.store(mail2);
         repository.store(mail3);
 
-        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, CONSUME), NOOP_CONSUMER);
+        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, NO_MAX_RETRIES, CONSUME, Limit.unlimited()), NOOP_CONSUMER).block();
 
         assertThat(queueFactory.getQueue(SPOOL).get().browse())
             .toIterable()
             .extracting(item -> item.getMail().getName())
             .containsOnly(NAME_1, NAME_2, NAME_3);
+    }
+
+    @Test
+    void reprocessingShouldSupportMaxRetries() throws Exception {
+        MailRepository repository = mailRepositoryStore.select(MailRepositoryUrl.fromPathAndProtocol(PATH, MEMORY_PROTOCOL));
+        mail1.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(1)));
+        repository.store(mail1);
+        mail2.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(2)));
+        repository.store(mail2);
+        mail3.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(3)));
+        repository.store(mail3);
+
+        Optional<Integer> maxRetries = Optional.of(2);
+        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, maxRetries, CONSUME, Limit.unlimited()), NOOP_CONSUMER).block();
+
+        assertThat(queueFactory.getQueue(SPOOL).get().browse())
+            .toIterable()
+            .extracting(item -> item.getMail().getName())
+            .containsOnly(NAME_1);
+    }
+
+    @Test
+    void reprocessingShouldCombineMaxRetriesAndLimit() throws Exception {
+        MailRepository repository = mailRepositoryStore.select(MailRepositoryUrl.fromPathAndProtocol(PATH, MEMORY_PROTOCOL));
+        mail1.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(3)));
+        repository.store(mail1);
+        mail2.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(2)));
+        repository.store(mail2);
+        mail3.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(1)));
+        repository.store(mail3);
+
+        Optional<Integer> maxRetries = Optional.of(2);
+        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, maxRetries, CONSUME, Limit.limit(2)), NOOP_CONSUMER).block();
+
+        assertThat(queueFactory.getQueue(SPOOL).get().browse())
+            .toIterable()
+            .extracting(item -> item.getMail().getName())
+            .containsOnly(NAME_3);
+    }
+
+    @Test
+    void reprocessingShouldSetRetries() throws Exception {
+        MailRepository repository = mailRepositoryStore.select(MailRepositoryUrl.fromPathAndProtocol(PATH, MEMORY_PROTOCOL));
+        repository.store(mail1);
+
+        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, NO_MAX_RETRIES, CONSUME, Limit.unlimited()), NOOP_CONSUMER).block();
+
+        assertThat(queueFactory.getQueue(SPOOL).get().browse())
+            .toIterable()
+            .extracting(item -> (int) item.getMail().getAttribute(AttributeName.of("mailRepository-reprocessing")).get().getValue().getValue())
+            .containsOnly(1);
+    }
+
+    @Test
+    void reprocessingShouldIncrementRetries() throws Exception {
+        MailRepository repository = mailRepositoryStore.select(MailRepositoryUrl.fromPathAndProtocol(PATH, MEMORY_PROTOCOL));
+        mail1.setAttribute(new Attribute(AttributeName.of("mailRepository-reprocessing"), AttributeValue.of(1)));
+        repository.store(mail1);
+
+        reprocessingService.reprocessAll(PATH, new Configuration(SPOOL, NO_TARGET_PROCESSOR, NO_MAX_RETRIES, CONSUME, Limit.unlimited()), NOOP_CONSUMER).block();
+
+        assertThat(queueFactory.getQueue(SPOOL).get().browse())
+            .toIterable()
+            .extracting(item -> (int) item.getMail().getAttribute(AttributeName.of("mailRepository-reprocessing")).get().getValue().getValue())
+            .containsOnly(2);
     }
 
     @Test
@@ -180,7 +250,7 @@ class ReprocessingServiceTest {
             }
         });
 
-        reprocessingService.reprocessAll(PATH, new ReprocessingService.Configuration(SPOOL, NO_TARGET_PROCESSOR, CONSUME), concurrentRemoveConsumer);
+        reprocessingService.reprocessAll(PATH, new ReprocessingService.Configuration(SPOOL, NO_TARGET_PROCESSOR, NO_MAX_RETRIES, CONSUME, Limit.unlimited()), concurrentRemoveConsumer).block();
 
         assertThat(queueFactory.getQueue(SPOOL).get().browse())
             .toIterable()

@@ -21,11 +21,13 @@ package org.apache.james.mailbox.store;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.mail.Flags;
 
@@ -47,6 +49,7 @@ import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.streaming.InputStreamContent;
 import org.apache.james.mailbox.store.streaming.InputStreamContent.Type;
 import org.apache.james.mime4j.MimeException;
+import org.reactivestreams.Publisher;
 
 import com.google.common.base.Objects;
 
@@ -92,6 +95,11 @@ public class MessageResultImpl implements MessageResult {
     @Override
     public ThreadId getThreadId() {
         return message.getThreadId();
+    }
+
+    @Override
+    public Optional<Date> getSaveDate() {
+        return message.getSaveDate();
     }
 
     @Override
@@ -344,6 +352,11 @@ public class MessageResultImpl implements MessageResult {
         @Override
         public InputStream getInputStream() throws IOException {
             return msg.getHeaderContent();
+        }
+
+        @Override
+        public Publisher<ByteBuffer> reactiveBytes() {
+            return msg.getHeaderContentReactive();
         }
 
         @Override

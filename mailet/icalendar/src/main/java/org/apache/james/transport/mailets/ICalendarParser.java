@@ -41,8 +41,11 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
 import net.fortuna.ical4j.data.CalendarBuilder;
+import net.fortuna.ical4j.data.CalendarParserFactory;
+import net.fortuna.ical4j.data.ContentHandlerContext;
 import net.fortuna.ical4j.data.ParserException;
 import net.fortuna.ical4j.model.Calendar;
+import net.fortuna.ical4j.model.TimeZoneRegistryFactory;
 
 /**
  * <p>
@@ -69,7 +72,7 @@ import net.fortuna.ical4j.model.Calendar;
 public class ICalendarParser extends GenericMailet {
     private static final Logger LOGGER = LoggerFactory.getLogger(ICalendarParser.class);
     @SuppressWarnings("unchecked")
-    private static final Class<Map<String, byte[]>> MAP_STRING_BYTES_CLASS = (Class<Map<String, byte[]>>) (Object) Map.class;
+    private static final Class<Map<String, AttributeValue<byte[]>>> MAP_STRING_BYTES_CLASS = (Class<Map<String, AttributeValue<byte[]>>>) (Object) Map.class;
 
     public static final String SOURCE_ATTRIBUTE_PARAMETER_NAME = "sourceAttribute";
     public static final String DESTINATION_ATTRIBUTE_PARAMETER_NAME = "destinationAttribute";
@@ -116,13 +119,13 @@ public class ICalendarParser extends GenericMailet {
             .ifPresent(icsAttachments -> addCalendarsToAttribute(mail, icsAttachments));
     }
 
-    private void addCalendarsToAttribute(Mail mail, Map<String, byte[]> icsAttachments) {
-        Map<String, Calendar> calendars = icsAttachments.entrySet()
+    private void addCalendarsToAttribute(Mail mail, Map<String, AttributeValue<byte[]>> icsAttachments) {
+        Map<String, AttributeValue<?>> calendars = icsAttachments.entrySet()
             .stream()
-            .flatMap(entry -> createCalendar(entry.getKey(), entry.getValue()))
-            .collect(ImmutableMap.toImmutableMap(Pair::getKey, Pair::getValue));
+            .flatMap(entry -> createCalendar(entry.getKey(), entry.getValue().getValue()))
+            .collect(ImmutableMap.toImmutableMap(Pair::getKey, pair -> AttributeValue.ofSerializable(pair.getValue())));
 
-        mail.setAttribute(new Attribute(destinationAttributeName, AttributeValue.ofAny(calendars)));
+        mail.setAttribute(new Attribute(destinationAttributeName, AttributeValue.of(calendars)));
     }
 
     @Override
@@ -131,7 +134,10 @@ public class ICalendarParser extends GenericMailet {
     }
 
     private Stream<Pair<String, Calendar>> createCalendar(String key, byte[] icsContent) {
-        CalendarBuilder builder = new CalendarBuilder();
+        CalendarBuilder builder = new CalendarBuilder(
+            CalendarParserFactory.getInstance().get(),
+            new ContentHandlerContext().withSupressInvalidProperties(true),
+            TimeZoneRegistryFactory.getInstance().createRegistry());
         try {
             ByteArrayInputStream inputStream = new ByteArrayInputStream(icsContent);
             return Stream.of(Pair.of(key, builder.build(inputStream)));

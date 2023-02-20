@@ -22,7 +22,6 @@
 package org.apache.james.transport.mailets;
 
 import java.io.IOException;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -206,17 +205,17 @@ public class SMIMECheckSignature extends GenericMailet {
         // If at least one mail signer is found 
         // the mail attributes are set.
         if (signers != null) {
-            ArrayList<X509Certificate> signerinfolist = new ArrayList<>();
+            ArrayList<AttributeValue<?>> signerinfolist = new ArrayList<>();
 
             for (SMIMESignerInfo info : signers) {
                 if (info.isSignValid()
                         && (!onlyTrusted || info.getCertPath() != null)) {
-                    signerinfolist.add(info.getSignerCertificate());
+                    signerinfolist.add(AttributeValue.ofSerializable(info.getSignerCertificate()));
                 }
             }
 
             if (signerinfolist.size() > 0) {
-                mail.setAttribute(new Attribute(mailAttribute, AttributeValue.ofAny(signerinfolist)));
+                mail.setAttribute(new Attribute(mailAttribute, AttributeValue.of(signerinfolist)));
             } else {
                 // if no valid signers are found the message is not modified.
                 strippedMessage = null;

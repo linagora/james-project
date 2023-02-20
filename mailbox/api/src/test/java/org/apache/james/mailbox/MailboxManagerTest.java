@@ -161,7 +161,6 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
 
     @AfterEach
     void tearDown() {
-        mailboxManager.logout(session);
         mailboxManager.endProcessingRequest(session);
     }
 
@@ -1684,19 +1683,18 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
 
             mailboxManager.createMailbox(originalPath, session);
             mailboxManager.createMailbox(mailboxPath2, session);
-            subscriptionManager.subscribe(session, originalPath.getName());
-            subscriptionManager.subscribe(session, mailboxPath2.getName());
+            subscriptionManager.subscribe(session, originalPath);
+            subscriptionManager.subscribe(session, mailboxPath2);
 
             mailboxManager.createMailbox(mailboxPath3, session);
-            subscriptionManager.subscribe(session, mailboxPath3.getName());
+            subscriptionManager.subscribe(session, mailboxPath3);
 
             mailboxManager.renameMailbox(originalPath, newMailboxPath, RENAME_SUBSCRIPTIONS, session);
 
-            assertThat(subscriptionManager.subscriptions(session)).containsExactly(
-                newMailboxPath.getName(),
-                "mbx9.mbx2",
-                "mbx9.mbx2.mbx3"
-            );
+            assertThat(subscriptionManager.subscriptions(session)).containsOnly(
+                newMailboxPath,
+                MailboxPath.forUser(USER_1, "mbx9.mbx2"),
+                MailboxPath.forUser(USER_1, "mbx9.mbx2.mbx3"));
         }
 
         @Test
@@ -1707,11 +1705,11 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
             MailboxPath newMailboxPath = MailboxPath.forUser(USER_1, "mbx2");
 
             mailboxManager.createMailbox(originalPath, session);
-            subscriptionManager.subscribe(session, originalPath.getName());
+            subscriptionManager.subscribe(session, originalPath);
 
             mailboxManager.renameMailbox(originalPath, newMailboxPath, RENAME_SUBSCRIPTIONS, session);
 
-            assertThat(subscriptionManager.subscriptions(session)).containsExactly(newMailboxPath.getName());
+            assertThat(subscriptionManager.subscriptions(session)).containsExactly(newMailboxPath);
         }
 
         @Test
@@ -1736,11 +1734,11 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
             MailboxPath newMailboxPath = MailboxPath.forUser(USER_1, "mbx2");
 
             mailboxManager.createMailbox(originalPath, session);
-            subscriptionManager.subscribe(session, originalPath.getName());
+            subscriptionManager.subscribe(session, originalPath);
 
             mailboxManager.renameMailbox(originalPath, newMailboxPath, MailboxManager.RenameOption.NONE, session);
 
-            assertThat(subscriptionManager.subscriptions(session)).containsExactly(originalPath.getName());
+            assertThat(subscriptionManager.subscriptions(session)).containsExactly(originalPath);
         }
 
         @Test
@@ -1754,19 +1752,18 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
 
             Optional<MailboxId> id = mailboxManager.createMailbox(originalPath, session);
             mailboxManager.createMailbox(mailboxPath2, session);
-            subscriptionManager.subscribe(session, originalPath.getName());
-            subscriptionManager.subscribe(session, mailboxPath2.getName());
+            subscriptionManager.subscribe(session, originalPath);
+            subscriptionManager.subscribe(session, mailboxPath2);
 
             mailboxManager.createMailbox(mailboxPath3, session);
-            subscriptionManager.subscribe(session, mailboxPath3.getName());
+            subscriptionManager.subscribe(session, mailboxPath3);
 
             mailboxManager.renameMailbox(id.get(), newMailboxPath, RENAME_SUBSCRIPTIONS, session);
 
-            assertThat(subscriptionManager.subscriptions(session)).containsExactly(
-                newMailboxPath.getName(),
-                "mbx9.mbx2",
-                "mbx9.mbx2.mbx3"
-            );
+            assertThat(subscriptionManager.subscriptions(session)).containsOnly(
+                newMailboxPath,
+                MailboxPath.forUser(USER_1, "mbx9.mbx2"),
+                MailboxPath.forUser(USER_1, "mbx9.mbx2.mbx3"));
         }
 
         @Test
@@ -1777,11 +1774,11 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
             MailboxPath newMailboxPath = MailboxPath.forUser(USER_1, "mbx2");
 
             Optional<MailboxId> id = mailboxManager.createMailbox(originalPath, session);
-            subscriptionManager.subscribe(session, originalPath.getName());
+            subscriptionManager.subscribe(session, originalPath);
 
             mailboxManager.renameMailbox(id.get(), newMailboxPath, RENAME_SUBSCRIPTIONS, session);
 
-            assertThat(subscriptionManager.subscriptions(session)).containsExactly(newMailboxPath.getName());
+            assertThat(subscriptionManager.subscriptions(session)).containsExactly(newMailboxPath);
         }
 
         @Test
@@ -1806,11 +1803,11 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
             MailboxPath newMailboxPath = MailboxPath.forUser(USER_1, "mbx2");
 
             Optional<MailboxId> id = mailboxManager.createMailbox(originalPath, session);
-            subscriptionManager.subscribe(session, originalPath.getName());
+            subscriptionManager.subscribe(session, originalPath);
 
             mailboxManager.renameMailbox(id.get(), newMailboxPath, MailboxManager.RenameOption.NONE, session);
 
-            assertThat(subscriptionManager.subscriptions(session)).containsExactly(originalPath.getName());
+            assertThat(subscriptionManager.subscriptions(session)).containsExactly(originalPath);
         }
 
         @Test
@@ -2558,17 +2555,6 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
 
             assertThat(session.getUser()).isEqualTo(USER_1);
         }
-
-        @Test
-        void closingSessionShouldWork() {
-            session = mailboxManager.createSystemSession(USER_1);
-            mailboxManager.startProcessingRequest(session);
-
-            mailboxManager.logout(session);
-            mailboxManager.endProcessingRequest(session);
-
-            assertThat(session.isOpen()).isFalse();
-        }
     }
 
     @Nested
@@ -2613,7 +2599,7 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
                     .hasSameElementsAs(preDeleteCaptor2.getValue().getDeletionMetadataList())
                     .allSatisfy(deleteMetadata -> SoftAssertions.assertSoftly(softy -> {
                         softy.assertThat(deleteMetadata.getMailboxId()).isEqualTo(inboxId);
-                        softy.assertThat(deleteMetadata.getMessageMetaData().getMessageId()).isEqualTo(composeId.getMessageId());
+                        softy.assertThat(deleteMetadata.getMessageId()).isEqualTo(composeId.getMessageId());
                     }));
             }
 
@@ -2634,7 +2620,7 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
                     .hasSameElementsAs(preDeleteCaptor2.getValue().getDeletionMetadataList())
                     .allSatisfy(deleteMetadata -> SoftAssertions.assertSoftly(softy -> {
                         softy.assertThat(deleteMetadata.getMailboxId()).isEqualTo(inboxId);
-                        softy.assertThat(deleteMetadata.getMessageMetaData().getMessageId()).isEqualTo(composeId.getMessageId());
+                        softy.assertThat(deleteMetadata.getMessageId()).isEqualTo(composeId.getMessageId());
                     }));
             }
 
@@ -2655,7 +2641,7 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
                     .hasSameElementsAs(preDeleteCaptor2.getValue().getDeletionMetadataList())
                     .allSatisfy(deleteMetadata -> SoftAssertions.assertSoftly(softy -> {
                         softy.assertThat(deleteMetadata.getMailboxId()).isEqualTo(inboxId);
-                        softy.assertThat(deleteMetadata.getMessageMetaData().getMessageId()).isEqualTo(composeId.getMessageId());
+                        softy.assertThat(deleteMetadata.getMessageId()).isEqualTo(composeId.getMessageId());
                     }));
             }
 
@@ -2681,7 +2667,7 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
                     .hasSameElementsAs(preDeleteCaptor2.getAllValues())
                     .flatExtracting(PreDeletionHook.DeleteOperation::getDeletionMetadataList)
                     .allSatisfy(deleteMetadata -> assertThat(deleteMetadata.getMailboxId()).isEqualTo(inboxId))
-                    .extracting(deleteMetadata -> deleteMetadata.getMessageMetaData().getMessageId())
+                    .extracting(deleteMetadata -> deleteMetadata.getMessageId())
                     .containsOnly(composeId1.getMessageId(), composeId2.getMessageId());
             }
 
@@ -2705,7 +2691,7 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
                     .hasSameElementsAs(preDeleteCaptor2.getValue().getDeletionMetadataList())
                     .allSatisfy(deleteMetadata -> SoftAssertions.assertSoftly(softy -> {
                         softy.assertThat(deleteMetadata.getMailboxId()).isEqualTo(inboxId);
-                        softy.assertThat(deleteMetadata.getMessageMetaData().getMessageId()).isEqualTo(composeId1.getMessageId());
+                        softy.assertThat(deleteMetadata.getMessageId()).isEqualTo(composeId1.getMessageId());
                     }));
             }
 
@@ -2740,7 +2726,7 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
                 assertThat(preDeleteCaptor1.getAllValues())
                     .hasSameElementsAs(preDeleteCaptor2.getAllValues())
                     .flatExtracting(PreDeletionHook.DeleteOperation::getDeletionMetadataList)
-                    .extracting(deleteMetadata -> deleteMetadata.getMessageMetaData().getMessageId())
+                    .extracting(deleteMetadata -> deleteMetadata.getMessageId())
                     .containsOnly(composeId1.getMessageId(), composeId2.getMessageId());
 
                 assertThat(preDeleteCaptor1.getAllValues())
@@ -2872,6 +2858,26 @@ public abstract class MailboxManagerTest<T extends MailboxManager> {
             ComposedMessageId composeId1 = inboxManager.appendMessage(AppendCommand.builder().build(message), session).getId();
             MessageResult messageResult = inboxManager.getMessages(MessageRange.one(composeId1.getUid()), FetchGroup.MINIMAL, session).next();
             assertThat(messageResult.getThreadId().getBaseMessageId()).isInstanceOf(MessageId.class);
+        }
+    }
+
+    @Nested
+    class SaveDateTests {
+        private MessageManager inboxManager;
+
+        @BeforeEach
+        void setUp() throws Exception {
+            session = mailboxManager.createSystemSession(USER_1);
+            MailboxPath inbox = MailboxPath.inbox(session);
+            mailboxManager.createMailbox(inbox, session).get();
+            inboxManager = mailboxManager.getMailbox(inbox, session);
+        }
+
+        @Test
+        void shouldSetSaveDateWhenAppendMessage() throws Exception {
+            ComposedMessageId composeId1 = inboxManager.appendMessage(AppendCommand.builder().build(message), session).getId();
+            MessageResult messageResult = inboxManager.getMessages(MessageRange.one(composeId1.getUid()), FetchGroup.MINIMAL, session).next();
+            assertThat(messageResult.getSaveDate()).isPresent();
         }
     }
 

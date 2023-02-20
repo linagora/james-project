@@ -30,10 +30,11 @@ import org.apache.james.queue.api.ManageableMailQueue;
 import org.apache.james.task.Task;
 import org.apache.james.task.TaskExecutionDetails;
 import org.apache.james.task.TaskType;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import reactor.core.publisher.Mono;
 
 public class ClearMailQueueTask implements Task {
 
@@ -102,10 +103,13 @@ public class ClearMailQueueTask implements Task {
     @Override
     public Result run() {
         try (ManageableMailQueue queue = factory.create(queueName)) {
-            this.initialCount = Optional.of(getRemainingSize(queue));
+            this.initialCount = Mono.justOrEmpty(queue)
+                .flatMap(q -> Mono.from(q.getSizeReactive()))
+                .blockOptional();
             this.queue = Optional.of(queue);
             queue.clear();
-            this.lastAdditionalInformation = details();
+            this.lastAdditionalInformation = Mono.from(detailsReactive())
+                .block();
         } catch (MailQueue.MailQueueException | IOException e) {
             LOGGER.error("Clear MailQueue got an exception", e);
             return Result.PARTIAL;
@@ -122,25 +126,20 @@ public class ClearMailQueueTask implements Task {
     }
 
     @Override
-    public Optional<TaskExecutionDetails.AdditionalInformation> details() {
-        return lastAdditionalInformation
-            .or(() -> queue.map(q -> new AdditionalInformation(queueName, initialCount.get(), getRemainingSize(q), Clock.systemUTC().instant())));
+    public Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> detailsReactive() {
+        return Mono.justOrEmpty(lastAdditionalInformation)
+            .switchIfEmpty(getAdditionalInformation())
+            .map(Optional::of)
+            .switchIfEmpty(Mono.just(Optional.empty()));
     }
 
     MailQueueName getQueueName() {
         return queueName;
     }
 
-    @VisibleForTesting
-    Optional<Long> initialCount() {
-        return initialCount;
-    }
-
-    private long getRemainingSize(ManageableMailQueue mailQueue) {
-        try {
-            return mailQueue.getSize();
-        } catch (MailQueue.MailQueueException e) {
-            throw new RuntimeException(e);
-        }
+    private Mono<TaskExecutionDetails.AdditionalInformation> getAdditionalInformation() {
+        return Mono.justOrEmpty(queue)
+            .flatMap(q -> Mono.from(q.getSizeReactive()))
+            .map(remainingSize -> new AdditionalInformation(queueName, initialCount.get(), remainingSize, Clock.systemUTC().instant()));
     }
 }

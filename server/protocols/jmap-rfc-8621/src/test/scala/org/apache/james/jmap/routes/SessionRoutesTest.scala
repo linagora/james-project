@@ -20,7 +20,6 @@
 package org.apache.james.jmap.routes
 
 import java.nio.charset.StandardCharsets
-
 import io.netty.handler.codec.http.HttpHeaderNames.ACCEPT
 import io.restassured.RestAssured
 import io.restassured.builder.RequestSpecBuilder
@@ -37,6 +36,7 @@ import org.apache.james.jmap.http.Authenticator
 import org.apache.james.jmap.routes.SessionRoutesTest.{BOB, TEST_CONFIGURATION}
 import org.apache.james.jmap.{JMAPConfiguration, JMAPRoutesHandler, JMAPServer, Version, VersionParser}
 import org.apache.james.mailbox.MailboxSession
+import org.apache.james.user.api.DelegationStore
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
@@ -65,8 +65,13 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
     when(mockedAuthFilter.authenticate(any()))
       .thenReturn(Mono.just(mockedSession))
 
+    val mockDelegationStore = mock(classOf[DelegationStore])
+    when(mockDelegationStore.delegatedUsers(any()))
+      .thenReturn(Mono.empty())
+
     val sessionRoutes = new SessionRoutes(
       sessionSupplier = new SessionSupplier(DefaultCapabilities.supported(JmapRfc8621Configuration.LOCALHOST_CONFIGURATION)),
+      delegationStore = mockDelegationStore,
       authenticator = mockedAuthFilter,
       jmapRfc8621Configuration = JmapRfc8621Configuration.LOCALHOST_CONFIGURATION)
     jmapServer = new JMAPServer(
@@ -125,7 +130,7 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |  "capabilities" : {
                          |    "urn:ietf:params:jmap:submission": {
                          |      "maxDelayedSend": 0,
-                         |      "submissionExtensions": []
+                         |      "submissionExtensions": {}
                          |    },
                          |    "urn:ietf:params:jmap:core" : {
                          |      "maxSizeUpload" : 31457280,
@@ -149,7 +154,10 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |      "supportsPush": true,
                          |      "url": "ws://localhost/jmap/ws"
                          |    },
+                         |    "urn:apache:james:params:jmap:mail:identity:sortorder": {},
+                         |    "urn:apache:james:params:jmap:delegation": {},
                          |    "urn:apache:james:params:jmap:mail:quota": {},
+                         |    "urn:ietf:params:jmap:quota": {},
                          |    "urn:apache:james:params:jmap:mail:shares": {},
                          |    "urn:ietf:params:jmap:vacationresponse":{}
                          |  },
@@ -161,7 +169,7 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |      "accountCapabilities" : {
                          |        "urn:ietf:params:jmap:submission": {
                          |          "maxDelayedSend": 0,
-                         |          "submissionExtensions": []
+                         |          "submissionExtensions": {}
                          |        },
                          |        "urn:ietf:params:jmap:websocket": {
                          |            "supportsPush": true,
@@ -186,6 +194,9 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |          "mayCreateTopLevelMailbox" : true
                          |        },
                          |        "urn:apache:james:params:jmap:mail:quota": {},
+                         |        "urn:ietf:params:jmap:quota": {},
+                         |        "urn:apache:james:params:jmap:mail:identity:sortorder": {},
+                         |        "urn:apache:james:params:jmap:delegation": {},
                          |        "urn:apache:james:params:jmap:mail:shares": {},
                          |        "urn:ietf:params:jmap:vacationresponse":{}
                          |      }
@@ -197,6 +208,9 @@ class SessionRoutesTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
                          |    "urn:ietf:params:jmap:core" : "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:ietf:params:jmap:mail" : "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:apache:james:params:jmap:mail:quota": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
+                         |    "urn:ietf:params:jmap:quota": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
+                         |    "urn:apache:james:params:jmap:mail:identity:sortorder": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
+                         |    "urn:apache:james:params:jmap:delegation": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:apache:james:params:jmap:mail:shares": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401",
                          |    "urn:ietf:params:jmap:vacationresponse": "0fe275bf13ff761407c17f64b1dfae2f4b3186feea223d7267b79f873a105401"
                          |  },

@@ -44,18 +44,18 @@
         <module>data-cassandra</module>
         <module>data-ldap</module>
         <module>distributed</module>
-        <module>elasticsearch</module>
-        <module>es-metric-reporter</module>
         <module>jmx</module>
         <module>jpa-common</module>
         <module>mailbox</module>
         <module>mailbox-jpa</module>
         <module>mailbox-plugin-deleted-messages-vault</module>
-        <module>mailbox-plugin-spamassassin</module>
         <module>mailet</module>
+        <module>mailrepository-blob</module>
         <module>mailrepository-cassandra</module>
+        <module>mailrepository-loaders</module>
         <module>memory</module>
         <module>onami</module>
+        <module>opensearch</module>
         <module>protocols/imap</module>
         <module>protocols/jmap</module>
         <module>protocols/lmtp</module>
@@ -121,11 +121,6 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>james-server-guice-elasticsearch</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-guice-es-resporter</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -162,11 +157,6 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
-                <artifactId>james-server-guice-mailbox-plugin-spamassassin</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-guice-mailet</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -178,6 +168,11 @@
             <dependency>
                 <groupId>${james.groupId}</groupId>
                 <artifactId>james-server-guice-memory</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>james-server-guice-opensearch</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -258,7 +253,17 @@
             </dependency>
             <dependency>
                 <groupId>${james.groupId}</groupId>
+                <artifactId>mailrepository-blob</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
                 <artifactId>mailrepository-cassandra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${james.groupId}</groupId>
+                <artifactId>mailrepository-loaders</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

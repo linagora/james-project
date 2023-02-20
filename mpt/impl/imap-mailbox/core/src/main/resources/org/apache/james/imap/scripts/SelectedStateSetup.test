@@ -17,7 +17,7 @@
 # under the License.                                           #
 ################################################################
 C: a1 CREATE selected
-S: a1 OK CREATE completed.
+S: a1 OK \[MAILBOXID \(.+\)\] CREATE completed.
 
 C: A003 APPEND selected {254+}
 C: Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
@@ -72,6 +72,7 @@ C:
 S: A006 OK (\[.+\] )?APPEND completed.
 
 C: a1 SELECT selected
+S: \* OK \[MAILBOXID \(.+\)\] Ok
 S: \* FLAGS \(\\Answered \\Deleted \\Draft \\Flagged \\Seen\)
 S: \* 4 EXISTS
 S: \* 4 RECENT

@@ -30,7 +30,7 @@ import static org.hamcrest.collection.IsMapWithSize.anEmptyMap;
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraRabbitMQJamesConfiguration;
 import org.apache.james.CassandraRabbitMQJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.JamesServerBuilder;
 import org.apache.james.JamesServerExtension;
@@ -44,6 +44,7 @@ import org.apache.james.modules.blobstore.BlobStoreConfiguration;
 import org.apache.james.probe.DataProbe;
 import org.apache.james.utils.DataProbeImpl;
 import org.apache.james.utils.WebAdminGuiceProbe;
+import org.apache.james.vault.VaultConfiguration;
 import org.apache.james.webadmin.WebAdminUtils;
 import org.apache.james.webadmin.routes.CassandraMappingsRoutes;
 import org.apache.james.webadmin.routes.MailQueueRoutes;
@@ -73,9 +74,10 @@ class RabbitMQWebAdminServerTaskSerializationIntegrationImmutableTest {
                     .disableCache()
                     .deduplication()
                     .noCryptoConfig())
-            .searchConfiguration(SearchConfiguration.elasticSearch())
+            .vaultConfiguration(VaultConfiguration.ENABLED_DEFAULT)
+            .searchConfiguration(SearchConfiguration.openSearch())
             .build())
-        .extension(new DockerElasticSearchExtension())
+        .extension(new DockerOpenSearchExtension())
         .extension(new CassandraExtension())
         .extension(new AwsS3BlobStoreExtension())
         .extension(new RabbitMQExtension())
@@ -304,5 +306,28 @@ class RabbitMQWebAdminServerTaskSerializationIntegrationImmutableTest {
             .body("taskId", is(taskId))
             .body("type", is("republish-not-processed-mails"))
             .body("additionalInformation.nbRequeuedMails", is(0));
+    }
+
+
+    @Test
+    void tasksCleanupShouldComplete(){
+        String taskId = with()
+            .basePath("/tasks")
+            .queryParam("olderThan", "15day")
+            .delete()
+            .jsonPath()
+            .get("taskId");
+
+        given()
+            .basePath(TasksRoutes.BASE)
+        .when()
+            .get(taskId + "/await")
+        .then()
+            .body("status", is("completed"))
+            .body("taskId", is(taskId))
+            .body("type", is("tasks-cleanup"))
+            .body("additionalInformation.olderThan", is(notNullValue()))
+            .body("additionalInformation.processedTaskCount", is(0))
+            .body("additionalInformation.removedTaskCount", is(0));
     }
 }

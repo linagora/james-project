@@ -19,7 +19,8 @@
 
 package org.apache.james.queue.rabbitmq;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.selectFrom;
+import static java.time.temporal.ChronoUnit.DAYS;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static org.apache.james.backends.cassandra.Scenario.Builder.executeNormally;
 import static org.apache.james.backends.cassandra.Scenario.Builder.fail;
@@ -42,6 +43,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -91,6 +94,7 @@ import org.mockito.ArgumentCaptor;
 
 import com.github.fge.lambdas.Throwing;
 
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -104,11 +108,12 @@ class RabbitMQMailQueueTest {
     private static final int UPDATE_BROWSE_START_PACE = 2;
     private static final Duration ONE_HOUR_SLICE_WINDOW = Duration.ofHours(1);
     private static final org.apache.james.queue.api.MailQueueName SPOOL = org.apache.james.queue.api.MailQueueName.of("spool");
-    private static final Instant IN_SLICE_1 = Instant.parse("2007-12-03T10:15:30.00Z");
+    private static final Instant IN_SLICE_1 = Instant.now().minus(60, DAYS);
     private static final Instant IN_SLICE_2 = IN_SLICE_1.plus(1, HOURS);
     private static final Instant IN_SLICE_3 = IN_SLICE_1.plus(2, HOURS);
     private static final Instant IN_SLICE_5 = IN_SLICE_1.plus(4, HOURS);
     private static final Instant IN_SLICE_7 = IN_SLICE_1.plus(6, HOURS);
+    public static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
 
     @RegisterExtension
     static CassandraClusterExtension cassandraCluster = new CassandraClusterExtension(CassandraModule.aggregateModules(
@@ -200,11 +205,12 @@ class RabbitMQMailQueueTest {
 
             dequeueFlux.take(1)
                 .flatMap(mailQueueItem -> Mono.fromCallable(() -> {
-                    mailQueueItem.done(true);
+                    mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
                     return mailQueueItem;
-                })).blockLast(Duration.ofSeconds(10));
+                }).subscribeOn(Schedulers.fromExecutor(EXECUTOR))).blockLast(Duration.ofSeconds(10));
 
-            assertThat(cassandra.getConf().execute(select().from(BlobTables.DefaultBucketBlobTable.TABLE_NAME)))
+            assertThat(cassandra.getConf().execute(selectFrom(BlobTables.DefaultBucketBlobTable.TABLE_NAME)
+                .all().build()))
                 .isEmpty();
         }
 
@@ -217,7 +223,8 @@ class RabbitMQMailQueueTest {
 
             getManageableMailQueue().clear();
 
-            assertThat(cassandra.getConf().execute(select().from(BlobTables.DefaultBucketBlobTable.TABLE_NAME)))
+            assertThat(cassandra.getConf().execute(selectFrom(BlobTables.DefaultBucketBlobTable.TABLE_NAME)
+                .all().build()))
                 .isEmpty();
         }
 
@@ -230,7 +237,8 @@ class RabbitMQMailQueueTest {
 
             getManageableMailQueue().remove(ManageableMailQueue.Type.Name, name1);
 
-            assertThat(cassandra.getConf().execute(select().from(BlobTables.DefaultBucketBlobTable.TABLE_NAME)))
+            assertThat(cassandra.getConf().execute(selectFrom(BlobTables.DefaultBucketBlobTable.TABLE_NAME)
+                .all().build()))
                 .isEmpty();
         }
 
@@ -244,7 +252,8 @@ class RabbitMQMailQueueTest {
 
             getManageableMailQueue().remove(ManageableMailQueue.Type.Recipient, RECIPIENT1.asString());
 
-            assertThat(cassandra.getConf().execute(select().from(BlobTables.DefaultBucketBlobTable.TABLE_NAME)))
+            assertThat(cassandra.getConf().execute(selectFrom(BlobTables.DefaultBucketBlobTable.TABLE_NAME)
+                .all().build()))
                 .isEmpty();
         }
 
@@ -258,7 +267,8 @@ class RabbitMQMailQueueTest {
 
             getManageableMailQueue().remove(ManageableMailQueue.Type.Sender, SENDER.asString());
 
-            assertThat(cassandra.getConf().execute(select().from(BlobTables.DefaultBucketBlobTable.TABLE_NAME)))
+            assertThat(cassandra.getConf().execute(selectFrom(BlobTables.DefaultBucketBlobTable.TABLE_NAME)
+                .all().build()))
                 .isEmpty();
         }
 
@@ -610,20 +620,21 @@ class RabbitMQMailQueueTest {
                 .name(name3)
                 .build());
 
-            Flux.merge(Mono.fromCallable(() -> {
-                //mail send concurently with rebuild
-                getMailQueue().enQueue(defaultMail()
-                    .name(name2)
-                    .build());
-                return true;
+            Flux.merge(
+                Mono.fromCallable(() -> {
+                    //mail send concurently with rebuild
+                    getMailQueue().enQueue(defaultMail()
+                        .name(name2)
+                        .build());
+                    return true;
 
-            }), Mono.fromRunnable(() ->
-                assertThat(getMailQueue()
+                }).subscribeOn(Schedulers.fromExecutor(EXECUTOR)),
+                Mono.fromRunnable(() ->
+                    assertThat(getMailQueue()
                         .republishNotProcessedMails(Instant.now().minus(Duration.ofHours(1)))
                         .collectList()
                         .block())
-                    .containsOnly(name1)
-            ))
+                        .containsOnly(name1)).subscribeOn(Schedulers.fromExecutor(EXECUTOR)))
             .then()
             .block(Duration.ofSeconds(10));
 
@@ -642,14 +653,26 @@ class RabbitMQMailQueueTest {
         }
 
         private void dequeueMails(int times) {
-            Flux.from(getManageableMailQueue()
+            AtomicInteger counter = new AtomicInteger(0);
+
+            Disposable disposable = Flux.from(getManageableMailQueue()
                 .deQueue())
-                .take(times)
-                .flatMap(mailQueueItem -> Mono.fromCallable(() -> {
-                    mailQueueItem.done(true);
-                    return mailQueueItem;
-                }))
-                .blockLast();
+                .concatMap(mailQueueItem -> Mono.fromCallable(() -> {
+                    if (counter.getAndIncrement() < times) {
+                        mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
+                        return mailQueueItem;
+                    } else {
+                        mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.RETRY);
+                        return null;
+                    }
+                }).subscribeOn(Schedulers.fromExecutor(EXECUTOR)))
+                .subscribe();
+
+            try {
+                Awaitility.await().untilAsserted(() -> assertThat(counter.get()).isGreaterThanOrEqualTo(times));
+            } finally {
+                disposable.dispose();
+            }
         }
 
         @Test
@@ -704,14 +727,15 @@ class RabbitMQMailQueueTest {
 
             cassandra.getConf().registerScenario(returnEmpty()
                 .forever()
-                .whenQueryStartsWith("SELECT * FROM blobs WHERE id=:id;"));
+                .whenQueryStartsWith("SELECT * FROM blobs WHERE id=:id"));
 
             ConcurrentLinkedDeque<String> dequeuedNames = new ConcurrentLinkedDeque<>();
             Flux.from(getMailQueue().deQueue())
                 .take(3)
                 .doOnNext(item -> dequeuedNames.add(item.getMail().getName()))
-                .doOnNext(Throwing.consumer(item -> item.done(true)))
-                .subscribeOn(Schedulers.elastic())
+                .flatMap(item -> Mono.fromRunnable(Throwing.runnable(() -> item.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS)))
+                    .subscribeOn(Schedulers.fromExecutor(EXECUTOR)))
+                .subscribeOn(Schedulers.fromExecutor(EXECUTOR))
                 .subscribe();
 
             // One second should be enough to attempt dequeues while we fail to load blobs
@@ -720,7 +744,7 @@ class RabbitMQMailQueueTest {
             // Restore normal behaviour
             cassandra.getConf().registerScenario(executeNormally()
                 .forever()
-                .whenQueryStartsWith("SELECT * FROM blobs WHERE id=:id;"));
+                .whenQueryStartsWith("SELECT * FROM blobs WHERE id=:id"));
 
             // Let one second to check if the queue is empty
             Thread.sleep(1000);
@@ -758,7 +782,8 @@ class RabbitMQMailQueueTest {
 
             Flux.from(getMailQueue().deQueue())
                 .doOnNext(item -> dequeuedMailNames.add(item.getMail().getName()))
-                .doOnNext(Throwing.consumer(item -> item.done(true)))
+                .flatMap(item -> Mono.fromRunnable(Throwing.runnable(() -> item.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS)))
+                    .subscribeOn(Schedulers.fromExecutor(EXECUTOR)))
                 .subscribe();
 
             Awaitility.await().atMost(TEN_SECONDS)
@@ -797,7 +822,8 @@ class RabbitMQMailQueueTest {
 
             Flux.from(getMailQueue().deQueue())
                 .doOnNext(item -> dequeuedMailNames.add(item.getMail().getName()))
-                .doOnNext(Throwing.consumer(item -> item.done(true)))
+                .flatMap(item -> Mono.fromRunnable(Throwing.runnable(() -> item.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS)))
+                    .subscribeOn(Schedulers.fromExecutor(EXECUTOR)))
                 .subscribe();
 
             Awaitility.await().atMost(TEN_SECONDS)
@@ -806,7 +832,7 @@ class RabbitMQMailQueueTest {
         }
 
         @Test
-        void rejectedMessagesShouldBeDeadLettered() {
+        void invalidMessagesShouldBeDeadLettered() {
             String emptyRoutingKey = "";
             rabbitMQExtension.getSender()
                 .send(Mono.just(new OutboundMessage("JamesMailQueue-exchange-spool",
@@ -819,14 +845,40 @@ class RabbitMQMailQueueTest {
                 .createReceiver()
                 .consumeAutoAck("JamesMailQueue-dead-letter-queue-spool")
                 .doOnNext(next -> deadLetteredCount.incrementAndGet())
-                .subscribeOn(Schedulers.elastic())
+                .subscribeOn(Schedulers.fromExecutor(EXECUTOR))
                 .subscribe();
 
             Flux.from(getMailQueue().deQueue())
-                .doOnNext(Throwing.consumer(item -> item.done(true)))
-                .subscribeOn(Schedulers.elastic())
+                .doOnNext(Throwing.consumer(item -> item.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS)))
+                .subscribeOn(Schedulers.fromExecutor(EXECUTOR))
                 .subscribe();
 
+
+            Awaitility.await().atMost(TEN_SECONDS)
+                .untilAsserted(() -> assertThat(deadLetteredCount.get()).isEqualTo(1));
+        }
+
+        @Test
+        void rejectedMessagesShouldBeDeadLettered() throws Exception {
+            String name1 = "myMail1";
+
+            getMailQueue().enQueue(defaultMail()
+                .name(name1)
+                .build());
+
+            getMailQueue().deQueue()
+                .flatMap(item -> Mono.fromRunnable(Throwing.runnable(() -> item.done(MailQueue.MailQueueItem.CompletionStatus.REJECT)))
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .thenReturn(item))
+                .blockFirst();
+
+            AtomicInteger deadLetteredCount = new AtomicInteger();
+            rabbitMQExtension.getRabbitChannelPool()
+                .createReceiver()
+                .consumeAutoAck("JamesMailQueue-dead-letter-queue-spool")
+                .doOnNext(next -> deadLetteredCount.incrementAndGet())
+                .subscribeOn(Schedulers.fromExecutor(EXECUTOR))
+                .subscribe();
 
             Awaitility.await().atMost(TEN_SECONDS)
                 .untilAsserted(() -> assertThat(deadLetteredCount.get()).isEqualTo(1));
@@ -890,7 +942,6 @@ class RabbitMQMailQueueTest {
 
         @Test
         void dequeueShouldStillRetrieveAllBlobsWhenIdenticalContentAndDeduplication() throws Exception {
-            Flux<MailQueue.MailQueueItem> dequeueFlux = Flux.from(mailQueue.deQueue());
             String identicalContent = "identical content";
             String identicalSubject = "identical subject";
 
@@ -907,11 +958,16 @@ class RabbitMQMailQueueTest {
                     .setText(identicalContent))
                 .build());
 
+            Flux<MailQueue.MailQueueItem> dequeueFlux = Flux.from(mailQueue.deQueue());
+
             List<MailQueue.MailQueueItem> items = dequeueFlux.take(2)
-                .concatMap(mailQueueItem -> Mono.fromCallable(() -> {
-                    mailQueueItem.done(true);
-                    return mailQueueItem;
-                }))
+                .concatMap(mailQueueItem ->
+                    Mono.fromCallable(() -> {
+                        mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
+                        return mailQueueItem;
+                    }).subscribeOn(Schedulers.fromExecutor(EXECUTOR))
+                        .thenReturn(mailQueueItem)
+                        .onErrorResume(e -> Mono.just(mailQueueItem)))
                 .collectList()
                 .block(Duration.ofSeconds(10));
 

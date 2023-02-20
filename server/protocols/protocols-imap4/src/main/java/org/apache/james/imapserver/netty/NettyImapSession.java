@@ -23,6 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.imap.api.ImapSessionState;
@@ -43,13 +47,10 @@ import io.netty.handler.codec.compression.JZlibEncoder;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.ssl.SslHandler;
 import reactor.core.publisher.Mono;
 
 public class NettyImapSession implements ImapSession, NettyConstants {
-    private static final int BUFFER_SIZE = 2048;
-
-    private ImapSessionState state = ImapSessionState.NON_AUTHENTICATED;
-    private SelectedMailbox selectedMailbox;
     private final Map<String, Object> attributesByKey = new HashMap<>();
     private final Encryption secure;
     private final boolean compress;
@@ -57,10 +58,13 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     private final boolean requiredSSL;
     private final boolean plainAuthEnabled;
     private final SessionId sessionId;
-    private boolean needsCommandInjectionDetection;
-    private Optional<OidcSASLConfiguration> oidcSASLConfiguration;
-    private boolean supportsOAuth;
-    private MailboxSession mailboxSession = null;
+    private final boolean supportsOAuth;
+    private final Optional<OidcSASLConfiguration> oidcSASLConfiguration;
+
+    private volatile ImapSessionState state = ImapSessionState.NON_AUTHENTICATED;
+    private final AtomicReference<SelectedMailbox> selectedMailbox = new AtomicReference<>();
+    private volatile boolean needsCommandInjectionDetection;
+    private volatile MailboxSession mailboxSession = null;
 
     public NettyImapSession(Channel channel, Encryption secure, boolean compress, boolean requiredSSL, boolean plainAuthEnabled, SessionId sessionId,
                             Optional<OidcSASLConfiguration> oidcSASLConfiguration) {
@@ -119,6 +123,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     @Override
     public Mono<Void> deselect() {
         this.state = ImapSessionState.AUTHENTICATED;
+        this.selectedMailbox.set(null);
         return closeMailbox();
     }
 
@@ -126,7 +131,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     public Mono<Void> selected(SelectedMailbox mailbox) {
         this.state = ImapSessionState.SELECTED;
         return closeMailbox()
-            .then(Mono.fromRunnable(() -> selectedMailbox = mailbox));
+            .then(Mono.fromRunnable(() -> selectedMailbox.set(mailbox)));
     }
 
     @Override
@@ -141,7 +146,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
 
     @Override
     public SelectedMailbox getSelected() {
-        return this.selectedMailbox;
+        return this.selectedMailbox.get();
     }
 
     @Override
@@ -150,9 +155,9 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     }
 
     private Mono<Void> closeMailbox() {
-        if (selectedMailbox != null) {
-            return selectedMailbox.deselect()
-                .then(Mono.fromRunnable(() -> selectedMailbox = null));
+        if (selectedMailbox.get() != null) {
+            return selectedMailbox.get().deselect()
+                .then(Mono.fromRunnable(() -> selectedMailbox.set(null)));
         }
         return Mono.empty();
     }
@@ -208,7 +213,7 @@ public class NettyImapSession implements ImapSession, NettyConstants {
 
     @Override
     public boolean supportStartTLS() {
-        return secure != null && secure.supportsEncryption();
+        return secure != null && secure.supportsEncryption() && !isTLSActive();
     }
 
     @Override
@@ -278,6 +283,14 @@ public class NettyImapSession implements ImapSession, NettyConstants {
     @Override
     public boolean isTLSActive() {
         return channel.pipeline().get(SSL_HANDLER) != null;
+    }
+
+    @Override
+    public Optional<SSLSession> getSSLSession() {
+        return Optional.ofNullable(channel.pipeline().get(SSL_HANDLER))
+            .map(SslHandler.class::cast)
+            .map(SslHandler::engine)
+            .map(SSLEngine::getSession);
     }
 
     @Override

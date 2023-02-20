@@ -99,7 +99,7 @@ Will return a list of healthChecks execution result, with an aggregated result:
 Supported health checks include:
 
  - **Cassandra backend**: Cassandra storage. Included in Cassandra Guice based products.
- - **ElasticSearch Backend**: ElasticSearch storage. Included in Cassandra Guice based products.
+ - **OpenSearch Backend**: OpenSearch storage. Included in Cassandra Guice based products.
  - **EventDeadLettersHealthCheck**: Included in all Guice products.
  - **Guice application lifecycle**: included in all Guice products.
  - **JPA Backend**: JPA storage. Included in JPA Guice based products.
@@ -470,6 +470,54 @@ Response codes:
 - 404: The base user does not exist
 
 Note: Delegation is only available on top of Cassandra products and not implemented yet on top of JPA backends.
+
+
+### Change a username
+
+```
+curl -XPOST http://ip:port/users/oldUser/rename/newUser?action=rename
+```
+
+Would migrate account data from `oldUser` to `newUser`.
+
+[More details about endpoints returning a task](#_endpoints_returning_a_task).
+
+Implemented migration steps are:
+
+ - `ForwardUsernameChangeTaskStep`: creates forward from old user to new user and migrates existing forwards
+ - `DelegationUsernameChangeTaskStep`: migrates delegations where the impacted user is either delegatee or delegator
+
+Response codes:
+
+* 201: Success. Corresponding task id is returned.
+* 400: Error in the request. Details can be found in the reported error.
+
+The `fromStep` query parameter allows skipping previous steps, allowing to resume the username change from a failed step.
+
+The scheduled task will have the following type `UsernameChangeTask` and the following `additionalInformation`:
+
+```
+{
+        "type": "UsernameChangeTask",
+        "oldUser": "jessy.jones@domain.tld",
+        "newUser": "jessy.smith@domain.tld",
+        "status": {
+            "A": "DONE",
+            "B": "FAILED",
+            "C": "ABORTED"
+        },
+        "fromStep": null,
+        "timestamp": "2023-02-17T02:54:01.246477Z"
+}
+```
+
+Valid status includes:
+
+ - `SKIPPED`: bypassed via `fromStep` setting
+ - `WAITING`: Awaits execution
+ - `IN_PROGRESS`: Currently executed
+ - `FAILED`: Error encountered while executing this step. Check the logs.
+ - `ABORTED`: Won't be executed because of previous step failures.
 
 ## Administrating mailboxes
 
@@ -3048,6 +3096,10 @@ Additional query parameters are supported:
  - `consume` (boolean defaulting to `true`) whether the reprocessing should consume the mail in its originating mail repository. Passing
  this value to `false` allows non destructive reprocessing as you keep a copy of the email in the mail repository and can be valuable
  when debugging.
+ - `limit` (integer value. Optional, default is empty). It enables to limit the count of elements reprocessed.
+ If unspecified the count of the processed elements is unbounded.
+ - `maxRetries` Optional integer, defaults to no max retries limit. Only processed emails that had been retried less 
+ than this value. Ignored by default.
 
 
 For instance:
@@ -3674,6 +3726,7 @@ failing, then the event will be stored in the "Event Dead Letter". This API allo
  - [Listing failed events](#Listing_failed_events)
  - [Getting event details](#Getting_event_details)
  - [Deleting an event](#Deleting_an_event)
+ - [Deleting all events of a group](#Deleting_all_events_of_a_group)
  - [Redeliver all events](#Redeliver_all_events)
  - [Redeliver group events](#Redeliver_group_events)
  - [Redeliver a single event](#Redeliver_a_single_event)
@@ -3743,10 +3796,23 @@ Response codes:
  - 204: Success
  - 400: Invalid group name or `insertionId`
 
+### Deleting all events of a group
+
+```
+curl -XDELETE http://ip:port/events/deadLetter/groups/org.apache.james.mailbox.events.EventBusTestFixture$GroupA
+```
+
+Will delete all events of this group.
+
+Response codes:
+
+- 204: Success
+- 400: Invalid group name
+
 ### Redeliver all events
 
 ```
-curl -XPOST http://ip:port/events/deadLetter?action=redeliver
+curl -XPOST http://ip:port/events/deadLetter?action=reDeliver
 ```
 
 Will create a task that will attempt to redeliver all events stored in "Event Dead Letter".
@@ -4159,12 +4225,21 @@ One can filter the above results by status. For example:
 curl -XGET http://ip:port/tasks?status=inProgress
 ```
 
-Will return a list of Execution reports that are currently in progress.
+Will return a list of Execution reports that are currently in progress. This list is sorted by 
+reverse submitted date (recent tasks goes first).
 
 Response codes:
 
  - 200: A list of corresponding tasks is returned
  - 400: Invalid status value
+ 
+Additionnal optional task parameters are supported:
+
+ - `status` one of `waiting`, `inProgress`, `canceledRequested`, `completed`, `canceled`, `failed`. Only
+ tasks with the given status are returned.
+ - `type`: only tasks with the given type are returned.
+ - `offset`: Integer, number of tasks to skip in the response. Useful for paging.
+ - `limit`: Integer, maximum number of tasks to return in one call
  
 ### Endpoints returning a task
 

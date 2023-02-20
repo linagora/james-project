@@ -19,7 +19,6 @@
 
 package org.apache.james.transport.mailets;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,8 +30,10 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
+import org.apache.james.util.io.UnsynchronizedBufferedInputStream;
 import org.apache.mailet.AttributeName;
 import org.apache.mailet.AttributeUtils;
+import org.apache.mailet.AttributeValue;
 import org.apache.mailet.Experimental;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailetException;
@@ -66,7 +67,7 @@ import com.github.fge.lambdas.Throwing;
 public class RecoverAttachment extends GenericMailet {
     private static final Logger LOGGER = LoggerFactory.getLogger(RecoverAttachment.class);
     @SuppressWarnings("unchecked")
-    private static final Class<Map<String, byte[]>> MAP_STRING_BYTES_CLASS = (Class<Map<String, byte[]>>) (Object) Map.class;
+    private static final Class<Map<String, AttributeValue<?>>> MAP_STRING_BYTES_CLASS = (Class<Map<String, AttributeValue<?>>>) (Object) Map.class;
 
     private static final String ATTRIBUTE_PARAMETER_NAME = "attribute";
 
@@ -98,11 +99,11 @@ public class RecoverAttachment extends GenericMailet {
     public void service(Mail mail) throws MailetException {
         AttributeUtils
             .getValueAndCastFromMail(mail, attributeName, MAP_STRING_BYTES_CLASS)
-            .ifPresent(Throwing.<Map<String, byte[]>>consumer(attachments ->
+            .ifPresent(Throwing.<Map<String, AttributeValue<?>>>consumer(attachments ->
                     processAttachment(mail, attachments)).sneakyThrow());
     }
 
-    private void processAttachment(Mail mail, Map<String, byte[]> attachments) throws MailetException {
+    private void processAttachment(Mail mail, Map<String,  AttributeValue<?>> attachments) throws MailetException {
         MimeMessage message;
         try {
             message = mail.getMessage();
@@ -111,11 +112,14 @@ public class RecoverAttachment extends GenericMailet {
                     "Could not retrieve message from Mail object", e);
         }
 
-        Iterator<byte[]> i = attachments.values().iterator();
+        Iterator<AttributeValue<?>> i = attachments.values().iterator();
         try {
             while (i.hasNext()) {
-                byte[] bytes = i.next();
-                InputStream is = new BufferedInputStream(
+                if (!(i.next().getValue() instanceof byte[])) {
+                    continue;
+                }
+                byte[] bytes = (byte[]) i.next().getValue();
+                InputStream is = new UnsynchronizedBufferedInputStream(
                         new ByteArrayInputStream(bytes));
                 MimeBodyPart p = new MimeBodyPart(is);
                 if (!(message.isMimeType("multipart/*") && (message

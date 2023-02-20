@@ -25,15 +25,15 @@ import static io.restassured.config.RestAssuredConfig.newConfig;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.apache.james.util.docker.DockerContainer;
 import org.apache.james.util.docker.Images;
 import org.apache.james.util.docker.RateLimiters;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -47,7 +47,7 @@ import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 
-public class FakeSmtp implements TestRule, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
+public class FakeSmtp implements TestRule, AfterEachCallback {
     public static void clean(RequestSpecification requestSpecification) {
         given(requestSpecification, RESPONSE_SPECIFICATION)
             .get("/api/email")
@@ -61,11 +61,32 @@ public class FakeSmtp implements TestRule, BeforeAllCallback, AfterAllCallback, 
     }
 
     public static FakeSmtp withSmtpPort(Integer smtpPort) {
-        DockerContainer container = fakeSmtpContainer()
-            .withExposedPorts(smtpPort)
-            .withCommands("node", "cli", "--listen", "80", "--smtp", smtpPort.toString());
+        DockerContainer container = reuseContainerIfPossible(smtpPort);
+
+        if (!container.isRunning()) {
+            container.start();
+        }
 
         return new FakeSmtp(container);
+    }
+
+    private static DockerContainer reuseContainerIfPossible(Integer smtpPort) {
+        if (smtpPort == SMTP_PORT) {
+            return Optional.ofNullable(DEFAULT_PORT_25)
+                .orElseGet(() -> {
+                    DockerContainer newContainer = createContainer(smtpPort);
+                    DEFAULT_PORT_25 = newContainer;
+                    return newContainer;
+                });
+        } else {
+            return createContainer(smtpPort);
+        }
+    }
+
+    private static DockerContainer createContainer(Integer smtpPort) {
+        return fakeSmtpContainer()
+            .withExposedPorts(smtpPort)
+            .withCommands("node", "cli", "--listen", "80", "--smtp", smtpPort.toString());
     }
 
     public static FakeSmtp withDefaultPort() {
@@ -77,9 +98,11 @@ public class FakeSmtp implements TestRule, BeforeAllCallback, AfterAllCallback, 
             .withAffinityToContainer()
             .waitingFor(new HostPortWaitStrategy()
                 .withRateLimiter(RateLimiters.TWENTIES_PER_SECOND)
-                .withStartupTimeout(Duration.ofMinutes(1))
-            );
+                .withStartupTimeout(Duration.ofMinutes(1)))
+            .withName("james-testing-fake-smtp" + UUID.randomUUID());
     }
+
+    private static DockerContainer DEFAULT_PORT_25;
 
     private static final int SMTP_PORT = 25;
     public static final ResponseSpecification RESPONSE_SPECIFICATION = new ResponseSpecBuilder().build();
@@ -95,22 +118,12 @@ public class FakeSmtp implements TestRule, BeforeAllCallback, AfterAllCallback, 
     }
 
     @Override
-    public void afterAll(ExtensionContext extensionContext) {
-        container.stop();
-    }
-
-    @Override
     public void afterEach(ExtensionContext extensionContext) {
         clean();
     }
 
-    @Override
-    public void beforeAll(ExtensionContext extensionContext) {
-        container.start();
-    }
-
     public void assertEmailReceived(Consumer<ValidatableResponse> expectations) {
-        Awaitility.await().atMost(Duration.ofSeconds(15))
+        Awaitility.await().atMost(Duration.ofMinutes(2))
             .untilAsserted(() -> expectations.accept(
                 given(requestSpecification(), RESPONSE_SPECIFICATION)
                     .get("/api/email")

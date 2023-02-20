@@ -6,6 +6,7 @@
   "modSeq": 42,
   "size": 25,
   "date": "2015-06-07T00:00:00+0200",
+  "saveDate": null,
   "mediaType": "plain",
   "subtype": "text",
   "mimeMessageID": "<VASs-IZaXqmZao@spam.minet.net>",
@@ -101,13 +102,15 @@
   "from": [
 	{
 	  "name": "Content-filter at spam.minet.net",
-	  "address": "postmaster@minet.net"
+	  "address": "postmaster@minet.net",
+	  "domain": "minet"
 	}
   ],
   "to": [
 	{
 	  "name": null,
-	  "address": "root@listes.minet.net"
+	  "address": "root@listes.minet.net",
+      "domain": "listes.minet"
 	}
   ],
   "cc": [],

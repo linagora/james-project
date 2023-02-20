@@ -40,8 +40,8 @@ class AuthenticatedCassandraJamesServerTest {
     @Nested
     class AuthenticationTest implements JamesServerContract {
         @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(cassandraExtension)
             .server(CassandraJamesServerMain::createServer)
             .overrideServerModule(binder -> binder.bind(ClusterConfiguration.class)
@@ -50,37 +50,13 @@ class AuthenticatedCassandraJamesServerTest {
                     .password(VALID_PASSWORD)
                     .build()))
             .build();
-    }
-
-    @Nested
-    class SslTest {
-        @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
-            .extension(cassandraExtension)
-            .disableAutoStart()
-            .server(CassandraJamesServerMain::createServer)
-            .overrideServerModule(binder -> binder.bind(ClusterConfiguration.class)
-                .toInstance(DockerCassandra.configurationBuilder(cassandraExtension.getCassandra().getHost())
-                    .username(CASSANDRA_USER)
-                    .password(VALID_PASSWORD)
-                    .useSsl()
-                    .build()))
-            .build();
-
-        @Test
-        void startShouldFailWhenSslUsedAndNotSupportedByServer(GuiceJamesServer jamesServer) {
-            assertThatThrownBy(jamesServer::start)
-                .isInstanceOf(CreationException.class)
-                .hasStackTraceContaining("Caused by: com.datastax.driver.core.exceptions.NoHostAvailableException: All host(s) tried for query failed");
-        }
     }
 
     @Nested
     class AuthenticationFailureTest {
         @RegisterExtension
-        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+        JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(cassandraExtension)
             .disableAutoStart()
             .server(configuration -> CassandraJamesServerMain.createServer(configuration)
@@ -97,7 +73,7 @@ class AuthenticatedCassandraJamesServerTest {
         void startShouldFailOnBadPassword(GuiceJamesServer jamesServer) {
             assertThatThrownBy(jamesServer::start)
                 .isInstanceOf(CreationException.class)
-                .hasStackTraceContaining("Caused by: com.datastax.driver.core.exceptions.AuthenticationException: Authentication error");
+                .hasStackTraceContaining("com.datastax.oss.driver.api.core.auth.AuthenticationException");
         }
     }
 }

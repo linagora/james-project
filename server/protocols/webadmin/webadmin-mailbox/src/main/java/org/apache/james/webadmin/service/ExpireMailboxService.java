@@ -45,7 +45,6 @@ import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
 import org.apache.james.util.DurationParser;
 import org.apache.james.util.ReactorUtils;
-import org.apache.james.util.streams.Iterators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +55,6 @@ import com.google.common.base.Preconditions;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 
 public class ExpireMailboxService {
@@ -178,27 +176,24 @@ public class ExpireMailboxService {
     }
 
     public Mono<Result> expireMailboxes(Context context, RunningOptions runningOptions, Date now) {
-        try {
-            SearchQuery expiration = SearchQuery.of(
-                runningOptions.maxAgeDuration.map(maxAge -> {
-                        Date limit = Date.from(now.toInstant().minus(maxAge));
-                        return SearchQuery.internalDateBefore(limit, DateResolution.Second);
-                    })
-                    .orElse(
-                        SearchQuery.headerDateBefore("Expires", now, DateResolution.Second)
-                    )
-            );
-            return Iterators.toFlux(usersRepository.list())
-                .transform(ReactorUtils.<Username, Task.Result>throttle()
-                    .elements(runningOptions.getUsersPerSecond())
-                    .per(Duration.ofSeconds(1))
-                    .forOperation(username -> 
-                        expireUserMailbox(context, username, runningOptions.getMailbox(), expiration)))
-                .reduce(Task.Result.COMPLETED, Task::combine);
-        } catch (UsersRepositoryException e) {
-            LOGGER.error("Error while accessing users from repository", e);
-            return Mono.just(Task.Result.PARTIAL);
-        }
+        SearchQuery expiration = SearchQuery.of(
+            runningOptions.maxAgeDuration.map(maxAge -> {
+                Date limit = Date.from(now.toInstant().minus(maxAge));
+                return SearchQuery.internalDateBefore(limit, DateResolution.Second);
+            }).orElse(SearchQuery.headerDateBefore("Expires", now, DateResolution.Second)));
+
+        return Flux.from(usersRepository.listReactive())
+            .transform(ReactorUtils.<Username, Task.Result>throttle()
+                .elements(runningOptions.getUsersPerSecond())
+                .per(Duration.ofSeconds(1))
+                .forOperation(username ->
+                    expireUserMailbox(context, username, runningOptions.getMailbox(), expiration)))
+            .reduce(Task.Result.COMPLETED, Task::combine)
+
+            .onErrorResume(UsersRepositoryException.class, e -> {
+                LOGGER.error("Error while accessing users from repository", e);
+                return Mono.just(Task.Result.PARTIAL);
+            });
     }
 
     private Mono<Result> expireUserMailbox(Context context, Username username, String mailbox, SearchQuery expiration) {
@@ -237,12 +232,8 @@ public class ExpireMailboxService {
         if (uids.isEmpty()) {
             return Mono.just(0);
         } else {
-            return Mono.fromCallable(
-                    () -> {
-                        mgr.delete(uids, session);
-                        return uids.size();
-                    })
-                .subscribeOn(Schedulers.elastic());
+            return Mono.from(mgr.deleteReactive(uids, session))
+                .thenReturn(uids.size());
         }
     }
 }

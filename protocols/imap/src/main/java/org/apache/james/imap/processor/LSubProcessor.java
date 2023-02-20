@@ -19,11 +19,11 @@
 
 package org.apache.james.imap.processor;
 
-import static org.apache.james.util.ReactorUtils.logOnError;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.display.ModifiedUtf7;
@@ -36,10 +36,12 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.SubscriptionManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.search.MailboxNameExpression;
 import org.apache.james.mailbox.model.search.PrefixedRegex;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +53,9 @@ public class LSubProcessor extends AbstractMailboxProcessor<LsubRequest> {
 
     private final SubscriptionManager subscriptionManager;
 
+    @Inject
     public LSubProcessor(MailboxManager mailboxManager, SubscriptionManager subscriptionManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
+                         MetricFactory metricFactory) {
         super(LsubRequest.class, mailboxManager, factory, metricFactory);
         this.subscriptionManager = subscriptionManager;
     }
@@ -64,10 +67,9 @@ public class LSubProcessor extends AbstractMailboxProcessor<LsubRequest> {
 
         return listSubscriptions(session, responder, referenceName, mailboxPattern)
             .then(Mono.fromRunnable(() -> okComplete(request, responder)))
-            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("LSub failed for reference {} and pattern {}", referenceName, mailboxPattern, e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.GENERIC_LSUB_FAILURE);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.error("LSub failed for reference {} and pattern {}", referenceName, mailboxPattern, e));
             }).then();
     }
 
@@ -75,6 +77,7 @@ public class LSubProcessor extends AbstractMailboxProcessor<LsubRequest> {
         MailboxSession mailboxSession = session.getMailboxSession();
         try {
             Mono<List<String>> mailboxesMono = Flux.from(subscriptionManager.subscriptionsReactive(mailboxSession))
+                .map(MailboxPath::getName)
                 .collectList();
 
             String decodedMailName = ModifiedUtf7.decodeModifiedUTF7(referenceName);

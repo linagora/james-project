@@ -26,6 +26,7 @@ import org.apache.james.mailrepository.api.MailRepositoryPath;
 import org.apache.james.queue.api.MailQueueName;
 import org.apache.james.server.task.json.dto.AdditionalInformationDTO;
 import org.apache.james.server.task.json.dto.AdditionalInformationDTOModule;
+import org.apache.james.util.streams.Limit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -38,7 +39,9 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
                 new ReprocessingService.Configuration(
                     MailQueueName.of(dto.getTargetQueue()),
                     dto.getTargetProcessor(),
-                    dto.isConsume()),
+                    dto.getMaxRetries(),
+                    dto.isConsume(),
+                    Limit.from(dto.getLimit())),
                 dto.initialCount,
                 dto.remainingCount,
                 dto.timestamp))
@@ -50,7 +53,9 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
                 Optional.of(details.getConfiguration().isConsume()),
                 details.getInitialCount(),
                 details.getRemainingCount(),
-                details.timestamp()))
+                details.timestamp(),
+                details.getConfiguration().getLimit().getLimit(),
+                details.getConfiguration().getMaxRetries()))
             .typeName(ReprocessingAllMailsTask.TYPE.asString())
             .withFactory(AdditionalInformationDTOModule::new);
     }
@@ -63,6 +68,8 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
     private final long initialCount;
     private final long remainingCount;
     private final Instant timestamp;
+    private final Optional<Integer> limit;
+    private final Optional<Integer> maxRetries;
 
     public ReprocessingAllMailsTaskAdditionalInformationDTO(
         @JsonProperty("type") String type,
@@ -72,7 +79,9 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
         @JsonProperty("consume") Optional<Boolean> consume,
         @JsonProperty("initialCount") long initialCount,
         @JsonProperty("remainingCount") long remainingCount,
-        @JsonProperty("timestamp") Instant timestamp) {
+        @JsonProperty("timestamp") Instant timestamp,
+        @JsonProperty("limit") Optional<Integer> limit,
+        @JsonProperty("maxRetries") Optional<Integer> maxRetries) {
         this.type = type;
         this.repositoryPath = repositoryPath;
         this.targetQueue = targetQueue;
@@ -81,6 +90,8 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
         this.remainingCount = remainingCount;
         this.timestamp = timestamp;
         this.consume = consume.orElse(true);
+        this.limit = limit;
+        this.maxRetries = maxRetries;
     }
 
     public boolean isConsume() {
@@ -90,6 +101,10 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
     @Override
     public String getType() {
         return type;
+    }
+
+    public Optional<Integer> getMaxRetries() {
+        return maxRetries;
     }
 
     public long getInitialCount() {
@@ -114,5 +129,9 @@ public class ReprocessingAllMailsTaskAdditionalInformationDTO implements Additio
 
     public Optional<String> getTargetProcessor() {
         return targetProcessor;
+    }
+
+    public Optional<Integer> getLimit() {
+        return limit;
     }
 }

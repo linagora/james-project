@@ -27,22 +27,44 @@ import org.apache.commons.configuration2.Configuration;
 import com.google.common.collect.ImmutableList;
 
 public class ExtensionConfiguration {
-    public static final ExtensionConfiguration DEFAULT = new ExtensionConfiguration(ImmutableList.of());
+    public static final ExtensionConfiguration DEFAULT = new ExtensionConfiguration(ImmutableList.of(), ImmutableList.of());
 
     public static ExtensionConfiguration from(Configuration configuration) {
         return new ExtensionConfiguration(
             Arrays.stream(configuration.getStringArray("guice.extension.module"))
                 .map(ClassName::new)
+                .collect(ImmutableList.toImmutableList()),
+            Arrays.stream(configuration.getStringArray("guice.extension.startable"))
+                .map(ClassName::new)
+                .collect(ImmutableList.toImmutableList()),
+            Arrays.stream(configuration.getStringArray("guice.extension.task"))
+                .map(ClassName::new)
                 .collect(ImmutableList.toImmutableList()));
     }
 
     private final List<ClassName> additionalGuiceModulesForExtensions;
+    private final List<ClassName> taskExtensions;
+    private final List<ClassName> startables;
 
-    public ExtensionConfiguration(List<ClassName> additionalGuiceModulesForExtensions) {
+    public ExtensionConfiguration(List<ClassName> additionalGuiceModulesForExtensions, List<ClassName> startables) {
+        this(additionalGuiceModulesForExtensions, startables, List.of());
+    }
+
+    public ExtensionConfiguration(List<ClassName> additionalGuiceModulesForExtensions, List<ClassName> startables, List<ClassName> taskExtensions) {
         this.additionalGuiceModulesForExtensions = additionalGuiceModulesForExtensions;
+        this.startables = startables;
+        this.taskExtensions = taskExtensions;
     }
 
     public List<ClassName> getAdditionalGuiceModulesForExtensions() {
         return additionalGuiceModulesForExtensions;
+    }
+
+    public List<ClassName> getStartables() {
+        return startables;
+    }
+
+    public List<ClassName> getTaskExtensions() {
+        return taskExtensions;
     }
 }

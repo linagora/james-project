@@ -26,7 +26,7 @@
 *** Storage dependencies
 **** xref:configure/blobstore.adoc[blobstore.properties]
 **** xref:configure/cassandra.adoc[cassandra.properties]
-**** xref:configure/elasticsearch.adoc[elasticsearch.properties]
+**** xref:configure/opensearch.adoc[opensearch.properties]
 **** xref:configure/rabbitmq.adoc[rabbitmq.properties]
 **** xref:configure/redis.adoc[redis.properties]
 **** xref:configure/tika.adoc[tika.properties]
@@ -64,6 +64,7 @@
 *** xref:extending/mailbox-listeners.adoc[]
 *** xref:extending/smtp-hooks.adoc[]
 *** xref:extending/webadmin-routes.adoc[]
+*** xref:extending/imap.adoc[]
 ** xref:benchmark/index.adoc[Performance benchmark]
 *** xref:benchmark/db-benchmark.adoc[]
 *** xref:benchmark/james-benchmark.adoc[]

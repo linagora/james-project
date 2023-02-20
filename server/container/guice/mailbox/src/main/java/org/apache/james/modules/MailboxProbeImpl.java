@@ -49,6 +49,8 @@ import org.apache.james.mailbox.model.search.Wildcard;
 import org.apache.james.mailbox.probe.MailboxProbe;
 import org.apache.james.utils.GuiceProbe;
 
+import com.google.common.collect.ImmutableList;
+
 import reactor.core.publisher.Flux;
 
 public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
@@ -100,7 +102,6 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
     private void closeSession(MailboxSession session) {
         if (session != null) {
             mailboxManager.endProcessingRequest(session);
-            mailboxManager.logout(session);
         }
     }
 
@@ -183,7 +184,10 @@ public class MailboxProbeImpl implements GuiceProbe, MailboxProbe {
     @Override
     public Collection<String> listSubscriptions(String user) throws Exception {
         MailboxSession mailboxSession = mailboxManager.createSystemSession(Username.of(user));
-        return subscriptionManager.subscriptions(mailboxSession);
+        return subscriptionManager.subscriptions(mailboxSession)
+            .stream()
+            .map(MailboxPath::getName)
+            .collect(ImmutableList.toImmutableList());
     }
 
     @Override

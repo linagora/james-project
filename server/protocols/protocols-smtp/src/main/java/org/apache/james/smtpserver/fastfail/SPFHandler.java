@@ -24,7 +24,6 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.apache.james.core.MailAddress;
 import org.apache.james.core.MaybeSender;
 import org.apache.james.jspf.core.DNSService;
 import org.apache.james.jspf.core.exceptions.SPFErrorConstants;
@@ -40,7 +39,6 @@ import org.apache.james.protocols.smtp.dsn.DSNStatus;
 import org.apache.james.protocols.smtp.hook.HookResult;
 import org.apache.james.protocols.smtp.hook.HookReturnCode;
 import org.apache.james.protocols.smtp.hook.MailHook;
-import org.apache.james.protocols.smtp.hook.RcptHook;
 import org.apache.james.smtpserver.JamesMessageHook;
 import org.apache.mailet.Attribute;
 import org.apache.mailet.AttributeName;
@@ -49,7 +47,7 @@ import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, ProtocolHandler {
+public class SPFHandler implements JamesMessageHook, MailHook, ProtocolHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SPFHandler.class);
 
@@ -77,7 +75,7 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
 
     private boolean blockPermError = true;
 
-    private SPF spf = new DefaultSPF(new SPFLogger(serviceLog));
+    private SPF spf = new DefaultSPF();
 
     /**
      * block the email on a softfail
@@ -107,7 +105,7 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
      */
     @Inject
     public void setDNSService(DNSService dnsService) {
-        spf = new SPF(dnsService, new SPFLogger(serviceLog));
+        spf = new SPF(dnsService);
     }
 
     /**
@@ -155,8 +153,10 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
     }
 
     @Override
-    public HookResult doRcpt(SMTPSession session, MaybeSender sender, MailAddress rcpt) {
+    public HookResult doMail(SMTPSession session, MaybeSender sender) {
         if (!session.isRelayingAllowed()) {
+            doSPFCheck(session, sender);
+
             // Check if session is blocklisted
             if (session.getAttachment(SPF_BLOCKLISTED, State.Transaction).isPresent()) {
 
@@ -173,108 +173,6 @@ public class SPFHandler implements JamesMessageHook, MailHook, RcptHook, Protoco
             }
         }
         return HookResult.DECLINED;
-    }
-
-    @Override
-    public HookResult doMail(SMTPSession session, MaybeSender sender) {
-        doSPFCheck(session, sender);
-        return HookResult.DECLINED;
-    }
-
-    /**
-     * Adapts service log.
-     */
-    public static class SPFLogger implements org.apache.james.jspf.core.Logger {
-
-        private final Logger serviceLog;
-
-        public SPFLogger(Logger serviceLog) {
-            this.serviceLog = serviceLog;
-        }
-
-        public SPFLogger() {
-            this.serviceLog = FALLBACK_LOG;
-        }
-
-        @Override
-        public void debug(String message) {
-            serviceLog.debug(message);
-        }
-
-        @Override
-        public void debug(String message, Throwable t) {
-            serviceLog.debug(message, t);
-        }
-
-        @Override
-        public void error(String message) {
-            serviceLog.error(message);
-        }
-
-        @Override
-        public void error(String message, Throwable t) {
-            serviceLog.error(message, t);
-        }
-
-        @Override
-        public void fatalError(String message) {
-            serviceLog.error(message);
-        }
-
-        @Override
-        public void fatalError(String message, Throwable t) {
-            serviceLog.error(message, t);
-        }
-
-        @Override
-        public void info(String message) {
-            serviceLog.info(message);
-        }
-
-        @Override
-        public void info(String message, Throwable t) {
-            serviceLog.info(message, t);
-        }
-
-        @Override
-        public boolean isDebugEnabled() {
-            return serviceLog.isDebugEnabled();
-        }
-
-        @Override
-        public boolean isErrorEnabled() {
-            return serviceLog.isErrorEnabled();
-        }
-
-        @Override
-        public boolean isFatalErrorEnabled() {
-            return serviceLog.isErrorEnabled();
-        }
-
-        @Override
-        public boolean isInfoEnabled() {
-            return serviceLog.isInfoEnabled();
-        }
-
-        @Override
-        public boolean isWarnEnabled() {
-            return serviceLog.isWarnEnabled();
-        }
-
-        @Override
-        public void warn(String message) {
-            serviceLog.warn(message);
-        }
-
-        @Override
-        public void warn(String message, Throwable t) {
-            serviceLog.warn(message, t);
-        }
-
-        @Override
-        public org.apache.james.jspf.core.Logger getChildLogger(String name) {
-            return this;
-        }
     }
 
     @Override

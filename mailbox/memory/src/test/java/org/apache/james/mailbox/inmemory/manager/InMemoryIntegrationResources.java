@@ -19,6 +19,7 @@
 
 package org.apache.james.mailbox.inmemory.manager;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
@@ -72,6 +73,7 @@ import org.apache.james.mailbox.store.search.ListeningMessageSearchIndex;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.store.search.SimpleMessageSearchIndex;
 import org.apache.james.metrics.tests.RecordingMetricFactory;
+import org.apache.james.utils.UpdatableTickingClock;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -292,7 +294,8 @@ public class InMemoryIntegrationResources implements IntegrationResources<StoreM
             Preconditions.checkState(searchIndexFactory.isPresent());
             Preconditions.checkState(messageParser.isPresent());
 
-            InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory();
+            UpdatableTickingClock clock = new UpdatableTickingClock(Instant.now());
+            InMemoryMailboxSessionMapperFactory mailboxSessionMapperFactory = new InMemoryMailboxSessionMapperFactory(clock);
 
             EventBus eventBus = this.eventBus.get();
             StoreRightManager storeRightManager = new StoreRightManager(mailboxSessionMapperFactory, new UnionMailboxACLResolver(), eventBus);
@@ -334,7 +337,8 @@ public class InMemoryIntegrationResources implements IntegrationResources<StoreM
                 quotaComponents,
                 index,
                 hooks,
-                threadIdGuessingAlgorithm);
+                threadIdGuessingAlgorithm,
+                clock);
 
             eventBus.register(listeningCurrentQuotaUpdater);
             eventBus.register(new MailboxAnnotationListener(mailboxSessionMapperFactory, sessionProvider));
