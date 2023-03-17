@@ -24,13 +24,16 @@ import static io.restassured.RestAssured.when;
 import static io.restassured.RestAssured.with;
 import static org.apache.james.JamesServerExtension.Lifecycle.PER_CLASS;
 import static org.apache.james.webadmin.Constants.JSON_CONTENT_TYPE;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+
+import java.util.List;
 
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraRabbitMQJamesConfiguration;
 import org.apache.james.CassandraRabbitMQJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.JamesServerBuilder;
 import org.apache.james.JamesServerExtension;
 import org.apache.james.SearchConfiguration;
@@ -40,6 +43,7 @@ import org.apache.james.modules.AwsS3BlobStoreExtension;
 import org.apache.james.modules.RabbitMQExtension;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
 import org.apache.james.webadmin.integration.WebAdminServerIntegrationImmutableTest;
+import org.apache.james.webadmin.routes.HealthCheckRoutes;
 import org.apache.james.webadmin.routes.TasksRoutes;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.Tag;
@@ -59,9 +63,9 @@ class RabbitMQWebAdminServerIntegrationImmutableTest extends WebAdminServerInteg
                     .disableCache()
                     .deduplication()
                     .noCryptoConfig())
-            .searchConfiguration(SearchConfiguration.elasticSearch())
+            .searchConfiguration(SearchConfiguration.openSearch())
             .build())
-        .extension(new DockerElasticSearchExtension())
+        .extension(new DockerOpenSearchExtension())
         .extension(new CassandraExtension())
         .extension(new AwsS3BlobStoreExtension())
         .extension(new RabbitMQExtension())
@@ -116,5 +120,24 @@ class RabbitMQWebAdminServerIntegrationImmutableTest extends WebAdminServerInteg
             .body("additionalInformation.runningOptions.messagesPerSecond", is(100))
             .body("additionalInformation.fixedInconsistencies", hasSize(0))
             .body("additionalInformation.errors", hasSize(0));
+    }
+
+    @Test
+    void healthCheckComponentsList() {
+        List<String> listComponentNames =
+            when()
+                .get(HealthCheckRoutes.HEALTHCHECK)
+            .then()
+                .statusCode(HttpStatus.OK_200)
+                .extract()
+                .body()
+                .jsonPath()
+                .getList("checks.componentName", String.class);
+
+        assertThat(listComponentNames).containsOnly("Guice application lifecycle", "EmptyErrorMailRepository",
+            "RabbitMQ backend", "RabbitMQMailQueueDeadLetterQueueHealthCheck",
+            "RabbitMQEventBusDeadLetterQueueHealthCheck", "MailReceptionCheck",
+            "Cassandra backend", "EventDeadLettersHealthCheck", "MessageFastViewProjection",
+            "RabbitMQMailQueue BrowseStart", "OpenSearch Backend");
     }
 }

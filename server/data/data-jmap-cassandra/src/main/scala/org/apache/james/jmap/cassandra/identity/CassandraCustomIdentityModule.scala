@@ -19,30 +19,30 @@
 
 package org.apache.james.jmap.cassandra.identity
 
-import com.datastax.driver.core.DataType.{cboolean, text, uuid}
-import com.datastax.driver.core.schemabuilder.SchemaBuilder
+import com.datastax.oss.driver.api.core.`type`.DataTypes.{BOOLEAN, INT, TEXT, UUID, frozenSetOf}
 import org.apache.james.backends.cassandra.components.CassandraModule
 import org.apache.james.jmap.cassandra.identity.tables.CassandraCustomIdentityTable
-import org.apache.james.jmap.cassandra.identity.tables.CassandraCustomIdentityTable.{BCC, EMAIL, EMAIL_ADDRESS, EmailAddress, HTML_SIGNATURE, ID, MAY_DELETE, NAME, REPLY_TO, TEXT_SIGNATURE, USER}
+import org.apache.james.jmap.cassandra.identity.tables.CassandraCustomIdentityTable.{BCC, EMAIL, EMAIL_ADDRESS, EmailAddress, HTML_SIGNATURE, ID, MAY_DELETE, NAME, REPLY_TO, SORT_ORDER, TEXT_SIGNATURE, USER}
 
 object CassandraCustomIdentityModule {
   val MODULE: CassandraModule = CassandraModule.builder()
-    .`type`(EMAIL_ADDRESS)
+    .`type`(EMAIL_ADDRESS.asCql(true))
     .statement(statement => statement
-      .addColumn(EmailAddress.NAME, text())
-      .addColumn(EmailAddress.EMAIL, text()))
+      .withField(EmailAddress.NAME, TEXT)
+      .withField(EmailAddress.EMAIL, TEXT))
 
     .table(CassandraCustomIdentityTable.TABLE_NAME)
     .comment("Hold user custom identities data following JMAP RFC-8621 Identity concept")
-    .statement(statement => statement
-      .addPartitionKey(USER, text())
-      .addClusteringColumn(ID, uuid())
-      .addColumn(NAME, text())
-      .addColumn(EMAIL, text())
-      .addUDTSetColumn(REPLY_TO, SchemaBuilder.frozen(EMAIL_ADDRESS))
-      .addUDTSetColumn(BCC, SchemaBuilder.frozen(EMAIL_ADDRESS))
-      .addColumn(TEXT_SIGNATURE, text())
-      .addColumn(HTML_SIGNATURE, text())
-      .addColumn(MAY_DELETE, cboolean()))
+    .statement(statement => types => statement
+      .withPartitionKey(USER, TEXT)
+      .withClusteringColumn(ID, UUID)
+      .withColumn(NAME, TEXT)
+      .withColumn(EMAIL, TEXT)
+      .withColumn(REPLY_TO, frozenSetOf(types.getDefinedUserType(EMAIL_ADDRESS.asCql(true))))
+      .withColumn(BCC, frozenSetOf(types.getDefinedUserType(EMAIL_ADDRESS.asCql(true))))
+      .withColumn(TEXT_SIGNATURE, TEXT)
+      .withColumn(HTML_SIGNATURE, TEXT)
+      .withColumn(SORT_ORDER, INT)
+      .withColumn(MAY_DELETE, BOOLEAN))
     .build()
 }

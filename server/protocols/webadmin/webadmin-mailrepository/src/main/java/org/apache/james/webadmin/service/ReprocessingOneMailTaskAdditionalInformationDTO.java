@@ -27,10 +27,14 @@ import org.apache.james.mailrepository.api.MailRepositoryPath;
 import org.apache.james.queue.api.MailQueueName;
 import org.apache.james.server.task.json.dto.AdditionalInformationDTO;
 import org.apache.james.server.task.json.dto.AdditionalInformationDTOModule;
+import org.apache.james.util.streams.Limit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ReprocessingOneMailTaskAdditionalInformationDTO implements AdditionalInformationDTO {
+
+    public static final Optional<Integer> NO_MAX_RETRIES = Optional.empty();
+
     public static AdditionalInformationDTOModule<ReprocessingOneMailTask.AdditionalInformation, ReprocessingOneMailTaskAdditionalInformationDTO> module() {
         return DTOModule.forDomainObject(ReprocessingOneMailTask.AdditionalInformation.class)
             .convertToDTO(ReprocessingOneMailTaskAdditionalInformationDTO.class)
@@ -39,7 +43,9 @@ public class ReprocessingOneMailTaskAdditionalInformationDTO implements Addition
                 new ReprocessingService.Configuration(
                     MailQueueName.of(dto.targetQueue),
                     dto.targetProcessor,
-                    dto.isConsume()),
+                    NO_MAX_RETRIES,
+                    dto.isConsume(),
+                    Limit.unlimited()),
                 new MailKey(dto.mailKey),
                 dto.timestamp))
             .toDTOConverter((details, type) -> new ReprocessingOneMailTaskAdditionalInformationDTO(

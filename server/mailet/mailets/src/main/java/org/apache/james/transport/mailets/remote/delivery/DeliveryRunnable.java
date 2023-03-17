@@ -68,7 +68,8 @@ public class DeliveryRunnable implements Disposable {
     private final Supplier<Date> dateSupplier;
     private final MailetContext mailetContext;
     private Disposable disposable;
-    private Scheduler remoteDeliveryScheduler;
+    private Scheduler remoteDeliveryProcessScheduler;
+    private Scheduler remoteDeliveryDequeueScheduler;
 
     public DeliveryRunnable(MailQueue queue, RemoteDeliveryConfiguration configuration, DNSService dnsServer, MetricFactory metricFactory,
                             MailetContext mailetContext, Bouncer bouncer) {
@@ -91,11 +92,12 @@ public class DeliveryRunnable implements Disposable {
     }
 
     public void start() {
-        remoteDeliveryScheduler = Schedulers.newBoundedElastic(Schedulers.DEFAULT_BOUNDED_ELASTIC_SIZE, Schedulers.DEFAULT_BOUNDED_ELASTIC_QUEUESIZE, "RemoteDelivery");
+        remoteDeliveryProcessScheduler = Schedulers.newBoundedElastic(Schedulers.DEFAULT_BOUNDED_ELASTIC_SIZE, Schedulers.DEFAULT_BOUNDED_ELASTIC_QUEUESIZE, "RemoteDelivery-Process");
+        remoteDeliveryDequeueScheduler = Schedulers.newSingle("RemoteDelivery-Dequeue");
         disposable = Flux.from(queue.deQueue())
-            .flatMap(queueItem -> runStep(queueItem).subscribeOn(remoteDeliveryScheduler), Queues.SMALL_BUFFER_SIZE)
+            .flatMap(queueItem -> runStep(queueItem).subscribeOn(remoteDeliveryProcessScheduler), Queues.SMALL_BUFFER_SIZE)
             .onErrorContinue(((throwable, nothing) -> LOGGER.error("Exception caught in RemoteDelivery", throwable)))
-            .subscribeOn(remoteDeliveryScheduler)
+            .subscribeOn(remoteDeliveryDequeueScheduler)
             .subscribe();
     }
 
@@ -118,7 +120,7 @@ public class DeliveryRunnable implements Disposable {
                         .build()) {
                 LOGGER.debug("will process mail {}", mail.getName());
                 attemptDelivery(mail);
-                queueItem.done(true);
+                queueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
                 sink.success();
             } catch (Exception e) {
                 try {
@@ -126,7 +128,7 @@ public class DeliveryRunnable implements Disposable {
                     // DO NOT CHANGE THIS to catch Error!
                     // For example, if there were an OutOfMemory condition caused because
                     // something else in the server was abusing memory, we would not want to start purging the retrying spool!
-                    queueItem.done(false);
+                    queueItem.done(MailQueue.MailQueueItem.CompletionStatus.RETRY);
                 } catch (Exception ex) {
                     sink.error(ex);
                     return;
@@ -145,7 +147,7 @@ public class DeliveryRunnable implements Disposable {
             case SUCCESS:
                 outgoingMailsMetric.increment();
                 configuration.getOnSuccess()
-                    .ifPresent(Throwing.consumer(onSuccess -> mailetContext.sendMail(mail, onSuccess)));
+                    .ifPresent(Throwing.consumer(onSuccess -> mailetContext.sendMail(mail, onSuccess.getValue())));
                 break;
             case TEMPORARY_FAILURE:
                 handleTemporaryFailure(mail, executionResult);
@@ -202,6 +204,10 @@ public class DeliveryRunnable implements Disposable {
     @Override
     public void dispose() {
         disposable.dispose();
-        remoteDeliveryScheduler.dispose();
+        remoteDeliveryDequeueScheduler.dispose();
+        remoteDeliveryProcessScheduler.disposeGracefully()
+            .timeout(Duration.ofSeconds(2))
+            .onErrorResume(e -> Mono.empty())
+            .block();
     }
 }

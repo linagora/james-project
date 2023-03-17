@@ -99,7 +99,9 @@ class SubscribeAllRequestToTaskTest {
     void setUp() throws Exception {
         InMemoryIntegrationResources inMemoryIntegrationResources = InMemoryIntegrationResources.defaultResources();
         mailboxManager = inMemoryIntegrationResources.getMailboxManager();
-        subscriptionManager = new StoreSubscriptionManager(inMemoryIntegrationResources.getMailboxManager().getMapperFactory());
+        subscriptionManager = new StoreSubscriptionManager(inMemoryIntegrationResources.getMailboxManager().getMapperFactory(),
+            inMemoryIntegrationResources.getMailboxManager().getMapperFactory(),
+            inMemoryIntegrationResources.getMailboxManager().getEventBus());
         DomainList domainList = mock(DomainList.class);
         Mockito.when(domainList.containsDomain(any())).thenReturn(true);
         MemoryUsersRepository usersRepository = MemoryUsersRepository.withVirtualHosting(domainList);
@@ -249,12 +251,12 @@ class SubscribeAllRequestToTaskTest {
             .body("submitDate", is(notNullValue()))
             .body("completedDate", is(notNullValue()));
 
-        assertThat(subscriptionManager.subscriptions(session)).containsOnly("INBOX");
+        assertThat(subscriptionManager.subscriptions(session)).containsOnly(MailboxPath.inbox(BOB));
     }
 
     @Test
     void subscribeAllMailboxesShouldUnregisterAdditionalMailbox() throws Exception {
-        subscriptionManager.subscribe(session, "any");
+        subscriptionManager.subscribe(session, MailboxPath.forUser(BOB, "any"));
 
         String taskId = with()
             .queryParam("action", "subscribeAll")

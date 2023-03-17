@@ -50,6 +50,11 @@ public abstract class AbstractAuthProcessor<R extends ImapRequest> extends Abstr
 
     // TODO: this should be configurable
     private static final int MAX_FAILURES = 3;
+
+    @FunctionalInterface
+    protected interface MailboxSessionAuthWithDelegationSupplier {
+        MailboxSession get() throws MailboxException;
+    }
     
     public AbstractAuthProcessor(Class<R> acceptableClass, MailboxManager mailboxManager, StatusResponseFactory factory,
                                  MetricFactory metricFactory) {
@@ -66,12 +71,14 @@ public abstract class AbstractAuthProcessor<R extends ImapRequest> extends Abstr
             if (!authFailure) {
                 final MailboxManager mailboxManager = getMailboxManager();
                 try {
-                    final MailboxSession mailboxSession = mailboxManager.login(authenticationAttempt.getAuthenticationId(),
-                        authenticationAttempt.getPassword());
+                    final MailboxSession mailboxSession = mailboxManager.authenticate(authenticationAttempt.getAuthenticationId(),
+                        authenticationAttempt.getPassword())
+                        .withoutDelegation();
                     session.authenticated();
                     session.setMailboxSession(mailboxSession);
                     provisionInbox(session, mailboxManager, mailboxSession);
                     okComplete(request, responder);
+                    responder.flush();
                     session.stopDetectingCommandInjection();
                 } catch (BadCredentialsException e) {
                     authFailure = true;
@@ -83,40 +90,41 @@ public abstract class AbstractAuthProcessor<R extends ImapRequest> extends Abstr
         } catch (MailboxException e) {
             LOGGER.error("Error encountered while login", e);
             no(request, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
+            responder.flush();
         }
     }
 
-    protected void doAuthWithDelegation(AuthenticationAttempt authenticationAttempt, ImapSession session, ImapRequest request, Responder responder, HumanReadableText failed) {
+    protected void doAuthWithDelegation(AuthenticationAttempt authenticationAttempt, ImapSession session, ImapRequest request, Responder responder) {
         Preconditions.checkArgument(authenticationAttempt.isDelegation());
         Username givenUser = authenticationAttempt.getAuthenticationId();
-        Username otherUser = authenticationAttempt.getDelegateUserName().get();
+        if (givenUser == null) {
+            manageFailureCount(session, request, responder);
+            return;
+        }
+        Username otherUser = authenticationAttempt.getDelegateUserName().orElseThrow();
+        doAuthWithDelegation(() -> getMailboxManager()
+                .authenticate(givenUser, authenticationAttempt.getPassword())
+                .as(otherUser),
+            session,
+            request, responder);
+    }
+
+    protected void doAuthWithDelegation(MailboxSessionAuthWithDelegationSupplier mailboxSessionSupplier,
+                                        ImapSession session, ImapRequest request, Responder responder) {
         try {
-            boolean authFailure = false;
-            if (givenUser == null) {
-                authFailure = true;
-            }
-            if (!authFailure) {
-                final MailboxManager mailboxManager = getMailboxManager();
-                try {
-                    final MailboxSession mailboxSession = mailboxManager.loginAsOtherUser(givenUser,
-                        authenticationAttempt.getPassword(),
-                        otherUser);
-                    session.authenticated();
-                    session.setMailboxSession(mailboxSession);
-                    provisionInbox(session, mailboxManager, mailboxSession);
-                    okComplete(request, responder);
-                } catch (BadCredentialsException e) {
-                    authFailure = true;
-                }
-            }
-            if (authFailure) {
-                manageFailureCount(session, request, responder, failed);
-            }
+            final MailboxManager mailboxManager = getMailboxManager();
+            final MailboxSession mailboxSession = mailboxSessionSupplier.get();
+            session.authenticated();
+            session.setMailboxSession(mailboxSession);
+            okComplete(request, responder);
+            provisionInbox(session, mailboxManager, mailboxSession);
+        } catch (BadCredentialsException e) {
+            manageFailureCount(session, request, responder);
         } catch (UserDoesNotExistException e) {
-            LOGGER.info("User {} does not exist", otherUser, e);
+            LOGGER.info("User does not exist", e);
             no(request, responder, HumanReadableText.USER_DOES_NOT_EXIST);
         } catch (ForbiddenDelegationException e) {
-            LOGGER.info("User {} is not delegated by {}", givenUser, otherUser, e);
+            LOGGER.info("Delegate forbidden", e);
             no(request, responder, HumanReadableText.DELEGATION_FORBIDDEN);
         } catch (MailboxException e) {
             LOGGER.info("Login failed", e);
@@ -124,14 +132,13 @@ public abstract class AbstractAuthProcessor<R extends ImapRequest> extends Abstr
         }
     }
 
-    private void provisionInbox(ImapSession session, MailboxManager mailboxManager, MailboxSession mailboxSession) throws MailboxException {
+    protected void provisionInbox(ImapSession session, MailboxManager mailboxManager, MailboxSession mailboxSession) throws MailboxException {
         final MailboxPath inboxPath = PathConverter.forSession(session).buildFullPath(MailboxConstants.INBOX);
         if (Mono.from(mailboxManager.mailboxExists(inboxPath, mailboxSession)).block()) {
             LOGGER.debug("INBOX exists. No need to create it.");
         } else {
             try {
-                mailboxManager
-                    .createMailbox(inboxPath, mailboxSession)
+                mailboxManager.createMailbox(inboxPath, MailboxManager.CreateOption.CREATE_SUBSCRIPTION, mailboxSession)
                     .ifPresentOrElse(
                         id -> LOGGER.info("Provisioning INBOX. {} created.", id),
                         () -> LOGGER.warn("Provisioning INBOX successful. But no MailboxId have been returned."));
@@ -139,6 +146,10 @@ public abstract class AbstractAuthProcessor<R extends ImapRequest> extends Abstr
                 LOGGER.warn("Mailbox INBOX created by concurrent call. Safe to ignore this exception.");
             }
         }
+    }
+
+    protected void manageFailureCount(ImapSession session, ImapRequest request, Responder responder) {
+        manageFailureCount(session, request, responder, HumanReadableText.AUTHENTICATION_FAILED);
     }
 
     protected void manageFailureCount(ImapSession session, ImapRequest request, Responder responder, HumanReadableText failed) {

@@ -41,9 +41,11 @@ import org.apache.james.modules.DistributedTaskSerializationModule;
 import org.apache.james.modules.MailboxModule;
 import org.apache.james.modules.MailetProcessingModule;
 import org.apache.james.modules.Pop3FixInconsistenciesWebAdminModule;
+import org.apache.james.modules.TasksCleanupTaskSerializationModule;
 import org.apache.james.modules.blobstore.BlobStoreCacheModulesChooser;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
 import org.apache.james.modules.blobstore.BlobStoreModulesChooser;
+import org.apache.james.modules.data.CassandraDelegationStoreModule;
 import org.apache.james.modules.data.CassandraDomainListModule;
 import org.apache.james.modules.data.CassandraJmapModule;
 import org.apache.james.modules.data.CassandraRecipientRewriteTableModule;
@@ -70,7 +72,6 @@ import org.apache.james.modules.queue.rabbitmq.MailQueueViewChoice;
 import org.apache.james.modules.queue.rabbitmq.RabbitMQModule;
 import org.apache.james.modules.server.DKIMMailetModule;
 import org.apache.james.modules.server.DataRoutesModules;
-import org.apache.james.modules.server.ElasticSearchMetricReporterModule;
 import org.apache.james.modules.server.InconsistencyQuotasSolvingRoutesModule;
 import org.apache.james.modules.server.JMXServerModule;
 import org.apache.james.modules.server.MailQueueRoutesModule;
@@ -79,6 +80,7 @@ import org.apache.james.modules.server.MailboxRoutesModule;
 import org.apache.james.modules.server.MailboxesExportRoutesModule;
 import org.apache.james.modules.server.MessagesRoutesModule;
 import org.apache.james.modules.server.RabbitMailQueueRoutesModule;
+import org.apache.james.modules.server.UserIdentityModule;
 import org.apache.james.modules.server.VacationRoutesModule;
 import org.apache.james.modules.server.WebAdminMailOverWebModule;
 import org.apache.james.modules.server.WebAdminReIndexingTaskSerializationModule;
@@ -86,6 +88,8 @@ import org.apache.james.modules.server.WebAdminServerModule;
 import org.apache.james.modules.vault.DeletedMessageVaultRoutesModule;
 import org.apache.james.modules.webadmin.CassandraRoutesModule;
 import org.apache.james.modules.webadmin.InconsistencySolvingRoutesModule;
+import org.apache.james.modules.webadmin.TasksCleanupRoutesModule;
+import org.apache.james.vault.VaultConfiguration;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Module;
@@ -99,7 +103,6 @@ public class DistributedPOP3JamesServerMain implements JamesServerMain {
         new CassandraRoutesModule(),
         new DataRoutesModules(),
         new VacationRoutesModule(),
-        new DeletedMessageVaultRoutesModule(),
         new InconsistencyQuotasSolvingRoutesModule(),
         new InconsistencySolvingRoutesModule(),
         new MailboxesExportRoutesModule(),
@@ -110,7 +113,9 @@ public class DistributedPOP3JamesServerMain implements JamesServerMain {
         new WebAdminReIndexingTaskSerializationModule(),
         new MessagesRoutesModule(),
         new Pop3FixInconsistenciesWebAdminModule(),
-        new WebAdminMailOverWebModule());
+        new TasksCleanupRoutesModule(),
+        new WebAdminMailOverWebModule(),
+        new UserIdentityModule());
 
     public static final Module PROTOCOLS = Modules.combine(
         new LMTPServerModule(),
@@ -131,9 +136,9 @@ public class DistributedPOP3JamesServerMain implements JamesServerMain {
 
     public static final Module CASSANDRA_SERVER_CORE_MODULE = Modules.combine(
         new CassandraBlobStoreDependenciesModule(),
+        new CassandraDelegationStoreModule(),
         new CassandraDomainListModule(),
         new CassandraEventStoreModule(),
-        new CassandraDeletedMessageVaultModule(),
         new CassandraJmapModule(),
         new CassandraMailRepositoryModule(),
         new CassandraMetricsModule(),
@@ -141,7 +146,7 @@ public class DistributedPOP3JamesServerMain implements JamesServerMain {
         new CassandraSessionModule(),
         new CassandraSieveRepositoryModule(),
         new CassandraVacationModule(),
-        new ElasticSearchMetricReporterModule(),
+        new TasksCleanupTaskSerializationModule(),
         BLOB_MODULE,
         CASSANDRA_EVENT_STORE_JSON_SERIALIZATION_DEFAULT_MODULE);
 
@@ -198,6 +203,18 @@ public class DistributedPOP3JamesServerMain implements JamesServerMain {
                 binder.bind(UidProvider.class).to(RandomUidProvider.class);
                 binder.bind(RandomModSeqProvider.class).in(Scopes.SINGLETON);
                 binder.bind(ModSeqProvider.class).to(RandomModSeqProvider.class);
-            });
+            })
+            .combineWith(chooseDeletedMessageVault(configuration.getVaultConfiguration()));
+    }
+
+    private static Module chooseDeletedMessageVault(VaultConfiguration vaultConfiguration) {
+        if (vaultConfiguration.isEnabled()) {
+            return Modules.combine(
+                new CassandraDeletedMessageVaultModule(),
+                new DeletedMessageVaultRoutesModule());
+        }
+        return binder -> {
+
+        };
     }
 }

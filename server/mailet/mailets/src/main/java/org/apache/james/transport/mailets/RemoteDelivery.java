@@ -22,6 +22,7 @@ package org.apache.james.transport.mailets;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.mail.MessagingException;
@@ -39,11 +40,13 @@ import org.apache.james.transport.mailets.remote.delivery.Bouncer;
 import org.apache.james.transport.mailets.remote.delivery.DeliveryRunnable;
 import org.apache.james.transport.mailets.remote.delivery.RemoteDeliveryConfiguration;
 import org.apache.mailet.Mail;
+import org.apache.mailet.ProcessingState;
 import org.apache.mailet.base.GenericMailet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 
 /**
  * <p>The RemoteDelivery mailet delivers messages to a remote SMTP server able to deliver or forward messages to their final
@@ -92,6 +95,10 @@ import com.google.common.collect.HashMultimap;
  * <li><b>sslEnable</b> (optional) - a Boolean (true/false) indicating whether to use SSL to connect and use the SSL port unless
  * explicitly overridden. Default is false. The trust-store if needed can be customized by
  * <strong>-Djavax.net.ssl.trustStore=/root/conf/keystore</strong>.</li>
+ * <li><b>verifyServerIdentity</b> (optional) - a Boolean (true/false) indicating whether to match the remote server name against its
+ * certificate on TLS connections. Default is true. Disabling this runs the risk of someone spoofing a legitimate server and intercepting
+ * mails, but may be necessary to contact servers that have strange certificates, no DNS entries, are reachable by IP address only,
+ * and similar edge cases.</li>
  * <li><b>gateway</b> (optional) - a String containing a comma separated list of patterns defining the gateway servers to be used to
  * deliver mail regardless of the recipient address. If multiple gateway servers are defined, each will be tried in definition order
  * until delivery is successful. If none are successful, the mail is bounced. The pattern is <code>host[:port]</code> where:
@@ -122,14 +129,17 @@ import com.google.common.collect.HashMultimap;
  * </ul>
  * <br/>
  * <b>Security:</b><br/>
- * You can use the <i>mail.smtp.ssl.enable</i> javax property described above to force SMTP outgoing delivery to default to SSL
- * encrypted traffic. <br/>
- * When enabling SSL, you might need to specify <i>mail.smtp.ssl.checkserveridentity</i> and <i>mail.smtp.ssl.trust</i>
- * properties. You can also control ciphersuites and protocols via <i>mail.smtp.ssl.ciphersuites</i> and
- * <i>mail.smtp.ssl.protocols</i> properties.<br/>
- * <b>startTls</b> can alternatively be enabled upon sending a mail. For this, use the <i>startTls</i> configuration property, serving as a shortcut for
+ * You can use the <b>sslEnable</b> parameter described above to force SMTP outgoing delivery to default to SSL encrypted traffic (SMTPS).
+ * This is a shortcut for the <i>mail.smtps.ssl.enable</i> javax property.<br/>
+ * When enabling SSL, you might need to specify the <i>mail.smtps.ssl.trust</i> property as well.
+ * You can also control ciphersuites and protocols via *mail.smtps.ssl.ciphersuites* and 
+ * <b>mail.smtps.ssl.protocols</b> properties.<br/>
+ * StartTLS can alternatively be enabled upon sending a mail. For this, use the <b>startTls</b> parameter, serving as a shortcut for the
  * javax <i>mail.smtp.starttls.enable</i> property. Depending on how strict your security policy is, you might consider
- * <i>mail.smtp.starttls.required</i> as well. Be aware that configuring trust will then be required.<br/>
+ * <i>mail.smtp.starttls.required</i> as well. Be aware that configuring trust will then be required.
+ * You can also use other javax properties for StartTLS, but their property prefix must be <i>mail.smtp.ssl.</i> in this case.<br/> 
+ * James enables server identity verification by default. In certain rare edge cases you might disable it via the <b>verifyServerIdentity</b> parameter,
+ * or use the <i>mail.smtps.ssl.checkserveridentity</i> and <i>mail.smtp.ssl.checkserveridentity</i> javax properties for fine control.<br/>
  * Read <a href="https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html"><code>com.sun.mail.smtp</code></a>
  * for full information.
  */
@@ -206,18 +216,14 @@ public class RemoteDelivery extends GenericMailet {
         mail.setState(Mail.GHOST);
     }
 
-    private void serviceWithGateway(Mail mail) {
+    private void serviceWithGateway(Mail mail) throws MailQueueException {
         if (configuration.isDebug()) {
             LOGGER.debug("Sending mail to {} via {}", mail.getRecipients(), configuration.getGatewayServer());
         }
-        try {
-            queue.enQueue(mail);
-        } catch (MailQueueException e) {
-            LOGGER.error("Unable to queue mail {} for recipients {}", mail.getName(), mail.getRecipients(), e);
-        }
+        queue.enQueue(mail);
     }
 
-    private void serviceNoGateway(Mail mail) {
+    private void serviceNoGateway(Mail mail) throws MailQueueException {
         String mailName = mail.getName();
         Map<Domain, Collection<MailAddress>> targets = groupByServer(mail.getRecipients());
         for (Map.Entry<Domain, Collection<MailAddress>> entry : targets.entrySet()) {
@@ -225,17 +231,14 @@ public class RemoteDelivery extends GenericMailet {
         }
     }
 
-    private void serviceSingleServer(Mail mail, String originalName, Map.Entry<Domain, Collection<MailAddress>> entry) {
+    private void serviceSingleServer(Mail mail, String originalName, Map.Entry<Domain, Collection<MailAddress>> entry) throws MailQueueException {
         if (configuration.isDebug()) {
             LOGGER.debug("Sending mail to {} on host {}", entry.getValue(), entry.getKey());
         }
         mail.setRecipients(entry.getValue());
         mail.setName(originalName + NAME_JUNCTION + entry.getKey().name());
-        try {
-            queue.enQueue(mail);
-        } catch (MailQueueException e) {
-            LOGGER.error("Unable to queue mail {} for recipients {}", mail.getName(), mail.getRecipients(), e);
-        }
+
+        queue.enQueue(mail);
     }
 
     private Map<Domain, Collection<MailAddress>> groupByServer(Collection<MailAddress> recipients) {
@@ -253,7 +256,7 @@ public class RemoteDelivery extends GenericMailet {
      * service.
      */
     @Override
-    public synchronized void destroy() {
+    public void destroy() {
         if (startThreads == ThreadState.START_THREADS) {
             deliveryRunnable.dispose();
         }
@@ -264,4 +267,11 @@ public class RemoteDelivery extends GenericMailet {
         }
     }
 
+    @Override
+    public Collection<ProcessingState> requiredProcessingState() {
+        return Stream.of(configuration.getBounceProcessor().stream(),
+                configuration.getOnSuccess().stream())
+            .flatMap(x -> x)
+            .collect(ImmutableList.toImmutableList());
+    }
 }

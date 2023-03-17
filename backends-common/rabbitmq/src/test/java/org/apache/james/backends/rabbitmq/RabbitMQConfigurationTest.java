@@ -455,6 +455,66 @@ class RabbitMQConfigurationTest {
             .isInstanceOf(ConversionException.class);
     }
 
+    @Test
+    void fromShouldReturnEmptyVhostValueByDefault() {
+        PropertiesConfiguration configuration = new PropertiesConfiguration();
+        String amqpUri = "amqp://james:james@rabbitmqhost:5672";
+        configuration.addProperty("uri", amqpUri);
+        String managementUri = "http://james:james@rabbitmqhost:15672/api/";
+        configuration.addProperty("management.uri", managementUri);
+        configuration.addProperty("management.user", DEFAULT_USER);
+        configuration.addProperty("management.password", DEFAULT_PASSWORD_STRING);
+
+        assertThat(RabbitMQConfiguration.from(configuration).getVhost())
+            .isEqualTo(Optional.empty());
+    }
+
+    @Test
+    void fromShouldReturnVhostValueWhenGiven() {
+        PropertiesConfiguration configuration = new PropertiesConfiguration();
+        String amqpUri = "amqp://james:james@rabbitmqhost:5672";
+        configuration.addProperty("uri", amqpUri);
+        String managementUri = "http://james:james@rabbitmqhost:15672/api/";
+        configuration.addProperty("management.uri", managementUri);
+        configuration.addProperty("management.user", DEFAULT_USER);
+        configuration.addProperty("management.password", DEFAULT_PASSWORD_STRING);
+
+        configuration.addProperty("vhost", "test");
+
+        assertThat(RabbitMQConfiguration.from(configuration).getVhost())
+            .isEqualTo(Optional.of("test"));
+    }
+
+    @Test
+    void fromShouldReturnVhostValueWhenDeclaredInURI() {
+        PropertiesConfiguration configuration = new PropertiesConfiguration();
+        String amqpUri = "amqp://james:james@rabbitmqhost:5672/test";
+        configuration.addProperty("uri", amqpUri);
+        String managementUri = "http://james:james@rabbitmqhost:15672/api/";
+        configuration.addProperty("management.uri", managementUri);
+        configuration.addProperty("management.user", DEFAULT_USER);
+        configuration.addProperty("management.password", DEFAULT_PASSWORD_STRING);
+
+        assertThat(RabbitMQConfiguration.from(configuration).getVhost())
+            .isEqualTo(Optional.of("test"));
+    }
+
+    @Test
+    void fromShouldReturnVhostValueWhenGivenAndNotUriOne() {
+        PropertiesConfiguration configuration = new PropertiesConfiguration();
+        String amqpUri = "amqp://james:james@rabbitmqhost:5672/test";
+        configuration.addProperty("uri", amqpUri);
+        String managementUri = "http://james:james@rabbitmqhost:15672/api/";
+        configuration.addProperty("management.uri", managementUri);
+        configuration.addProperty("management.user", DEFAULT_USER);
+        configuration.addProperty("management.password", DEFAULT_PASSWORD_STRING);
+
+        configuration.addProperty("vhost", "vhosttest");
+
+        assertThat(RabbitMQConfiguration.from(configuration).getVhost())
+            .isEqualTo(Optional.of("vhosttest"));
+    }
+
     @Nested
     class ManagementCredentialsTest {
         @Test

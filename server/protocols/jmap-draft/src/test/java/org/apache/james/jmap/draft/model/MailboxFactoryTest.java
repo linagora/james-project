@@ -38,6 +38,7 @@ import org.apache.james.mailbox.model.MailboxCounters;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
+import org.apache.james.mailbox.model.UidValidity;
 import org.apache.james.mailbox.model.search.MailboxQuery;
 import org.apache.james.mailbox.quota.QuotaManager;
 import org.apache.james.mailbox.quota.QuotaRootResolver;
@@ -71,8 +72,8 @@ public class MailboxFactoryTest {
 
         user = ManagerTestProvisionner.USER;
         otherUser = OTHER_USER;
-        mailboxSession = mailboxManager.login(user, ManagerTestProvisionner.USER_PASS);
-        otherMailboxSession = mailboxManager.login(otherUser, ManagerTestProvisionner.OTHER_USER_PASS);
+        mailboxSession = mailboxManager.authenticate(user, ManagerTestProvisionner.USER_PASS).withoutDelegation();
+        otherMailboxSession = mailboxManager.authenticate(otherUser, ManagerTestProvisionner.OTHER_USER_PASS).withoutDelegation();
         sut = new MailboxFactory(mailboxManager, quotaManager, quotaRootResolver);
     }
 
@@ -179,8 +180,9 @@ public class MailboxFactoryTest {
 
         mailboxManager.createMailbox(mailboxPath, mailboxSession);
 
+        org.apache.james.mailbox.model.Mailbox mailbox = new org.apache.james.mailbox.model.Mailbox(parentMailboxPath, UidValidity.of(34), parentId);
         Optional<MailboxId> id = sut.getParentIdFromMailboxPath(mailboxPath,
-            Optional.of(ImmutableList.of(new MailboxMetaData(parentMailboxPath, parentId, DELIMITER,
+            Optional.of(ImmutableMap.of(parentMailboxPath, new MailboxMetaData(mailbox, DELIMITER,
                 MailboxMetaData.Children.CHILDREN_ALLOWED_BUT_UNKNOWN, MailboxMetaData.Selectability.NONE, new MailboxACL(),
                 MailboxCounters.empty(parentId)))),
             mailboxSession).block();
@@ -205,16 +207,15 @@ public class MailboxFactoryTest {
     @Test
     public void buildShouldRelyOnPreloadedMailboxes() throws Exception {
         MailboxPath inbox = MailboxPath.inbox(user);
-        Optional<MailboxId> inboxId = mailboxManager.createMailbox(inbox, mailboxSession);
         Optional<MailboxId> otherId = mailboxManager.createMailbox(inbox.child("child", '.'), mailboxSession);
 
         InMemoryId preLoadedId = InMemoryId.of(45);
+        final org.apache.james.mailbox.model.Mailbox mailbox = new org.apache.james.mailbox.model.Mailbox(inbox, UidValidity.of(34), preLoadedId);
         Mailbox retrievedMailbox = sut.builder()
             .id(otherId.get())
             .session(mailboxSession)
-            .usingPreloadedMailboxesMetadata(Optional.of(ImmutableList.of(new MailboxMetaData(
-                inbox,
-                preLoadedId,
+            .usingPreloadedMailboxesMetadata(Optional.of(ImmutableMap.of(inbox, new MailboxMetaData(
+                mailbox,
                 DELIMITER,
                 MailboxMetaData.Children.NO_INFERIORS,
                 MailboxMetaData.Selectability.NONE,

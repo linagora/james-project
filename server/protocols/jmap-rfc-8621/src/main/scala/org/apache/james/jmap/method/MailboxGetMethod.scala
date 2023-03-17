@@ -20,12 +20,11 @@
 package org.apache.james.jmap.method
 
 import eu.timepit.refined.auto._
-import javax.inject.Inject
 import org.apache.james.jmap.api.change.MailboxChangeRepository
 import org.apache.james.jmap.api.model.{AccountId => JavaAccountId}
 import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, JAMES_SHARES, JMAP_CORE, JMAP_MAIL}
 import org.apache.james.jmap.core.Invocation.{Arguments, MethodName}
-import org.apache.james.jmap.core.{AccountId, CapabilityIdentifier, ErrorCode, Invocation, Properties, UuidState}
+import org.apache.james.jmap.core.{AccountId, CapabilityIdentifier, ErrorCode, Invocation, Properties, SessionTranslator, UuidState}
 import org.apache.james.jmap.http.MailboxesProvisioner
 import org.apache.james.jmap.json.{MailboxSerializer, ResponseSerializer}
 import org.apache.james.jmap.mail.{Ids, Mailbox, MailboxFactory, MailboxGet, MailboxGetRequest, MailboxGetResponse, NotFound, PersonalNamespace, Subscriptions, UnparsedMailboxId}
@@ -33,12 +32,12 @@ import org.apache.james.jmap.routes.SessionSupplier
 import org.apache.james.jmap.utils.quotas.{QuotaLoaderWithPreloadedDefault, QuotaLoaderWithPreloadedDefaultFactory}
 import org.apache.james.mailbox.exception.MailboxNotFoundException
 import org.apache.james.mailbox.model.search.MailboxQuery
-import org.apache.james.mailbox.model.{MailboxId, MailboxMetaData}
+import org.apache.james.mailbox.model.{MailboxId, MailboxMetaData, MailboxPath}
 import org.apache.james.mailbox.{MailboxManager, MailboxSession, SubscriptionManager}
 import org.apache.james.metrics.api.MetricFactory
-import org.apache.james.util.ReactorUtils
-import play.api.libs.json.{JsError, JsObject, JsSuccess}
+import play.api.libs.json.JsObject
 import reactor.core.scala.publisher.{SFlux, SMono}
+import javax.inject.Inject
 
 import scala.util.Try
 
@@ -69,7 +68,8 @@ class MailboxGetMethod @Inject() (serializer: MailboxSerializer,
                                   provisioner: MailboxesProvisioner,
                                   mailboxChangeRepository: MailboxChangeRepository,
                                   val metricFactory: MetricFactory,
-                                  val sessionSupplier: SessionSupplier) extends MethodRequiringAccountId[MailboxGetRequest] {
+                                  val sessionSupplier: SessionSupplier,
+                                  val sessionTranslator: SessionTranslator) extends MethodRequiringAccountId[MailboxGetRequest] {
   override val methodName: MethodName = MethodName("Mailbox/get")
   override val requiredCapabilities: Set[CapabilityIdentifier] = Set(JMAP_CORE, JMAP_MAIL)
 
@@ -102,11 +102,8 @@ class MailboxGetMethod @Inject() (serializer: MailboxSerializer,
     }
 
   override def getRequest(mailboxSession: MailboxSession, invocation: Invocation): Either[IllegalArgumentException, MailboxGetRequest] =
-    serializer.deserializeMailboxGetRequest(invocation.arguments.value) match {
-    case JsSuccess(mailboxGetRequest, _) => Right(mailboxGetRequest)
-    case errors: JsError => Left(new IllegalArgumentException(ResponseSerializer.serialize(errors).toString))
-  }
-
+    serializer.deserializeMailboxGetRequest(invocation.arguments.value)
+      .asEither.left.map(ResponseSerializer.asException)
 
   private def getMailboxes(capabilities: Set[CapabilityIdentifier],
                            mailboxGetRequest: MailboxGetRequest,
@@ -146,7 +143,6 @@ class MailboxGetMethod @Inject() (serializer: MailboxSerializer,
         case _: MailboxNotFoundException => SMono.just(MailboxGetResults.notFound(mailboxId))
         case error => SMono.error(error)
       }
-      .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
 
   private def filterShared(capabilities: Set[CapabilityIdentifier], mailbox: Mailbox): MailboxGetResults = {
     if (capabilities.contains(CapabilityIdentifier.JAMES_SHARES)) {
@@ -159,29 +155,27 @@ class MailboxGetMethod @Inject() (serializer: MailboxSerializer,
     }
   }
 
-  private def getAllMailboxes(capabilities: Set[CapabilityIdentifier], mailboxSession: MailboxSession): SFlux[Mailbox] = {
-    SMono.zip(array => (array(0).asInstanceOf[Seq[MailboxMetaData]],
+  private def getAllMailboxes(capabilities: Set[CapabilityIdentifier], mailboxSession: MailboxSession): SFlux[Mailbox] =
+    SMono.zip(array => (array(0).asInstanceOf[Map[MailboxPath, MailboxMetaData]],
           array(1).asInstanceOf[QuotaLoaderWithPreloadedDefault],
           array(2).asInstanceOf[Subscriptions]),
         getAllMailboxesMetaData(capabilities, mailboxSession),
         quotaFactory.loadFor(mailboxSession),
         retrieveSubscriptions(mailboxSession))
-      .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
       .flatMapMany {
-        case (mailboxes, quotaLoader, subscriptions) => SFlux.fromIterable(mailboxes)
+        case (mailboxes, quotaLoader, subscriptions) => SFlux.fromIterable(mailboxes.values)
           .flatMap(mailbox => mailboxFactory.create(mailboxMetaData = mailbox,
             mailboxSession = mailboxSession,
             subscriptions = subscriptions,
             allMailboxesMetadata = mailboxes,
             quotaLoader = quotaLoader))
       }
-  }
 
-  private def getAllMailboxesMetaData(capabilities: Set[CapabilityIdentifier], mailboxSession: MailboxSession): SMono[Seq[MailboxMetaData]] =
+  private def getAllMailboxesMetaData(capabilities: Set[CapabilityIdentifier], mailboxSession: MailboxSession): SMono[Map[MailboxPath, MailboxMetaData]] =
       SFlux.fromPublisher(mailboxManager.search(
           mailboxQuery(capabilities, mailboxSession),
           mailboxSession))
-        .collectSeq()
+        .collectMap(_.getPath)
 
   private def mailboxQuery(capabilities: Set[CapabilityIdentifier], mailboxSession: MailboxSession) =
     if (capabilities.contains(CapabilityIdentifier.JAMES_SHARES)) {

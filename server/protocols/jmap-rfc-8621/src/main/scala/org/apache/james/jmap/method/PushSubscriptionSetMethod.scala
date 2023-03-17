@@ -20,32 +20,30 @@
 package org.apache.james.jmap.method
 
 import eu.timepit.refined.auto._
-import javax.inject.Inject
 import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, JMAP_CORE}
 import org.apache.james.jmap.core.Invocation.{Arguments, MethodName}
-import org.apache.james.jmap.core.{Invocation, PushSubscriptionSetRequest, PushSubscriptionSetResponse}
+import org.apache.james.jmap.core.{Invocation, PushSubscriptionSetRequest, PushSubscriptionSetResponse, SessionTranslator}
 import org.apache.james.jmap.json.{PushSubscriptionSerializer, ResponseSerializer}
 import org.apache.james.jmap.routes.SessionSupplier
 import org.apache.james.lifecycle.api.Startable
 import org.apache.james.mailbox.MailboxSession
 import org.apache.james.metrics.api.MetricFactory
-import play.api.libs.json.{JsError, JsSuccess}
 import reactor.core.scala.publisher.SMono
+import javax.inject.Inject
 
 class PushSubscriptionSetMethod @Inject()(createPerformer: PushSubscriptionSetCreatePerformer,
                                           updatePerformer: PushSubscriptionUpdatePerformer,
                                           deletePerformer: PushSubscriptionSetDeletePerformer,
                                           pushSubscriptionSerializer: PushSubscriptionSerializer,
                                           val metricFactory: MetricFactory,
-                                          val sessionSupplier: SessionSupplier) extends MethodWithoutAccountId[PushSubscriptionSetRequest] with Startable {
+                                          val sessionSupplier: SessionSupplier,
+                                          val sessionTranslator: SessionTranslator) extends MethodWithoutAccountId[PushSubscriptionSetRequest] with Startable {
   override val methodName: Invocation.MethodName = MethodName("PushSubscription/set")
   override val requiredCapabilities: Set[CapabilityIdentifier] = Set(JMAP_CORE)
 
   override def getRequest(invocation: Invocation): Either[Exception, PushSubscriptionSetRequest] =
-    pushSubscriptionSerializer.deserializePushSubscriptionSetRequest(invocation.arguments.value) match {
-      case JsSuccess(emailSetRequest, _) => Right(emailSetRequest)
-      case errors: JsError => Left(new IllegalArgumentException(ResponseSerializer.serialize(errors).toString))
-    }
+    pushSubscriptionSerializer.deserializePushSubscriptionSetRequest(invocation.arguments.value)
+      .asEither.left.map(ResponseSerializer.asException)
 
   override def doProcess(invocation: InvocationWithContext, mailboxSession: MailboxSession, request: PushSubscriptionSetRequest): SMono[InvocationWithContext] =
     for {

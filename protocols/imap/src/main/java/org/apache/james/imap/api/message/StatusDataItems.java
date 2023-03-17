@@ -27,18 +27,32 @@ public class StatusDataItems {
     public static final String SIMPLE_NAME = StatusDataItems.class.getSimpleName();
 
     public enum StatusItem {
+        // See https://www.rfc-editor.org/rfc/rfc7889.html
+        APPENDLIMIT,
         MESSAGES,
+        // https://www.rfc-editor.org/rfc/rfc8474.html#section-4.3
+        MAILBOXID,
         RECENT,
         UID_NEXT,
         UID_VALIDITY,
         UNSEEN,
-        HIGHEST_MODSEQ
+        HIGHEST_MODSEQ,
+        // See https://www.iana.org/go/rfc8438
+        SIZE,
+        // See https://www.rfc-editor.org/rfc/rfc9208.html
+        DELETED,
+        // See https://www.rfc-editor.org/rfc/rfc9208.html
+        DELETED_STORAGE
     }
 
     private final EnumSet<StatusItem> statusItems;
 
     public StatusDataItems(EnumSet<StatusItem> statusItems) {
         this.statusItems = statusItems;
+    }
+
+    public boolean isAppendLimit() {
+        return statusItems.contains(StatusItem.APPENDLIMIT);
     }
 
     public boolean isMessages() {
@@ -60,9 +74,25 @@ public class StatusDataItems {
     public boolean isUnseen() {
         return statusItems.contains(StatusItem.UNSEEN);
     }
+
+    public boolean isMailboxId() {
+        return statusItems.contains(StatusItem.MAILBOXID);
+    }
     
     public boolean isHighestModSeq() {
         return statusItems.contains(StatusItem.HIGHEST_MODSEQ);
+    }
+
+    public boolean isSize() {
+        return statusItems.contains(StatusItem.SIZE);
+    }
+
+    public boolean isDeleted() {
+        return statusItems.contains(StatusItem.DELETED);
+    }
+
+    public boolean isDeletedStorage() {
+        return statusItems.contains(StatusItem.DELETED_STORAGE);
     }
 
     @Override

@@ -19,14 +19,12 @@
 package org.apache.james.data;
 
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.apache.james.adapter.mailbox.UserRepositoryAuthorizator;
-import org.apache.james.mailbox.Authorizator;
+import org.apache.james.core.healthcheck.HealthCheck;
 import org.apache.james.server.core.configuration.ConfigurationProvider;
-import org.apache.james.user.api.DelegationStore;
 import org.apache.james.user.api.UsersRepository;
+import org.apache.james.user.ldap.LdapHealthCheck;
 import org.apache.james.user.ldap.LdapRepositoryConfiguration;
 import org.apache.james.user.ldap.ReadOnlyUsersLDAPRepository;
-import org.apache.james.user.memory.NaiveDelegationStore;
 import org.apache.james.utils.InitializationOperation;
 import org.apache.james.utils.InitilizationOperationBuilder;
 
@@ -34,6 +32,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.multibindings.ProvidesIntoSet;
 
 public class LdapUsersRepositoryModule extends AbstractModule {
@@ -41,8 +40,7 @@ public class LdapUsersRepositoryModule extends AbstractModule {
     public void configure() {
         bind(ReadOnlyUsersLDAPRepository.class).in(Scopes.SINGLETON);
         bind(UsersRepository.class).to(ReadOnlyUsersLDAPRepository.class);
-        bind(DelegationStore.class).to(NaiveDelegationStore.class);
-        bind(Authorizator.class).to(UserRepositoryAuthorizator.class);
+        Multibinder.newSetBinder(binder(), HealthCheck.class).addBinding().to(LdapHealthCheck.class);
     }
 
     @Provides

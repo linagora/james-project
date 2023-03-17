@@ -58,6 +58,17 @@
        <li>RESYNCH (RFC 5162 http://www.ietf.org/rfc/rfc5162.txt on master)</li>
        <li>MOVE (RFC 6851 https://tools.ietf.org/html/rfc6851 on master). This is enabled only if you use a MailboxManager exposing the Move capability</li>
        <li>METADATA Extension (RFC 5464 http://www.ietf.org/rfc/rfc5464.txt on master). This is enabled only if you use a MailboxManager exposing the Annotation capability</li>
+       <li>IMAP Replace Extension (RFC 8508 - https://www.rfc-editor.org/rfc/rfc8508.html)</li>
+       <li>IMAP Extension for APPENDLIMIT (RFC 7889 - https://www.rfc-editor.org/rfc/rfc7889.html)</li>
+       <li>IMAP Extension for OBJECTID (https://www.rfc-editor.org/rfc/rfc8474.html)</li>
+       <li>IMAP Extension for STATUS=SIZE (https://www.rfc-editor.org/rfc/rfc8438.html)</li>
+       <li>IMAP QUOTA (https://www.rfc-editor.org/rfc/rfc9208.html)</li>
+       <li>IMAP ID (https://www.rfc-editor.org/rfc/rfc2971.html)</li>
+       <li>IMAP LIST Command Extensions (link:https://www.rfc-editor.org/rfc/rfc5258.html)</li>
+       <li>IMAP4 Extension for Returning STATUS Information in Extended LIST (https://www.rfc-editor.org/rfc/rfc5819.html)</li>
+       <li>IMAP4 Extension for Returning MYRIGHTS Information in Extended LIST (https://www.rfc-editor.org/rfc/rfc8440.html)</li>
+       <li>IMAP LIST Extension for Special-Use Mailboxes (https://www.rfc-editor.org/rfc/rfc6154.html)</li>
+       <li>SAVEDATE Extension (https://www.rfc-editor.org/rfc/rfc8514.html)</li>
      </ul>
      <p>We follow RFC2683 recommendations for our implementations:</p>
      <ul>
@@ -76,7 +87,7 @@
   </section>
 
   <section name='Apache James IMAP in Server and as component'>
-    <p><a href='http://james.apache.org/server'>Apache James Server 3.7.0</a> supports IMAP
+    <p><a href='http://james.apache.org/server'>Apache James Server 3.7.3</a> supports IMAP
        (using this library).</p>
     <p>The <a href="source-code.html">source code</a> page contains information on how 
        to develop on James IMAP.</p>

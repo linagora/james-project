@@ -19,6 +19,7 @@
 
 package org.apache.james.queue.api;
 
+import static org.apache.james.queue.api.MailQueueContract.SCHEDULER;
 import static org.apache.james.queue.api.Mails.defaultMail;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,11 +54,11 @@ public interface DelayedPriorityMailQueueContract extends DelayedMailQueueContra
 
         Thread.sleep(unit.toMillis(2 * delay));
 
-        Iterator<MailQueue.MailQueueItem> mailQueueItems = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        Iterator<MailQueue.MailQueueItem> mailQueueItems = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem item1 = mailQueueItems.next();
-        item1.done(true);
+        item1.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         MailQueue.MailQueueItem item2 = mailQueueItems.next();
-        item2.done(true);
+        item2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
 
         assertThat(item1.getMail().getName()).isEqualTo("name2");
         assertThat(item2.getMail().getName()).isEqualTo("name1");
@@ -79,11 +80,11 @@ public interface DelayedPriorityMailQueueContract extends DelayedMailQueueContra
             delay,
             unit);
 
-        Iterator<MailQueue.MailQueueItem> mailQueueItems = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        Iterator<MailQueue.MailQueueItem> mailQueueItems = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem item1 = mailQueueItems.next();
-        item1.done(true);
+        item1.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         MailQueue.MailQueueItem item2 = mailQueueItems.next();
-        item2.done(true);
+        item2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
 
         assertThat(item1.getMail().getName()).isEqualTo("name1");
         assertThat(item2.getMail().getName()).isEqualTo("name2");

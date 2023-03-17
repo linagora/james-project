@@ -317,14 +317,11 @@ public class UserRoutes implements Routes {
                     .type(ErrorType.NOT_FOUND)
                     .message(String.format("User '%s' does not exist", baseUser.asString()))
                     .haltError();
-            } else if (!userService.userExists(delegatedUser)) {
-                throw ErrorResponder.builder()
-                    .statusCode(HttpStatus.BAD_REQUEST_400)
-                    .type(ErrorType.INVALID_ARGUMENT)
-                    .message(String.format("Delegated user '%s' does not exist", delegatedUser.asString()))
-                    .haltError();
             } else {
-                Mono.from(delegationStore.addAuthorizedUser(baseUser, delegatedUser)).block();
+                Mono.from(delegationStore
+                    .addAuthorizedUser(delegatedUser)
+                    .forUser(baseUser))
+                    .block();
                 return Constants.EMPTY_BODY;
             }
         } catch (NotImplementedException e) {
@@ -348,14 +345,10 @@ public class UserRoutes implements Routes {
                     .type(ErrorType.NOT_FOUND)
                     .message(String.format("User '%s' does not exist", baseUser.asString()))
                     .haltError();
-            } else if (!userService.userExists(delegatedUser)) {
-                throw ErrorResponder.builder()
-                    .statusCode(HttpStatus.BAD_REQUEST_400)
-                    .type(ErrorType.INVALID_ARGUMENT)
-                    .message(String.format("Delegated user '%s' does not exist", delegatedUser.asString()))
-                    .haltError();
             } else {
-                Mono.from(delegationStore.removeAuthorizedUser(baseUser, delegatedUser)).block();
+                Mono.from(delegationStore.removeAuthorizedUser(delegatedUser)
+                    .forUser(baseUser))
+                    .block();
                 return Constants.EMPTY_BODY;
             }
         } catch (NotImplementedException e) {

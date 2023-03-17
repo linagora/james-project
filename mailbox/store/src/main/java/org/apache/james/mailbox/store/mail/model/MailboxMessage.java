@@ -18,6 +18,9 @@
  ****************************************************************/
 package org.apache.james.mailbox.store.mail.model;
 
+import java.util.Date;
+import java.util.Optional;
+
 import javax.mail.Flags;
 
 import org.apache.james.mailbox.MessageUid;
@@ -35,6 +38,8 @@ import org.apache.james.mailbox.model.ThreadId;
  * has internal structure described by the meta-data.
  */
 public interface MailboxMessage extends Message, Comparable<MailboxMessage> {
+
+    Optional<Date> EMPTY_SAVE_DATE = Optional.empty();
 
     ThreadId getThreadId();
 
@@ -103,6 +108,8 @@ public interface MailboxMessage extends Message, Comparable<MailboxMessage> {
      */
     void setFlags(Flags flags);
 
+    void setSaveDate(Date saveDate);
+
     /**
      * Creates a new flags instance populated
      * with the current flag data.
@@ -112,7 +119,7 @@ public interface MailboxMessage extends Message, Comparable<MailboxMessage> {
     Flags createFlags();
 
     default MessageMetaData metaData() {
-        return new MessageMetaData(getUid(), getModSeq(), createFlags(), getFullContentOctets(), getInternalDate(), getMessageId(), getThreadId());
+        return new MessageMetaData(getUid(), getModSeq(), createFlags(), getFullContentOctets(), getInternalDate(), getSaveDate(), getMessageId(), getThreadId());
     }
 
     default int compareTo(MailboxMessage other) {
@@ -120,4 +127,6 @@ public interface MailboxMessage extends Message, Comparable<MailboxMessage> {
     }
 
     MailboxMessage copy(Mailbox mailbox) throws MailboxException;
+
+    Optional<Date> getSaveDate();
 }

@@ -19,7 +19,6 @@
 
 package org.apache.james.server.core;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.DeferredFileOutputStream;
 import org.apache.james.lifecycle.api.Disposable;
 import org.apache.james.util.SizeFormat;
+import org.apache.james.util.io.UnsynchronizedBufferedInputStream;
 
 /**
  * Takes an input stream and creates a repeatable input stream source for a
@@ -63,11 +63,6 @@ public class MimeMessageInputStreamSource extends Disposable.LeakAware<MimeMessa
      * The full path of the temporary file
      */
     private final String sourceId;
-
-    /**
-     * Temporary directory to use
-     */
-    private static final File TMPDIR = new File(System.getProperty("java.io.tmpdir"));
 
     static class Resource extends LeakAware.Resource {
         private final BufferedDeferredFileOutputStream out;
@@ -111,7 +106,7 @@ public class MimeMessageInputStreamSource extends Disposable.LeakAware<MimeMessa
 
     public static MimeMessageInputStreamSource create(String key, InputStream in) throws MessagingException {
         Disposable.LeakAware.track();
-        BufferedDeferredFileOutputStream out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
+        BufferedDeferredFileOutputStream out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64");
         Resource resource = new Resource(out, new HashSet<>());
 
         return new MimeMessageInputStreamSource(resource, key, in);
@@ -119,7 +114,7 @@ public class MimeMessageInputStreamSource extends Disposable.LeakAware<MimeMessa
 
     public static MimeMessageInputStreamSource create(String key) {
         Disposable.LeakAware.track();
-        BufferedDeferredFileOutputStream out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64", TMPDIR);
+        BufferedDeferredFileOutputStream out = new BufferedDeferredFileOutputStream(THRESHOLD, "mimemessage-" + key, ".m64");
         Resource resource = new Resource(out, new HashSet<>());
 
         return new MimeMessageInputStreamSource(resource, key);
@@ -191,7 +186,7 @@ public class MimeMessageInputStreamSource extends Disposable.LeakAware<MimeMessa
         if (getResource().getOut().isInMemory()) {
             return new ByteArrayInputStream(getResource().getOut().getData());
         } else {
-            InputStream in = new BufferedInputStream(new FileInputStream(getResource().getOut().getFile()), 2048);
+            InputStream in = new UnsynchronizedBufferedInputStream(new FileInputStream(getResource().getOut().getFile()), 2048);
             getResource().streams.add(in);
             return in;
         }

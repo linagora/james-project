@@ -26,7 +26,7 @@ import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.string.Uri
-import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, EMAIL_SUBMISSION, JAMES_QUOTA, JAMES_SHARES, JMAP_CORE, JMAP_MAIL, JMAP_MDN, JMAP_VACATION_RESPONSE, JMAP_WEBSOCKET}
+import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, EMAIL_SUBMISSION, JAMES_DELEGATION, JAMES_IDENTITY_SORTORDER, JAMES_QUOTA, JAMES_SHARES, JMAP_CORE, JMAP_MAIL, JMAP_MDN, JMAP_QUOTA, JMAP_VACATION_RESPONSE, JMAP_WEBSOCKET}
 import org.apache.james.jmap.core.CoreCapabilityProperties.CollationAlgorithm
 import org.apache.james.jmap.core.MailCapability.EmailQuerySortOption
 import org.apache.james.jmap.core.UnsignedInt.{UnsignedInt, UnsignedIntConstraint}
@@ -48,7 +48,10 @@ object CapabilityIdentifier {
   val EMAIL_SUBMISSION: CapabilityIdentifier = "urn:ietf:params:jmap:submission"
   val JMAP_WEBSOCKET: CapabilityIdentifier = "urn:ietf:params:jmap:websocket"
   val JAMES_QUOTA: CapabilityIdentifier = "urn:apache:james:params:jmap:mail:quota"
+  val JMAP_QUOTA: CapabilityIdentifier = "urn:ietf:params:jmap:quota"
   val JAMES_SHARES: CapabilityIdentifier = "urn:apache:james:params:jmap:mail:shares"
+  val JAMES_IDENTITY_SORTORDER: CapabilityIdentifier = "urn:apache:james:params:jmap:mail:identity:sortorder"
+  val JAMES_DELEGATION: CapabilityIdentifier = "urn:apache:james:params:jmap:delegation"
   val JMAP_MDN: CapabilityIdentifier = "urn:ietf:params:jmap:mdn"
 }
 
@@ -154,7 +157,8 @@ final case class WebSocketCapabilityProperties(supportsPush: SupportsPush,
 final case class SupportsPush(value: Boolean) extends AnyVal
 final case class MaxDelayedSend(value: Int) extends AnyVal
 final case class EhloName(value: String) extends AnyVal
-final case class EhloArgs(value: String) extends AnyVal
+final case class EhloArg(value: String) extends AnyVal
+final case class EhloArgs(values: List[EhloArg]) extends AnyVal
 
 final case class SubmissionCapability(identifier: CapabilityIdentifier = EMAIL_SUBMISSION,
                                       properties: SubmissionProperties = SubmissionProperties()) extends Capability
@@ -166,7 +170,7 @@ case object SubmissionCapabilityFactory extends CapabilityFactory {
 }
 
 final case class SubmissionProperties(maxDelayedSend: MaxDelayedSend = MaxDelayedSend(0),
-                                      submissionExtensions: Map[EhloName, List[EhloArgs]] = Map()) extends CapabilityProperties {
+                                      submissionExtensions: Map[EhloName, EhloArgs] = Map()) extends CapabilityProperties {
   override def jsonify(): JsObject = ResponseSerializer.submissionPropertiesWrites.writes(this)
 }
 
@@ -177,16 +181,24 @@ object MailCapability {
 final case class MailCapability(properties: MailCapabilityProperties,
                                 identifier: CapabilityIdentifier = JMAP_MAIL) extends Capability
 
-case object MailCapabilityFactory extends CapabilityFactory {
+case class MailCapabilityFactory(configuration: JmapRfc8621Configuration) extends CapabilityFactory {
   override def id(): CapabilityIdentifier = JMAP_MAIL
 
   override def create(urlPrefixes: UrlPrefixes): Capability = MailCapability(MailCapabilityProperties(
     MaxMailboxesPerEmail(Some(10_000_000L)),
     MaxMailboxDepth(None),
     MaxSizeMailboxName(200L),
-    MaxSizeAttachmentsPerEmail(20_000_000L),
+    configuration.maxSizeAttachmentsPerEmail,
     emailQuerySortOptions = List("receivedAt", "sentAt", "size", "from", "to", "subject"),
     MayCreateTopLevelMailbox(true)))
+}
+
+
+object MaxSizeAttachmentsPerEmail {
+  def of(size: Size): Try[MaxSizeAttachmentsPerEmail] = refined.refineV[UnsignedIntConstraint](size.asBytes()) match {
+    case Right(value) => Success(MaxSizeAttachmentsPerEmail(value))
+    case Left(error) => Failure(new NumberFormatException(error))
+  }
 }
 
 case class MaxMailboxesPerEmail(value: Option[UnsignedInt])
@@ -215,6 +227,32 @@ case object QuotaCapabilityFactory extends CapabilityFactory {
   override def id(): CapabilityIdentifier = JAMES_QUOTA
 
   override def create(urlPrefixes: UrlPrefixes): Capability = QuotaCapability()
+}
+
+final case class IdentitySortOrderCapabilityProperties() extends CapabilityProperties {
+  override def jsonify(): JsObject = Json.obj()
+}
+
+final case class IdentitySortOrderCapability(properties: IdentitySortOrderCapabilityProperties = IdentitySortOrderCapabilityProperties(),
+                                             identifier: CapabilityIdentifier = JAMES_IDENTITY_SORTORDER) extends Capability
+
+case object IdentitySortOrderCapabilityFactory extends CapabilityFactory {
+  override def id(): CapabilityIdentifier = JAMES_IDENTITY_SORTORDER
+
+  override def create(urlPrefixes: UrlPrefixes): Capability = IdentitySortOrderCapability()
+}
+
+final case class DelegationCapabilityProperties() extends CapabilityProperties {
+  override def jsonify(): JsObject = Json.obj()
+}
+
+final case class DelegationCapability(properties: DelegationCapabilityProperties = DelegationCapabilityProperties(),
+                                      identifier: CapabilityIdentifier = JAMES_DELEGATION) extends Capability
+
+case object DelegationCapabilityFactory extends CapabilityFactory {
+  override def id(): CapabilityIdentifier = JAMES_DELEGATION
+
+  override def create(urlPrefixes: UrlPrefixes): Capability = DelegationCapability()
 }
 
 final case class SharesCapabilityProperties() extends CapabilityProperties {
@@ -255,3 +293,16 @@ case object VacationResponseCapabilityFactory extends CapabilityFactory {
 
 final case class VacationResponseCapability(properties: VacationResponseCapabilityProperties = VacationResponseCapabilityProperties(),
                                             identifier: CapabilityIdentifier = JMAP_VACATION_RESPONSE) extends Capability
+
+final case class JmapQuotaCapability(properties: JmapQuotaCapabilityProperties = JmapQuotaCapabilityProperties(),
+                                     identifier: CapabilityIdentifier = JMAP_QUOTA) extends Capability
+
+final case class JmapQuotaCapabilityProperties() extends CapabilityProperties {
+  override def jsonify(): JsObject = Json.obj()
+}
+
+case object JmapQuotaCapabilityFactory extends CapabilityFactory {
+  override def id(): CapabilityIdentifier = JMAP_QUOTA
+
+  override def create(urlPrefixes: UrlPrefixes): Capability = JmapQuotaCapability()
+}

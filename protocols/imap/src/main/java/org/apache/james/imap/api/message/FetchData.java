@@ -102,6 +102,11 @@ public class FetchData {
         BODY,
         BODY_STRUCTURE,
         MODSEQ,
+        // https://www.rfc-editor.org/rfc/rfc8474.html#section-5.3
+        EMAILID,
+        THREADID,
+        // https://www.rfc-editor.org/rfc/rfc8514.html#section-4.2
+        SAVEDATE
     }
 
     public static Builder builder() {

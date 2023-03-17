@@ -19,51 +19,34 @@
 
 package org.apache.james.backends.cassandra.init;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
-
 import org.apache.james.backends.cassandra.init.configuration.KeyspaceConfiguration;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.querybuilder.SchemaBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 
-public class KeyspaceFactory {
-    private static final String SYSTEM_SCHEMA = "system_schema";
-    private static final String KEYSPACES = "keyspaces";
-    private static final String KEYSPACE_NAME = "keyspace_name";
+import reactor.core.publisher.Mono;
 
-    public static void createKeyspace(KeyspaceConfiguration configuration, Cluster cluster) {
-        try (Session session = cluster.connect()) {
-            if (!keyspaceExist(cluster, configuration.getKeyspace())) {
-                session.execute(SchemaBuilder.createKeyspace(configuration.getKeyspace())
-                    .with()
-                    .replication(ImmutableMap.<String, Object>builder()
-                        .put("class", "SimpleStrategy")
-                        .put("replication_factor", configuration.getReplicationFactor())
-                        .build())
-                    .durableWrites(configuration.isDurableWrites()));
-            }
+public class KeyspaceFactory {
+    public static Mono<Void> createKeyspace(KeyspaceConfiguration configuration, CqlSession session) {
+        if (!keyspaceExist(session, configuration.getKeyspace())) {
+            return Mono.from(session.executeReactive(SchemaBuilder.createKeyspace(configuration.getKeyspace())
+                .ifNotExists()
+                .withReplicationOptions(ImmutableMap.<String, Object>builder()
+                    .put("class", "SimpleStrategy")
+                    .put("replication_factor", configuration.getReplicationFactor())
+                    .build())
+                .withDurableWrites(configuration.isDurableWrites())
+                .build()))
+                .then();
         }
+        return Mono.empty();
     }
 
     @VisibleForTesting
-    public static boolean keyspaceExist(Cluster cluster, String keyspaceName) {
-        try (Session session = cluster.connect(SYSTEM_SCHEMA)) {
-            long numberOfKeyspaces = session.execute(select()
-                    .countAll()
-                    .from(KEYSPACES)
-                    .where(eq(KEYSPACE_NAME, keyspaceName)))
-                .one()
-                .getLong("count");
-
-            if (numberOfKeyspaces > 1 || numberOfKeyspaces < 0) {
-                throw new IllegalStateException(String.format("unexpected keyspace('%s') count being %d", keyspaceName, numberOfKeyspaces));
-            }
-
-            return numberOfKeyspaces == 1;
-        }
+    public static boolean keyspaceExist(CqlSession session, String keyspaceName) {
+        return session.getMetadata().getKeyspaces().get(CqlIdentifier.fromCql(keyspaceName)) != null;
     }
 }

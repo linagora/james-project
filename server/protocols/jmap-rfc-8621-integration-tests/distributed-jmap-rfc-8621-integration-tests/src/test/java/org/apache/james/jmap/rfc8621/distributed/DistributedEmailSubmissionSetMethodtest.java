@@ -22,7 +22,7 @@ package org.apache.james.jmap.rfc8621.distributed;
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraRabbitMQJamesConfiguration;
 import org.apache.james.CassandraRabbitMQJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.JamesServerBuilder;
 import org.apache.james.JamesServerExtension;
 import org.apache.james.jmap.rfc8621.contract.EmailSubmissionSetMethodContract;
@@ -34,10 +34,10 @@ import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 
 class DistributedEmailSubmissionSetMethodtest implements EmailSubmissionSetMethodContract {
-    public static final DockerElasticSearchExtension ELASTIC_SEARCH_EXTENSION = new DockerElasticSearchExtension();
+    public static final DockerOpenSearchExtension ELASTIC_SEARCH_EXTENSION = new DockerOpenSearchExtension();
     public static final CassandraMessageId.Factory MESSAGE_ID_FACTORY = new CassandraMessageId.Factory();
 
     @RegisterExtension
@@ -61,6 +61,6 @@ class DistributedEmailSubmissionSetMethodtest implements EmailSubmissionSetMetho
 
     @Override
     public MessageId randomMessageId() {
-        return MESSAGE_ID_FACTORY.of(UUIDs.timeBased());
+        return MESSAGE_ID_FACTORY.of(Uuids.timeBased());
     }
 }

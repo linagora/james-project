@@ -29,20 +29,22 @@ import io.netty.util.concurrent.EventExecutorGroup;
  */
 @ChannelHandler.Sharable
 public abstract class AbstractSSLAwareChannelPipelineFactory<C extends SocketChannel> extends AbstractChannelPipelineFactory<C> {
-
+    private final boolean proxyRequired;
     private Encryption secure;
 
     public AbstractSSLAwareChannelPipelineFactory(int timeout,
                                                   int maxConnections, int maxConnectsPerIp,
+                                                  boolean proxyRequired,
                                                   ChannelHandlerFactory frameHandlerFactory,
                                                   EventExecutorGroup eventExecutorGroup) {
-        super(timeout, maxConnections, maxConnectsPerIp, frameHandlerFactory, eventExecutorGroup);
+        super(timeout, maxConnections, maxConnectsPerIp, proxyRequired, frameHandlerFactory, eventExecutorGroup);
+        this.proxyRequired = proxyRequired;
     }
 
     public AbstractSSLAwareChannelPipelineFactory(int timeout,
-            int maxConnections, int maxConnectsPerIp, Encryption secure,
+            int maxConnections, int maxConnectsPerIp, boolean proxyRequired, Encryption secure,
             ChannelHandlerFactory frameHandlerFactory, EventExecutorGroup eventExecutorGroup) {
-        this(timeout, maxConnections, maxConnectsPerIp, frameHandlerFactory, eventExecutorGroup);
+        this(timeout, maxConnections, maxConnectsPerIp, proxyRequired, frameHandlerFactory, eventExecutorGroup);
 
         this.secure = secure;
     }
@@ -52,7 +54,11 @@ public abstract class AbstractSSLAwareChannelPipelineFactory<C extends SocketCha
         super.initChannel(channel);
 
         if (isSSLSocket()) {
-            channel.pipeline().addFirst(HandlerConstants.SSL_HANDLER, secure.sslHandler());
+            if (proxyRequired) {
+                channel.pipeline().addAfter("proxyInformationHandler", HandlerConstants.SSL_HANDLER, secure.sslHandler());
+            } else {
+                channel.pipeline().addFirst(HandlerConstants.SSL_HANDLER, secure.sslHandler());
+            }
         }
     }
 

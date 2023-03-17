@@ -20,10 +20,9 @@
 package org.apache.james.jmap.method
 
 import eu.timepit.refined.auto._
-import javax.inject.Inject
 import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, JMAP_CORE, JMAP_MAIL}
 import org.apache.james.jmap.core.Invocation.{Arguments, MethodName}
-import org.apache.james.jmap.core.{AccountId, Invocation, UuidState}
+import org.apache.james.jmap.core.{AccountId, Invocation, SessionTranslator, UuidState}
 import org.apache.james.jmap.json.{ResponseSerializer, ThreadSerializer}
 import org.apache.james.jmap.mail.{Thread, ThreadGetRequest, ThreadGetResponse, ThreadNotFound, UnparsedThreadId}
 import org.apache.james.jmap.routes.SessionSupplier
@@ -31,8 +30,8 @@ import org.apache.james.mailbox.exception.ThreadNotFoundException
 import org.apache.james.mailbox.model.{ThreadId => JavaThreadId}
 import org.apache.james.mailbox.{MailboxManager, MailboxSession}
 import org.apache.james.metrics.api.MetricFactory
-import play.api.libs.json.{JsError, JsSuccess}
 import reactor.core.scala.publisher.{SFlux, SMono}
+import javax.inject.Inject
 
 import scala.util.Try
 
@@ -62,6 +61,7 @@ case class ThreadGetResult(threads: Set[Thread], notFound: ThreadNotFound) {
 
 class ThreadGetMethod @Inject()(val metricFactory: MetricFactory,
                                 val sessionSupplier: SessionSupplier,
+                                val sessionTranslator: SessionTranslator,
                                 val threadIdFactory: JavaThreadId.Factory,
                                 val mailboxManager: MailboxManager) extends MethodRequiringAccountId[ThreadGetRequest] {
   override val methodName: MethodName = MethodName("Thread/get")
@@ -78,10 +78,8 @@ class ThreadGetMethod @Inject()(val metricFactory: MetricFactory,
       .map(InvocationWithContext(_, invocation.processingContext))
 
   override def getRequest(mailboxSession: MailboxSession, invocation: Invocation): Either[IllegalArgumentException, ThreadGetRequest] =
-    ThreadSerializer.deserialize(invocation.arguments.value) match {
-      case JsSuccess(threadGetRequest, _) => Right(threadGetRequest)
-      case errors: JsError => Left(new IllegalArgumentException(ResponseSerializer.serialize(errors).toString))
-    }
+    ThreadSerializer.deserialize(invocation.arguments.value)
+      .asEither.left.map(ResponseSerializer.asException)
 
   private def getThreadResponse(threadGetRequest: ThreadGetRequest,
                                 mailboxSession: MailboxSession): SFlux[ThreadGetResult] =

@@ -24,6 +24,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
+import java.util.Optional;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
 
 import org.apache.james.protocols.api.AbstractProtocolTransport;
 import org.apache.james.protocols.api.ProtocolSession;
@@ -44,10 +48,12 @@ public class NettyProtocolTransport extends AbstractProtocolTransport {
     
     private final Channel channel;
     private final Encryption encryption;
+    private final boolean proxyRequired;
     
-    public NettyProtocolTransport(Channel channel, Encryption encryption) {
+    public NettyProtocolTransport(Channel channel, Encryption encryption, boolean proxyRequired) {
         this.channel = channel;
         this.encryption = encryption;
+        this.proxyRequired = proxyRequired;
     }
 
     @Override
@@ -70,6 +76,17 @@ public class NettyProtocolTransport extends AbstractProtocolTransport {
         return encryption != null && encryption.isStartTLS();
     }
 
+    @Override
+    public Optional<SSLSession> getSSLSession() {
+        return Optional.ofNullable(channel.pipeline().get(SslHandler.class))
+            .map(SslHandler::engine)
+            .map(SSLEngine::getSession);
+    }
+
+    @Override
+    public boolean isProxyRequired() {
+        return proxyRequired;
+    }
 
     @Override
     public void popLineHandler() {

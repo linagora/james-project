@@ -19,7 +19,7 @@
 
 package org.apache.james.imap.processor;
 
-import static org.apache.james.util.ReactorUtils.logOnError;
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.display.HumanReadableText;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
@@ -32,6 +32,7 @@ import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +43,10 @@ import reactor.core.publisher.Mono;
 public class CloseProcessor extends AbstractMailboxProcessor<CloseRequest> {
     private static final Logger LOGGER = LoggerFactory.getLogger(CloseProcessor.class);
 
+    @Inject
     public CloseProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
-        super(CloseRequest.class,mailboxManager, factory, metricFactory);
+                          MetricFactory metricFactory) {
+        super(CloseRequest.class, mailboxManager, factory, metricFactory);
     }
 
     @Override
@@ -61,10 +63,9 @@ public class CloseProcessor extends AbstractMailboxProcessor<CloseRequest> {
                 }
                 return Mono.empty();
             }))
-            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("Close failed for mailbox {}", session.getSelected().getMailboxId(), e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.error("Close failed for mailbox {}", session.getSelected().getMailboxId(), e));
             }).then();
     }
 

@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.utility.DockerImageName;
 
 import io.lettuce.core.RedisClient;
@@ -39,6 +40,14 @@ public class DockerRedis {
     public DockerRedis() {
         this.container = new GenericContainer<>(DEFAULT_IMAGE_NAME.withTag(DEFAULT_TAG))
             .withExposedPorts(DEFAULT_PORT);
+    }
+
+    public DockerRedis(Network network) {
+        this.container = new GenericContainer<>(DEFAULT_IMAGE_NAME.withTag(DEFAULT_TAG))
+            .withExposedPorts(DEFAULT_PORT)
+            .withNetwork(network)
+            .withCreateContainerCmdModifier(createContainerCmd -> createContainerCmd.withName("james-redis-test"))
+            .withNetworkAliases("redis");
     }
 
     public Integer getPort() {

@@ -21,6 +21,8 @@ package org.apache.james.imap.processor;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.apache.james.core.quota.QuotaCountLimit;
 import org.apache.james.core.quota.QuotaCountUsage;
 import org.apache.james.core.quota.QuotaSizeLimit;
@@ -54,13 +56,14 @@ import reactor.core.publisher.Mono;
  * GETQUOTAROOT Processor
  */
 public class GetQuotaRootProcessor extends AbstractMailboxProcessor<GetQuotaRootRequest> implements CapabilityImplementingProcessor {
+    private static final List<Capability> CAPABILITIES = ImmutableList.of(ImapConstants.SUPPORTS_QUOTA, ImapConstants.SUPPORTS_QUOTA_RES_MESSAGE, ImapConstants.SUPPORTS_QUOTA_RES_STORAGE);
 
-    private static final List<Capability> CAPABILITIES = ImmutableList.of(ImapConstants.SUPPORTS_QUOTA);
     private final QuotaRootResolver quotaRootResolver;
     private final QuotaManager quotaManager;
 
+    @Inject
     public GetQuotaRootProcessor(MailboxManager mailboxManager, StatusResponseFactory factory, QuotaRootResolver quotaRootResolver, QuotaManager quotaManager,
-            MetricFactory metricFactory) {
+                                 MetricFactory metricFactory) {
         super(GetQuotaRootRequest.class, mailboxManager, factory, metricFactory);
         this.quotaRootResolver = quotaRootResolver;
         this.quotaManager = quotaManager;

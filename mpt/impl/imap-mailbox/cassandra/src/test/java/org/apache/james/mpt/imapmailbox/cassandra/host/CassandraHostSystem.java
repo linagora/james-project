@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.mpt.imapmailbox.cassandra.host;
 
+import java.time.Instant;
+
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.core.quota.QuotaCountLimit;
 import org.apache.james.core.quota.QuotaSizeLimit;
@@ -35,7 +37,6 @@ import org.apache.james.mailbox.cassandra.CassandraMailboxManager;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.TestCassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
-import org.apache.james.mailbox.cassandra.mail.MailboxAggregateModule;
 import org.apache.james.mailbox.cassandra.quota.CassandraCurrentQuotaManager;
 import org.apache.james.mailbox.cassandra.quota.CassandraGlobalMaxQuotaDao;
 import org.apache.james.mailbox.cassandra.quota.CassandraPerDomainMaxQuotaDao;
@@ -66,7 +67,9 @@ import org.apache.james.metrics.tests.RecordingMetricFactory;
 import org.apache.james.mpt.api.ImapFeatures;
 import org.apache.james.mpt.api.ImapFeatures.Feature;
 import org.apache.james.mpt.host.JamesImapHostSystem;
-import org.apache.james.util.Host;
+import org.apache.james.utils.UpdatableTickingClock;
+
+import com.datastax.oss.driver.api.core.CqlSession;
 
 public class CassandraHostSystem extends JamesImapHostSystem {
 
@@ -77,13 +80,12 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         Feature.ANNOTATION_SUPPORT,
         Feature.MOD_SEQ_SEARCH);
 
-    private final Host cassandraHost;
+    private final CassandraCluster cassandra;
     private CassandraMailboxManager mailboxManager;
-    private CassandraCluster cassandra;
     private CassandraPerUserMaxQuotaManager perUserMaxQuotaManager;
     
-    public CassandraHostSystem(Host cassandraHost) {
-        this.cassandraHost = cassandraHost;
+    public CassandraHostSystem(CassandraCluster cluster) {
+        this.cassandra = cluster;
     }
 
     public CassandraCluster getCassandra() {
@@ -93,10 +95,10 @@ public class CassandraHostSystem extends JamesImapHostSystem {
     @Override
     public void beforeTest() throws Exception {
         super.beforeTest();
-        cassandra = CassandraCluster.create(MailboxAggregateModule.MODULE_WITH_QUOTA, cassandraHost);
-        com.datastax.driver.core.Session session = cassandra.getConf();
+        CqlSession session = cassandra.getConf();
         CassandraMessageId.Factory messageIdFactory = new CassandraMessageId.Factory();
         ThreadIdGuessingAlgorithm threadIdGuessingAlgorithm = new NaiveThreadIdGuessingAlgorithm();
+        UpdatableTickingClock clock = new UpdatableTickingClock(Instant.now());
         CassandraMailboxSessionMapperFactory mapperFactory = TestCassandraMailboxSessionMapperFactory.forTests(
             cassandra, messageIdFactory);
 
@@ -125,21 +127,15 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         mailboxManager = new CassandraMailboxManager(mapperFactory, sessionProvider,
             new JVMMailboxPathLocker(), new MessageParser(), messageIdFactory,
             eventBus, annotationManager, storeRightManager, quotaComponents, index, MailboxManagerConfiguration.DEFAULT,
-            PreDeletionHooks.NO_PRE_DELETION_HOOK, threadIdGuessingAlgorithm);
+            PreDeletionHooks.NO_PRE_DELETION_HOOK, threadIdGuessingAlgorithm, clock);
 
         eventBus.register(quotaUpdater);
 
-        SubscriptionManager subscriptionManager = new StoreSubscriptionManager(mapperFactory);
+        SubscriptionManager subscriptionManager = new StoreSubscriptionManager(mapperFactory, mapperFactory, eventBus);
 
         configure(new DefaultImapDecoderFactory().buildImapDecoder(),
                 new DefaultImapEncoderFactory().buildImapEncoder(),
                 DefaultImapProcessorFactory.createDefaultProcessor(mailboxManager, eventBus, subscriptionManager, quotaManager, quotaRootResolver, new DefaultMetricFactory()));
-    }
-
-    @Override
-    public void afterTest() throws Exception {
-        super.afterTest();
-        cassandra.close();
     }
 
     @Override

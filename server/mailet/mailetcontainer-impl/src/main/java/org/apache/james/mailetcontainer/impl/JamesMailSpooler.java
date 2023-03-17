@@ -22,6 +22,7 @@ package org.apache.james.mailetcontainer.impl;
 import static reactor.core.scheduler.Schedulers.DEFAULT_BOUNDED_ELASTIC_QUEUESIZE;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -81,6 +82,7 @@ public class JamesMailSpooler implements Disposable, Configurable, MailSpoolerMB
         private final MailQueue queue;
         private final Configuration configuration;
         private final Scheduler scheduler;
+        private final Scheduler queueScheduler;
 
         private Runner(MetricFactory metricFactory, GaugeRegistry gaugeRegistry, MailProcessor mailProcessor,
                        MailRepository errorRepository, MailQueue queue, Configuration configuration) {
@@ -93,6 +95,9 @@ public class JamesMailSpooler implements Disposable, Configurable, MailSpoolerMB
             scheduler = Schedulers.newBoundedElastic(configuration.getConcurrencyLevel() + 1, DEFAULT_BOUNDED_ELASTIC_QUEUESIZE,
                 "spooler");
 
+            queueScheduler = Schedulers.newBoundedElastic(1, DEFAULT_BOUNDED_ELASTIC_QUEUESIZE,
+                "queueScheduler");
+
             this.disposable = run(queue);
 
             gaugeRegistry.register(SPOOL_PROCESSING + ".inFlight",
@@ -103,7 +108,7 @@ public class JamesMailSpooler implements Disposable, Configurable, MailSpoolerMB
             return Flux.from(queue.deQueue())
                 .flatMap(item -> handleOnQueueItem(item).subscribeOn(scheduler), configuration.getConcurrencyLevel())
                 .onErrorContinue((throwable, item) -> LOGGER.error("Exception processing mail while spooling {}", item, throwable))
-                .subscribeOn(scheduler)
+                .subscribeOn(queueScheduler)
                 .subscribe();
         }
 
@@ -132,7 +137,7 @@ public class JamesMailSpooler implements Disposable, Configurable, MailSpoolerMB
                 if (Thread.currentThread().isInterrupted()) {
                     throw new InterruptedException("Thread has been interrupted");
                 }
-                queueItem.done(true);
+                queueItem.done(MailQueueItem.CompletionStatus.SUCCESS);
             } catch (Exception e) {
                 handleError(queueItem, mail, originalRecipients, e);
             } finally {
@@ -171,17 +176,17 @@ public class JamesMailSpooler implements Disposable, Configurable, MailSpoolerMB
             Mail mail = queueItem.getMail();
             mail.setAttribute(new Attribute(MAIL_PROCESSING_ERROR_COUNT, AttributeValue.of(failureCount)));
             queue.enQueue(mail);
-            queueItem.done(true);
+            queueItem.done(MailQueueItem.CompletionStatus.SUCCESS);
         }
 
         private void storeInErrorRepository(MailQueueItem queueItem) throws MessagingException {
             errorRepository.store(queueItem.getMail());
-            queueItem.done(true);
+            queueItem.done(MailQueueItem.CompletionStatus.SUCCESS);
         }
 
         private void nack(MailQueueItem queueItem, Exception processingException) {
             try {
-                queueItem.done(false);
+                queueItem.done(MailQueueItem.CompletionStatus.REJECT);
             } catch (MailQueue.MailQueueException ex) {
                 throw new RuntimeException(processingException);
             }
@@ -189,14 +194,20 @@ public class JamesMailSpooler implements Disposable, Configurable, MailSpoolerMB
 
         public void dispose() {
             LOGGER.info("start dispose() ...");
+            LOGGER.info("Cancel queue consumption...");
+            queueScheduler.dispose();
+            LOGGER.info("Queue consumption canceled, shutting down processor threads...");
+            scheduler.disposeGracefully()
+                .timeout(Duration.ofSeconds(5))
+                .onErrorResume(e -> Mono.empty())
+                .block();
             disposable.dispose();
+            LOGGER.info("Thread shutdown completed. Turning off mail queue.");
             try {
                 queue.close();
             } catch (IOException e) {
                 LOGGER.debug("error closing queue", e);
             }
-            LOGGER.info("thread shutdown completed.");
-            scheduler.dispose();
         }
 
         public int getCurrentSpoolCount() {

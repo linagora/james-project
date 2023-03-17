@@ -22,6 +22,7 @@ package org.apache.james.webadmin.integration.rabbitmq;
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
 import static io.restassured.RestAssured.with;
+import static org.apache.james.events.NamingStrategy.MAILBOX_EVENT_BUS_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Durations.ONE_MINUTE;
 import static org.hamcrest.CoreMatchers.is;
@@ -39,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraRabbitMQJamesConfiguration;
 import org.apache.james.CassandraRabbitMQJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.GuiceModuleTestExtension;
 import org.apache.james.JamesServerBuilder;
@@ -48,9 +49,9 @@ import org.apache.james.SearchConfiguration;
 import org.apache.james.backends.rabbitmq.DockerRabbitMQ;
 import org.apache.james.core.Username;
 import org.apache.james.events.Event;
-import org.apache.james.events.EventDispatcher.DispatchingFailureGroup;
 import org.apache.james.events.EventListener;
 import org.apache.james.events.Group;
+import org.apache.james.events.DispatchingFailureGroup;
 import org.apache.james.events.RetryBackoffConfiguration;
 import org.apache.james.junit.categories.BasicFeature;
 import org.apache.james.junit.categories.Unstable;
@@ -210,9 +211,9 @@ class RabbitMQEventDeadLettersIntegrationTest {
                     .disableCache()
                     .deduplication()
                     .noCryptoConfig())
-            .searchConfiguration(SearchConfiguration.elasticSearch())
+            .searchConfiguration(SearchConfiguration.openSearch())
             .build())
-        .extension(new DockerElasticSearchExtension())
+        .extension(new DockerOpenSearchExtension())
         .extension(new CassandraExtension())
         .extension(new AwsS3BlobStoreExtension())
         .extension(RABBIT_MQ_EXTENSION)
@@ -231,7 +232,7 @@ class RabbitMQEventDeadLettersIntegrationTest {
     private static final String BOB_PASSWORD = "bobPassword";
     private static final String EVENTS_ACTION = "reDeliver";
     private static final String GROUP_ID = new RetryEventsListenerGroup().asString();
-    private static final String DISPATCHING_FAILURE_GROUP_ID = DispatchingFailureGroup.INSTANCE.getClass().getName();
+    private static final String DISPATCHING_FAILURE_GROUP_ID = new DispatchingFailureGroup(MAILBOX_EVENT_BUS_NAME).asString();
     private static final MailboxPath BOB_INBOX_PATH = MailboxPath.inbox(Username.of(BOB));
 
     private Duration slowPacedPollInterval = Duration.ofMillis(100);

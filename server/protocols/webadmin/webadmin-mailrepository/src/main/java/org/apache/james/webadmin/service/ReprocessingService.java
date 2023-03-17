@@ -28,6 +28,7 @@ import javax.inject.Inject;
 import javax.mail.MessagingException;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.james.lifecycle.api.LifecycleUtil;
 import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepository;
@@ -36,16 +37,25 @@ import org.apache.james.mailrepository.api.MailRepositoryStore;
 import org.apache.james.queue.api.MailQueue;
 import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.queue.api.MailQueueName;
+import org.apache.james.task.Task;
 import org.apache.james.util.streams.Iterators;
+import org.apache.james.util.streams.Limit;
+import org.apache.mailet.Attribute;
+import org.apache.mailet.AttributeName;
+import org.apache.mailet.AttributeValue;
 import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 public class ReprocessingService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReprocessingService.class);
+    public static final AttributeName RETRY_ATTRIBUTE_NAME = AttributeName.of("mailRepository-reprocessing");
 
     public static class MissingKeyException extends RuntimeException {
         MissingKeyException(MailKey key) {
@@ -56,12 +66,16 @@ public class ReprocessingService {
     public static class Configuration {
         private final MailQueueName mailQueueName;
         private final Optional<String> targetProcessor;
+        private final Optional<Integer> maxRetries;
         private final boolean consume;
+        private final Limit limit;
 
-        public Configuration(MailQueueName mailQueueName, Optional<String> targetProcessor, boolean consume) {
+        public Configuration(MailQueueName mailQueueName, Optional<String> targetProcessor, Optional<Integer> maxRetries, boolean consume, Limit limit) {
             this.mailQueueName = mailQueueName;
             this.targetProcessor = targetProcessor;
+            this.maxRetries = maxRetries;
             this.consume = consume;
+            this.limit = limit;
         }
 
         public MailQueueName getMailQueueName() {
@@ -74,6 +88,14 @@ public class ReprocessingService {
 
         public boolean isConsume() {
             return consume;
+        }
+
+        public Limit getLimit() {
+            return limit;
+        }
+
+        public Optional<Integer> getMaxRetries() {
+            return maxRetries;
         }
     }
 
@@ -88,6 +110,7 @@ public class ReprocessingService {
 
         private void reprocess(MailRepository repository, Mail mail, MailKey key) {
             try {
+                incrementRetries(mail);
                 configuration.getTargetProcessor().ifPresent(mail::setState);
                 mailQueue.enQueue(mail);
                 if (configuration.isConsume()) {
@@ -98,6 +121,26 @@ public class ReprocessingService {
             } finally {
                 LifecycleUtil.dispose(mail);
             }
+        }
+
+        private boolean retryExceeded(Mail mail) {
+            Integer retryCount = mail.getAttribute(RETRY_ATTRIBUTE_NAME)
+                .map(attribute -> attribute.getValue().getValue())
+                .filter(Integer.class::isInstance)
+                .map(Integer.class::cast)
+                .orElse(0);
+
+            return configuration.getMaxRetries().map(maxRetries -> retryCount >= maxRetries).orElse(false);
+        }
+
+        private void incrementRetries(Mail mail) {
+            Integer retryCount = mail.getAttribute(RETRY_ATTRIBUTE_NAME)
+                .map(attribute -> attribute.getValue().getValue())
+                .filter(Integer.class::isInstance)
+                .map(Integer.class::cast)
+                .orElse(0);
+
+            mail.setAttribute(new Attribute(RETRY_ATTRIBUTE_NAME, AttributeValue.of(retryCount + 1)));
         }
 
         @Override
@@ -120,19 +163,30 @@ public class ReprocessingService {
         this.mailRepositoryStoreService = mailRepositoryStoreService;
     }
 
-    public void reprocessAll(MailRepositoryPath path, Configuration configuration, Consumer<MailKey> keyListener) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {
-        try (Reprocessor reprocessor = new Reprocessor(getMailQueue(configuration.getMailQueueName()), configuration)) {
-            mailRepositoryStoreService
-                .getRepositories(path)
-                .forEach(Throwing.consumer((MailRepository repository) ->
-                    Iterators.toStream(repository.list())
-                        .peek(keyListener)
-                        .forEach(Throwing.consumer(key ->
-                                Optional.ofNullable(repository.retrieve(key))
-                                        .ifPresent(mail -> reprocessor.reprocess(repository, mail, key))
-                        ))
-                ));
-        }
+    public Mono<Task.Result> reprocessAll(MailRepositoryPath path, Configuration configuration, Consumer<MailKey> keyListener) {
+        return Mono.using(() -> new Reprocessor(getMailQueue(configuration.getMailQueueName()), configuration),
+            reprocessor -> reprocessAll(reprocessor, path, configuration, keyListener),
+            Reprocessor::close);
+    }
+
+    private Mono<Task.Result> reprocessAll(Reprocessor reprocessor, MailRepositoryPath path, Configuration configuration, Consumer<MailKey> keyListener) {
+        return configuration.limit.applyOnFlux(Flux.fromStream(Throwing.supplier(() -> mailRepositoryStoreService.getRepositories(path)))
+            .flatMap(Throwing.function((MailRepository repository) -> Iterators.toFlux(repository.list())
+                .doOnNext(keyListener)
+                .flatMap(mailKey -> Mono.fromCallable(() -> repository.retrieve(mailKey))
+                    .map(mail -> Triple.of(mail, repository, mailKey)))
+                .filter(triple -> !reprocessor.retryExceeded(triple.getLeft())))))
+            .flatMap(triple -> reprocess(triple.getRight(), triple.getLeft(), triple.getMiddle(), reprocessor))
+            .reduce(Task.Result.COMPLETED, Task::combine);
+    }
+
+    private Mono<Task.Result> reprocess(MailKey key, Mail mail, MailRepository repository, Reprocessor reprocessor) {
+        return Mono.fromRunnable(() -> reprocessor.reprocess(repository, mail, key))
+            .thenReturn(Task.Result.COMPLETED)
+            .onErrorResume(error -> {
+                LOGGER.warn("Failed when reprocess mail {}", key.asString(), error);
+                return Mono.just(Task.Result.PARTIAL);
+            });
     }
 
     public void reprocess(MailRepositoryPath path, MailKey key, Configuration configuration) throws MailRepositoryStore.MailRepositoryStoreException, MessagingException {

@@ -23,9 +23,9 @@
 
 SESSION: 1
 C: 1a CREATE parent
-S: 1a OK CREATE completed.
+S: 1a OK \[MAILBOXID \(.+\)\] CREATE completed.
 C: 1a CREATE parent.child
-S: 1a OK CREATE completed.
+S: 1a OK \[MAILBOXID \(.+\)\] CREATE completed.
 
 C: 1b APPEND parent.child (\Deleted) {254+}
 C: Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)
@@ -41,6 +41,7 @@ C:
 S: 1b OK (\[.+\] )?APPEND completed.
 
 C: 1c SELECT parent.child
+S: \* OK \[MAILBOXID \(.+\)\] Ok
 S: \* FLAGS \(\\Answered \\Deleted \\Draft \\Flagged \\Seen\)
 S: \* 1 EXISTS
 S: \* 1 RECENT

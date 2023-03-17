@@ -23,6 +23,7 @@ import static javax.mail.Flags.Flag.ANSWERED;
 import static javax.mail.Flags.Flag.FLAGGED;
 import static javax.mail.Flags.Flag.RECENT;
 import static javax.mail.Flags.Flag.SEEN;
+import static org.apache.james.mailbox.events.MailboxEvents.Added.IS_DELIVERY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -138,7 +140,7 @@ class SelectedMailboxImplTest {
         AtomicInteger successCount = new AtomicInteger(0);
         doAnswer(generateEmitEventAnswer(successCount))
             .when(eventBus)
-            .register(any(EventListener.class), eq(mailboxIdRegistrationKey));
+            .register(any(EventListener.ReactiveEventListener.class), eq(mailboxIdRegistrationKey));
         SelectedMailboxImpl selectedMailbox = new SelectedMailboxImpl(
             mailboxManager,
             eventBus,
@@ -154,7 +156,7 @@ class SelectedMailboxImplTest {
         AtomicInteger successCount = new AtomicInteger(0);
         doAnswer(generateEmitCustomFlagEventAnswer(successCount))
             .when(eventBus)
-            .register(any(EventListener.class), eq(mailboxIdRegistrationKey));
+            .register(any(EventListener.ReactiveEventListener.class), eq(mailboxIdRegistrationKey));
 
         new SelectedMailboxImpl(mailboxManager, eventBus, imapSession, messageManager).finishInit().block();
 
@@ -166,7 +168,7 @@ class SelectedMailboxImplTest {
         AtomicInteger successCount = new AtomicInteger(0);
         doAnswer(generateEmitCustomFlagEventAnswer(successCount))
             .when(eventBus)
-            .register(any(EventListener.class), eq(mailboxIdRegistrationKey));
+            .register(any(EventListener.ReactiveEventListener.class), eq(mailboxIdRegistrationKey));
 
         SelectedMailboxImpl selectedMailbox = new SelectedMailboxImpl(mailboxManager, eventBus, imapSession, messageManager);
         selectedMailbox.finishInit().block();
@@ -179,7 +181,7 @@ class SelectedMailboxImplTest {
         AtomicInteger successCount = new AtomicInteger(0);
         doAnswer(generateEmitEventAnswer(successCount))
             .when(eventBus)
-            .register(any(EventListener.class), eq(mailboxIdRegistrationKey));
+            .register(any(EventListener.ReactiveEventListener.class), eq(mailboxIdRegistrationKey));
 
         new SelectedMailboxImpl(
             mailboxManager,
@@ -221,7 +223,8 @@ class SelectedMailboxImplTest {
             .randomEventId()
             .mailboxSession(MailboxSessionUtil.create(Username.of("user")))
             .mailbox(mailbox)
-            .addMetaData(new MessageMetaData(EMITTED_EVENT_UID, MOD_SEQ, new Flags(), SIZE, new Date(), new DefaultMessageId(), ThreadId.fromBaseMessageId(new DefaultMessageId())))
+            .addMetaData(new MessageMetaData(EMITTED_EVENT_UID, MOD_SEQ, new Flags(), SIZE, new Date(), Optional.empty(), new DefaultMessageId(), ThreadId.fromBaseMessageId(new DefaultMessageId())))
+            .isDelivery(!IS_DELIVERY)
             .build();
     }
 

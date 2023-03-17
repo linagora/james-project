@@ -31,6 +31,7 @@ import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.decode.ImapDecoder;
 import org.apache.james.imap.encode.ImapEncoder;
+import org.apache.james.metrics.api.GaugeRegistry;
 import org.apache.james.protocols.api.OidcSASLConfiguration;
 import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
 import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
@@ -50,6 +51,7 @@ import com.google.common.collect.ImmutableSet;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 
@@ -120,11 +122,16 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private static final String SOFTWARE_TYPE = "JAMES " + VERSION + " Server ";
     private static final String DEFAULT_TIME_UNIT = "SECONDS";
     private static final String CAPABILITY_SEPARATOR = "|";
+    public static final int DEFAULT_MAX_LINE_LENGTH = 65536; // Use a big default
+    public static final Size DEFAULT_IN_MEMORY_SIZE_LIMIT = Size.of(10L, Size.Unit.M); // Use 10MB as default
+    public static final int DEFAULT_TIMEOUT = 30 * 60; // default timeout is 30 minutes
+    public static final int DEFAULT_LITERAL_SIZE_LIMIT = 0;
 
     private final ImapProcessor processor;
     private final ImapEncoder encoder;
     private final ImapDecoder decoder;
     private final ImapMetrics imapMetrics;
+    private final GaugeRegistry gaugeRegistry;
 
     private String hello;
     private boolean compress;
@@ -137,17 +144,15 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private Optional<ConnectionPerIpLimitUpstreamHandler> connectionPerIpLimitUpstreamHandler = Optional.empty();
     private boolean ignoreIDLEUponProcessing;
     private Duration heartbeatInterval;
+    private ReactiveThrottler reactiveThrottler;
 
-    public static final int DEFAULT_MAX_LINE_LENGTH = 65536; // Use a big default
-    public static final Size DEFAULT_IN_MEMORY_SIZE_LIMIT = Size.of(10L, Size.Unit.M); // Use 10MB as default
-    public static final int DEFAULT_TIMEOUT = 30 * 60; // default timeout is 30 minutes
-    public static final int DEFAULT_LITERAL_SIZE_LIMIT = 0;
 
-    public IMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics) {
+    public IMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics, GaugeRegistry gaugeRegistry) {
         this.processor = processor;
         this.encoder = encoder;
         this.decoder = decoder;
         this.imapMetrics = imapMetrics;
+        this.gaugeRegistry = gaugeRegistry;
     }
 
     @Override
@@ -162,11 +167,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
             .map(Size::parse)
             .orElse(DEFAULT_IN_MEMORY_SIZE_LIMIT)
             .asBytes());
-        literalSizeLimit = Optional.ofNullable(configuration.getString("literalSizeLimit", null))
-            .map(Size::parse)
-            .map(Size::asBytes)
-            .map(Math::toIntExact)
-            .orElse(DEFAULT_LITERAL_SIZE_LIMIT);
+        literalSizeLimit = parseLiteralSizeLimit(configuration);
 
         timeout = configuration.getInt("timeout", DEFAULT_TIMEOUT);
         if (timeout < DEFAULT_TIMEOUT) {
@@ -178,7 +179,16 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
         ignoreIDLEUponProcessing = configuration.getBoolean("ignoreIDLEUponProcessing", true);
         ImapConfiguration imapConfiguration = getImapConfiguration(configuration);
         heartbeatInterval = imapConfiguration.idleTimeIntervalAsDuration();
+        reactiveThrottler = new ReactiveThrottler(gaugeRegistry, imapConfiguration.getConcurrentRequests(), imapConfiguration.getMaxQueueSize());
         processor.configure(imapConfiguration);
+    }
+
+    private static Integer parseLiteralSizeLimit(HierarchicalConfiguration<ImmutableNode> configuration) {
+        return Optional.ofNullable(configuration.getString("literalSizeLimit", null))
+            .map(Size::parse)
+            .map(Size::asBytes)
+            .map(Math::toIntExact)
+            .orElse(DEFAULT_LITERAL_SIZE_LIMIT);
     }
 
     @VisibleForTesting static ImapConfiguration getImapConfiguration(HierarchicalConfiguration<ImmutableNode> configuration) {
@@ -189,6 +199,10 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
                 .idleTimeInterval(configuration.getLong("idleTimeInterval", ImapConfiguration.DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS))
                 .idleTimeIntervalUnit(getTimeIntervalUnit(configuration.getString("idleTimeIntervalUnit", DEFAULT_TIME_UNIT)))
                 .disabledCaps(disabledCaps)
+                .appendLimit(Optional.of(parseLiteralSizeLimit(configuration)).filter(i -> i > 0))
+                .maxQueueSize(configuration.getInteger("maxQueueSize", ImapConfiguration.DEFAULT_QUEUE_SIZE))
+                .concurrentRequests(configuration.getInteger("concurrentRequests", ImapConfiguration.DEFAULT_CONCURRENT_REQUESTS))
+                .withCustomProperties(configuration.getProperties("customProperties"))
                 .build();
     }
 
@@ -230,6 +244,11 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
                 connectionLimitUpstreamHandler.ifPresent(handler -> pipeline.addLast(HandlerConstants.CONNECTION_LIMIT_HANDLER, handler));
                 connectionPerIpLimitUpstreamHandler.ifPresent(handler -> pipeline.addLast(HandlerConstants.CONNECTION_LIMIT_PER_IP_HANDLER, handler));
 
+                if (proxyRequired) {
+                    pipeline.addLast(HandlerConstants.PROXY_HANDLER, new HAProxyMessageDecoder());
+                    pipeline.addLast("proxyInformationHandler", new HAProxyMessageHandler());
+                }
+
                 // Add the text line decoder which limit the max line length,
                 // don't strip the delimiter and use CRLF as delimiter
                 // Use a SwitchableDelimiterBasedFrameDecoder, see JAMES-1436
@@ -237,7 +256,11 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
                
                 Encryption secure = getEncryption();
                 if (secure != null && !secure.isStartTLS()) {
-                    pipeline.addFirst(SSL_HANDLER, secure.sslHandler());
+                    if (proxyRequired) {
+                        channel.pipeline().addAfter("proxyInformationHandler", SSL_HANDLER, secure.sslHandler());
+                    } else {
+                        channel.pipeline().addFirst(SSL_HANDLER, secure.sslHandler());
+                    }
                 }
 
                 pipeline.addLast(CHUNK_WRITE_HANDLER, new ChunkedWriteHandler());
@@ -260,6 +283,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     protected ChannelInboundHandlerAdapter createCoreHandler() {
         Encryption secure = getEncryption();
         return ImapChannelUpstreamHandler.builder()
+            .reactiveThrottler(reactiveThrottler)
             .hello(hello)
             .processor(processor)
             .encoder(encoder)

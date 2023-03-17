@@ -19,6 +19,8 @@
 
 package org.apache.james.adapter.mailbox;
 
+import java.util.Collection;
+
 import javax.inject.Inject;
 
 import org.apache.james.core.Username;
@@ -27,6 +29,8 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.user.api.DelegationStore;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import reactor.core.publisher.Flux;
 
@@ -47,7 +51,7 @@ public class DelegationStoreAuthorizator implements Authorizator {
     public AuthorizationState canLoginAsOtherUser(Username userId, Username otherUserId) throws MailboxException {
         boolean isAuthorized = Flux.from(delegationStore.authorizedUsers(otherUserId)).hasElement(userId).block();
         try {
-            if (isAuthorized || usersRepository.isAdministrator(userId)) {
+            if (isAuthorized || isAdministrator(userId)) {
                 return AuthorizationState.ALLOWED;
             }
             if (!usersRepository.contains(otherUserId)) {
@@ -57,5 +61,23 @@ public class DelegationStoreAuthorizator implements Authorizator {
         } catch (UsersRepositoryException e) {
             throw new MailboxException("Unable to access usersRepository", e);
         }
+    }
+
+    @VisibleForTesting
+    boolean isAdministrator(Username userId) throws UsersRepositoryException {
+        if (userId.hasDomainPart() ^ usersRepository.supportVirtualHosting()) {
+            return false;
+        }
+        try {
+            return usersRepository.isAdministrator(userId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public Collection<Username> delegatedUsers(Username username) {
+        return Flux.from(delegationStore.delegatedUsers(username)).collectList()
+            .block();
     }
 }

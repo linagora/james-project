@@ -57,6 +57,7 @@ public class ImapParserFactory implements ImapCommandParserFactory {
             // UNSUBSCRIBE, LIST, LSUB, STATUS, and APPEND
             new SelectCommandParser(statusResponseFactory),
             new ExamineCommandParser(statusResponseFactory),
+            new ReplaceCommandParser(statusResponseFactory, Clock.systemDefaultZone()),
             new CreateCommandParser(statusResponseFactory),
             new DeleteCommandParser(statusResponseFactory),
             new RenameCommandParser(statusResponseFactory),
@@ -90,6 +91,7 @@ public class ImapParserFactory implements ImapCommandParserFactory {
             new StoreCommandParser(statusResponseFactory),
             new UidCommandParser(this, statusResponseFactory),
             new IdleCommandParser(statusResponseFactory),
+            new IDCommandParser(statusResponseFactory),
             new StartTLSCommandParser(statusResponseFactory),
 
             // RFC3691
@@ -109,11 +111,15 @@ public class ImapParserFactory implements ImapCommandParserFactory {
             //RFC5464
             //SETMETADATA, GETMETADATA
             new SetAnnotationCommandParser(statusResponseFactory),
-            new GetAnnotationCommandParser(statusResponseFactory));
+            new GetMetadataCommandParser(statusResponseFactory));
 
         imapCommands = parsers.collect(ImmutableMap.toImmutableMap(
                 parser -> parser.getCommand().getName(),
                 Function.identity()));
+    }
+
+    public ImapParserFactory(Map<String, ImapCommandParser> imapCommands) {
+        this.imapCommands = imapCommands;
     }
 
     @Override

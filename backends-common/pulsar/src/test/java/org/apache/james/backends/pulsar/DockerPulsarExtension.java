@@ -19,9 +19,16 @@
 
 package org.apache.james.backends.pulsar;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.common.policies.data.TenantInfo;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -35,6 +42,7 @@ import org.testcontainers.containers.PulsarContainer;
 import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
+import org.testcontainers.utility.DockerImageName;
 
 public class DockerPulsarExtension implements
         AfterAllCallback,
@@ -43,30 +51,28 @@ public class DockerPulsarExtension implements
         ParameterResolver {
     private static final Logger logger = LoggerFactory.getLogger(DockerPulsarExtension.class);
     private static PulsarContainer container;
+    private static final DockerImageName DEFAULT_IMAGE_NAME = DockerImageName.parse("apachepulsar/pulsar");
+
     private static void displayDockerLog(OutputFrame outputFrame) {
         logger.info(outputFrame.getUtf8String().trim());
     }
+
     private PulsarConfiguration configuration;
     private PulsarAdmin adminClient;
     private DockerPulsar dockerPulsar;
 
     public DockerPulsarExtension() {
-        container = new PulsarContainer("2.9.1")
-                .withLogConsumer(DockerPulsarExtension::displayDockerLog)
-                .waitingFor(
-                        new WaitAllStrategy()
-                                .withStrategy(
-                                        Wait.forHttp(PulsarContainer.METRICS_ENDPOINT)
-                                                .forStatusCode(200)
-                                                .forPort(PulsarContainer.BROKER_HTTP_PORT))
-                                .withStrategy(
-                                        Wait.forLogMessage(".*Successfully validated clusters on tenant .public.*\\n", 1))
-                );
+        container = new PulsarContainer(DEFAULT_IMAGE_NAME.withTag("2.10.1"))
+                .withLogConsumer(DockerPulsarExtension::displayDockerLog);
     }
 
     PulsarConfiguration pulsarConfiguration() {
-        return new PulsarConfiguration(container.getPulsarBrokerUrl(),
-                container.getHttpServiceUrl(), new Namespace("public/" + RandomStringUtils.randomAlphabetic(10)));
+        return new PulsarConfiguration(
+                container.getPulsarBrokerUrl(),
+                container.getHttpServiceUrl(),
+                new Namespace("test/" + RandomStringUtils.randomAlphabetic(10)),
+                Auth.noAuth()
+        );
     }
 
     public PulsarConfiguration getConfiguration() {
@@ -74,9 +80,11 @@ public class DockerPulsarExtension implements
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) throws PulsarClientException {
+    public void beforeAll(ExtensionContext context) throws PulsarClientException, PulsarAdminException {
         container.start();
         adminClient = PulsarAdmin.builder().serviceHttpUrl(container.getHttpServiceUrl()).build();
+        Set<String> clusters = new HashSet<>(adminClient.clusters().getClusters());
+        adminClient.tenants().createTenant("test", TenantInfo.builder().allowedClusters(clusters).build());
     }
 
     @Override

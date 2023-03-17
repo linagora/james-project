@@ -306,6 +306,7 @@ public class RabbitMQConfiguration {
     private static final String QUEUE_TTL = "notification.queue.ttl";
     private static final String EVENT_BUS_NOTIFICATION_DURABILITY_ENABLED = "event.bus.notification.durability.enabled";
     private static final String EVENT_BUS_PUBLISH_CONFIRM_ENABLED = "event.bus.publish.confirm.enabled";
+    private static final String VHOST = "vhost";
 
     public static class ManagementCredentials {
 
@@ -402,6 +403,7 @@ public class RabbitMQConfiguration {
         private Optional<Long> queueTTL;
         private Optional<Boolean> eventBusPublishConfirmEnabled;
         private Optional<Boolean> eventBusNotificationDurabilityEnabled;
+        private Optional<String> vhost;
 
         private Builder(URI amqpUri, URI managementUri, ManagementCredentials managementCredentials) {
             this.amqpUri = amqpUri;
@@ -423,6 +425,7 @@ public class RabbitMQConfiguration {
             this.queueTTL = Optional.empty();
             this.eventBusPublishConfirmEnabled = Optional.empty();
             this.eventBusNotificationDurabilityEnabled = Optional.empty();
+            this.vhost = Optional.empty();
         }
 
         public Builder maxRetries(int maxRetries) {
@@ -513,6 +516,11 @@ public class RabbitMQConfiguration {
             return this;
         }
 
+        public Builder vhost(Optional<String> vhost) {
+            this.vhost = vhost;
+            return this;
+        }
+
         public RabbitMQConfiguration build() {
             Preconditions.checkNotNull(amqpUri, "'amqpUri' should not be null");
             Preconditions.checkNotNull(managementUri, "'managementUri' should not be null");
@@ -535,7 +543,8 @@ public class RabbitMQConfiguration {
                     hostsDefaultingToUri(),
                     queueTTL,
                     eventBusPublishConfirmEnabled.orElse(true),
-                    eventBusNotificationDurabilityEnabled.orElse(true));
+                    eventBusNotificationDurabilityEnabled.orElse(true),
+                    vhost);
         }
 
         private List<Host> hostsDefaultingToUri() {
@@ -584,6 +593,8 @@ public class RabbitMQConfiguration {
 
         Optional<Long> queueTTL = Optional.ofNullable(configuration.getLong(QUEUE_TTL, null));
 
+        Optional<String> vhost = Optional.ofNullable(configuration.getString(VHOST, null));
+
         ManagementCredentials managementCredentials = ManagementCredentials.from(configuration);
         return builder()
             .amqpUri(amqpUri)
@@ -598,6 +609,7 @@ public class RabbitMQConfiguration {
             .queueTTL(queueTTL)
             .eventBusNotificationDurabilityEnabled(configuration.getBoolean(EVENT_BUS_NOTIFICATION_DURABILITY_ENABLED, null))
             .eventBusPublishConfirmEnabled(configuration.getBoolean(EVENT_BUS_PUBLISH_CONFIRM_ENABLED, null))
+            .vhost(vhost)
             .build();
     }
 
@@ -668,12 +680,14 @@ public class RabbitMQConfiguration {
     private final Optional<Long> queueTTL;
     private final boolean eventBusPublishConfirmEnabled;
     private final boolean eventBusNotificationDurabilityEnabled;
+    private final Optional<String> vhost;
 
     private RabbitMQConfiguration(URI uri, URI managementUri, ManagementCredentials managementCredentials, int maxRetries, int minDelayInMs,
                                   int connectionTimeoutInMs, int channelRpcTimeoutInMs, int handshakeTimeoutInMs, int shutdownTimeoutInMs,
                                   int networkRecoveryIntervalInMs, Boolean useSsl, Boolean useSslManagement, SSLConfiguration sslConfiguration,
                                   boolean useQuorumQueues, int quorumQueueReplicationFactor, List<Host> hosts, Optional<Long> queueTTL,
-                                  boolean eventBusPublishConfirmEnabled, boolean eventBusNotificationDurabilityEnabled) {
+                                  boolean eventBusPublishConfirmEnabled, boolean eventBusNotificationDurabilityEnabled,
+                                  Optional<String> vhost) {
         this.uri = uri;
         this.managementUri = managementUri;
         this.managementCredentials = managementCredentials;
@@ -693,6 +707,7 @@ public class RabbitMQConfiguration {
         this.queueTTL = queueTTL;
         this.eventBusPublishConfirmEnabled = eventBusPublishConfirmEnabled;
         this.eventBusNotificationDurabilityEnabled = eventBusNotificationDurabilityEnabled;
+        this.vhost = vhost;
     }
 
     public URI getUri() {
@@ -747,12 +762,11 @@ public class RabbitMQConfiguration {
         return sslConfiguration;
     }
 
-    public QueueArguments.Builder workQueueArgumentsBuilder() {
+    public QueueArguments.Builder workQueueArgumentsBuilder(boolean allowQuorum) {
         QueueArguments.Builder builder = QueueArguments.builder();
-        if (useQuorumQueues) {
+        if (allowQuorum && useQuorumQueues) {
             builder.quorumQueue().replicationFactor(quorumQueueReplicationFactor);
         }
-        queueTTL.ifPresent(builder::queueTTL);
         return builder;
     }
 
@@ -770,6 +784,19 @@ public class RabbitMQConfiguration {
 
     public boolean isEventBusNotificationDurabilityEnabled() {
         return eventBusNotificationDurabilityEnabled;
+    }
+
+    public Optional<String> getVhost() {
+        return vhost.or(this::getVhostFromPath);
+    }
+
+    private Optional<String> getVhostFromPath() {
+        String vhostPath = uri.getPath();
+        if (vhostPath.startsWith("/")) {
+            return Optional.of(vhostPath.substring(1))
+                .filter(value -> !value.isEmpty());
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -795,7 +822,8 @@ public class RabbitMQConfiguration {
                 && Objects.equals(this.hosts, that.hosts)
                 && Objects.equals(this.queueTTL, that.queueTTL)
                 && Objects.equals(this.eventBusPublishConfirmEnabled, that.eventBusPublishConfirmEnabled)
-                && Objects.equals(this.eventBusNotificationDurabilityEnabled, that.eventBusNotificationDurabilityEnabled);
+                && Objects.equals(this.eventBusNotificationDurabilityEnabled, that.eventBusNotificationDurabilityEnabled)
+                && Objects.equals(this.vhost, that.vhost);
         }
         return false;
     }
@@ -804,6 +832,6 @@ public class RabbitMQConfiguration {
     public final int hashCode() {
         return Objects.hash(uri, managementUri, maxRetries, minDelayInMs, connectionTimeoutInMs, quorumQueueReplicationFactor, useQuorumQueues, hosts,
             channelRpcTimeoutInMs, handshakeTimeoutInMs, shutdownTimeoutInMs, networkRecoveryIntervalInMs, managementCredentials, useSsl, useSslManagement,
-            sslConfiguration, queueTTL, eventBusPublishConfirmEnabled, eventBusNotificationDurabilityEnabled);
+            sslConfiguration, queueTTL, eventBusPublishConfirmEnabled, eventBusNotificationDurabilityEnabled, vhost);
     }
 }

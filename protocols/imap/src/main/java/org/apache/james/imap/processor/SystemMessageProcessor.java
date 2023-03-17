@@ -19,6 +19,8 @@
 
 package org.apache.james.imap.processor;
 
+import javax.inject.Inject;
+
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.message.request.SystemMessage;
 import org.apache.james.imap.processor.base.AbstractProcessor;
@@ -38,6 +40,7 @@ public class SystemMessageProcessor extends AbstractProcessor<SystemMessage> {
 
     private final MailboxManager mailboxManager;
 
+    @Inject
     public SystemMessageProcessor(MailboxManager mailboxManager) {
         super(SystemMessage.class);
         this.mailboxManager = mailboxManager;
@@ -66,9 +69,6 @@ public class SystemMessageProcessor extends AbstractProcessor<SystemMessage> {
         final MailboxSession session = imapSession.getMailboxSession();
         if (session == null) {
             LOGGER.trace("No mailbox session so no force logout needed");
-        } else {
-            session.close();
-            mailboxManager.logout(session);
         }
     }
 

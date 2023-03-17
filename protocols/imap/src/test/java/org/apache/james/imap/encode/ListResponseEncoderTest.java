@@ -21,6 +21,9 @@ package org.apache.james.imap.encode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.EnumSet;
+
+import org.apache.james.imap.api.process.MailboxType;
 import org.apache.james.imap.encode.base.ByteImapResponseWriter;
 import org.apache.james.imap.encode.base.ImapResponseComposerImpl;
 import org.apache.james.imap.message.response.ListResponse;
@@ -45,7 +48,10 @@ class ListResponseEncoderTest {
 
     @Test
     void encoderShouldIncludeListCommand() throws Exception {
-        encoder.encode(new ListResponse(MailboxMetaData.Children.HAS_CHILDREN, MailboxMetaData.Selectability.NONE, "name", '.'), composer);
+        encoder.encode(new ListResponse(MailboxMetaData.Children.HAS_CHILDREN, MailboxMetaData.Selectability.NONE,
+            "name", '.', false,
+            false, EnumSet.noneOf(ListResponse.ChildInfo.class), MailboxType.OTHER), composer);
+        composer.flush();
         assertThat(writer.getString()).startsWith("* LIST");
     }
 }

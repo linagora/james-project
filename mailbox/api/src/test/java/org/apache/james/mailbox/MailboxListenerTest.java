@@ -19,6 +19,7 @@
 
 package org.apache.james.mailbox;
 
+import static org.apache.james.mailbox.events.MailboxEvents.Added.IS_DELIVERY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -73,7 +74,7 @@ class MailboxListenerTest {
     private static final MailboxACL ACL_2 = new MailboxACL(
         Pair.of(MailboxACL.EntryKey.createUserEntryKey(Username.of("Bob")), new MailboxACL.Rfc4314Rights(MailboxACL.Right.Read)));
     private static final MessageUid UID = MessageUid.of(85);
-    private static final MessageMetaData META_DATA = new MessageMetaData(UID, ModSeq.of(45), new Flags(), 45, new Date(), TestMessageId.of(75), ThreadId.fromBaseMessageId(TestMessageId.of(75)));
+    private static final MessageMetaData META_DATA = new MessageMetaData(UID, ModSeq.of(45), new Flags(), 45, new Date(), Optional.of(new Date()), TestMessageId.of(75), ThreadId.fromBaseMessageId(TestMessageId.of(75)));
 
     @Test
     void mailboxAddedShouldMatchBeanContract() {
@@ -161,7 +162,7 @@ class MailboxListenerTest {
     @Test
     void addedShouldBeNoopWhenEmpty() {
         Added added = new Added(SESSION_ID, BOB, PATH, MAILBOX_ID, ImmutableSortedMap.of(),
-            Event.EventId.random());
+            Event.EventId.random(), !IS_DELIVERY);
 
         assertThat(added.isNoop()).isTrue();
     }
@@ -169,7 +170,7 @@ class MailboxListenerTest {
     @Test
     void addedShouldNotBeNoopWhenNotEmpty() {
         Added added = new Added(SESSION_ID, BOB, PATH, MAILBOX_ID, ImmutableSortedMap.of(UID, META_DATA),
-            Event.EventId.random());
+            Event.EventId.random(), !IS_DELIVERY);
 
         assertThat(added.isNoop()).isFalse();
     }

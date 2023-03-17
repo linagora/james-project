@@ -37,15 +37,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.reactivestreams.Publisher;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 class SerialTaskManagerWorkerTest {
-    private  static final Duration UPDATE_INFORMATION_POLLING_DURATION = Duration.ofMillis(100);
+    private static final Duration UPDATE_INFORMATION_POLLING_DURATION = Duration.ofMillis(100);
 
     private TaskManagerWorker.Listener listener;
     private SerialTaskManagerWorker worker;
@@ -67,20 +68,19 @@ class SerialTaskManagerWorkerTest {
         worker = new SerialTaskManagerWorker(listener, UPDATE_INFORMATION_POLLING_DURATION);
     }
 
-    @AfterEach
-    void tearDown() {
-        worker.close();
-    }
-
     @Test
     void aSuccessfullTaskShouldCompleteSuccessfully() {
+        ArgumentCaptor<Publisher<Optional<TaskExecutionDetails.AdditionalInformation>>> additionalInformationPublisherCapture = ArgumentCaptor.forClass(Publisher.class);
         TaskWithId taskWithId = new TaskWithId(TaskId.generateTaskId(), this.successfulTask);
 
         Mono<Task.Result> result = worker.executeTask(taskWithId);
 
         assertThat(result.block()).isEqualTo(Task.Result.COMPLETED);
 
-        verify(listener, atLeastOnce()).completed(taskWithId.getId(), Task.Result.COMPLETED, Optional.empty());
+        verify(listener, atLeastOnce()).completed(eq(taskWithId.getId()), eq(Task.Result.COMPLETED), additionalInformationPublisherCapture.capture());
+
+        assertThat(Mono.from(additionalInformationPublisherCapture.getValue())
+            .block()).isEmpty();
     }
 
     @Test
@@ -129,22 +129,30 @@ class SerialTaskManagerWorkerTest {
 
     @Test
     void aFailedTaskShouldCompleteWithFailedStatus() {
+        ArgumentCaptor<Publisher<Optional<TaskExecutionDetails.AdditionalInformation>>> additionalInformationPublisherCapture = ArgumentCaptor.forClass(Publisher.class);
         TaskWithId taskWithId = new TaskWithId(TaskId.generateTaskId(), failedTask);
 
         Mono<Task.Result> result = worker.executeTask(taskWithId);
 
         assertThat(result.block()).isEqualTo(Task.Result.PARTIAL);
-        verify(listener, atLeastOnce()).failed(taskWithId.getId(), Optional.empty());
+
+        verify(listener, atLeastOnce()).failed(eq(taskWithId.getId()), additionalInformationPublisherCapture.capture());
+
+        assertThat(Mono.from(additionalInformationPublisherCapture.getValue())
+            .block()).isEmpty();
     }
 
     @Test
     void aThrowingTaskShouldCompleteWithFailedStatus() {
         TaskWithId taskWithId = new TaskWithId(TaskId.generateTaskId(), throwingTask);
+        ArgumentCaptor<Publisher<Optional<TaskExecutionDetails.AdditionalInformation>>> additionalInformationPublisherCapture = ArgumentCaptor.forClass(Publisher.class);
 
         Mono<Task.Result> result = worker.executeTask(taskWithId);
 
         assertThat(result.block()).isEqualTo(Task.Result.PARTIAL);
-        verify(listener, atLeastOnce()).failed(eq(taskWithId.getId()), eq(Optional.empty()), any(RuntimeException.class));
+        verify(listener, atLeastOnce()).failed(eq(taskWithId.getId()), additionalInformationPublisherCapture.capture(), any(RuntimeException.class));
+        assertThat(Mono.from(additionalInformationPublisherCapture.getValue())
+            .block()).isEmpty();
     }
 
     @Test
@@ -204,6 +212,8 @@ class SerialTaskManagerWorkerTest {
 
     @Test
     void theWorkerShouldCancelAnInProgressTask() throws InterruptedException {
+        ArgumentCaptor<Publisher<Optional<TaskExecutionDetails.AdditionalInformation>>> additionalInformationPublisherCapture = ArgumentCaptor.forClass(Publisher.class);
+
         TaskId id = TaskId.generateTaskId();
         AtomicInteger counter = new AtomicInteger(0);
         CountDownLatch latch = new CountDownLatch(1);
@@ -230,10 +240,102 @@ class SerialTaskManagerWorkerTest {
         // Let a grace period for the cancellation to complete to increase test stability
         Thread.sleep(50);
 
-        verify(listener, atLeastOnce()).cancelled(id, Optional.empty());
+        verify(listener, atLeastOnce()).cancelled(eq(id), additionalInformationPublisherCapture.capture());
+        verifyNoMoreInteractions(listener);
+
+        assertThat(Mono.from(additionalInformationPublisherCapture.getValue())
+            .block()).isEmpty();
+    }
+
+    @Test
+    void theWorkerShouldCancelAnInProgressAsyncTask() throws InterruptedException {
+        TaskId id = TaskId.generateTaskId();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        Task inProgressTask = new AsyncSafeTask() {
+            @Override
+            public Mono<Result> runAsync() {
+                return Mono.fromCallable(() -> {
+                    await(latch);
+                    return Task.Result.COMPLETED;
+                });
+            }
+
+            @Override
+            public TaskType type() {
+                return TaskType.of("async memory task");
+            }
+        };
+
+        TaskWithId taskWithId = new TaskWithId(id, inProgressTask);
+
+        Mono<Task.Result> resultMono = worker.executeTask(taskWithId).cache();
+        resultMono.subscribe();
+
+        Awaitility.waitAtMost(TEN_SECONDS)
+            .untilAsserted(() -> verify(listener, atLeastOnce()).started(id));
+
+        worker.cancelTask(id);
+
+        resultMono.block(Duration.ofSeconds(10));
+
+        // Due to the use of signals, cancellation cannot be instantaneous
+        // Let a grace period for the cancellation to complete to increase test stability
+        Thread.sleep(50);
+
+        verify(listener, atLeastOnce()).cancelled(eq(id), any());
         verifyNoMoreInteractions(listener);
     }
 
+    @Test
+    void theWorkerShouldRunAsyncTasksInParallel() throws InterruptedException {
+        TaskId id1 = TaskId.generateTaskId();
+        TaskId id2 = TaskId.generateTaskId();
+        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch task1Started = new CountDownLatch(1);
+        CountDownLatch task2Started = new CountDownLatch(1);
+
+        Task inProgressTask1 = new AsyncSafeTask() {
+            @Override
+            public Mono<Result> runAsync() {
+                return Mono.fromCallable(() -> {
+                    task1Started.countDown();
+                    await(latch);
+                    return Task.Result.COMPLETED;
+                });
+            }
+
+            @Override
+            public TaskType type() {
+                return TaskType.of("async memory task");
+            }
+        };
+
+        Task inProgressTask2 = new AsyncSafeTask() {
+            @Override
+            public Mono<Result> runAsync() {
+                return Mono.fromCallable(() -> {
+                    task2Started.countDown();
+                    return Task.Result.COMPLETED;
+                });
+            }
+
+            @Override
+            public TaskType type() {
+                return TaskType.of("async memory task");
+            }
+        };
+
+        worker.executeTask(new TaskWithId(id1, inProgressTask1)).subscribe();
+        await(task1Started);
+
+        worker.executeTask(new TaskWithId(id2, inProgressTask2)).subscribe();
+        await(task2Started);
+
+        verify(listener, atLeastOnce()).started(id1);
+        verify(listener, atLeastOnce()).started(id2);
+        latch.countDown();
+    }
 
     private void await(CountDownLatch countDownLatch) throws InterruptedException {
         countDownLatch.await();

@@ -20,7 +20,6 @@
 package org.apache.james.imap.processor.base;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -83,13 +82,7 @@ public class UidMsnConverter {
     private void addAllToEmptyLongStructure(List<MessageUid> addedUids) {
         uids.ensureCapacity(addedUids.size());
         for (MessageUid uid : addedUids) {
-            if (uid.asLong() > INTEGER_MAX_VALUE) {
-                uids.clear();
-                switchToLongs();
-                addAllUnSynchronized(addedUids);
-                return;
-            }
-            uids.add((int) uid.asLong());
+            uids.add(uid.asLong());
         }
         uids.sort(LongComparators.NATURAL_COMPARATOR);
     }
@@ -128,6 +121,8 @@ public class UidMsnConverter {
         for (int i = 0; i < uidsAsInts.size(); i++) {
             uids.add(uidsAsInts.getInt(i));
         }
+        uidsAsInts.clear();
+        uidsAsInts.trim();
     }
 
     public synchronized NullableMessageSequenceNumber getMsn(MessageUid uid) {
@@ -199,7 +194,7 @@ public class UidMsnConverter {
                 uidsAsInts.removeInt(index);
             }
         } else {
-            int index = Arrays.binarySearch(uids.elements(), 0, uids.size(), (int) uid.asLong());
+            int index = Arrays.binarySearch(uids.elements(), 0, uids.size(), uid.asLong());
             if (index >= 0) {
                 uids.removeLong(index);
             }
@@ -232,27 +227,32 @@ public class UidMsnConverter {
                 addUidUnSynchronized(uid);
                 return;
             }
-            if (uidsAsInts.contains((int) uid.asLong())) {
-                return;
-            }
             if (isLastUid(uid)) {
                 uidsAsInts.add((int) uid.asLong());
+                return;
+            }
+            if (contains(uid)) {
+                return;
             } else {
                 uidsAsInts.add((int) uid.asLong());
                 uidsAsInts.sort(IntComparators.NATURAL_COMPARATOR);
-                Collections.sort(uids);
             }
         } else {
-            if (uids.contains(uid.asLong())) {
-                return;
-            }
             if (isLastUid(uid)) {
                 uids.add(uid.asLong());
+                return;
+            }
+            if (contains(uid)) {
+                return;
             } else {
                 uids.add(uid.asLong());
                 uids.sort(LongComparators.NATURAL_COMPARATOR);
             }
         }
+    }
+
+    private boolean contains(MessageUid uid) {
+        return getMsnUnsynchronized(uid).foldSilent(() -> false, any -> true);
     }
 
     private boolean isLastUid(MessageUid uid) {

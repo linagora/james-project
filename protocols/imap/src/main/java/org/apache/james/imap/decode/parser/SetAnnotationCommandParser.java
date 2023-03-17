@@ -22,6 +22,8 @@ package org.apache.james.imap.decode.parser;
 import java.util.Optional;
 import java.util.function.Function;
 
+import javax.inject.Inject;
+
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.Tag;
@@ -31,15 +33,17 @@ import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.imap.decode.DecodingException;
 import org.apache.james.imap.decode.ImapRequestLineReader;
 import org.apache.james.imap.decode.base.AbstractImapCommandParser;
-import org.apache.james.imap.message.request.SetAnnotationRequest;
+import org.apache.james.imap.message.request.SetMetadataRequest;
 import org.apache.james.mailbox.model.MailboxAnnotation;
 import org.apache.james.mailbox.model.MailboxAnnotationKey;
 
 import com.google.common.collect.ImmutableList;
 
 public class SetAnnotationCommandParser extends AbstractImapCommandParser {
+
+    @Inject
     public SetAnnotationCommandParser(StatusResponseFactory statusResponseFactory) {
-        super(ImapConstants.SETANNOTATION_COMMAND, statusResponseFactory);
+        super(ImapConstants.SETMETADATA_COMMAND, statusResponseFactory);
     }
 
     @Override
@@ -59,7 +63,7 @@ public class SetAnnotationCommandParser extends AbstractImapCommandParser {
         }
         request.eol();
 
-        return new SetAnnotationRequest(tag, mailboxName, listMailboxAnnotations.build());
+        return new SetMetadataRequest(tag, mailboxName, listMailboxAnnotations.build());
     }
 
     private MailboxAnnotation readNextAnnotation(ImapRequestLineReader request) throws DecodingException {

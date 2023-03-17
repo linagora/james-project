@@ -19,26 +19,51 @@
 
 package org.apache.james.webadmin.service;
 
-import static org.apache.james.util.ReactorUtils.DEFAULT_CONCURRENCY;
-
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Inject;
 
+import org.apache.james.events.DispatchingFailureGroup;
 import org.apache.james.events.Event;
 import org.apache.james.events.EventBus;
 import org.apache.james.events.EventDeadLetters;
 import org.apache.james.events.Group;
 import org.apache.james.task.Task;
+import org.apache.james.util.streams.Limit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class EventDeadLettersRedeliverService {
+    public static class RunningOptions {
+        public static RunningOptions DEFAULT = new RunningOptions(Limit.unlimited());
+        private final Limit limit;
+
+        public RunningOptions(Limit limit) {
+            this.limit = limit;
+        }
+
+        @JsonCreator
+        public RunningOptions(@JsonProperty("limit") Integer limit) {
+            this.limit = Limit.from(Optional.ofNullable(limit));
+        }
+
+        @JsonProperty("limit")
+        public Optional<Integer> limitValue() {
+            return limit.getLimit();
+        }
+
+        public Limit limit() {
+            return limit;
+        }
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EventDeadLettersRedeliverService.class);
 
@@ -52,16 +77,14 @@ public class EventDeadLettersRedeliverService {
         this.deadLetters = deadLetters;
     }
 
-    Flux<Task.Result> redeliverEvents(EventRetriever eventRetriever) {
-        return eventRetriever.retrieveEvents(deadLetters)
-            .flatMap(entry -> redeliverGroupEvents(entry.getT1(), entry.getT2(), entry.getT3()), DEFAULT_CONCURRENCY);
+    Flux<Task.Result> redeliverEvents(EventRetriever eventRetriever, RunningOptions runningOptions) {
+        return runningOptions.limit().applyOnFlux(eventRetriever.retrieveEvents(deadLetters))
+            .flatMap(tuple3 -> redeliverGroupEvents(tuple3.getT1(), tuple3.getT2(), tuple3.getT3()));
     }
 
     private Mono<Task.Result> redeliverGroupEvents(Group group, Event event, EventDeadLetters.InsertionId insertionId) {
-        return eventBuses.stream()
-            .filter(eventBus -> eventBus.listRegisteredGroups().contains(group))
-            .findFirst()
-            .map(eventBus -> eventBus. reDeliver(group, event)
+        return findEventBus(group)
+            .map(eventBus -> eventBus.reDeliver(group, event)
                 .then(deadLetters.remove(group, insertionId))
                 .thenReturn(Task.Result.COMPLETED)
                 .onErrorResume(e -> {
@@ -74,5 +97,16 @@ public class EventDeadLettersRedeliverService {
                     event.getEventId().toString(), group.asString());
                 return Mono.just(Task.Result.PARTIAL);
             });
+    }
+
+    private Optional<EventBus> findEventBus(Group group) {
+        if (group instanceof DispatchingFailureGroup) {
+            DispatchingFailureGroup dispatchingFailureGroup = (DispatchingFailureGroup) group;
+            return eventBuses.stream().filter(eventBus -> eventBus.eventBusName().equals(dispatchingFailureGroup.getEventBusName()))
+                .findFirst();
+        }
+        return eventBuses.stream()
+            .filter(eventBus -> eventBus.listRegisteredGroups().contains(group))
+            .findFirst();
     }
 }

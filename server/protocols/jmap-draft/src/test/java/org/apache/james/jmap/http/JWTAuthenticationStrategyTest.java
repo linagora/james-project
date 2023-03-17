@@ -25,13 +25,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.james.core.Username;
 import org.apache.james.domainlist.api.DomainList;
 import org.apache.james.jmap.exceptions.UnauthorizedException;
 import org.apache.james.jwt.JwtTokenVerifier;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.SessionProvider;
+import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.user.memory.MemoryUsersRepository;
 import org.junit.Before;
 import org.junit.Test;
@@ -122,8 +126,23 @@ public class JWTAuthenticationStrategyTest {
         MailboxSession fakeMailboxSession = mock(MailboxSession.class);
 
         when(stubTokenVerifier.verifyAndExtractLogin(validAuthHeader)).thenReturn(Optional.of(username));
-        when(mockedMailboxManager.createSystemSession(eq(Username.of(username))))
-                .thenReturn(fakeMailboxSession);
+        when(mockedMailboxManager.authenticate(eq(Username.of(username))))
+            .thenReturn(new SessionProvider.AuthorizationStep() {
+                @Override
+                public MailboxSession as(Username other) throws MailboxException {
+                    throw new NotImplementedException();
+                }
+
+                @Override
+                public MailboxSession withoutDelegation() throws MailboxException {
+                    return fakeMailboxSession;
+                }
+
+                @Override
+                public MailboxSession forMatchingUser(Predicate<Username> other) throws MailboxException {
+                    throw new NotImplementedException();
+                }
+            });
         when(mockedHeaders.get(AUTHORIZATION_HEADERS))
             .thenReturn(fakeAuthHeaderWithPrefix);
 

@@ -44,16 +44,16 @@ public class CassandraRabbitMQAwsS3JmapTestRule implements TestRule {
     }
 
     private final GuiceModuleTestRule guiceModuleTestRule;
-    private final DockerElasticSearchRule dockerElasticSearchRule;
+    private final DockerOpenSearchRule dockerOpenSearchRule;
 
     public CassandraRabbitMQAwsS3JmapTestRule(GuiceModuleTestRule... guiceModuleTestRule) {
         TempFilesystemTestRule tempFilesystemTestRule = new TempFilesystemTestRule();
-        this.dockerElasticSearchRule = new DockerElasticSearchRule();
+        this.dockerOpenSearchRule = new DockerOpenSearchRule();
         this.temporaryFolder = tempFilesystemTestRule.getTemporaryFolder();
         this.guiceModuleTestRule =
             AggregateGuiceModuleTestRule
                 .of(guiceModuleTestRule)
-                .aggregate(dockerElasticSearchRule)
+                .aggregate(dockerOpenSearchRule)
                 .aggregate(tempFilesystemTestRule);
     }
 
@@ -66,7 +66,7 @@ public class CassandraRabbitMQAwsS3JmapTestRule implements TestRule {
                     .disableCache()
                     .deduplication()
                     .noCryptoConfig())
-            .searchConfiguration(SearchConfiguration.elasticSearch())
+            .searchConfiguration(SearchConfiguration.openSearch())
             .build();
 
         return CassandraRabbitMQJamesServerMain.createServer(configuration)

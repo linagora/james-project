@@ -22,10 +22,14 @@ package org.apache.james.imap.processor;
 import static org.apache.james.util.ReactorUtils.logOnError;
 
 import java.util.Date;
+import java.util.List;
 
+import javax.inject.Inject;
 import javax.mail.Flags;
 
+import org.apache.james.imap.api.ImapConfiguration;
 import org.apache.james.imap.api.display.HumanReadableText;
+import org.apache.james.imap.api.message.Capability;
 import org.apache.james.imap.api.message.UidRange;
 import org.apache.james.imap.api.message.response.StatusResponse;
 import org.apache.james.imap.api.message.response.StatusResponse.ResponseCode;
@@ -39,6 +43,7 @@ import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.exception.OverQuotaException;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.model.MailboxPath;
@@ -49,15 +54,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
+import com.google.common.collect.ImmutableList;
 
 import reactor.core.publisher.Mono;
 
-public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
+public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> implements CapabilityImplementingProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AppendProcessor.class);
 
-    public AppendProcessor(MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory,
-            MetricFactory metricFactory) {
+    private ImmutableList<Capability> capabilities = ImmutableList.of();
+
+    @Inject
+    public AppendProcessor(MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory, MetricFactory metricFactory) {
         super(AppendRequest.class, mailboxManager, statusResponseFactory, metricFactory);
+    }
+
+    @Override
+    public void configure(ImapConfiguration imapConfiguration) {
+        super.configure(imapConfiguration);
+
+        capabilities = ImmutableList.of(imapConfiguration.getAppendLimit()
+            .map(value -> Capability.of("APPENDLIMIT=" + value))
+            .orElse(Capability.of("APPENDLIMIT")));
+    }
+
+    @Override
+    public List<Capability> getImplementedCapabilities(ImapSession session) {
+        return capabilities;
     }
 
     @Override
@@ -77,6 +99,13 @@ public class AppendProcessor extends AbstractMailboxProcessor<AppendRequest> {
                 // Indicates that the mailbox does not exist
                 // So TRY CREATE
                 no(request, responder, HumanReadableText.FAILURE_NO_SUCH_MAILBOX, StatusResponse.ResponseCode.tryCreate());
+                return Mono.empty();
+            })
+            .doOnEach(logOnError(OverQuotaException.class, e -> LOGGER.info("Append failed for mailbox {} because overquota", mailboxPath)))
+            .onErrorResume(OverQuotaException.class, e -> {
+                // Indicates that the mailbox does not exist
+                // So TRY CREATE
+                no(request, responder, HumanReadableText.FAILURE_OVERQUOTA, StatusResponse.ResponseCode.overQuota());
                 return Mono.empty();
             })
             .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("Append failed for mailbox {}", mailboxPath, e)))

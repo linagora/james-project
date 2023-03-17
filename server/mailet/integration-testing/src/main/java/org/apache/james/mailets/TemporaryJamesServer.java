@@ -55,14 +55,16 @@ public class TemporaryJamesServer {
         return MailetContainer.builder()
             .putProcessor(CommonProcessors.root())
             .putProcessor(CommonProcessors.error())
-            .putProcessor(CommonProcessors.transport());
+            .putProcessor(CommonProcessors.transport())
+            .putProcessor(CommonProcessors.bounces());
     }
 
     public static MailetContainer.Builder simpleMailetContainerConfiguration() {
         return MailetContainer.builder()
             .putProcessor(CommonProcessors.simpleRoot())
             .putProcessor(CommonProcessors.error())
-            .putProcessor(CommonProcessors.transport());
+            .putProcessor(CommonProcessors.transport())
+            .putProcessor(CommonProcessors.bounces());
     }
 
 
@@ -167,8 +169,14 @@ public class TemporaryJamesServer {
     }
 
     private void copyResource(Path resourcesFolder, String resourceName) {
-        try (OutputStream outputStream = new FileOutputStream(resourcesFolder.resolve(resourceName).toFile())) {
-            ClassLoader.getSystemClassLoader().getResource(resourceName).openStream().transferTo(outputStream);
+        var resolvedResource = resourcesFolder.resolve(resourceName);
+        try (OutputStream outputStream = new FileOutputStream(resolvedResource.toFile())) {
+            var resource = ClassLoader.getSystemClassLoader().getResource(resourceName);
+            if (resource != null) {
+                resource.openStream().transferTo(outputStream);
+            } else {
+                throw new RuntimeException("Failed to load configuration resource " + resourceName);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

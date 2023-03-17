@@ -73,6 +73,22 @@
 &lt;/tls&gt;
 </source>
 
+      <p>Optionally, TLS protocols and/or cipher suites can be specified explicitly (smtpserver.xml, pop3server.xml, imapserver.xml,..).
+        Otherwise, the default protocols and cipher suites of the used JDK will be used.</p>
+<source>
+&lt;tls socketTLS="false" startTLS="false"&gt;
+    &lt;supportedCipherSuites&gt;
+      &lt;cipherSuite&gt;TLS_AES_256_GCM_SHA384&lt;/cipherSuite&gt;
+      &lt;cipherSuite&gt;TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256&lt;/cipherSuite&gt;
+    &lt;/supportedCipherSuites&gt;
+    &lt;supportedProtocols&gt;
+      &lt;protocol&gt;TLSv1.2&lt;/protocol&gt;
+      &lt;protocol&gt;TLSv1.1&lt;/protocol&gt;
+      &lt;protocol&gt;TLSv1&lt;/protocol&gt;
+      &lt;protocol&gt;SSLv3&lt;/protocol&gt;
+    &lt;/supportedProtocols&gt;
+&lt;/tls&gt;
+</source>
       <p>Each of these block has an optional boolean configuration element <b>socketTLS</b> and <b>startTLS</b> which is used to toggle
          use of SSL or TLS for the service.</p>
          
@@ -124,6 +140,7 @@
         &lt;truststore&gt;file://conf/truststore&lt;/truststore&gt;
         &lt;truststoreType&gt;JKS&lt;/truststoreType&gt;
         &lt;truststoreSecret&gt;yoursecret&lt;/truststoreSecret&gt;
+        &lt;enableOCSPCRLChecks&gt;false&lt;/enableOCSPCRLChecks&gt;
     &lt;/clientAuth&gt;
 &lt;/tls&gt;
 </source>
@@ -132,6 +149,8 @@
          or an issuer certificate (CA) if you trust all certificates created by it. If you omit the truststore configuration,
          James will use the Java default truststore instead, effectively trusting any known CA.</p>
 
+      <p>James can optionally enable OCSP verifications for client certificates against Certificate Revocation List referenced
+      in the certificate itself.</p>
     </subsection>
 
     <subsection name="Creating your own PEM keys">

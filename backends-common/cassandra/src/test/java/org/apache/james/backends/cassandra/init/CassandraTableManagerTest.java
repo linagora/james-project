@@ -26,15 +26,16 @@ import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.CassandraClusterExtension;
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.components.CassandraTable;
+import org.apache.james.backends.cassandra.init.configuration.JamesExecutionProfiles;
 import org.apache.james.backends.cassandra.versions.CassandraSchemaVersionModule;
 import org.apache.james.backends.cassandra.versions.table.CassandraSchemaVersionTable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import com.datastax.oss.driver.api.core.type.DataTypes;
+import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
+import com.datastax.oss.driver.api.querybuilder.SchemaBuilder;
 
 class CassandraTableManagerTest {
     private static final String TABLE_NAME = "tablename";
@@ -43,9 +44,9 @@ class CassandraTableManagerTest {
             CassandraSchemaVersionModule.MODULE,
             CassandraModule.table(TABLE_NAME)
                 .comment("Testing table")
-                .statement(statement -> statement
-                        .addPartitionKey("id", DataType.timeuuid())
-                        .addClusteringColumn("clustering", DataType.bigint()))
+                .statement(statement -> types -> statement
+                    .withPartitionKey("id", DataTypes.TIMEUUID)
+                    .withClusteringColumn("clustering", DataTypes.BIGINT))
                 .build());
 
     @RegisterExtension
@@ -65,10 +66,12 @@ class CassandraTableManagerTest {
 
     @Test
     void initializeTableShouldCreateAllTheTables() {
-        cassandra.getConf().execute(SchemaBuilder.dropTable(TABLE_NAME));
-        cassandra.getConf().execute(SchemaBuilder.dropTable(CassandraSchemaVersionTable.TABLE_NAME));
+        cassandra.getConf().execute(SchemaBuilder.dropTable(TABLE_NAME).build()
+            .setExecutionProfile(JamesExecutionProfiles.getTableCreationProfile(cassandra.getConf())));
+        cassandra.getConf().execute(SchemaBuilder.dropTable(CassandraSchemaVersionTable.TABLE_NAME).build()
+            .setExecutionProfile(JamesExecutionProfiles.getTableCreationProfile(cassandra.getConf())));
 
-        assertThat(new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables())
+        assertThat(new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables(new CassandraTypesProvider(cassandra.getConf())))
                 .isEqualByComparingTo(CassandraTable.InitializationStatus.FULL);
 
         ensureTableExistence(TABLE_NAME);
@@ -76,9 +79,10 @@ class CassandraTableManagerTest {
 
     @Test
     void initializeTableShouldCreateAllTheMissingTable() {
-        cassandra.getConf().execute(SchemaBuilder.dropTable(TABLE_NAME));
+        cassandra.getConf().execute(SchemaBuilder.dropTable(TABLE_NAME).build()
+            .setExecutionProfile(JamesExecutionProfiles.getTableCreationProfile(cassandra.getConf())));
 
-        assertThat(new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables())
+        assertThat(new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables(new CassandraTypesProvider(cassandra.getConf())))
                 .isEqualByComparingTo(CassandraTable.InitializationStatus.PARTIAL);
 
         ensureTableExistence(TABLE_NAME);
@@ -86,19 +90,20 @@ class CassandraTableManagerTest {
 
     @Test
     void initializeTableShouldNotPerformIfCalledASecondTime() {
-        assertThat(new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables())
+        assertThat(new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables(new CassandraTypesProvider(cassandra.getConf())))
                 .isEqualByComparingTo(CassandraTable.InitializationStatus.ALREADY_DONE);
     }
 
     @Test
     void initializeTableShouldNotFailIfCalledASecondTime() {
-        new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables();
+        new CassandraTableManager(MODULE, cassandra.getConf()).initializeTables(new CassandraTypesProvider(cassandra.getConf()));
 
         ensureTableExistence(TABLE_NAME);
     }
 
     private void ensureTableExistence(String tableName) {
-        assertThatCode(() -> cassandra.getConf().execute(QueryBuilder.select().from(tableName).limit(1)))
+        assertThatCode(() -> cassandra.getConf().execute(QueryBuilder.selectFrom(tableName).all().limit(1).build()
+            .setExecutionProfile(JamesExecutionProfiles.getTableCreationProfile(cassandra.getConf()))))
             .doesNotThrowAnyException();
     }
 }

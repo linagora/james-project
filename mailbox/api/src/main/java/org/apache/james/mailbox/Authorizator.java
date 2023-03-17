@@ -19,13 +19,21 @@
 
 package org.apache.james.mailbox;
 
+import java.util.Collection;
+
 import org.apache.james.core.Username;
 import org.apache.james.mailbox.exception.MailboxException;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Authenticates user credentials.
  */
 public interface Authorizator {
+
+    interface FluentAuthorizator {
+        AuthorizationState canLoginAs(Username otherUserId) throws MailboxException;
+    }
 
     enum AuthorizationState {
         ALLOWED,
@@ -34,5 +42,13 @@ public interface Authorizator {
     }
 
     AuthorizationState canLoginAsOtherUser(Username userId, Username otherUserId) throws MailboxException;
+
+    default FluentAuthorizator user(Username userId) {
+        return otherUserId -> canLoginAsOtherUser(userId, otherUserId);
+    }
+
+    default Collection<Username> delegatedUsers(Username username) {
+        return ImmutableList.of();
+    }
 }
 

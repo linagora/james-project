@@ -120,7 +120,7 @@ class DeletedMessageVaultHookTest {
                 .blobIdFactory(new HashBlobId.Factory())
                 .defaultBucketName()
                 .passthrough(), blobStoreDAO, new BucketNameGenerator(clock), clock,
-            VaultConfiguration.DEFAULT);
+            VaultConfiguration.ENABLED_DEFAULT);
 
         DeletedMessageConverter deletedMessageConverter = new DeletedMessageConverter();
 
@@ -176,7 +176,7 @@ class DeletedMessageVaultHookTest {
             .mapToObj(Throwing.intFunction(i -> appendMessage(messageManager).getMessageId()))
             .collect(ImmutableList.toImmutableList());
 
-        assertThatCode(() -> Mono.from(messageIdManager.delete(ids, aliceSession)).subscribeOn(Schedulers.elastic()).block())
+        assertThatCode(() -> Mono.from(messageIdManager.delete(ids, aliceSession)).subscribeOn(Schedulers.newSingle("test")).block())
             .doesNotThrowAnyException();
     }
 

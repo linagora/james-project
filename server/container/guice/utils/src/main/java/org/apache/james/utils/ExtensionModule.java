@@ -34,6 +34,8 @@ public class ExtensionModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(GuiceGenericLoader.class).in(Scopes.SINGLETON);
+
+        install(new UserStartables.Module());
     }
 
     @Provides

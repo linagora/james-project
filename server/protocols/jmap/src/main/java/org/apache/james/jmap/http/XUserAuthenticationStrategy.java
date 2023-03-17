@@ -29,6 +29,7 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.user.api.UsersRepository;
 import org.apache.james.user.api.UsersRepositoryException;
+import org.apache.james.util.ReactorUtils;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -67,8 +68,8 @@ public class XUserAuthenticationStrategy implements AuthenticationStrategy {
             } catch (UsersRepositoryException e) {
                 throw new UnauthorizedException("Invalid username", e);
             }
-            return mailboxManager.createSystemSession(username);
-        });
+            return mailboxManager.authenticate(username).withoutDelegation();
+        }).subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER);
     }
 
     @Override
