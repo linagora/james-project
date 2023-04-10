@@ -144,6 +144,10 @@ public interface MessageManager {
      */
     void delete(List<MessageUid> uids, MailboxSession mailboxSession) throws MailboxException;
 
+    default Mono<Void> deleteReactive(List<MessageUid> uids, MailboxSession mailboxSession) {
+        return Mono.fromRunnable(Throwing.runnable(() -> delete(uids, mailboxSession)));
+    }
+
     /**
      * Sets flags on messages within the given range. The new flags are returned
      * for each message altered.
@@ -251,12 +255,14 @@ public interface MessageManager {
         public static class Builder {
             private Optional<Date> internalDate;
             private Optional<Boolean> isRecent;
+            private Optional<Boolean> isDelivery;
             private Optional<Flags> flags;
             private Optional<Message> maybeParsedMessage;
 
             private Builder() {
                 this.internalDate = Optional.empty();
                 this.isRecent = Optional.empty();
+                this.isDelivery = Optional.empty();
                 this.flags = Optional.empty();
                 this.maybeParsedMessage = Optional.empty();
             }
@@ -289,6 +295,19 @@ public interface MessageManager {
                 return isRecent(false);
             }
 
+            public Builder isDelivery(boolean isDelivery) {
+                this.isDelivery = Optional.of(isDelivery);
+                return this;
+            }
+
+            public Builder delivery() {
+                return isDelivery(true);
+            }
+
+            public Builder notDelivery() {
+                return isDelivery(false);
+            }
+
             public Builder withParsedMessage(Message message) {
                 this.maybeParsedMessage = Optional.of(message);
                 return this;
@@ -299,6 +318,7 @@ public interface MessageManager {
                     msgIn,
                     internalDate.orElse(new Date()),
                     isRecent.orElse(true),
+                    isDelivery.orElse(false),
                     flags.orElse(new Flags()),
                     maybeParsedMessage);
             }
@@ -346,13 +366,15 @@ public interface MessageManager {
         private final Content msgIn;
         private final Date internalDate;
         private final boolean isRecent;
+        private final boolean isDelivery;
         private final Flags flags;
         private final Optional<Message> maybeParsedMessage;
 
-        private AppendCommand(Content msgIn, Date internalDate, boolean isRecent, Flags flags, Optional<Message> maybeParsedMessage) {
+        private AppendCommand(Content msgIn, Date internalDate, boolean isRecent, boolean isDelivery, Flags flags, Optional<Message> maybeParsedMessage) {
             this.msgIn = msgIn;
             this.internalDate = internalDate;
             this.isRecent = isRecent;
+            this.isDelivery = isDelivery;
             this.flags = flags;
             this.maybeParsedMessage = maybeParsedMessage;
         }
@@ -367,6 +389,10 @@ public interface MessageManager {
 
         public boolean isRecent() {
             return isRecent;
+        }
+
+        public boolean isDelivery() {
+            return isDelivery;
         }
 
         public Flags getFlags() {
@@ -425,7 +451,7 @@ public interface MessageManager {
     /**
      * Gets the path of the referenced mailbox
      */
-    MailboxPath getMailboxPath() throws MailboxException;
+    MailboxPath getMailboxPath();
 
     Flags getApplicableFlags(MailboxSession session) throws MailboxException;
 
@@ -447,10 +473,14 @@ public interface MessageManager {
      *            describes which optional data should be returned
      * @return metadata view filtered for the session's user, not null
      */
-    MailboxMetaData getMetaData(RecentMode recentMode, MailboxSession mailboxSession, MailboxMetaData.FetchGroup fetchGroup) throws MailboxException;
+    default MailboxMetaData getMetaData(RecentMode recentMode, MailboxSession mailboxSession, MailboxMetaData.FetchGroup fetchGroup) throws MailboxException {
+        return getMetaData(recentMode, mailboxSession, fetchGroup.getItems());
+    }
 
-    default Mono<MailboxMetaData> getMetaDataReactive(RecentMode recentMode, MailboxSession mailboxSession, MailboxMetaData.FetchGroup fetchGroup) throws MailboxException {
-        return Mono.fromCallable(() -> getMetaData(recentMode, mailboxSession, fetchGroup));
+    MailboxMetaData getMetaData(RecentMode recentMode, MailboxSession mailboxSession, EnumSet<MailboxMetaData.Item> items) throws MailboxException;
+
+    default Mono<MailboxMetaData> getMetaDataReactive(RecentMode recentMode, MailboxSession mailboxSession, EnumSet<MailboxMetaData.Item> items) throws MailboxException {
+        return Mono.fromCallable(() -> getMetaData(recentMode, mailboxSession, items));
     }
 
     /**
@@ -462,6 +492,13 @@ public interface MessageManager {
             RESET,
             RETRIEVE,
             IGNORE
+        }
+
+        public enum Item {
+            MailboxCounters,
+            FirstUnseen,
+            HighestModSeq,
+            NextUid
         }
 
         /**
@@ -476,22 +513,32 @@ public interface MessageManager {
             /**
              * Only include the message and recent count
              */
-            NO_UNSEEN,
+            NO_UNSEEN(EnumSet.of(Item.MailboxCounters, Item.NextUid, Item.HighestModSeq)),
 
             /**
              * Only include the unseen message and recent count
              */
-            UNSEEN_COUNT,
+            UNSEEN_COUNT(EnumSet.of(Item.MailboxCounters, Item.NextUid, Item.HighestModSeq)),
 
             /**
              * Only include the first unseen and the recent count
              */
-            FIRST_UNSEEN,
+            FIRST_UNSEEN(EnumSet.of(Item.MailboxCounters, Item.NextUid, Item.HighestModSeq, Item.FirstUnseen)),
 
             /**
              * Only return the "always set" metadata as documented above
              */
-            NO_COUNT
+            NO_COUNT(EnumSet.of(Item.NextUid, Item.HighestModSeq));
+
+            private final EnumSet<Item> items;
+
+            FetchGroup(EnumSet<Item> items) {
+                this.items = items;
+            }
+
+            public EnumSet<Item> getItems() {
+                return items;
+            }
         }
 
         /**

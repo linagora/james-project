@@ -32,6 +32,8 @@ import org.apache.james.imap.message.Literal;
 
 public interface ImapResponseComposer {
 
+    void flush() throws IOException;
+
     /**
      * Writes an untagged NO response. Indicates that a warning. The command may
      * still complete sucessfully.
@@ -199,6 +201,8 @@ public interface ImapResponseComposer {
      *            message for display, not null
      */
     ImapResponseComposer continuationResponse(String message) throws IOException;
+
+    ImapResponseComposer continuationResponse() throws IOException;
 
     /**
      * Write a '}'

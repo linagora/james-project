@@ -20,12 +20,13 @@
 package org.apache.james.queue.pulsar
 
 import akka.actor.ActorSystem
-import org.apache.james.backends.pulsar.PulsarConfiguration
+import org.apache.james.backends.pulsar.{Auth, PulsarClients, PulsarConfiguration}
 import org.apache.james.blob.api.{BlobId, Store}
 import org.apache.james.blob.mail.MimeMessagePartsId
 import org.apache.james.metrics.api.{GaugeRegistry, MetricFactory}
 import org.apache.james.queue.api.{MailQueueFactory, MailQueueItemDecoratorFactory, MailQueueName}
 import org.apache.pulsar.client.admin.PulsarAdmin
+import org.apache.pulsar.client.impl.auth.{AuthenticationBasic, AuthenticationToken}
 
 import java.util
 import java.util.Optional
@@ -37,7 +38,8 @@ import scala.jdk.CollectionConverters._
 import scala.jdk.OptionConverters._
 import scala.util.Try
 
-class PulsarMailQueueFactory @Inject()(config: PulsarConfiguration,
+class PulsarMailQueueFactory @Inject()(pulsarConfiguration: PulsarConfiguration,
+  pulsarClients:PulsarClients,
   blobIdFactory: BlobId.Factory,
   mimeMessageStore: Store[MimeMessage, MimeMessagePartsId],
   mailQueueItemDecoratorFactory: MailQueueItemDecoratorFactory,
@@ -45,9 +47,7 @@ class PulsarMailQueueFactory @Inject()(config: PulsarConfiguration,
   gaugeRegistry: GaugeRegistry
 ) extends MailQueueFactory[PulsarMailQueue] {
   private val queues: AtomicReference[Map[MailQueueName, PulsarMailQueue]] = new AtomicReference(Map.empty)
-  private val admin =
-    PulsarAdmin.builder().serviceHttpUrl(config.adminUri).build()
-
+  private val admin = pulsarClients.adminClient
   private val system: ActorSystem = ActorSystem("pulsar-mailqueue")
 
   @PreDestroy
@@ -60,7 +60,7 @@ class PulsarMailQueueFactory @Inject()(config: PulsarConfiguration,
   }
 
   override def getQueue(name: MailQueueName, count: MailQueueFactory.PrefetchCount): Optional[PulsarMailQueue] = {
-    Try(admin.topics().getInternalInfo(s"persistent://${config.namespace.asString}/James-${name.asString()}")).toOption.map(_ =>
+    Try(admin.topics().getInternalInfo(s"persistent://${pulsarConfiguration.namespace.asString}/James-${name.asString()}")).toOption.map(_ =>
       createQueue(name, count)
     ).toJava
   }
@@ -69,8 +69,8 @@ class PulsarMailQueueFactory @Inject()(config: PulsarConfiguration,
     queues.updateAndGet(map => {
       val queue = map.get(name)
         .fold(new PulsarMailQueue(
-          name,
-          config,
+          PulsarMailQueueConfiguration(name, pulsarConfiguration),
+          pulsarClients,
           blobIdFactory,
           mimeMessageStore,
           mailQueueItemDecoratorFactory,
@@ -84,10 +84,10 @@ class PulsarMailQueueFactory @Inject()(config: PulsarConfiguration,
 
   override def listCreatedMailQueues(): util.Set[MailQueueName] =
     admin.topics()
-      .getList(config.namespace.asString)
+      .getList(pulsarConfiguration.namespace.asString)
       .asScala
-      .filter(_.startsWith(s"persistent://${config.namespace.asString}/James-"))
-      .map(_.replace(s"persistent://${config.namespace.asString}/James-", ""))
+      .filter(_.startsWith(s"persistent://${pulsarConfiguration.namespace.asString}/James-"))
+      .map(_.replace(s"persistent://${pulsarConfiguration.namespace.asString}/James-", ""))
       .map(MailQueueName.of)
       .toSet
       .asJava

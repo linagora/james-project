@@ -38,7 +38,6 @@ import org.apache.james.modules.protocols.SMTPServerModule;
 import org.apache.james.modules.queue.activemq.ActiveMQQueueModule;
 import org.apache.james.modules.server.DataRoutesModules;
 import org.apache.james.modules.server.DefaultProcessorsConfigurationProviderModule;
-import org.apache.james.modules.server.ElasticSearchMetricReporterModule;
 import org.apache.james.modules.server.InconsistencyQuotasSolvingRoutesModule;
 import org.apache.james.modules.server.JMXServerModule;
 import org.apache.james.modules.server.MailQueueRoutesModule;
@@ -51,7 +50,6 @@ import org.apache.james.modules.server.SieveRoutesModule;
 import org.apache.james.modules.server.TaskManagerModule;
 import org.apache.james.modules.server.WebAdminReIndexingTaskSerializationModule;
 import org.apache.james.modules.server.WebAdminServerModule;
-import org.apache.james.modules.spamassassin.SpamAssassinListenerModule;
 
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
@@ -80,8 +78,8 @@ public class JPAJamesServerMain implements JamesServerMain {
 
     private static final Module JPA_SERVER_MODULE = Modules.combine(
         new ActiveMQQueueModule(),
+        new NaiveDelegationStoreModule(),
         new DefaultProcessorsConfigurationProviderModule(),
-        new ElasticSearchMetricReporterModule(),
         new JPADataModule(),
         new JPAMailboxModule(),
         new MailboxModule(),
@@ -91,8 +89,7 @@ public class JPAJamesServerMain implements JamesServerMain {
         new SieveJPARepositoryModules(),
         new DefaultEventModule(),
         new TaskManagerModule(),
-        new MemoryDeadLetterModule(),
-        new SpamAssassinListenerModule());
+        new MemoryDeadLetterModule());
 
     private static final Module JPA_MODULE_AGGREGATE = Modules.combine(
         new MailetProcessingModule(), JPA_SERVER_MODULE, PROTOCOLS);

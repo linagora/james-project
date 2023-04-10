@@ -23,7 +23,7 @@ import static org.apache.james.modules.protocols.SmtpGuiceProbe.SmtpServerConnec
 
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.JamesServerExtension;
 import org.apache.james.SearchConfiguration;
 import org.apache.james.TestingDistributedJamesServerBuilder;
@@ -44,8 +44,8 @@ public class CassandraForwardSmtpTest implements ForwardSmtpTest {
     }
     @Order(1)
     @RegisterExtension
-    static JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-            .extension(new DockerElasticSearchExtension())
+    static JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+            .extension(new DockerOpenSearchExtension())
             .extension(cassandraExtension)
             .extension(new InMemoryDnsExtension())
             .server(CassandraJamesServerMain::createServer)

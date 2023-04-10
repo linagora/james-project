@@ -28,7 +28,7 @@ import org.apache.james.jmap.api.model.{AccountId => JavaAccountId}
 import org.apache.james.jmap.core.CapabilityIdentifier.{CapabilityIdentifier, JAMES_SHARES, JMAP_CORE, JMAP_MAIL}
 import org.apache.james.jmap.core.Invocation.{Arguments, MethodName}
 import org.apache.james.jmap.core.UuidState.INSTANCE
-import org.apache.james.jmap.core.{AccountId, ErrorCode, Invocation, Properties, UuidState}
+import org.apache.james.jmap.core.{AccountId, ErrorCode, Invocation, Properties, SessionTranslator, UuidState}
 import org.apache.james.jmap.json.{EmailGetSerializer, ResponseSerializer}
 import org.apache.james.jmap.mail.{Email, EmailBodyPart, EmailGetRequest, EmailGetResponse, EmailIds, EmailNotFound, EmailView, EmailViewReaderFactory, SpecificHeaderRequest, UnparsedEmailId}
 import org.apache.james.jmap.routes.SessionSupplier
@@ -80,7 +80,8 @@ class EmailGetMethod @Inject() (readerFactory: EmailViewReaderFactory,
                                 messageIdFactory: MessageId.Factory,
                                 val metricFactory: MetricFactory,
                                 val emailchangeRepository: EmailChangeRepository,
-                                val sessionSupplier: SessionSupplier) extends MethodRequiringAccountId[EmailGetRequest] {
+                                val sessionSupplier: SessionSupplier,
+                                val sessionTranslator: SessionTranslator) extends MethodRequiringAccountId[EmailGetRequest] {
   override val methodName: MethodName = MethodName("Email/get")
   override val requiredCapabilities: Set[CapabilityIdentifier] = Set(JMAP_CORE, JMAP_MAIL)
 
@@ -92,10 +93,8 @@ class EmailGetMethod @Inject() (readerFactory: EmailViewReaderFactory,
   }
 
   override def getRequest(mailboxSession: MailboxSession, invocation: Invocation): Either[IllegalArgumentException, EmailGetRequest] =
-    EmailGetSerializer.deserializeEmailGetRequest(invocation.arguments.value) match {
-      case JsSuccess(emailGetRequest, _) => Right(emailGetRequest)
-      case errors: JsError => Left(new IllegalArgumentException(ResponseSerializer.serialize(errors).toString))
-    }
+    EmailGetSerializer.deserializeEmailGetRequest(invocation.arguments.value)
+      .asEither.left.map(ResponseSerializer.asException)
 
   private def computeResponseInvocation(capabilities: Set[CapabilityIdentifier], request: EmailGetRequest, invocation: Invocation, mailboxSession: MailboxSession): SMono[Invocation] =
     validateProperties(request)
@@ -131,11 +130,17 @@ class EmailGetMethod @Inject() (readerFactory: EmailViewReaderFactory,
     request.bodyProperties match {
       case None => Right(EmailBodyPart.defaultProperties)
       case Some(properties) =>
-        val invalidProperties = properties -- EmailBodyPart.allowedProperties
-        if (invalidProperties.isEmpty()) {
-          Right(properties)
+        val invalidProperties: Set[NonEmptyString] = properties.value
+          .flatMap(property => SpecificHeaderRequest.from(property)
+            .fold(
+              invalidProperty => Some(invalidProperty),
+              _ => None
+            )) -- EmailBodyPart.allowedProperties.value
+
+        if (invalidProperties.nonEmpty) {
+          Left(new IllegalArgumentException(s"The following bodyProperties [${invalidProperties.map(p => p.value).mkString(", ")}] do not exist."))
         } else {
-          Left(new IllegalArgumentException(s"The following bodyProperties [${invalidProperties.format()}] do not exist."))
+          Right(properties)
         }
     }
 

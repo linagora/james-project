@@ -36,13 +36,13 @@ import org.apache.james.mailbox.ModSeq;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
-import org.apache.james.mailbox.cassandra.table.Flag;
 import org.apache.james.mailbox.model.ComposedMessageId;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.ThreadId;
 import org.apache.james.mailbox.model.UpdatedFlags;
 import org.apache.james.util.streams.Limit;
+import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -121,7 +121,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData metadata = ComposedMessageIdWithMetaData.builder()
             .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
-            .flags(new Flags(Flag.ANSWERED))
+            .flags(new Flags(Flags.Flag.ANSWERED))
             .modSeq(ModSeq.of(2))
             .threadId(ThreadId.fromBaseMessageId(messageId))
             .build();
@@ -208,6 +208,58 @@ class CassandraMessageIdDAOTest {
     }
 
     @Test
+    void shouldHandleNullSaveDateWell() {
+        CassandraMessageId messageId = messageIdFactory.generate();
+        CassandraId mailboxId = CassandraId.timeBased();
+        MessageUid messageUid = MessageUid.of(1);
+
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
+            .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+            .flags(new Flags())
+            .modSeq(ModSeq.of(1))
+            .threadId(ThreadId.fromBaseMessageId(messageId))
+            .build();
+        testee.insert(CassandraMessageMetadata.builder()
+                .ids(composedMessageIdWithMetaData)
+                .internalDate(new Date())
+                .bodyStartOctet(18L)
+                .size(36L)
+                .headerContent(Optional.of(HEADER_BLOB_ID_1))
+                .build())
+            .block();
+
+        Optional<CassandraMessageMetadata> message = testee.retrieve(mailboxId, messageUid).block();
+        assertThat(message.get().getSaveDate()).isEmpty();
+    }
+
+    @Test
+    void shouldHandleSaveDateWell() {
+        CassandraMessageId messageId = messageIdFactory.generate();
+        CassandraId mailboxId = CassandraId.timeBased();
+        MessageUid messageUid = MessageUid.of(1);
+        Optional<Date> saveDate = Optional.of(new Date());
+
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
+            .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+            .flags(new Flags())
+            .modSeq(ModSeq.of(1))
+            .threadId(ThreadId.fromBaseMessageId(messageId))
+            .build();
+        testee.insert(CassandraMessageMetadata.builder()
+                .ids(composedMessageIdWithMetaData)
+                .internalDate(new Date())
+                .saveDate(saveDate)
+                .bodyStartOctet(18L)
+                .size(36L)
+                .headerContent(Optional.of(HEADER_BLOB_ID_1))
+                .build())
+            .block();
+
+        Optional<CassandraMessageMetadata> message = testee.retrieve(mailboxId, messageUid).block();
+        assertThat(message.get().getSaveDate()).isEqualTo(saveDate);
+    }
+
+    @Test
     void updateShouldUpdateModSeq() {
         CassandraMessageId messageId = messageIdFactory.generate();
         CassandraId mailboxId = CassandraId.timeBased();
@@ -272,7 +324,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.ANSWERED))
+                .flags(new Flags(Flags.Flag.ANSWERED))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -314,7 +366,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.DELETED))
+                .flags(new Flags(Flags.Flag.DELETED))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -356,7 +408,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.DRAFT))
+                .flags(new Flags(Flags.Flag.DRAFT))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -398,7 +450,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.FLAGGED))
+                .flags(new Flags(Flags.Flag.FLAGGED))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -440,7 +492,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.RECENT))
+                .flags(new Flags(Flags.Flag.RECENT))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -482,7 +534,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.SEEN))
+                .flags(new Flags(Flags.Flag.SEEN))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -524,7 +576,7 @@ class CassandraMessageIdDAOTest {
 
         ComposedMessageIdWithMetaData expectedComposedMessageId = ComposedMessageIdWithMetaData.builder()
                 .composedMessageId(composedMessageId)
-                .flags(new Flags(Flag.USER))
+                .flags(new Flags(Flags.Flag.USER))
                 .modSeq(ModSeq.of(2))
                 .threadId(ThreadId.fromBaseMessageId(messageId))
                 .build();
@@ -1189,5 +1241,29 @@ class CassandraMessageIdDAOTest {
         assertThat(testee.retrieveMessages(mailboxId, MessageRange.one(messageUid2), Limit.unlimited()).toIterable())
             .extracting(CassandraMessageMetadata::getComposedMessageId)
             .containsOnly(composedMessageIdWithMetaData);
+    }
+
+    @Test
+    void retrieveMessageShouldHandlePossibleNullInternalDate() {
+        CassandraMessageId messageId = messageIdFactory.generate();
+        CassandraId mailboxId = CassandraId.timeBased();
+        MessageUid messageUid = MessageUid.of(1);
+        ComposedMessageIdWithMetaData composedMessageIdWithMetaData = ComposedMessageIdWithMetaData.builder()
+            .composedMessageId(new ComposedMessageId(mailboxId, messageId, messageUid))
+            .flags(new Flags())
+            .modSeq(ModSeq.of(1))
+            .threadId(ThreadId.fromBaseMessageId(messageId))
+            .build();
+
+        testee.insertNullInternalDateAndHeaderContent(CassandraMessageMetadata.builder()
+                .ids(composedMessageIdWithMetaData)
+                .build())
+            .block();
+
+        SoftAssertions.assertSoftly(softAssertions -> {
+            Optional<CassandraMessageMetadata> message = testee.retrieve(mailboxId, messageUid).block();
+            assertThat(message.get().getComposedMessageId()).isEqualTo(composedMessageIdWithMetaData);
+            assertThat(message.get().getInternalDate()).isEmpty();
+        });
     }
 }

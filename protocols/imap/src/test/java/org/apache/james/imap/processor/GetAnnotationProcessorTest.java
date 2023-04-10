@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -43,9 +44,9 @@ import org.apache.james.imap.api.message.response.StatusResponse.ResponseCode;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.encode.FakeImapSession;
-import org.apache.james.imap.message.request.GetAnnotationRequest;
-import org.apache.james.imap.message.request.GetAnnotationRequest.Depth;
-import org.apache.james.imap.message.response.AnnotationResponse;
+import org.apache.james.imap.message.request.GetMetadataRequest;
+import org.apache.james.imap.message.request.GetMetadataRequest.Depth;
+import org.apache.james.imap.message.response.MetadataResponse;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MailboxSessionUtil;
@@ -79,7 +80,7 @@ class GetAnnotationProcessorTest {
     private static final MailboxAnnotation PRIVATE_CHILD_ANNOTATION = MailboxAnnotation.newInstance(PRIVATE_CHILD_KEY, "The middle size");
     private static final MailboxAnnotation PRIVATE_GRANDCHILD_ANNOTATION = MailboxAnnotation.newInstance(PRIVATE_GRANDCHILD_KEY, "The longest value size");
 
-    private GetAnnotationProcessor processor;
+    private GetMetadataProcessor processor;
     private MailboxManager mockMailboxManager;
     private StatusResponseFactory mockStatusResponseFactory;
     private ImapProcessor.Responder mockResponder;
@@ -87,15 +88,16 @@ class GetAnnotationProcessorTest {
     private MailboxSession mailboxSession;
     private Set<MailboxAnnotationKey> keys;
     private StatusResponse statusResponse;
-    private GetAnnotationRequest.Builder annotationRequestBuilder;
+    private GetMetadataRequest.Builder annotationRequestBuilder;
     private MailboxPath inbox;
     private ArgumentCaptor<HumanReadableText> humanTextCaptor;
     private ArgumentCaptor<ResponseCode> captorResponsecode;
-    private ArgumentCaptor<AnnotationResponse> captorAnnotationResponse;
+    private ArgumentCaptor<MetadataResponse> captorAnnotationResponse;
 
     private void initAndMockData() {
         statusResponse = mock(StatusResponse.class);
         mockMailboxManager = mock(MailboxManager.class);
+        when(mockMailboxManager.getSupportedMailboxCapabilities()).thenReturn(EnumSet.of(MailboxManager.MailboxCapabilities.Annotation));
         when(mockMailboxManager.manageProcessing(any(), any())).thenAnswer((Answer<Mono>) invocation -> {
             Object[] args = invocation.getArguments();
             return (Mono) args[0];
@@ -108,12 +110,12 @@ class GetAnnotationProcessorTest {
         mailboxSession = MailboxSessionUtil.create(username);
         inbox = MailboxPath.inbox(username);
         keys = ImmutableSet.of(PRIVATE_KEY);
-        annotationRequestBuilder = GetAnnotationRequest.builder()
+        annotationRequestBuilder = GetMetadataRequest.builder()
             .tag(TAG)
             .mailboxName(ImapConstants.INBOX_NAME);
         humanTextCaptor = ArgumentCaptor.forClass(HumanReadableText.class);
         captorResponsecode = ArgumentCaptor.forClass(ResponseCode.class);
-        captorAnnotationResponse = ArgumentCaptor.forClass(AnnotationResponse.class);
+        captorAnnotationResponse = ArgumentCaptor.forClass(MetadataResponse.class);
 
         imapSession.authenticated();
         imapSession.setMailboxSession(mailboxSession);
@@ -124,7 +126,7 @@ class GetAnnotationProcessorTest {
         MockitoAnnotations.initMocks(this);
         initAndMockData();
 
-        processor = new GetAnnotationProcessor(mockMailboxManager, mockStatusResponseFactory, new RecordingMetricFactory());
+        processor = new GetMetadataProcessor(mockMailboxManager, mockStatusResponseFactory, new RecordingMetricFactory());
     }
 
     @Test
@@ -233,7 +235,7 @@ class GetAnnotationProcessorTest {
         verify(mockResponder, times(2)).respond(captorAnnotationResponse.capture());
         verifyNoMoreInteractions(mockResponder);
 
-        AnnotationResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
+        MetadataResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
         assertThat(resultAnnotation.getMailboxAnnotations()).contains(PRIVATE_ANNOTATION, SHARED_ANNOTATION);
     }
 
@@ -249,7 +251,7 @@ class GetAnnotationProcessorTest {
         verify(mockResponder, times(2)).respond(captorAnnotationResponse.capture());
         verifyNoMoreInteractions(mockResponder);
 
-        AnnotationResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
+        MetadataResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
         assertThat(resultAnnotation.getMailboxAnnotations()).contains(PRIVATE_ANNOTATION, SHARED_ANNOTATION, PRIVATE_CHILD_ANNOTATION, PRIVATE_GRANDCHILD_ANNOTATION);
     }
 
@@ -267,7 +269,7 @@ class GetAnnotationProcessorTest {
         verify(mockResponder, times(2)).respond(captorAnnotationResponse.capture());
         verifyNoMoreInteractions(mockResponder);
 
-        AnnotationResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
+        MetadataResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
         assertThat(resultAnnotation.getMailboxAnnotations()).contains(PRIVATE_ANNOTATION);
     }
 
@@ -285,7 +287,7 @@ class GetAnnotationProcessorTest {
         verify(mockResponder, times(2)).respond(captorAnnotationResponse.capture());
         verifyNoMoreInteractions(mockResponder);
 
-        AnnotationResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
+        MetadataResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
         assertThat(resultAnnotation.getMailboxAnnotations()).contains(PRIVATE_ANNOTATION, SHARED_ANNOTATION);
     }
 
@@ -303,7 +305,7 @@ class GetAnnotationProcessorTest {
         verify(mockResponder, times(2)).respond(captorAnnotationResponse.capture());
         verifyNoMoreInteractions(mockResponder);
 
-        AnnotationResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
+        MetadataResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
 
         assertThat(resultAnnotation.getMailboxAnnotations()).contains(PRIVATE_ANNOTATION);
     }
@@ -320,7 +322,7 @@ class GetAnnotationProcessorTest {
         verify(mockResponder, times(2)).respond(captorAnnotationResponse.capture());
         verifyNoMoreInteractions(mockResponder);
 
-        AnnotationResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
+        MetadataResponse resultAnnotation = captorAnnotationResponse.getAllValues().get(FIRST_ELEMENT_INDEX);
         assertThat(resultAnnotation.getMailboxAnnotations()).contains(PRIVATE_ANNOTATION, PRIVATE_CHILD_ANNOTATION, PRIVATE_GRANDCHILD_ANNOTATION);
     }
 

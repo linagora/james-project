@@ -23,8 +23,12 @@ import static org.apache.james.backends.cassandra.Scenario.Builder.fail;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Durations.ONE_SECOND;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 import javax.mail.Flags;
@@ -39,13 +43,25 @@ import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.ByteContent;
+import org.apache.james.mailbox.model.Cid;
+import org.apache.james.mailbox.model.MessageAttachmentMetadata;
+import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.model.ParsedAttachment;
+import org.apache.james.mailbox.model.ThreadId;
 import org.apache.james.mailbox.store.FlagsUpdateCalculator;
+import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
+import org.apache.james.mailbox.store.mail.model.MessageAssert;
 import org.apache.james.mailbox.store.mail.model.MessageMapperTest;
+import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
 import org.apache.james.util.streams.Limit;
+import org.apache.james.utils.UpdatableTickingClock;
 import org.assertj.core.api.SoftAssertions;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Nested;
@@ -54,17 +70,25 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteSource;
 
 class CassandraMessageMapperTest extends MessageMapperTest {
     @RegisterExtension
     static CassandraClusterExtension cassandraCluster = new CassandraClusterExtension(MailboxAggregateModule.MODULE);
-    
+
+    private CassandraMapperProvider cassandraMapperProvider;
+
     @Override
     protected MapperProvider createMapperProvider() {
-        return new CassandraMapperProvider(
+        cassandraMapperProvider = new CassandraMapperProvider(
             cassandraCluster.getCassandraCluster(),
-            cassandraCluster.getCassandraConsistenciesConfiguration(),
             CassandraConfiguration.DEFAULT_CONFIGURATION);
+        return cassandraMapperProvider;
+    }
+
+    @Override
+    protected UpdatableTickingClock updatableTickingClock() {
+        return cassandraMapperProvider.getUpdatableTickingClock();
     }
 
     @Nested
@@ -76,7 +100,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("DELETE FROM messageIdTable WHERE mailboxId=:mailboxId AND uid=:uid;"));
+                    .whenQueryStartsWith("DELETE FROM messageidtable"));
             try {
                 messageMapper.deleteMessages(benwaInboxMailbox, ImmutableList.of(message1.getUid(), message2.getUid(), message3.getUid()));
             } catch (Exception e) {
@@ -89,8 +113,8 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             FlagsUpdateCalculator markAsRead = new FlagsUpdateCalculator(new Flags(Flags.Flag.SEEN), MessageManager.FlagsUpdateMode.ADD);
             messageMapper.updateFlags(benwaInboxMailbox, markAsRead, MessageRange.all());
 
-            assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatement(
-                "UPDATE modseq SET nextModseq=:nextModseq WHERE mailboxId=:mailboxId IF nextModseq=:modSeqCondition;")))
+            assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatementStartingWith(
+                "UPDATE modseq SET nextmodseq=:nextmodseq WHERE mailboxid=:mailboxid")))
                 .hasSize(2);
         }
 
@@ -104,7 +128,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             messageMapper.deleteMessages(benwaInboxMailbox, ImmutableList.of(message1.getUid(), message2.getUid(), message3.getUid()));
 
             assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatementStartingWith(
-                "SELECT * FROM messageIdTable WHERE mailboxId=:mailboxId AND ")))
+                "SELECT * FROM messageidtable WHERE mailboxid=:mailboxid AND ")))
                 .hasSize(1);
         }
 
@@ -118,7 +142,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             messageMapper.deleteMessages(benwaInboxMailbox, ImmutableList.of(message1.getUid(), message2.getUid(), message3.getUid()));
 
             assertThat(statementRecorder.listExecutedStatements(
-                Selector.preparedStatementStartingWith("UPDATE mailboxCounters SET ")))
+                Selector.preparedStatementStartingWith("UPDATE mailboxcounters SET ")))
                 .hasSize(1);
         }
 
@@ -162,7 +186,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             messageMapper.deleteMessages(benwaInboxMailbox, ImmutableList.of(message1.getUid(), message2.getUid(), message3.getUid()));
 
             assertThat(statementRecorder.listExecutedStatements(
-                Selector.preparedStatement("DELETE FROM firstUnseen WHERE mailboxId=:mailboxId AND uid=:uid;")))
+                Selector.preparedStatement("DELETE FROM firstunseen WHERE mailboxid=:mailboxid AND uid=:uid")))
                 .isEmpty();
         }
 
@@ -177,7 +201,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
 
 
             assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatementStartingWith(
-                "UPDATE mailboxCounters SET ")))
+                "UPDATE mailboxcounters SET ")))
                 .hasSize(1);
         }
 
@@ -193,7 +217,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
 
 
             assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatement(
-                "SELECT * FROM messageV3 WHERE messageId=:messageId;")))
+                "SELECT * FROM messagev3 WHERE messageid=:messageid")))
                 .hasSize(limit);
         }
 
@@ -206,8 +230,8 @@ class CassandraMessageMapperTest extends MessageMapperTest {
 
             messageMapper.updateFlags(benwaInboxMailbox, new FlagsUpdateCalculator(new Flags(Flags.Flag.ANSWERED), MessageManager.FlagsUpdateMode.REPLACE), MessageRange.all());
 
-            assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatement(
-                "UPDATE modseq SET nextModseq=:nextModseq WHERE mailboxId=:mailboxId IF nextModseq=:modSeqCondition;")))
+            assertThat(statementRecorder.listExecutedStatements(Selector.preparedStatementStartingWith(
+                "UPDATE modseq SET nextmodseq=:nextmodseq WHERE mailboxid=:mailboxid")))
                 .hasSize(1);
         }
 
@@ -223,7 +247,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("UPDATE messageV3"));
+                    .whenQueryStartsWith("UPDATE messagev3"));
 
             try {
                 messageMapper.add(benwaInboxMailbox, message1);
@@ -246,7 +270,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO blobParts (id,chunkNumber,data) VALUES (:id,:chunkNumber,:data);"));
+                    .whenQueryStartsWith("INSERT INTO blobparts (id,chunknumber,data)"));
 
             try {
                 messageMapper.add(benwaInboxMailbox, message1);
@@ -269,7 +293,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO blobs (id,position) VALUES (:id,:position);"));
+                    .whenQueryStartsWith("INSERT INTO blobs (id,position)"));
 
             try {
                 messageMapper.add(benwaInboxMailbox, message1);
@@ -292,7 +316,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO imapUidTable"));
+                    .whenQueryStartsWith("INSERT INTO imapuidtable"));
 
             try {
                 messageMapper.add(benwaInboxMailbox, message1);
@@ -315,7 +339,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("UPDATE messageIdTable"));
+                    .whenQueryStartsWith("UPDATE messageidtable"));
 
             try {
                 messageMapper.add(benwaInboxMailbox, message1);
@@ -326,7 +350,6 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             CassandraMessageIdToImapUidDAO imapUidDAO = new CassandraMessageIdToImapUidDAO(
                 cassandra.getConf(),
                 new HashBlobId.Factory(),
-                cassandraCluster.getCassandraConsistenciesConfiguration(),
                 CassandraConfiguration.DEFAULT_CONFIGURATION);
 
             SoftAssertions.assertSoftly(Throwing.consumer(softly -> {
@@ -343,7 +366,7 @@ class CassandraMessageMapperTest extends MessageMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .times(5)
-                    .whenQueryStartsWith("INSERT INTO messageIdTable (mailboxId,uid,threadId,modSeq,messageId,flagAnswered,flagDeleted,flagDraft,flagFlagged,flagRecent,flagSeen,flagUser,userFlags)"));
+                    .whenQueryStartsWith("INSERT INTO messageidtable"));
 
             messageMapper.add(benwaInboxMailbox, message1);
 
@@ -410,5 +433,38 @@ class CassandraMessageMapperTest extends MessageMapperTest {
 
             assertThat(messageMapper.getMailboxCounters(benwaInboxMailbox).getUnseen()).isEqualTo(4);
         }
+    }
+
+    @Test
+    void messagesRetrievedUsingFetchTypeAttachmentsMetadataShouldNotHaveBodyDataLoaded() throws MailboxException, IOException {
+        saveMessages();
+        MessageMapper.FetchType fetchType = FetchType.ATTACHMENTS_METADATA;
+        MailboxMessage retrievedMessage = messageMapper.findInMailbox(benwaInboxMailbox, MessageRange.one(message1.getUid()), fetchType, 1).next();
+        MessageAssert.assertThat(retrievedMessage).isEqualToWithoutUid(message1, fetchType);
+        assertThat(retrievedMessage.getBodyContent().readAllBytes()).isEmpty();
+    }
+
+    @Test
+    void messagesRetrievedUsingFetchTypeAttachmentsMetadataShouldHaveAttachmentsMetadataLoaded() throws MailboxException {
+        AttachmentMapper attachmentMapper = mapperProvider.createAttachmentMapper();
+        MessageId messageId = mapperProvider.generateMessageId();
+        String content = "Subject: Test1 \n\nBody1\n.\n";
+        ParsedAttachment attachment1 = ParsedAttachment.builder()
+            .contentType("content")
+            .content(ByteSource.wrap("attachment".getBytes(StandardCharsets.UTF_8)))
+            .noName()
+            .cid(Cid.from("cid"))
+            .inline();
+        List<MessageAttachmentMetadata> messageAttachments = attachmentMapper.storeAttachments(ImmutableList.of(attachment1), messageId);
+        MailboxMessage message = new SimpleMailboxMessage(messageId, ThreadId.fromBaseMessageId(messageId), new Date(), content.length(), 16,
+            new ByteContent(content.getBytes()), new Flags(), new PropertyBuilder().build(), benwaInboxMailbox.getMailboxId(),
+            messageAttachments, Optional.empty());
+        messageMapper.add(benwaInboxMailbox, message);
+        message.setModSeq(messageMapper.getHighestModSeq(benwaInboxMailbox));
+
+        MessageMapper.FetchType fetchType = FetchType.ATTACHMENTS_METADATA;
+        MailboxMessage retrievedMessage = messageMapper.findInMailbox(benwaInboxMailbox, MessageRange.one(message.getUid()), fetchType, 1).next();
+
+        assertThat(retrievedMessage.getAttachments()).isEqualTo(message.getAttachments());
     }
 }

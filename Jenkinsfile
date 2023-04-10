@@ -55,10 +55,8 @@ pipeline {
                 logRotator(artifactNumToKeepStr: '10', numToKeepStr: '30')
         )
         disableConcurrentBuilds()
-    }
-
-    triggers {
-        issueCommentTrigger('.*test this please.*')
+        // This is better if you want to clean before build
+        skipDefaultCheckout(true)
     }
 
     stages {
@@ -72,9 +70,8 @@ pipeline {
         stage('Cleanup') {
             steps {
                 echo 'Cleaning up the workspace'
+                // cleanWs()
                 deleteDir()
-                echo 'Cleaning up James maven repo dependencies'
-                sh 'rm -rf /home/jenkins/.m2/repository/org/apache/james'
             }
         }
 
@@ -88,14 +85,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building'
-                sh 'mvn -U -B -e clean install -DskipTests -T1C ${MVN_SHOW_TIMESTAMPS}'
+                sh 'mvn -U -B -e clean install -DskipTests -T1C ${MVN_SHOW_TIMESTAMPS} ${MVN_LOCAL_REPO_OPT}'
             }
         }
 
         stage('Stable Tests') {
             steps {
                 echo 'Running tests'
-                sh 'mvn -B -e -fae test ${MVN_SHOW_TIMESTAMPS} -P ci-test'
+                sh 'mvn -B -e -fae test ${MVN_SHOW_TIMESTAMPS} -P ci-test ${MVN_LOCAL_REPO_OPT} -Dassembly.skipAssembly=true'
             }
             post {
                 always {
@@ -113,7 +110,7 @@ pipeline {
             steps {
                 echo 'Running unstable tests'
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh 'mvn -B -e -fae test -Punstable-tests ${MVN_SHOW_TIMESTAMPS} -P ci-test'
+                    sh 'mvn -B -e -fae test -Punstable-tests ${MVN_SHOW_TIMESTAMPS} -P ci-test ${MVN_LOCAL_REPO_OPT} -Dassembly.skipAssembly=true'
                 }
             }
             post {
@@ -132,7 +129,7 @@ pipeline {
             when { branch 'master' }
             steps {
                 echo 'Deploying'
-                sh 'mvn -B -e deploy -Pdeploy -DskipTests -T1C'
+                sh 'mvn -B -e deploy -Pdeploy -DskipTests -T1C ${MVN_LOCAL_REPO_OPT}'
             }
         }
    }
@@ -183,9 +180,6 @@ Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BRANC
 
         // Send an email, if the last build was not successful and this one is.
         success {
-            // Cleanup the build directory if the build was successful
-            // (in this cae we probably don't have to do any post-build analysis)
-            deleteDir()
             script {
                 if (env.BRANCH_NAME == "master" && (currentBuild.previousBuild != null) && (currentBuild.previousBuild.result != 'SUCCESS')) {
                     emailext(

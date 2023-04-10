@@ -22,6 +22,7 @@ package org.apache.james.jmap.api.model;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
@@ -62,7 +63,12 @@ public class Preview {
         }
 
         public Preview fromInputStream(InputStream inputStream) throws IOException {
-            return fromMime4JMessage(parse(inputStream));
+            Message message = parse(inputStream);
+            try {
+                return fromMime4JMessage(message);
+            } finally {
+                message.dispose();
+            }
         }
 
         public Preview fromMime4JMessage(Message mimeMessage) throws IOException {
@@ -90,9 +96,17 @@ public class Preview {
     public static Preview compute(String textBody) {
         int previewOffsetEstimate = estimatePreviewOffset(textBody, MAX_LENGTH);
         String previewPart = textBody.substring(0, previewOffsetEstimate);
-        return Preview.from(
-            truncateToMaxLength(
-                StringUtils.normalizeSpace(previewPart)));
+        String normalizeSpace = StringUtils.normalizeSpace(previewPart);
+        String truncateToMaxLength = truncateToMaxLength(normalizeSpace);
+        return Preview.from(sanitizeUTF8String(truncateToMaxLength));
+    }
+
+    private static String sanitizeUTF8String(String truncateToMaxLength) {
+        CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder();
+        while (!encoder.canEncode(truncateToMaxLength)) {
+            truncateToMaxLength = truncateToMaxLength.substring(0, truncateToMaxLength.length() - 1);
+        }
+        return truncateToMaxLength;
     }
 
     private static String truncateToMaxLength(String body) {

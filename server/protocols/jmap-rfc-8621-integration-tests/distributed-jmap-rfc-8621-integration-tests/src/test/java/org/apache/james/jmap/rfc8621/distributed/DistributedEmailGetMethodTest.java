@@ -22,10 +22,11 @@ package org.apache.james.jmap.rfc8621.distributed;
 import org.apache.james.CassandraExtension;
 import org.apache.james.CassandraRabbitMQJamesConfiguration;
 import org.apache.james.CassandraRabbitMQJamesServerMain;
-import org.apache.james.DockerElasticSearchExtension;
+import org.apache.james.DockerOpenSearchExtension;
 import org.apache.james.JamesServerBuilder;
 import org.apache.james.JamesServerExtension;
 import org.apache.james.jmap.rfc8621.contract.EmailGetMethodContract;
+import org.apache.james.jmap.rfc8621.contract.probe.DelegationProbeModule;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.modules.AwsS3BlobStoreExtension;
@@ -34,7 +35,7 @@ import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 
 public class DistributedEmailGetMethodTest implements EmailGetMethodContract {
     public static final CassandraMessageId.Factory MESSAGE_ID_FACTORY = new CassandraMessageId.Factory();
@@ -50,16 +51,16 @@ public class DistributedEmailGetMethodTest implements EmailGetMethodContract {
                 .deduplication()
                 .noCryptoConfig())
             .build())
-        .extension(new DockerElasticSearchExtension())
+        .extension(new DockerOpenSearchExtension())
         .extension(new CassandraExtension())
         .extension(new RabbitMQExtension())
         .extension(new AwsS3BlobStoreExtension())
         .server(configuration -> CassandraRabbitMQJamesServerMain.createServer(configuration)
-            .overrideWith(new TestJMAPServerModule()))
+            .overrideWith(new TestJMAPServerModule(), new DelegationProbeModule()))
         .build();
 
     @Override
     public MessageId randomMessageId() {
-        return MESSAGE_ID_FACTORY.of(UUIDs.timeBased());
+        return MESSAGE_ID_FACTORY.of(Uuids.timeBased());
     }
 }

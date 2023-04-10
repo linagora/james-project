@@ -47,6 +47,13 @@ public abstract class SelectedState implements ImapTestConstants {
     }
     
     @Test
+    public void testReplace() throws Exception {
+        simpleScriptedTestProtocol
+            .withLocale(Locale.US)
+            .run("Replace");
+    }
+
+    @Test
     public void testCheckUS() throws Exception {
         simpleScriptedTestProtocol
             .withLocale(Locale.US)
@@ -254,5 +261,11 @@ public abstract class SelectedState implements ImapTestConstants {
         simpleScriptedTestProtocol
             .withLocale(Locale.KOREA)
             .run("Namespace");
+    }
+
+    @Test
+    public void testSearchSaveDate() throws Exception {
+        simpleScriptedTestProtocol
+            .run("SearchSaveDate");
     }
 }

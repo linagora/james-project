@@ -57,34 +57,37 @@ class FetchResponseEncoderNoExtensionsTest {
 
     @Test
     void testShouldEncodeFlagsResponse() throws Exception {
-        FetchResponse message = new FetchResponse(MSN, flags, null, null, null, null,
-                null, null, null, null);
+        FetchResponse message = new FetchResponse(MSN, flags, null, null, null, null, null,
+                null, null, null, null, null, null);
         encoder.encode(message, composer);
+        composer.flush();
         assertThat(writer.getString()).isEqualTo("* 100 FETCH (FLAGS (\\Deleted))\r\n");
     }
 
     @Test
     void testShouldEncodeUidResponse() throws Exception {
-        FetchResponse message = new FetchResponse(MSN, null, MessageUid.of(72), null,
-                null, null, null, null, null, null);
+        FetchResponse message = new FetchResponse(MSN, null, MessageUid.of(72), null, null,
+                null, null, null, null, null, null, null, null);
         encoder.encode(message, composer);
+        composer.flush();
         assertThat(writer.getString()).isEqualTo("* 100 FETCH (UID 72)\r\n");
 
     }
 
     @Test
     void testShouldEncodeAllResponse() throws Exception {
-        FetchResponse message = new FetchResponse(MSN, flags, MessageUid.of(72), null,
-                null, null, null, null, null, null);
+        FetchResponse message = new FetchResponse(MSN, flags, MessageUid.of(72), null, null,
+                null, null, null, null, null, null, null, null);
         encoder.encode(message, composer);
+        composer.flush();
         assertThat(writer.getString()).isEqualTo("* 100 FETCH (FLAGS (\\Deleted) UID 72)\r\n");
 
     }
 
     @Test
     void testShouldNotAddExtensionsWithEncodingBodyStructure() throws Exception {
-        FetchResponse message = new FetchResponse(MSN, flags, MessageUid.of(72), null,
-                null, null, null, null, stubStructure, null);
+        FetchResponse message = new FetchResponse(MSN, flags, MessageUid.of(72), null, null,
+                null, null, null, null, stubStructure, null, null, null);
         final Map<String, String> parameters = new HashMap<>();
         parameters.put("CHARSET", "US-ASCII");
         final List<String> parameterList = new ArrayList<>();
@@ -101,6 +104,7 @@ class FetchResponseEncoderNoExtensionsTest {
         when(stubStructure.getDescription()).thenReturn("");
 
         encoder.encode(message, composer);
+        composer.flush();
         assertThat(writer.getString()).isEqualTo("* 100 FETCH (FLAGS (\\Deleted) BODYSTRUCTURE (\"TEXT\" \"HTML\" (\"CHARSET\" \"US-ASCII\") \"\" \"\" \"7BIT\" 2279 48) UID 72)\r\n");
 
     }

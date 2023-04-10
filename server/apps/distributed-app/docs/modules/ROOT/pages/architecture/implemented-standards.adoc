@@ -38,7 +38,6 @@ This page details standards implemented by the distributed server.
 - link:https://datatracker.ietf.org/doc/html/rfc2197[RFC-2197] SMTP Service Extension for Command Pipelining
 - link:https://datatracker.ietf.org/doc/html/rfc2554[RFC-2554] ESMTP Service Extension for Authentication
 - link:https://datatracker.ietf.org/doc/html/rfc1893[RFC-1893] Enhanced Mail System Status Codes
-- link:https://datatracker.ietf.org/doc/html/rfc1893[RFC-1893] Enhanced Mail System Status Codes
 
 == LMTP
 
@@ -50,7 +49,7 @@ The following IMAP specifications are implemented:
 
  - link:https://datatracker.ietf.org/doc/html/rfc3501.html[RFC-3501] INTERNET MESSAGE ACCESS PROTOCOL - VERSION 4rev1
  - link:https://datatracker.ietf.org/doc/html/rfc2177.html[RFC-2177] IMAP IDLE (mailbox scoped push notifications)
- - link:https://datatracker.ietf.org/doc/html/rfc2087.html[RFC-2087] IMAP Quota
+ - link:https://www.rfc-editor.org/rfc/rfc9208.html[RFC-9208] IMAP QUOTA Extension
  - link:https://datatracker.ietf.org/doc/html/rfc2342.html[RFC-2342] IMAP namespace
  - link:https://datatracker.ietf.org/doc/html/rfc2088.html[RFC-2088] IMAP non synchronized literals
  - link:https://datatracker.ietf.org/doc/html/rfc4315.html[RFC-4315] IMAP UIDPLUS
@@ -62,9 +61,19 @@ The following IMAP specifications are implemented:
  - link:https://datatracker.ietf.org/doc/html/rfc5161.html[RFC-5161] IMAP ENABLE
  - link:https://datatracker.ietf.org/doc/html/rfc6851.html[RFC-6851] IMAP MOVE command
  - link:https://datatracker.ietf.org/doc/html/rfc5182.html[RFC-5182] IMAP Extension for Referencing the Last SEARCH Result
- - link:https://datatracker.ietf.org/doc/html/rfc5032[RFC-5032] IMAP WITHIN (for relative date search semantic)
- - link:https://datatracker.ietf.org/doc/html/rfc4731[RFC-4731] IMAP ESEARCH: extentions for IMAP search: new options like min, max, count.
+ - link:https://datatracker.ietf.org/doc/html/rfc5032.html[RFC-5032] IMAP WITHIN (for relative date search semantic)
+ - link:https://datatracker.ietf.org/doc/html/rfc4731.html[RFC-4731] IMAP ESEARCH: extentions for IMAP search: new options like min, max, count.
  - link:https://datatracker.ietf.org/doc/html/rfc3348.html[RFC-3348] IMAP Child Mailbox Extension
+ - link:https://www.rfc-editor.org/rfc/rfc8508.html[RFC-8508] IMAP Replace Extension
+ - link:https://www.rfc-editor.org/rfc/rfc7889.html[RFC-7889] IMAP Extension for APPENDLIMIT
+ - link:https://www.rfc-editor.org/rfc/rfc8474.html[RFC-8474] IMAP Extension for Object Identifiers
+ - link:https://datatracker.ietf.org/doc/html/rfc2971.html[RFC-2971] IMAP ID Extension
+ - link:https://datatracker.ietf.org/doc/html/rfc8438.html[RFC-8438] IMAP Extension for STATUS=SIZE
+ - link:https://www.rfc-editor.org/rfc/rfc5258.html[RFC-5258] IMAP LIST Command Extensions
+ - link:https://www.rfc-editor.org/rfc/rfc5819.html[RFC-5819] IMAP4 Extension for Returning STATUS Information in Extended LIST
+ - link:https://www.rfc-editor.org/rfc/rfc8440.html[RFC-8440] IMAP4 Extension for Returning MYRIGHTS Information in Extended LIST
+ - link:https://www.rfc-editor.org/rfc/rfc8440.html[RFC-6154] IMAP LIST Extension for Special-Use Mailboxes
+ - link:https://www.rfc-editor.org/rfc/rfc8514.html[RFC-8514] IMAP SAVEDATE Extension
 
 Partially implemented specifications:
 

@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import javax.inject.Inject;
+
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.Tag;
@@ -64,6 +66,7 @@ public class SearchCommandParser extends AbstractUidCommandParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchCommandParser.class);
 
+    @Inject
     public SearchCommandParser(StatusResponseFactory statusResponseFactory) {
         super(ImapConstants.SEARCH_COMMAND, statusResponseFactory);
     }
@@ -98,7 +101,7 @@ public class SearchCommandParser extends AbstractUidCommandParser {
             case 'D':
                 return d(request);
             case 'E':
-                throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Unknown search key");
+                return emailId(request);
             case 'F':
                 return f(request, context.getCharset());
             case 'G':
@@ -270,6 +273,8 @@ public class SearchCommandParser extends AbstractUidCommandParser {
             return text(request, charset);
         case 'O':
             return to(request, charset);
+        case 'H':
+            return threadId(request, charset);
         default:
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Unknown search key");
         }
@@ -286,6 +291,8 @@ public class SearchCommandParser extends AbstractUidCommandParser {
             return smaller(request);
         case 'U':
             return subject(request, charset);
+        case 'A':
+            return saved(request);
         default:
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Unknown search key");
         }
@@ -324,6 +331,26 @@ public class SearchCommandParser extends AbstractUidCommandParser {
             return sentSince(request);
         default:
             throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Unknown search key");
+        }
+    }
+
+    private SearchKey saved(ImapRequestLineReader request) throws DecodingException {
+        nextIsV(request);
+        nextIsE(request);
+        nextIsD(request);
+
+        final int next = consumeAndCap(request);
+        switch (next) {
+            case 'A':
+                return saveDateSupported(request);
+            case 'B':
+                return savedBefore(request);
+            case 'O':
+                return savedOn(request);
+            case 'S':
+                return savedSince(request);
+            default:
+                throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Unknown search key");
         }
     }
 
@@ -663,6 +690,16 @@ public class SearchCommandParser extends AbstractUidCommandParser {
         return result;
     }
 
+    private SearchKey savedBefore(ImapRequestLineReader request) throws DecodingException {
+        nextIsE(request);
+        nextIsF(request);
+        nextIsO(request);
+        nextIsR(request);
+        nextIsE(request);
+        nextIsSpace(request);
+        return SearchKey.buildSavedBefore(request.date());
+    }
+
     private SearchKey sentSince(ImapRequestLineReader request) throws DecodingException {
         final SearchKey result;
         nextIsI(request);
@@ -673,6 +710,30 @@ public class SearchCommandParser extends AbstractUidCommandParser {
         final DayMonthYear value = request.date();
         result = SearchKey.buildSentSince(value);
         return result;
+    }
+
+    private SearchKey savedSince(ImapRequestLineReader request) throws DecodingException {
+        nextIsI(request);
+        nextIsN(request);
+        nextIsC(request);
+        nextIsE(request);
+        nextIsSpace(request);
+        return SearchKey.buildSavedSince(request.date());
+    }
+
+    private SearchKey saveDateSupported(ImapRequestLineReader request) throws DecodingException {
+        nextIsT(request);
+        nextIsE(request);
+        nextIsS(request);
+        nextIsU(request);
+        nextIsP(request);
+        nextIsP(request);
+        nextIsO(request);
+        nextIsR(request);
+        nextIsT(request);
+        nextIsE(request);
+        nextIsD(request);
+        return SearchKey.buildSaveDateSupported();
     }
 
     private SearchKey since(ImapRequestLineReader request) throws DecodingException {
@@ -693,6 +754,12 @@ public class SearchCommandParser extends AbstractUidCommandParser {
         final DayMonthYear value = request.date();
         result = SearchKey.buildSentOn(value);
         return result;
+    }
+
+    private SearchKey savedOn(ImapRequestLineReader request) throws DecodingException {
+        nextIsN(request);
+        nextIsSpace(request);
+        return SearchKey.buildSavedOn(request.date());
     }
 
     private SearchKey before(ImapRequestLineReader request) throws DecodingException {
@@ -726,6 +793,18 @@ public class SearchCommandParser extends AbstractUidCommandParser {
         return result;
     }
 
+    private SearchKey emailId(ImapRequestLineReader request) throws DecodingException {
+        nextIsM(request);
+        nextIsA(request);
+        nextIsI(request);
+        nextIsL(request);
+        nextIsI(request);
+        nextIsD(request);
+        nextIsSpace(request);
+
+        return SearchKey.buildMessageId(request.astring());
+    }
+
     private SearchKey uid(ImapRequestLineReader request) throws DecodingException {
         final SearchKey result;
         nextIsD(request);
@@ -746,6 +825,18 @@ public class SearchCommandParser extends AbstractUidCommandParser {
         final String value = request.astring(charset);
         result = SearchKey.buildTo(value);
         return result;
+    }
+
+    private SearchKey threadId(ImapRequestLineReader request, Charset charset) throws DecodingException {
+        nextIsR(request);
+        nextIsE(request);
+        nextIsA(request);
+        nextIsD(request);
+        nextIsI(request);
+        nextIsD(request);
+        nextIsSpace(request);
+        String astring = request.astring(charset);
+        return SearchKey.buildThreadId(astring);
     }
 
     private SearchKey subject(ImapRequestLineReader request, Charset charset) throws DecodingException {
@@ -883,6 +974,9 @@ public class SearchCommandParser extends AbstractUidCommandParser {
         nextIs(request, 'L', 'l');
     }
 
+    private void nextIsP(ImapRequestLineReader request) throws DecodingException {
+        nextIs(request, 'P', 'p');
+    }
 
     private void nextIsV(ImapRequestLineReader request) throws DecodingException {
         nextIs(request, 'V', 'v');

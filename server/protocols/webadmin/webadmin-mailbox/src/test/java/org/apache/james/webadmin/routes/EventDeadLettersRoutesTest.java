@@ -384,6 +384,66 @@ class EventDeadLettersRoutesTest {
     }
 
     @Nested
+    class DeleteAllEventsOfAGroup {
+        @Test
+        void deleteShouldReturnNoContent() {
+            deadLetters.store(new EventBusTestFixture.GroupA(), EVENT_1).block();
+            deadLetters.store(new EventBusTestFixture.GroupA(), EVENT_2).block();
+
+            when()
+                .delete("/events/deadLetter/groups/" + SERIALIZED_GROUP_A)
+            .then()
+                .statusCode(HttpStatus.NO_CONTENT_204);
+        }
+
+        @Test
+        void deleteShouldReturnNoContentWhenGroupNotFound() {
+            when()
+                .delete("/events/deadLetter/groups/" + SERIALIZED_GROUP_A)
+            .then()
+                .statusCode(HttpStatus.NO_CONTENT_204);
+        }
+
+        @Test
+        void deleteShouldFailWhenInvalidGroup() {
+            when()
+                .delete("/events/deadLetter/groups/invalid")
+            .then()
+                .statusCode(HttpStatus.BAD_REQUEST_400)
+                .contentType(ContentType.JSON)
+                .body("statusCode", is(400))
+                .body("type", is(ErrorResponder.ErrorType.INVALID_ARGUMENT.getType()))
+                .body("message", is("Can not deserialize the supplied group: invalid"));
+        }
+
+        @Test
+        void deleteShouldRemoveAllEventsOfAGroup() {
+            deadLetters.store(new EventBusTestFixture.GroupA(), EVENT_1).block();
+            deadLetters.store(new EventBusTestFixture.GroupA(), EVENT_2).block();
+
+            with()
+                .delete("/events/deadLetter/groups/" + SERIALIZED_GROUP_A);
+
+            assertThat(deadLetters.failedIds(new EventBusTestFixture.GroupA()).collectList().block()).isEmpty();
+        }
+
+        @Test
+        void mixedCaseShouldOnlyRemoveMatchedOne() {
+            InsertionId insertionId = deadLetters.store(new EventBusTestFixture.GroupA(), EVENT_1).block();
+            InsertionId insertionId2 = deadLetters.store(new EventBusTestFixture.GroupB(), EVENT_2).block();
+
+            assertThat(insertionId).isNotNull();
+            assertThat(insertionId2).isNotNull();
+
+            with()
+                .delete("/events/deadLetter/groups/" + SERIALIZED_GROUP_A);
+
+            assertThat(deadLetters.failedIds(new EventBusTestFixture.GroupA()).collectList().block()).isEmpty();
+            assertThat(deadLetters.failedIds(new EventBusTestFixture.GroupB()).collectList().block()).containsExactly(insertionId2);
+        }
+    }
+
+    @Nested
     class RedeliverAllEvents {
         private Group groupA;
         private Group groupB;
@@ -572,6 +632,52 @@ class EventDeadLettersRoutesTest {
                 .body("type", is(ErrorResponder.ErrorType.INVALID_ARGUMENT.getType()))
                 .body("message", is("Invalid arguments supplied in the user request"))
                 .body("details", is("'action' query parameter is compulsory. Supported values are [reDeliver]"));
+        }
+
+        @Test
+        void postRedeliverAllEventsShouldSuccessWhenProvideLimitParameter() {
+            deadLetters.store(groupA, EVENT_2).block();
+            deadLetters.store(groupA, EVENT_2).block();
+
+            String taskId = with()
+                .queryParam("action", EVENTS_ACTION)
+                .queryParam("limit", 1)
+                .post("/events/deadLetter")
+                .jsonPath()
+                .get("taskId");
+
+            given()
+                .basePath(TasksRoutes.BASE)
+                .when()
+            .get(taskId + "/await")
+                .then()
+                .body("status", is("completed"))
+                .body("additionalInformation.successfulRedeliveriesCount", is(1))
+                .body("additionalInformation.failedRedeliveriesCount", is(0))
+                .body("additionalInformation.runningOptions.limit", is(1));
+
+            when()
+                .get("/events/deadLetter/groups")
+                .then()
+                .statusCode(HttpStatus.OK_200)
+                .contentType(ContentType.JSON)
+                .body(".", hasSize(1));
+
+            assertThat(eventCollectorA.getEvents()).hasSize(1);
+        }
+
+        @Test
+        void postRedeliverAllEventsShouldSuccessWhenInvalidLimitParameter() {
+            with()
+                .queryParam("action", EVENTS_ACTION)
+                .queryParam("limit", "invalid")
+            .post("/events/deadLetter")
+                .then()
+                .statusCode(HttpStatus.BAD_REQUEST_400)
+                .contentType(ContentType.JSON)
+                .body("statusCode", is(400))
+                .body("type", is(ErrorResponder.ErrorType.INVALID_ARGUMENT.getType()))
+                .body("message", is("Can not parse limit"));
         }
     }
 
@@ -857,6 +963,51 @@ class EventDeadLettersRoutesTest {
                 .statusCode(HttpStatus.OK_200)
                 .contentType(ContentType.JSON)
                 .body(".", hasSize(1));
+        }
+
+        @Test
+        void postRedeliverGroupEventsShouldSuccessWhenProvideLimitParameter() {
+            deadLetters.store(groupA, EVENT_1).block();
+            deadLetters.store(groupA, EVENT_2).block();
+
+            String taskId = with()
+                .queryParam("action", EVENTS_ACTION)
+                .queryParam("limit", 1)
+                .post("/events/deadLetter/groups/" + SERIALIZED_GROUP_A)
+                .jsonPath()
+                .get("taskId");
+
+            given()
+                .basePath(TasksRoutes.BASE)
+                .when()
+            .get(taskId + "/await")
+                .then()
+                .body("status", is("completed"))
+                .body("additionalInformation.successfulRedeliveriesCount", is(1))
+                .body("additionalInformation.failedRedeliveriesCount", is(0))
+                .body("additionalInformation.runningOptions.limit", is(1))
+                .body("additionalInformation.group", is(SERIALIZED_GROUP_A));
+
+            when()
+                .get("/events/deadLetter/groups/" + SERIALIZED_GROUP_A + "/" + INSERTION_UUID_1)
+                .then()
+                .statusCode(HttpStatus.NOT_FOUND_404);
+
+            assertThat(eventCollector.getEvents()).hasSize(1);
+        }
+
+        @Test
+        void postRedeliverGroupEventsShouldFailWhenInvalidLimitParameter() {
+           with()
+                .queryParam("action", EVENTS_ACTION)
+                .queryParam("limit", "invalid")
+           .post("/events/deadLetter/groups/" + SERIALIZED_GROUP_A)
+                .then()
+                .statusCode(HttpStatus.BAD_REQUEST_400)
+                .contentType(ContentType.JSON)
+                .body("statusCode", is(400))
+                .body("type", is(ErrorResponder.ErrorType.INVALID_ARGUMENT.getType()))
+                .body("message", is("Can not parse limit"));
         }
     }
 

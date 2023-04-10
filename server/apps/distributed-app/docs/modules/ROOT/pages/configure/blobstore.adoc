@@ -63,6 +63,11 @@ If AES encryption is enabled, then the following properties MUST be present:
  - *encryption.aes.password* : String
  - *encryption.aes.salt* : Hexadecimal string
 
+The following properties CAN be supplied:
+
+ - *encryption.aes.private.key.algorithm* : String, defaulting to PBKDF2WithHmacSHA512. Previously was
+PBKDF2WithHmacSHA1.
+
 WARNING: Once chosen this choice can not be reverted, all the data is either clear or encrypted. Mixed encryption
 is not supported.
 
@@ -94,10 +99,6 @@ To be noted that blobs are stored within a single Cassandra row, hence a low thr
 
 | cache.cassandra.ttl
 | DEFAULT: 7 days, optional, must be a duration. Cache eviction policy is TTL based.
-
-| cache.cassandra.timeout
-| DEFAULT: 100ms, optional, must be a duration, cannot exceed 1 hour.
-Timeout after which this cache should be bypassed.
 
 | cache.sizeThresholdInBytes
 | DEFAULT: 8192, optional, must be a positive integer. Unit: bytes.
@@ -148,6 +149,11 @@ Maximum size of stored objects expressed in bytes.
 
 | objectstorage.s3.connection.timeout
 | optional: HTTP connection timeout. duration, default value being second. Leaving it empty relies on S3 driver defaults.
+
+| objectstorage.s3.in.read.limit
+| optional: Object read in memory will be rejected if they exceed the size limit exposed here. Size, exemple `100M`.
+Supported units: K, M, G, defaults to B if no unit is specified. If unspecified, big object won't be prevented
+from being loaded in memory. This settings complements protocol limits.
 |===
 
 ==== Buckets Configuration
@@ -157,7 +163,7 @@ Maximum size of stored objects expressed in bytes.
 | Property name | explanation
 
 | objectstorage.bucketPrefix
-| Bucket is an concept in James and similar to Containers in Swift or Buckets in AWS S3.
+| Bucket is a concept in James and similar to Containers in Swift or Buckets in AWS S3.
 BucketPrefix is the prefix of bucket names in James BlobStore
 
 | objectstorage.namespace

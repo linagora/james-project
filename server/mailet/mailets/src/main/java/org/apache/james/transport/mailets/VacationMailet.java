@@ -139,7 +139,7 @@ public class VacationMailet extends GenericMailet {
     }
 
     private void sendNotification(VacationReply vacationReply) throws MessagingException {
-        getMailetContext().sendMail(vacationReply.getSender(),
+        getMailetContext().sendMail(MailAddress.nullSender(),
             vacationReply.getRecipients(),
             vacationReply.getMimeMessage());
     }

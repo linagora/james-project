@@ -19,27 +19,27 @@
 
 package org.apache.james.mailbox.cassandra.mail;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.prependAll;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.update;
+import static com.datastax.oss.driver.api.core.type.DataTypes.TEXT;
+import static com.datastax.oss.driver.api.core.type.DataTypes.frozenListOf;
+import static com.datastax.oss.driver.api.core.type.DataTypes.frozenMapOf;
+import static com.datastax.oss.driver.api.core.type.DataTypes.listOf;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.deleteFrom;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.selectFrom;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.update;
+import static com.datastax.oss.driver.api.querybuilder.relation.Relation.column;
+import static com.datastax.oss.driver.api.querybuilder.update.Assignment.prepend;
+import static com.datastax.oss.driver.api.querybuilder.update.Assignment.setColumn;
 import static org.apache.james.blob.api.BlobStore.StoragePolicy.LOW_COST;
 import static org.apache.james.blob.api.BlobStore.StoragePolicy.SIZE_BASED;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageIds.MESSAGE_ID;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.ATTACHMENTS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.BODY_CONTENT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.BODY_CONTENT_LOWERCASE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.BODY_OCTECTS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.BODY_START_OCTET;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.BODY_START_OCTET_LOWERCASE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.FULL_CONTENT_OCTETS;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.FULL_CONTENT_OCTETS_LOWERCASE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.HEADER_CONTENT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.HEADER_CONTENT_LOWERCASE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.INTERNAL_DATE;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.INTERNAL_DATE_LOWERCASE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.Properties.CONTENT_DESCRIPTION;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.Properties.CONTENT_DISPOSITION_PARAMETERS;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.Properties.CONTENT_DISPOSITION_TYPE;
@@ -53,20 +53,18 @@ import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.P
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.Properties.SUB_TYPE;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.TABLE_NAME;
 import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.TEXTUAL_LINE_COUNT;
-import static org.apache.james.mailbox.cassandra.table.CassandraMessageV3Table.TEXTUAL_LINE_COUNT_LOWERCASE;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
-import org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration;
 import org.apache.james.backends.cassandra.utils.CassandraAsyncExecutor;
 import org.apache.james.blob.api.BlobId;
 import org.apache.james.blob.api.BlobStore;
@@ -77,27 +75,27 @@ import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.ByteContent;
 import org.apache.james.mailbox.model.Cid;
 import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
+import org.apache.james.mailbox.model.Content;
+import org.apache.james.mailbox.model.HeaderAndBodyByteContent;
 import org.apache.james.mailbox.model.MessageAttachmentMetadata;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.Properties;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.CodecRegistry;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.TypeCodec;
-import com.datastax.driver.core.TypeTokens;
-import com.datastax.driver.core.UDTValue;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.data.UdtValue;
+import com.datastax.oss.driver.api.core.type.UserDefinedType;
+import com.datastax.oss.driver.api.core.type.codec.TypeCodec;
+import com.datastax.oss.driver.api.core.type.codec.TypeCodecs;
+import com.datastax.oss.driver.api.core.type.codec.registry.CodecRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
-import com.google.common.primitives.Bytes;
-import com.google.common.reflect.TypeToken;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -106,14 +104,10 @@ import reactor.util.function.Tuple2;
 public class CassandraMessageDAOV3 {
     public static final long DEFAULT_LONG_VALUE = 0L;
     private static final byte[] EMPTY_BYTE_ARRAY = {};
-    private static final TypeToken<Map<String, String>> MAP_OF_STRING = TypeTokens.mapOf(String.class, String.class);
-    private static final TypeCodec<Map<String, String>> MAP_OF_STRINGS_CODEC = CodecRegistry.DEFAULT_INSTANCE.codecFor(DataType.frozenMap(DataType.text(), DataType.text()), MAP_OF_STRING);
-    private static final TypeToken<List<String>> LIST_OF_STRINGS = TypeTokens.listOf(String.class);
-    private static final TypeCodec<List<String>> LIST_OF_STRINGS_CODEC = CodecRegistry.DEFAULT_INSTANCE.codecFor(DataType.frozenList(DataType.text()), LIST_OF_STRINGS);
-    private static final TypeToken<List<UDTValue>> LIST_OF_UDT = TypeTokens.listOf(UDTValue.class);
+    private static final TypeCodec<Map<String, String>> MAP_OF_STRINGS_CODEC = CodecRegistry.DEFAULT.codecFor(frozenMapOf(TEXT, TEXT));
+    private static final TypeCodec<List<String>> LIST_OF_STRINGS_CODEC = CodecRegistry.DEFAULT.codecFor(frozenListOf(TEXT));
 
     private final CassandraAsyncExecutor cassandraAsyncExecutor;
-    private final CassandraTypesProvider typesProvider;
     private final BlobStore blobStore;
     private final BlobId.Factory blobIdFactory;
     private final PreparedStatement insert;
@@ -121,15 +115,13 @@ public class CassandraMessageDAOV3 {
     private final PreparedStatement select;
     private final PreparedStatement listBlobs;
     private final Cid.CidParser cidParser;
-    private final ConsistencyLevel consistencyLevel;
+    private final UserDefinedType attachmentsType;
+    private final TypeCodec<List<UdtValue>> attachmentCodec;
 
     @Inject
-    public CassandraMessageDAOV3(Session session, CassandraTypesProvider typesProvider, BlobStore blobStore,
-                                 BlobId.Factory blobIdFactory,
-                                 CassandraConsistenciesConfiguration consistenciesConfiguration) {
+    public CassandraMessageDAOV3(CqlSession session, CassandraTypesProvider typesProvider, BlobStore blobStore,
+                                 BlobId.Factory blobIdFactory) {
         this.cassandraAsyncExecutor = new CassandraAsyncExecutor(session);
-        this.consistencyLevel = consistenciesConfiguration.getRegular();
-        this.typesProvider = typesProvider;
         this.blobStore = blobStore;
         this.blobIdFactory = blobIdFactory;
 
@@ -138,47 +130,52 @@ public class CassandraMessageDAOV3 {
         this.select = prepareSelect(session);
         this.listBlobs = prepareSelectBlobs(session);
         this.cidParser = Cid.parser().relaxed();
+        this.attachmentsType = typesProvider.getDefinedUserType(ATTACHMENTS.asCql(true));
+        this.attachmentCodec = CodecRegistry.DEFAULT.codecFor(listOf(attachmentsType));
     }
 
-    private PreparedStatement prepareSelect(Session session) {
-        return session.prepare(select()
-            .from(TABLE_NAME)
-            .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
+    private PreparedStatement prepareSelect(CqlSession session) {
+        return session.prepare(selectFrom(TABLE_NAME)
+            .all()
+            .where(column(MESSAGE_ID).isEqualTo(bindMarker(MESSAGE_ID)))
+            .build());
     }
 
-    private PreparedStatement prepareSelectBlobs(Session session) {
-        return session.prepare(select(HEADER_CONTENT, BODY_CONTENT)
-            .from(TABLE_NAME));
+    private PreparedStatement prepareSelectBlobs(CqlSession session) {
+        return session.prepare(selectFrom(TABLE_NAME)
+            .columns(HEADER_CONTENT, BODY_CONTENT)
+            .build());
     }
 
-    private PreparedStatement prepareInsert(Session session) {
+    private PreparedStatement prepareInsert(CqlSession session) {
         return session.prepare(update(TABLE_NAME)
-            .with(set(INTERNAL_DATE, bindMarker(INTERNAL_DATE)))
-            .and(set(BODY_START_OCTET, bindMarker(BODY_START_OCTET)))
-            .and(set(FULL_CONTENT_OCTETS, bindMarker(FULL_CONTENT_OCTETS)))
-            .and(set(BODY_OCTECTS, bindMarker(BODY_OCTECTS)))
-            .and(set(BODY_CONTENT, bindMarker(BODY_CONTENT)))
-            .and(set(HEADER_CONTENT, bindMarker(HEADER_CONTENT)))
-            .and(set(CONTENT_DESCRIPTION, bindMarker(CONTENT_DESCRIPTION)))
-            .and(set(CONTENT_DISPOSITION_TYPE, bindMarker(CONTENT_DISPOSITION_TYPE)))
-            .and(set(MEDIA_TYPE, bindMarker(MEDIA_TYPE)))
-            .and(set(SUB_TYPE, bindMarker(SUB_TYPE)))
-            .and(set(CONTENT_ID, bindMarker(CONTENT_ID)))
-            .and(set(CONTENT_MD5, bindMarker(CONTENT_MD5)))
-            .and(set(CONTENT_TRANSFER_ENCODING, bindMarker(CONTENT_TRANSFER_ENCODING)))
-            .and(set(CONTENT_LOCATION, bindMarker(CONTENT_LOCATION)))
-            .and(set(CONTENT_LANGUAGE, bindMarker(CONTENT_LANGUAGE)))
-            .and(set(CONTENT_DISPOSITION_PARAMETERS, bindMarker(CONTENT_DISPOSITION_PARAMETERS)))
-            .and(set(CONTENT_TYPE_PARAMETERS, bindMarker(CONTENT_TYPE_PARAMETERS)))
-            .and(set(TEXTUAL_LINE_COUNT, bindMarker(TEXTUAL_LINE_COUNT)))
-            .and(prependAll(ATTACHMENTS, bindMarker(ATTACHMENTS)))
-            .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
+            .set(setColumn(INTERNAL_DATE, bindMarker(INTERNAL_DATE)),
+                setColumn(BODY_START_OCTET, bindMarker(BODY_START_OCTET)),
+                setColumn(FULL_CONTENT_OCTETS, bindMarker(FULL_CONTENT_OCTETS)),
+                setColumn(BODY_OCTECTS, bindMarker(BODY_OCTECTS)),
+                setColumn(BODY_CONTENT, bindMarker(BODY_CONTENT)),
+                setColumn(HEADER_CONTENT, bindMarker(HEADER_CONTENT)),
+                setColumn(CONTENT_DESCRIPTION, bindMarker(CONTENT_DESCRIPTION)),
+                setColumn(CONTENT_DISPOSITION_TYPE, bindMarker(CONTENT_DISPOSITION_TYPE)),
+                setColumn(MEDIA_TYPE, bindMarker(MEDIA_TYPE)),
+                setColumn(SUB_TYPE, bindMarker(SUB_TYPE)),
+                setColumn(CONTENT_ID, bindMarker(CONTENT_ID)),
+                setColumn(CONTENT_MD5, bindMarker(CONTENT_MD5)),
+                setColumn(CONTENT_TRANSFER_ENCODING, bindMarker(CONTENT_TRANSFER_ENCODING)),
+                setColumn(CONTENT_LOCATION, bindMarker(CONTENT_LOCATION)),
+                setColumn(CONTENT_LANGUAGE, bindMarker(CONTENT_LANGUAGE)),
+                setColumn(CONTENT_DISPOSITION_PARAMETERS, bindMarker(CONTENT_DISPOSITION_PARAMETERS)),
+                setColumn(CONTENT_TYPE_PARAMETERS, bindMarker(CONTENT_TYPE_PARAMETERS)),
+                setColumn(TEXTUAL_LINE_COUNT, bindMarker(TEXTUAL_LINE_COUNT)),
+                prepend(ATTACHMENTS, bindMarker(ATTACHMENTS)))
+            .where(column(MESSAGE_ID).isEqualTo(bindMarker(MESSAGE_ID)))
+            .build());
     }
 
-    private PreparedStatement prepareDelete(Session session) {
-        return session.prepare(QueryBuilder.delete()
-            .from(TABLE_NAME)
-            .where(eq(MESSAGE_ID, bindMarker(MESSAGE_ID))));
+    private PreparedStatement prepareDelete(CqlSession session) {
+        return session.prepare(deleteFrom(TABLE_NAME)
+            .where(column(MESSAGE_ID).isEqualTo(bindMarker(MESSAGE_ID)))
+            .build());
     }
 
     public Mono<Tuple2<BlobId, BlobId>> save(MailboxMessage message) throws MailboxException {
@@ -188,9 +185,9 @@ public class CassandraMessageDAOV3 {
 
     public Mono<Void> save(MessageRepresentation message) {
         CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
-        BoundStatement boundStatement = insert.bind()
-            .setUUID(MESSAGE_ID, messageId.get())
-            .setTimestamp(INTERNAL_DATE, message.getInternalDate())
+        BoundStatementBuilder boundStatement = insert.boundStatementBuilder()
+            .setUuid(MESSAGE_ID, messageId.get())
+            .setInstant(INTERNAL_DATE, message.getInternalDate().toInstant())
             .setInt(BODY_START_OCTET, message.getBodyStartOctet())
             .setLong(FULL_CONTENT_OCTETS, message.getSize())
             .setLong(BODY_OCTECTS, message.getSize() - message.getBodyStartOctet())
@@ -205,17 +202,16 @@ public class CassandraMessageDAOV3 {
             .setString(CONTENT_MD5, message.getProperties().getContentMD5())
             .setString(CONTENT_TRANSFER_ENCODING, message.getProperties().getContentTransferEncoding())
             .setString(CONTENT_LOCATION, message.getProperties().getContentLocation())
-            .setList(CONTENT_LANGUAGE, message.getProperties().getContentLanguage())
-            .setMap(CONTENT_DISPOSITION_PARAMETERS, message.getProperties().getContentDispositionParameters())
-            .setMap(CONTENT_TYPE_PARAMETERS, message.getProperties().getContentTypeParameters());
+            .set(CONTENT_LANGUAGE, message.getProperties().getContentLanguage(), LIST_OF_STRINGS_CODEC)
+            .set(CONTENT_DISPOSITION_PARAMETERS, message.getProperties().getContentDispositionParameters(), MAP_OF_STRINGS_CODEC)
+            .set(CONTENT_TYPE_PARAMETERS, message.getProperties().getContentTypeParameters(), MAP_OF_STRINGS_CODEC);
 
         if (message.getAttachments().isEmpty()) {
-            boundStatement.unset(ATTACHMENTS);
+            return cassandraAsyncExecutor.executeVoid(boundStatement.unset(ATTACHMENTS).build());
         } else {
-            boundStatement.setList(ATTACHMENTS, buildAttachmentUdt(message.getAttachments()));
+            return cassandraAsyncExecutor.executeVoid(boundStatement.setList(ATTACHMENTS, buildAttachmentUdt(message.getAttachments()), UdtValue.class).build());
         }
 
-        return cassandraAsyncExecutor.executeVoid(boundStatement);
     }
 
     private Mono<Tuple2<BlobId, BlobId>> saveContent(MailboxMessage message) throws MailboxException {
@@ -249,8 +245,8 @@ public class CassandraMessageDAOV3 {
     private BoundStatement boundWriteStatement(MailboxMessage message, Tuple2<BlobId, BlobId> pair) {
         CassandraMessageId messageId = (CassandraMessageId) message.getMessageId();
         BoundStatement boundStatement = insert.bind()
-            .setUUID(MESSAGE_ID, messageId.get())
-            .setTimestamp(INTERNAL_DATE, message.getInternalDate())
+            .setUuid(MESSAGE_ID, messageId.get())
+            .setInstant(INTERNAL_DATE, message.getInternalDate().toInstant())
             .setInt(BODY_START_OCTET, (int) (message.getHeaderOctets()))
             .setLong(FULL_CONTENT_OCTETS, message.getFullContentOctets())
             .setLong(BODY_OCTECTS, message.getBodyOctets())
@@ -265,53 +261,59 @@ public class CassandraMessageDAOV3 {
             .setString(CONTENT_MD5, message.getProperties().getContentMD5())
             .setString(CONTENT_TRANSFER_ENCODING, message.getProperties().getContentTransferEncoding())
             .setString(CONTENT_LOCATION, message.getProperties().getContentLocation())
-            .setList(CONTENT_LANGUAGE, message.getProperties().getContentLanguage())
-            .setMap(CONTENT_DISPOSITION_PARAMETERS, message.getProperties().getContentDispositionParameters())
-            .setMap(CONTENT_TYPE_PARAMETERS, message.getProperties().getContentTypeParameters());
+            .set(CONTENT_LANGUAGE, message.getProperties().getContentLanguage(), LIST_OF_STRINGS_CODEC)
+            .set(CONTENT_DISPOSITION_PARAMETERS, message.getProperties().getContentDispositionParameters(), MAP_OF_STRINGS_CODEC)
+            .set(CONTENT_TYPE_PARAMETERS, message.getProperties().getContentTypeParameters(), MAP_OF_STRINGS_CODEC);
 
         if (message.getAttachments().isEmpty()) {
-            boundStatement.unset(ATTACHMENTS);
+            return boundStatement.unset(ATTACHMENTS);
         } else {
-            boundStatement.setList(ATTACHMENTS, buildAttachmentUdt(message));
+            return boundStatement.setList(ATTACHMENTS, buildAttachmentUdt(message), UdtValue.class);
         }
-
-        return boundStatement;
     }
 
-    private ImmutableList<UDTValue> buildAttachmentUdt(MailboxMessage message) {
+    private ImmutableList<UdtValue> buildAttachmentUdt(MailboxMessage message) {
         return message.getAttachments().stream()
             .map(this::toUDT)
             .collect(ImmutableList.toImmutableList());
     }
 
-    private ImmutableList<UDTValue> buildAttachmentUdt(List<MessageAttachmentRepresentation> attachments) {
+    private ImmutableList<UdtValue> buildAttachmentUdt(List<MessageAttachmentRepresentation> attachments) {
         return attachments.stream()
             .map(this::toUDT)
             .collect(ImmutableList.toImmutableList());
     }
 
-    private UDTValue toUDT(MessageAttachmentMetadata messageAttachment) {
-        UDTValue result = typesProvider.getDefinedUserType(ATTACHMENTS)
+    private UdtValue toUDT(MessageAttachmentMetadata messageAttachment) {
+        UdtValue result = attachmentsType
             .newValue()
             .setString(Attachments.ID, messageAttachment.getAttachmentId().getId())
-            .setBool(Attachments.IS_INLINE, messageAttachment.isInline());
-        messageAttachment.getName()
-            .ifPresent(name -> result.setString(Attachments.NAME, name));
-        messageAttachment.getCid()
-            .ifPresent(cid -> result.setString(Attachments.CID, cid.getValue()));
-        return result;
+            .setBoolean(Attachments.IS_INLINE, messageAttachment.isInline());
+
+        UdtValue setNameUdtValue = messageAttachment.getName()
+            .map(name -> result.setString(Attachments.NAME, name))
+            .orElse(result);
+
+        return messageAttachment.getCid()
+                .map(cid -> setNameUdtValue.setString(Attachments.CID, cid.getValue()))
+                .orElse(setNameUdtValue);
     }
 
-    private UDTValue toUDT(MessageAttachmentRepresentation messageAttachment) {
-        UDTValue result = typesProvider.getDefinedUserType(ATTACHMENTS)
+    private UdtValue toUDT(MessageAttachmentRepresentation messageAttachment) {
+        UdtValue result = attachmentsType
             .newValue()
             .setString(Attachments.ID, messageAttachment.getAttachmentId().getId())
-            .setBool(Attachments.IS_INLINE, messageAttachment.isInline());
-        messageAttachment.getName()
-            .ifPresent(name -> result.setString(Attachments.NAME, name));
-        messageAttachment.getCid()
-            .ifPresent(cid -> result.setString(Attachments.CID, cid.getValue()));
-        return result;
+            .setBoolean(Attachments.IS_INLINE, messageAttachment.isInline());
+
+        Optional<UdtValue> maybeSetNameUdtValue = messageAttachment.getName()
+            .map(name -> result.setString(Attachments.NAME, name));
+
+        Optional<UdtValue> maybeSetCidUdtValue = maybeSetNameUdtValue
+            .map(setNameUdtValue -> messageAttachment.getCid()
+                .map(cid -> setNameUdtValue.setString(Attachments.CID, cid.getValue()))
+                .orElse(setNameUdtValue));
+
+        return maybeSetCidUdtValue.orElse(result);
     }
 
     public Mono<MessageRepresentation> retrieveMessage(ComposedMessageIdWithMetaData id, FetchType fetchType) {
@@ -321,108 +323,108 @@ public class CassandraMessageDAOV3 {
 
     public Mono<MessageRepresentation> retrieveMessage(CassandraMessageId cassandraMessageId, FetchType fetchType) {
         return retrieveRow(cassandraMessageId)
-                .flatMap(row -> message(row, cassandraMessageId, fetchType));
+            .flatMap(row -> message(row, cassandraMessageId, fetchType));
     }
 
     private Mono<Row> retrieveRow(CassandraMessageId messageId) {
         return cassandraAsyncExecutor.executeSingleRow(select
             .bind()
-            .setUUID(MESSAGE_ID, messageId.get())
-            .setConsistencyLevel(consistencyLevel));
+            .set(MESSAGE_ID, messageId.get(), TypeCodecs.TIMEUUID));
     }
 
     private Mono<MessageRepresentation> message(Row row, CassandraMessageId cassandraMessageId, FetchType fetchType) {
         BlobId headerId = retrieveBlobId(HEADER_CONTENT, row);
         BlobId bodyId = retrieveBlobId(BODY_CONTENT, row);
-        int bodyStartOctet = row.getInt(BODY_START_OCTET);
 
-        return buildContentRetriever(fetchType, headerId, bodyId, bodyStartOctet).map(content ->
-            new MessageRepresentation(
-                cassandraMessageId,
-                row.getTimestamp(INTERNAL_DATE_LOWERCASE),
-                row.getLong(FULL_CONTENT_OCTETS_LOWERCASE),
-                row.getInt(BODY_START_OCTET_LOWERCASE),
-                new ByteContent(content),
-                getProperties(row),
-                getAttachments(row).collect(ImmutableList.toImmutableList()),
-                headerId,
-                bodyId));
+        return buildContentRetriever(fetchType, headerId, bodyId)
+            .map(content ->
+                new MessageRepresentation(
+                    cassandraMessageId,
+                    Optional.ofNullable(row.get(INTERNAL_DATE, TypeCodecs.TIMESTAMP)).map(Date::from).orElse(null),
+                    row.getLong(FULL_CONTENT_OCTETS),
+                    row.getInt(BODY_START_OCTET),
+                    content,
+                    getProperties(row),
+                    getAttachments(row),
+                    headerId,
+                    bodyId));
     }
 
     private Properties getProperties(Row row) {
         PropertyBuilder property = new PropertyBuilder();
-        property.setContentDescription(row.getString(CONTENT_DESCRIPTION));
-        property.setContentDispositionType(row.getString(CONTENT_DISPOSITION_TYPE));
-        property.setMediaType(row.getString(MEDIA_TYPE));
-        property.setSubType(row.getString(SUB_TYPE));
-        property.setContentID(row.getString(CONTENT_ID));
-        property.setContentMD5(row.getString(CONTENT_MD5));
-        property.setContentTransferEncoding(row.getString(CONTENT_TRANSFER_ENCODING));
-        property.setContentLocation(row.getString(CONTENT_LOCATION));
+        property.setContentDescription(row.get(CONTENT_DESCRIPTION, TypeCodecs.TEXT));
+        property.setContentDispositionType(row.get(CONTENT_DISPOSITION_TYPE, TypeCodecs.TEXT));
+        property.setMediaType(row.get(MEDIA_TYPE, TypeCodecs.TEXT));
+        property.setSubType(row.get(SUB_TYPE, TypeCodecs.TEXT));
+        property.setContentID(row.get(CONTENT_ID, TypeCodecs.TEXT));
+        property.setContentMD5(row.get(CONTENT_MD5, TypeCodecs.TEXT));
+        property.setContentTransferEncoding(row.get(CONTENT_TRANSFER_ENCODING, TypeCodecs.TEXT));
+        property.setContentLocation(row.get(CONTENT_LOCATION, TypeCodecs.TEXT));
         property.setContentLanguage(row.get(CONTENT_LANGUAGE, LIST_OF_STRINGS_CODEC));
         property.setContentDispositionParameters(row.get(CONTENT_DISPOSITION_PARAMETERS, MAP_OF_STRINGS_CODEC));
         property.setContentTypeParameters(row.get(CONTENT_TYPE_PARAMETERS, MAP_OF_STRINGS_CODEC));
-        property.setTextualLineCount(row.getLong(TEXTUAL_LINE_COUNT_LOWERCASE));
+        property.setTextualLineCount(row.getLong(TEXTUAL_LINE_COUNT));
         return property.build();
     }
 
-    private Stream<MessageAttachmentRepresentation> getAttachments(Row row) {
-        List<UDTValue> udtValues = row.get(ATTACHMENTS, LIST_OF_UDT);
-        return attachmentByIds(udtValues);
+    private List<MessageAttachmentRepresentation> getAttachments(Row row) {
+        return Optional.ofNullable(row.get(ATTACHMENTS, attachmentCodec))
+            .map(this::attachmentByIds)
+            .orElseGet(ImmutableList::of);
     }
 
-    private Stream<MessageAttachmentRepresentation> attachmentByIds(List<UDTValue> udtValues) {
+    private List<MessageAttachmentRepresentation> attachmentByIds(List<UdtValue> udtValues) {
         return udtValues.stream()
-            .map(this::messageAttachmentByIdFrom);
+            .map(this::messageAttachmentByIdFrom)
+            .collect(ImmutableList.toImmutableList());
     }
 
-    private MessageAttachmentRepresentation messageAttachmentByIdFrom(UDTValue udtValue) {
+    private MessageAttachmentRepresentation messageAttachmentByIdFrom(UdtValue udtValue) {
         return MessageAttachmentRepresentation.builder()
-            .attachmentId(AttachmentId.from(udtValue.getString(Attachments.ID)))
-            .name(udtValue.getString(Attachments.NAME))
-            .cid(cidParser.parse(udtValue.getString(Attachments.CID)))
-            .isInline(udtValue.getBool(Attachments.IS_INLINE))
+            .attachmentId(AttachmentId.from(udtValue.get(Attachments.ID, TypeCodecs.TEXT)))
+            .name(udtValue.get(Attachments.NAME, TypeCodecs.TEXT))
+            .cid(cidParser.parse(udtValue.get(Attachments.CID, TypeCodecs.TEXT)))
+            .isInline(udtValue.getBoolean(Attachments.IS_INLINE))
             .build();
     }
 
     public Mono<Void> delete(CassandraMessageId messageId) {
         return cassandraAsyncExecutor.executeVoid(delete.bind()
-            .setUUID(MESSAGE_ID, messageId.get()));
+            .setUuid(MESSAGE_ID, messageId.get()));
     }
 
-    private Mono<byte[]> buildContentRetriever(FetchType fetchType, BlobId headerId, BlobId bodyId, int bodyStartOctet) {
+    private Mono<Content> buildContentRetriever(FetchType fetchType, BlobId headerId, BlobId bodyId) {
         switch (fetchType) {
             case FULL:
                 return getFullContent(headerId, bodyId);
+            case ATTACHMENTS_METADATA:
             case HEADERS:
-                return getContent(headerId, SIZE_BASED);
-            case BODY:
-                return getContent(bodyId, LOW_COST)
-                    .map(data -> Bytes.concat(new byte[bodyStartOctet], data));
+                return getContent(headerId, SIZE_BASED)
+                    .map(ByteContent::new);
             case METADATA:
-                return Mono.just(EMPTY_BYTE_ARRAY);
+                return Mono.just(new ByteContent(EMPTY_BYTE_ARRAY));
             default:
                 throw new RuntimeException("Unknown FetchType " + fetchType);
         }
     }
 
-    private Mono<byte[]> getFullContent(BlobId headerId, BlobId bodyId) {
+    private Mono<Content> getFullContent(BlobId headerId, BlobId bodyId) {
         return getContent(headerId, SIZE_BASED)
-            .zipWith(getContent(bodyId, LOW_COST), Bytes::concat);
+            .zipWith(getContent(bodyId, LOW_COST), HeaderAndBodyByteContent::new);
     }
 
     private Mono<byte[]> getContent(BlobId blobId, BlobStore.StoragePolicy storagePolicy) {
         return Mono.from(blobStore.readBytes(blobStore.getDefaultBucketName(), blobId, storagePolicy));
     }
 
-    private BlobId retrieveBlobId(String field, Row row) {
-        return blobIdFactory.from(row.getString(field));
+    private BlobId retrieveBlobId(CqlIdentifier field, Row row) {
+        return blobIdFactory.from(row.get(field, TypeCodecs.TEXT));
     }
 
     Flux<BlobId> listBlobs() {
         return cassandraAsyncExecutor.executeRows(listBlobs.bind())
             .flatMapIterable(row -> ImmutableList.of(
-                blobIdFactory.from(row.getString(HEADER_CONTENT_LOWERCASE)),
-                blobIdFactory.from(row.getString(BODY_CONTENT_LOWERCASE))));
+                blobIdFactory.from(row.get(HEADER_CONTENT, TypeCodecs.TEXT)),
+                blobIdFactory.from(row.get(BODY_CONTENT, TypeCodecs.TEXT))));
     }
 }

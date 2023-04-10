@@ -40,12 +40,19 @@ Defaults to an empty list.
 | Optional. Configuration max size for message created in both JMAP Draft amd RFC-8621.
 Default value: None. Supported units are B (bytes) K (KB) M (MB) G (GB).
 
+| max.size.attachments.per.mail
+| Optional. Defaults to 20MB. RFC-8621 `maxSizeAttachmentsPerEmail` advertised to JMAP client as part of the
+`urn:ietf:params:jmap:mail` capability. This needs to be at least 33% lower than `email.send.max.size` property
+(in order to account for text body, headers, base64 encoding and MIME structures).
+JMAP clients would use this property in order not to create too big emails.
+Default value: None. Supported units are B (bytes) K (KB) M (MB) G (GB).
+
 | upload.max.size
 | Optional. Configuration max size Upload in new JMAP-RFC-8621.
 Default value: 30M. Supported units are B (bytes) K (KB) M (MB) G (GB).
 
 | view.email.query.enabled
-| Optional boolean. Defaults to false. Should simple Email/query be resolved against a Cassandra projection, or should we resolve them against ElasticSearch?
+| Optional boolean. Defaults to false. Should simple Email/query be resolved against a Cassandra projection, or should we resolve them against OpenSearch?
 This enables a higher resilience, but the projection needs to be correctly populated.
 
 | user.provisioning.enabled
@@ -156,3 +163,9 @@ Eg:
 ----
 _jmap._tcp.domain.tld. 3600        IN    SRV    0 1 443 jmap.domain.tld.
 ----
+
+== JMAP reverse-proxy set up
+
+James implementation adds the value of `X-Real-IP` header as part of the logging MDC.
+
+This allows for reverse proxies to cary other the IP address of the client down to the JMAP server for diagnostic purpose.

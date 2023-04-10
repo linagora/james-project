@@ -18,13 +18,17 @@
  ****************************************************************/
 package org.apache.james.webadmin.utils;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.function.Function;
 
+import org.apache.james.util.DurationParser;
 import org.apache.james.util.streams.Limit;
 import org.apache.james.util.streams.Offset;
 import org.eclipse.jetty.http.HttpStatus;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 import spark.Request;
@@ -50,6 +54,25 @@ public class ParametersExtractor {
     public static Optional<Integer> extractPositiveInteger(Request request, String parameterName) {
         return extractPositiveNumber(request, parameterName, Integer::valueOf);
     }
+
+    public static Optional<Duration> extractDuration(Request request, String parameterName) {
+        return Optional.ofNullable(request.queryParams(parameterName))
+            .filter(s -> !s.isEmpty())
+            .map(raw -> DurationParser.parse(raw, ChronoUnit.SECONDS));
+    }
+
+    public static Optional<Boolean> extractBoolean(Request request, String parameterName) {
+        return Optional.ofNullable(request.queryParams(parameterName))
+            .filter(s -> !s.isEmpty())
+            .map(String::trim)
+            .map(s -> {
+                Preconditions.checkArgument(s.equalsIgnoreCase(Boolean.TRUE.toString())
+                        || s.equalsIgnoreCase(Boolean.FALSE.toString()),
+                    "Invalid '" + parameterName + "' query parameter");
+                return Boolean.parseBoolean(s);
+            });
+    }
+
 
     private static <T extends Number> Optional<T> extractPositiveNumber(Request request, String parameterName, Function<String, T> toNumber) {
         try {

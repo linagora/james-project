@@ -131,6 +131,11 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
+            <artifactId>james-server-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
             <artifactId>james-server-util</artifactId>
         </dependency>
         <dependency>
@@ -202,6 +207,7 @@
                 <configuration>
                     <reuseForks>true</reuseForks>
                     <forkCount>2</forkCount>
+                    <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
                 </configuration>
             </plugin>
         </plugins>

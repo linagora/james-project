@@ -30,22 +30,27 @@ public interface TaskManagerWorker extends Closeable {
     interface Listener {
         Publisher<Void> started(TaskId taskId);
 
-        Publisher<Void> completed(TaskId taskId, Task.Result result, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation);
+        Publisher<Void> completed(TaskId taskId, Task.Result result, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher);
 
-        Publisher<Void> failed(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation, String errorMessage, Throwable t);
+        Publisher<Void> failed(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher, Optional<String> errorMessage, Optional<Throwable> t);
 
-        Publisher<Void> failed(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation, Throwable t);
+        default Publisher<Void> failed(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher, Throwable t) {
+            return failed(taskId, additionalInformationPublisher, Optional.empty(), Optional.of(t));
+        }
 
-        Publisher<Void> failed(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation);
+        default Publisher<Void> failed(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher) {
+            return failed(taskId, additionalInformationPublisher, Optional.empty(), Optional.empty());
+        }
 
-        Publisher<Void> cancelled(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation);
+        Publisher<Void> cancelled(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher);
 
-        Publisher<Void> updated(TaskId taskId, TaskExecutionDetails.AdditionalInformation additionalInformation);
+        Publisher<Void> updated(TaskId taskId, Publisher<TaskExecutionDetails.AdditionalInformation> additionalInformationPublisher);
     }
 
     Mono<Task.Result> executeTask(TaskWithId taskWithId);
 
     void cancelTask(TaskId taskId);
 
-    Publisher<Void> fail(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation, String errorMessage, Throwable reason);
+    Publisher<Void> fail(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher, String errorMessage, Throwable reason);
+
 }

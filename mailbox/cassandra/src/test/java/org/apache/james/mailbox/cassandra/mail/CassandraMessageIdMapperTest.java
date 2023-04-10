@@ -42,10 +42,12 @@ import org.apache.james.mailbox.cassandra.TestCassandraMailboxSessionMapperFacto
 import org.apache.james.mailbox.cassandra.ids.CassandraId;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.model.MessageRange;
+import org.apache.james.mailbox.store.BatchSizes;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.MessageIdMapperTest;
 import org.apache.james.util.streams.Limit;
+import org.apache.james.utils.UpdatableTickingClock;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
@@ -60,13 +62,20 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
 
     @RegisterExtension
     static CassandraClusterExtension cassandraCluster = new CassandraClusterExtension(MailboxAggregateModule.MODULE);
-    
+
+    private CassandraMapperProvider mapperProvider;
+
     @Override
     protected CassandraMapperProvider provideMapper() {
-        return new CassandraMapperProvider(
+        mapperProvider = new CassandraMapperProvider(
             cassandraCluster.getCassandraCluster(),
-            cassandraCluster.getCassandraConsistenciesConfiguration(),
             CassandraConfiguration.DEFAULT_CONFIGURATION);
+        return mapperProvider;
+    }
+
+    @Override
+    protected UpdatableTickingClock updatableTickingClock() {
+        return mapperProvider.getUpdatableTickingClock();
     }
 
     @Test
@@ -75,8 +84,11 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
         CassandraMailboxSessionMapperFactory mapperFactory = TestCassandraMailboxSessionMapperFactory.forTests(
             cassandraCluster.getCassandraCluster(),
             messageIdFactory,
-            CassandraConfiguration.builder()
-                .messageReadChunkSize(3)
+            CassandraConfiguration.DEFAULT_CONFIGURATION,
+            BatchSizes.builder()
+                .fetchMetadata(3)
+                .fetchHeaders(3)
+                .fetchFull(3)
                 .build());
 
         saveMessages();
@@ -108,8 +120,11 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
         CassandraMailboxSessionMapperFactory mapperFactory = TestCassandraMailboxSessionMapperFactory.forTests(
             cassandraCluster.getCassandraCluster(),
             messageIdFactory,
-            CassandraConfiguration.builder()
-                .messageReadChunkSize(3)
+            CassandraConfiguration.DEFAULT_CONFIGURATION,
+            BatchSizes.builder()
+                .fetchMetadata(3)
+                .fetchHeaders(3)
+                .fetchFull(3)
                 .build());
 
         saveMessages();
@@ -124,7 +139,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             .block();
 
         assertThat(statementRecorder.listExecutedStatements(
-            StatementRecorder.Selector.preparedStatementStartingWith("SELECT * FROM imapUidTable")))
+            StatementRecorder.Selector.preparedStatementStartingWith("SELECT * FROM imapuidtable")))
             .hasSize(1);
     }
 
@@ -135,7 +150,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("UPDATE messageV3"));
+                    .whenQueryStartsWith("UPDATE messagev3"));
 
             try {
                 message1.setUid(mapperProvider.generateMessageUid());
@@ -159,7 +174,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO blobParts (id,chunkNumber,data) VALUES (:id,:chunkNumber,:data);"));
+                    .whenQueryStartsWith("INSERT INTO blobparts (id,chunknumber,data)"));
 
             try {
                 message1.setUid(mapperProvider.generateMessageUid());
@@ -183,7 +198,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO blobs (id,position) VALUES (:id,:position);"));
+                    .whenQueryStartsWith("INSERT INTO blobs (id,position) VALUES (:id,:position)"));
 
             try {
                 message1.setUid(mapperProvider.generateMessageUid());
@@ -207,7 +222,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO imapUidTable"));
+                    .whenQueryStartsWith("INSERT INTO imapuidtable"));
 
             try {
                 message1.setUid(mapperProvider.generateMessageUid());
@@ -231,7 +246,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .forever()
-                    .whenQueryStartsWith("INSERT INTO messageIdTable (mailboxId,uid,modSeq,messageId,flagAnswered,flagDeleted,flagDraft,flagFlagged,flagRecent,flagSeen,flagUser,userFlags)"));
+                    .whenQueryStartsWith("INSERT INTO messageidtable"));
 
             try {
                 message1.setUid(mapperProvider.generateMessageUid());
@@ -244,7 +259,6 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             CassandraMessageIdToImapUidDAO imapUidDAO = new CassandraMessageIdToImapUidDAO(
                 cassandra.getConf(),
                 new HashBlobId.Factory(),
-                cassandraCluster.getCassandraConsistenciesConfiguration(),
                 CassandraConfiguration.DEFAULT_CONFIGURATION);
 
             SoftAssertions.assertSoftly(Throwing.consumer(softly -> {
@@ -260,7 +274,7 @@ class CassandraMessageIdMapperTest extends MessageIdMapperTest {
             cassandra.getConf()
                 .registerScenario(fail()
                     .times(5)
-                    .whenQueryStartsWith("INSERT INTO messageIdTable (mailboxId,uid,modSeq,messageId,flagAnswered,flagDeleted,flagDraft,flagFlagged,flagRecent,flagSeen,flagUser,userFlags)"));
+                    .whenQueryStartsWith("INSERT INTO messageidtable"));
 
             message1.setUid(mapperProvider.generateMessageUid());
             message1.setModSeq(mapperProvider.generateModSeq(benwaInboxMailbox));

@@ -52,8 +52,8 @@ public class DefaultMailboxesProvisionerTest {
         session = MailboxSessionUtil.create(USERNAME);
 
         mailboxManager = InMemoryIntegrationResources.defaultResources().getMailboxManager();
-        subscriptionManager = new StoreSubscriptionManager(mailboxManager.getMapperFactory());
-        testee = new DefaultMailboxesProvisioner(mailboxManager, subscriptionManager, new RecordingMetricFactory());
+        subscriptionManager = new StoreSubscriptionManager(mailboxManager.getMapperFactory(), mailboxManager.getMapperFactory(), mailboxManager.getEventBus());
+        testee = new DefaultMailboxesProvisioner(mailboxManager, new RecordingMetricFactory());
     }
 
     @Test
@@ -84,7 +84,7 @@ public class DefaultMailboxesProvisionerTest {
         testee.createMailboxesIfNeeded(session).block();
 
         assertThat(subscriptionManager.subscriptions(session))
-            .containsOnlyElementsOf(DefaultMailboxes.DEFAULT_MAILBOXES);
+            .containsOnlyElementsOf(DefaultMailboxes.defaultMailboxesAsPath(USERNAME));
     }
 
     @Test
@@ -95,10 +95,7 @@ public class DefaultMailboxesProvisionerTest {
             .runSuccessfullyWithin(Duration.ofSeconds(10));
 
         assertThat(mailboxManager.list(session))
-            .containsOnlyElementsOf(DefaultMailboxes.DEFAULT_MAILBOXES
-                .stream()
-                .map(mailboxName -> MailboxPath.forUser(USERNAME, mailboxName))
-                .collect(ImmutableList.toImmutableList()));
+            .containsOnlyElementsOf(DefaultMailboxes.defaultMailboxesAsPath(USERNAME));
     }
 
 }

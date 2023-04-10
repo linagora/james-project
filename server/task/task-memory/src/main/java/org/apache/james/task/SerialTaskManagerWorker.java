@@ -20,22 +20,28 @@ package org.apache.james.task;
 
 import static org.apache.james.util.ReactorUtils.DEFAULT_CONCURRENCY;
 import static org.apache.james.util.ReactorUtils.publishIfPresent;
+import static org.awaitility.Durations.TWO_MINUTES;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.MDCStructuredLogger;
+import org.apache.james.util.ReactorUtils;
 import org.apache.james.util.concurrent.NamedThreadFactory;
+import org.awaitility.Awaitility;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import reactor.core.Disposable;
@@ -43,16 +49,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
 public class SerialTaskManagerWorker implements TaskManagerWorker {
     private static final Logger LOGGER = LoggerFactory.getLogger(SerialTaskManagerWorker.class);
     public static final boolean MAY_INTERRUPT_IF_RUNNING = true;
 
     private final Scheduler taskExecutor;
+    private final Scheduler asyncTaskExecutor;
     private final Listener listener;
-    private final AtomicReference<Tuple2<TaskId, CompletableFuture>> runningTask;
+    private final Map<TaskId, CompletableFuture<Task.Result>> runningTasks;
     private final Set<TaskId> cancelledTasks;
     private final Duration pollingInterval;
 
@@ -60,54 +65,74 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
         this.pollingInterval = pollingInterval;
         this.taskExecutor = Schedulers.fromExecutor(
             Executors.newSingleThreadExecutor(NamedThreadFactory.withName("task executor")));
+        this.asyncTaskExecutor = Schedulers.fromExecutor(
+            Executors.newCachedThreadPool(NamedThreadFactory.withName("async task executor")));
         this.listener = listener;
         this.cancelledTasks = Sets.newConcurrentHashSet();
-        this.runningTask = new AtomicReference<>();
+        this.runningTasks = Maps.newConcurrentMap();
     }
 
     @Override
     public Mono<Task.Result> executeTask(TaskWithId taskWithId) {
         if (!cancelledTasks.remove(taskWithId.getId())) {
-            Mono<Task.Result> taskMono = Mono.fromCallable(() -> runWithMdc(taskWithId, listener)).subscribeOn(taskExecutor);
+            Mono<Task.Result> taskMono = runWithMdc(taskWithId, listener).subscribeOn(schedulerForTask(taskWithId));
             CompletableFuture<Task.Result> future = taskMono.toFuture();
-            runningTask.set(Tuples.of(taskWithId.getId(), future));
+            runningTasks.put(taskWithId.getId(), future);
 
-            return Mono.using(
+            Mono<Task.Result> pollingMono = Mono.using(
                 () -> pollAdditionalInformation(taskWithId).subscribe(),
                 ignored -> Mono.fromFuture(future)
                     .onErrorResume(exception -> Mono.from(handleExecutionError(taskWithId, listener, exception))
-                            .thenReturn(Task.Result.PARTIAL)),
-                Disposable::dispose);
+                        .thenReturn(Task.Result.PARTIAL)),
+                Disposable::dispose)
+                .doOnTerminate(() -> runningTasks.remove(taskWithId.getId()));
+
+            if (taskWithId.getTask() instanceof AsyncSafeTask) {
+                pollingMono.subscribe();
+                return Mono.empty();
+            } else {
+                return pollingMono;
+            }
         } else {
-            return Mono.from(listener.cancelled(taskWithId.getId(), taskWithId.getTask().details()))
+            return Mono.from(listener.cancelled(taskWithId.getId(), taskWithId.getTask().detailsReactive()))
+                .doOnTerminate(() -> runningTasks.remove(taskWithId.getId()))
                 .then(Mono.empty());
+        }
+    }
+
+    private Scheduler schedulerForTask(TaskWithId taskWithId) {
+        if (taskWithId.getTask() instanceof AsyncSafeTask) {
+            return asyncTaskExecutor;
+        } else {
+            return taskExecutor;
         }
     }
 
     private Publisher<Void> handleExecutionError(TaskWithId taskWithId, Listener listener, Throwable exception) {
         if (exception instanceof CancellationException) {
-            return listener.cancelled(taskWithId.getId(), taskWithId.getTask().details());
+            return Mono.from(listener.cancelled(taskWithId.getId(), taskWithId.getTask().detailsReactive()))
+                .then(Mono.fromCallable(() -> cancelledTasks.remove(taskWithId.getId())))
+                .then();
         } else {
-            return listener.failed(taskWithId.getId(), taskWithId.getTask().details(), exception);
+            return listener.failed(taskWithId.getId(), taskWithId.getTask().detailsReactive(), exception);
         }
     }
 
     private Flux<TaskExecutionDetails.AdditionalInformation> pollAdditionalInformation(TaskWithId taskWithId) {
-        return Mono.fromCallable(() -> taskWithId.getTask().details())
+        return Mono.from(taskWithId.getTask().detailsReactive())
             .delayElement(pollingInterval, Schedulers.parallel())
             .repeat()
             .handle(publishIfPresent())
-            .flatMap(information -> Mono.from(listener.updated(taskWithId.getId(), information)).thenReturn(information), DEFAULT_CONCURRENCY);
+            .flatMap(information -> Mono.from(listener.updated(taskWithId.getId(), Mono.just(information))).thenReturn(information), DEFAULT_CONCURRENCY);
     }
 
 
-    private Task.Result runWithMdc(TaskWithId taskWithId, Listener listener) {
-        return MDCBuilder.withMdc(
-            MDCBuilder.create()
-                .addToContext(Task.TASK_ID, taskWithId.getId().asString())
-                .addToContext(Task.TASK_TYPE, taskWithId.getTask().type().asString())
-                .addToContext(Task.TASK_DETAILS, taskWithId.getTask().details().toString()),
-            () -> run(taskWithId, listener).block());
+    private Mono<Task.Result> runWithMdc(TaskWithId taskWithId, Listener listener) {
+        return run(taskWithId, listener)
+            .contextWrite(ReactorUtils.context("task",
+                MDCBuilder.create()
+                    .addToContext(Task.TASK_ID, taskWithId.getId().asString())
+                    .addToContext(Task.TASK_TYPE, taskWithId.getTask().type().asString())));
     }
 
     private Mono<Task.Result> run(TaskWithId taskWithId, Listener listener) {
@@ -115,8 +140,13 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
             .then(runTask(taskWithId, listener))
             .onErrorResume(this::isCausedByInterruptedException, e -> cancelled(taskWithId, listener))
             .onErrorResume(Exception.class, e -> {
-                LOGGER.error("Error while running task {}", taskWithId.getId(), e);
-                return Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().details(), e)).thenReturn(Task.Result.PARTIAL);
+                MDCStructuredLogger.forLogger(LOGGER)
+                    .field("taskId", taskWithId.getId().asString())
+                    .field("taskType", taskWithId.getTask().type().asString())
+                    .log(logger -> logger.error("Error while running task {}", taskWithId.getId(), e));
+
+                return Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().detailsReactive(), e))
+                    .thenReturn(Task.Result.PARTIAL);
             });
     }
 
@@ -125,42 +155,58 @@ public class SerialTaskManagerWorker implements TaskManagerWorker {
             return true;
         }
         return Stream.iterate(e, t -> t.getCause() != null, Throwable::getCause)
-            .anyMatch(t -> t instanceof InterruptedException);
+            .anyMatch(InterruptedException.class::isInstance);
     }
 
     private Mono<Task.Result> cancelled(TaskWithId taskWithId, Listener listener) {
         TaskId id = taskWithId.getId();
-        Optional<TaskExecutionDetails.AdditionalInformation> details = taskWithId.getTask().details();
-
-        return Mono.from(listener.cancelled(id, details))
+        return Mono.from(listener.cancelled(id, taskWithId.getTask().detailsReactive()))
             .thenReturn(Task.Result.PARTIAL);
     }
 
     private Mono<Task.Result> runTask(TaskWithId taskWithId, Listener listener) {
-        return Mono.fromCallable(() -> taskWithId.getTask().run())
+        return Mono.from(taskWithId.getTask().runAsync())
+            .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
             .doOnNext(result -> result
-                .onComplete(any -> Mono.from(listener.completed(taskWithId.getId(), result, taskWithId.getTask().details())).block())
+                .onComplete(any -> Mono.from(listener.completed(taskWithId.getId(), result, taskWithId.getTask().detailsReactive()))
+                    .subscribe())
                 .onFailure(() -> {
-                    LOGGER.error("Task was partially performed. Check logs for more details. Taskid : " + taskWithId.getId());
-                    Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().details())).block();
+                    MDCStructuredLogger.forLogger(LOGGER)
+                        .field("taskId", taskWithId.getId().asString())
+                        .field("taskType", taskWithId.getTask().type().asString())
+                        .log(logger -> logger.error("Task was partially performed. Check logs for more details. Taskid : {}", taskWithId.getId()));
+
+                    Mono.from(listener.failed(taskWithId.getId(), taskWithId.getTask().detailsReactive()))
+                        .subscribe();
                 }));
     }
 
     @Override
     public void cancelTask(TaskId taskId) {
         cancelledTasks.add(taskId);
-        Optional.ofNullable(runningTask.get())
-            .filter(task -> task.getT1().equals(taskId))
-            .ifPresent(task -> task.getT2().cancel(MAY_INTERRUPT_IF_RUNNING));
+        Optional.ofNullable(runningTasks.get(taskId))
+            .ifPresent(task -> task.cancel(MAY_INTERRUPT_IF_RUNNING));
     }
 
     @Override
-    public Publisher<Void> fail(TaskId taskId, Optional<TaskExecutionDetails.AdditionalInformation> additionalInformation, String errorMessage, Throwable reason) {
-        return listener.failed(taskId, additionalInformation, errorMessage, reason);
+    public Publisher<Void> fail(TaskId taskId, Publisher<Optional<TaskExecutionDetails.AdditionalInformation>> additionalInformationPublisher, String errorMessage, Throwable reason) {
+        return listener.failed(taskId, additionalInformationPublisher, Optional.ofNullable(errorMessage), Optional.ofNullable(reason));
     }
 
     @Override
     public void close() {
+        Set<TaskId> taskIds = runningTasks.entrySet().stream()
+            .filter(entry -> !entry.getValue().isCancelled() && !entry.getValue().isDone())
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toUnmodifiableSet());
+        if (!taskIds.isEmpty()) {
+            taskIds.forEach(this::cancelTask);
+            Awaitility
+                .waitAtMost(TWO_MINUTES)
+                .pollDelay(Duration.ofMillis(500))
+                .until(() -> !cancelledTasks.containsAll(taskIds));
+        }
         taskExecutor.dispose();
+        asyncTaskExecutor.dispose();
     }
 }

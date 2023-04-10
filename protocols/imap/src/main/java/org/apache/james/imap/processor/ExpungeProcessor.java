@@ -21,9 +21,11 @@ package org.apache.james.imap.processor;
 
 import static org.apache.james.imap.api.ImapConstants.SUPPORTS_UIDPLUS;
 import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode.IGNORE;
-import static org.apache.james.util.ReactorUtils.logOnError;
 
+import java.util.EnumSet;
 import java.util.List;
+
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.display.HumanReadableText;
@@ -37,13 +39,13 @@ import org.apache.james.imap.message.request.ExpungeRequest;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
-import org.apache.james.mailbox.MessageManager.MailboxMetaData.FetchGroup;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MessageRangeException;
 import org.apache.james.mailbox.model.MailboxACL;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +60,7 @@ public class ExpungeProcessor extends AbstractMailboxProcessor<ExpungeRequest> i
 
     private static final List<Capability> UIDPLUS = ImmutableList.of(SUPPORTS_UIDPLUS);
 
+    @Inject
     public ExpungeProcessor(MailboxManager mailboxManager, StatusResponseFactory factory, MetricFactory metricFactory) {
         super(ExpungeRequest.class, mailboxManager, factory, metricFactory);
     }
@@ -77,15 +80,13 @@ public class ExpungeProcessor extends AbstractMailboxProcessor<ExpungeRequest> i
                         .flatMap(Throwing.function(expunged -> respondOk(request, session, responder, mailbox, mailboxSession, expunged)));
                 }
             }))
-            .doOnEach(logOnError(MessageRangeException.class, e -> LOGGER.debug("Expunge failed", e)))
             .onErrorResume(MessageRangeException.class, e -> {
                 taggedBad(request, responder, HumanReadableText.INVALID_MESSAGESET);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.debug("Expunge failed", e));
             })
-            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("Expunge failed for mailbox {}", session.getSelected().getMailboxId(), e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.error("Expunge failed for mailbox {}", session.getSelected().getMailboxId(), e));
             });
     }
 
@@ -108,7 +109,7 @@ public class ExpungeProcessor extends AbstractMailboxProcessor<ExpungeRequest> i
         //
         // See RFC5162 3.3 EXPUNGE Command 3.5. UID EXPUNGE Command
         if (EnableProcessor.getEnabledCapabilities(session).contains(ImapConstants.SUPPORTS_QRESYNC)  && expunged > 0) {
-            return mailbox.getMetaDataReactive(IGNORE, mailboxSession, FetchGroup.NO_COUNT)
+            return mailbox.getMetaDataReactive(IGNORE, mailboxSession, EnumSet.of(MessageManager.MailboxMetaData.Item.HighestModSeq))
                 .doOnNext(metaData -> okComplete(request, ResponseCode.highestModSeq(metaData.getHighestModSeq()), responder))
                 .then();
         } else {

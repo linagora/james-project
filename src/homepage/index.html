@@ -78,7 +78,7 @@ layout: default
                 - <b>Emailing protocols:</b> SMTP, LMTP, POP3, IMAP, ManageSieve, JMAP<br/>
                 - <b>Mailet container:</b> independent, extensible and pluggable email processing agents<br/>
                 - <b>Storage API:</b> Mailbox API / Search API / User API<br/>
-                - <b>Storage Implementations:</b> Cassandra / PostgreSQL / HSQLDB / MySQL / ElasticSearch...<br/>
+                - <b>Storage Implementations:</b> Cassandra / PostgreSQL / HSQLDB / MySQL / OpenSearch...<br/>
                 - <b>Administration:</b> JMX / REST / Command Line<br/>
                 - <b>James Core</b>
               </div>
@@ -119,14 +119,14 @@ layout: default
             <ul class="james-ul no-padding">
               <li class="post-template"><span class="long-arrow-right">&#8594;</span><span><b>
 WHAT WILL YOU TRY:</b><br>
-              <span>Here you will try James server v 3.7.0 thanks to an image. This James image has a default configuration
+              <span>Here you will try James server v 3.7.4 thanks to an image. This James image has a default configuration
                 using JPA (hsqldb) and Lucene. It also includes a default domain named james.local and three default users:
                 user01@james.local, user02@james.local, user03@james.local, with their default password being <i>1234</i>.<br>
                 <i>Note: this James server will respond to IMAPS port 993 and SMTPS port 465.</i></span></span>
               </li>
               <li class="post-template"><span class="long-arrow-right">&#8594;</span><span><b>STEPS YOU HAVE TO FOLLOW:</b><br>
                 Pull and run the James image with the following single command:<br><br>
-                <code class="highlighter-rouge">docker run -p "465:465" -p "993:993" apache/james:demo-3.7.0</code>
+                <code class="highlighter-rouge">docker run -p "465:465" -p "993:993" apache/james:demo-3.7.4</code>
 
                 <br><br>
                 Then, connect this image with for instance, Thunderbird. This <a href="howTo/imap-server.html">tutorial</a> covers more in depth user and domain creation,
@@ -139,7 +139,7 @@ WHAT WILL YOU TRY:</b><br>
               <li class="post-template"><span class="long-arrow-right">&#8594;</span><span><b>BETA:</b> Distributed James server<br>
                 Recent work of the Apache James project did lead to a James product that leverages a distributed mail server,
                 using storage technologies like <a href="https://cassandra.apache.org/">Cassandra</a>,
-                  <a href="https://www.elastic.co/elasticsearch/">ElasticSearch</a>, <a href="https://www.rabbitmq.com/">RabbitMQ</a>, and
+                  <a href="https://opensearch.org/">OpenSearch</a>, <a href="https://www.rabbitmq.com/">RabbitMQ</a>, and
                 <a href="https://wiki.openstack.org/wiki/Swift">objectStorage (S3/Swift)</a>.<br/><br/>
                 Feedback on this product, announced as a beta since 3.5.0 is welcome.<br/><br/>
                 This product can be executed via <a href="https://github.com/apache/james-project/blob/master/server/apps/distributed-app/docker-compose.yml">
@@ -168,7 +168,7 @@ WHAT WILL YOU TRY:</b><br>
               <li class="post-template"><span><b>INCOMING WORK</b><br>
                 <ul>
                   <li><span class="long-arrow-right">&#8594;</span><span>Rework our documentation with <a href="https://antora.org/">Antora</a>,
-                    specify it on a per-server basis for ease of use. <a href="https://james.staged.apache.org/james-project/3.7.0/servers/index.html">Preview</a>...<br/>
+                    specify it on a per-server basis for ease of use. <a href="https://james.staged.apache.org/james-project/3.7.4/servers/index.html">Preview</a>...<br/>
                     We will furthermore target servers to identified use cases, formulated in non technical terms: Basic Server, Advanced Server and Distributed Server.<br/></span></li>
                   <li><span class="long-arrow-right">&#8594;</span><span>Promote guice based applications.<br/>
                     Spring server will be deprecated. A summary of community call describing this item can be found
@@ -405,7 +405,7 @@ WHAT WILL YOU TRY:</b><br>
             <h2>Some statistics...</h2>
           </header>
           <section>
-            <ul class="statistics" onclick="location.href='https://github.com/apache/james-project'" title="Github James Project">
+            <ul class="statistics" onclick="location.href='https://github.com/apache/james-project'" title="GitHub James Project">
               <li class="style1">
                 <span class="icon fa-users"></span>
                 <strong id="contributor-num"></strong> Contributors

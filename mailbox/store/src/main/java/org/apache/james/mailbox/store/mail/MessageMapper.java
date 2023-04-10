@@ -289,6 +289,7 @@ public interface MessageMapper extends Mapper {
          *  {@link MailboxMessage#getBodyOctets()}
          *  {@link MailboxMessage#getFullContentOctets()}
          *  {@link MailboxMessage#getInternalDate()}
+         *  {@link MailboxMessage#getSaveDate()}
          *  {@link MailboxMessage#getMailboxId()}
          *  {@link MailboxMessage#getMediaType()}
          *  {@link MailboxMessage#getModSeq()}
@@ -307,14 +308,13 @@ public interface MessageMapper extends Mapper {
          */
         HEADERS,
         /**
-         * Fetch the {@link #METADATA} and the Body for the {@link MailboxMessage}. This includes:
-         * 
+         * Fetch the {@link #HEADERS}, {@link Property}'s and the {@link #ATTACHMENTS_METADATA}'s for the {@link MailboxMessage}. This includes:
+         *
          * <p>
-         *  {@link MailboxMessage#getBodyContent()}
+         * {@link MailboxMessage#getAttachments()}
          * </p>
          */
-        BODY,
-        
+        ATTACHMENTS_METADATA,
         /**
          * Fetch the complete {@link MailboxMessage}
          * 

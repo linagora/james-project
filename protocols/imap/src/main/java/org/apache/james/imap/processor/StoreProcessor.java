@@ -20,15 +20,16 @@
 package org.apache.james.imap.processor;
 
 import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode.IGNORE;
-import static org.apache.james.util.ReactorUtils.logOnError;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.inject.Inject;
 import javax.mail.Flags;
 
 import org.apache.james.imap.api.ImapConstants;
@@ -56,6 +57,7 @@ import org.apache.james.mailbox.model.ComposedMessageIdWithMetaData;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,9 +70,10 @@ import reactor.core.publisher.Mono;
 
 public class StoreProcessor extends AbstractMailboxProcessor<StoreRequest> {
     private static final Logger LOGGER = LoggerFactory.getLogger(StoreProcessor.class);
-    
+
+    @Inject
     public StoreProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
+                          MetricFactory metricFactory) {
         super(StoreRequest.class, mailboxManager, factory, metricFactory);
     }
 
@@ -104,15 +107,13 @@ public class StoreProcessor extends AbstractMailboxProcessor<StoreRequest> {
                     respondFailed(request, responder, failed, failedMsns);
                 }
             })
-            .doOnEach(logOnError(MessageRangeException.class, e -> LOGGER.debug("Store failed for mailbox {} because of an invalid sequence-set {}", session.getSelected().getMailboxId(), idSet, e)))
             .onErrorResume(MessageRangeException.class, e -> {
                 taggedBad(request, responder, HumanReadableText.INVALID_MESSAGESET);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.debug("Store failed for mailbox {} because of an invalid sequence-set {}", session.getSelected().getMailboxId(), idSet, e));
             })
-            .doOnEach(logOnError(MessageRangeException.class, e -> LOGGER.error("Store failed for mailbox {} and sequence-set {}", session.getSelected().getMailboxId(), idSet, e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.SAVE_FAILED);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.error("Store failed for mailbox {} and sequence-set {}", session.getSelected().getMailboxId(), idSet, e));
             });
     }
 
@@ -235,7 +236,7 @@ public class StoreProcessor extends AbstractMailboxProcessor<StoreRequest> {
 
                     if (unchangedSince != -1) {
                         // Enable CONDSTORE as this is a CONDSTORE enabling command
-                        return mailbox.getMetaDataReactive(IGNORE, mailboxSession, MailboxMetaData.FetchGroup.NO_COUNT)
+                        return mailbox.getMetaDataReactive(IGNORE, mailboxSession, EnumSet.of(MailboxMetaData.Item.HighestModSeq))
                             .doOnNext(metaData -> condstoreEnablingCommand(session, responder,  metaData, true));
                     }
                     return Mono.empty();
@@ -314,14 +315,14 @@ public class StoreProcessor extends AbstractMailboxProcessor<StoreRequest> {
         if (unchangedSince != -1 || qresyncEnabled || condstoreEnabled) {
             if (silent) {
                 // We need to return an FETCH response which contains the mod-sequence of the message even if FLAGS.SILENT was used
-                return new FetchResponse(msn, null, resultUid, modSeqs.get(uid), null, null, null, null, null, null);
+                return new FetchResponse(msn, null, resultUid, null, modSeqs.get(uid), null, null, null, null, null, null, null, null);
             } else {
                 // Use a FETCH response which contains the mod-sequence and the flags
-                return new FetchResponse(msn, resultFlags, resultUid, modSeqs.get(uid), null, null, null, null, null, null);
+                return new FetchResponse(msn, resultFlags, resultUid, null, modSeqs.get(uid), null, null, null, null, null, null, null, null);
             }
         } else {
             // Use a FETCH response which only contains the flags as no CONDSTORE was used
-            return new FetchResponse(msn, resultFlags, resultUid, null, null, null, null, null, null, null);
+            return new FetchResponse(msn, resultFlags, resultUid, null, null, null, null, null, null, null, null, null, null);
         }
     }
 

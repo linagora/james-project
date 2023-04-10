@@ -22,11 +22,11 @@ package org.apache.james;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.apache.james.backends.es.v7.DockerElasticSearch;
+import org.apache.james.backends.opensearch.DockerOpenSearch;
 import org.apache.james.lifecycle.api.StartUpCheck;
 import org.apache.james.lifecycle.api.StartUpCheck.CheckResult;
 import org.apache.james.modules.TestJMAPServerModule;
-import org.apache.james.modules.mailbox.ElasticSearchStartUpCheck;
+import org.apache.james.modules.mailbox.OpenSearchStartUpCheck;
 import org.apache.james.util.docker.Images;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -34,11 +34,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 class JamesWithNonCompatibleElasticSearchServerTest {
 
-    static DockerElasticSearch dockerES6 = new DockerElasticSearch.NoAuth(Images.ELASTICSEARCH_6);
+    static DockerOpenSearch dockerES6 = new DockerOpenSearch.NoAuth(Images.ELASTICSEARCH_6);
 
     @RegisterExtension
-    static JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.elasticSearch())
-        .extension(new DockerElasticSearchExtension(dockerES6))
+    static JamesServerExtension testExtension = TestingDistributedJamesServerBuilder.withSearchConfiguration(SearchConfiguration.openSearch())
+        .extension(new DockerOpenSearchExtension(dockerES6))
         .extension(new CassandraExtension())
         .server(configuration -> CassandraJamesServerMain.createServer(configuration)
             .overrideWith(new TestJMAPServerModule()))
@@ -57,9 +57,9 @@ class JamesWithNonCompatibleElasticSearchServerTest {
                 StartUpChecksPerformer.StartUpChecksException.class,
                 ex -> assertThat(ex.getBadChecks())
                     .containsOnly(CheckResult.builder()
-                        .checkName(ElasticSearchStartUpCheck.CHECK_NAME)
+                        .checkName(OpenSearchStartUpCheck.CHECK_NAME)
                         .resultType(StartUpCheck.ResultType.BAD)
-                        .description("ES version(6.3.2) is not compatible with the recommendation(7.10.2)")
+                        .description("Error when checking ES version: Missing required property 'OpenSearchVersionInfo.distribution'")
                         .build()));
 
         assertThat(server.isStarted())

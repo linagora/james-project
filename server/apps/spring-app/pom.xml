@@ -48,10 +48,14 @@
         <javamail.system-property8>-Dmail.mime.encodeparameters=true</javamail.system-property8>
         <javamail.system-property9>-Dmail.mime.decodeparameters=true</javamail.system-property9>
         <javamail.system-property10>-Dmail.mime.address.strict=false</javamail.system-property10>
+        <javamail.system-property11>-Djmx.remote.x.mlet.allow.getMBeansFromURL=false</javamail.system-property11>
+        <javamail.system-property12>-Djames.jmx.unregister.log4j.mbeans=true</javamail.system-property12>
         <javamail.system-properties>${javamail.system-property1} ${javamail.system-property2}
             ${javamail.system-property3} ${javamail.system-property4} ${javamail.system-property5}
             ${javamail.system-property6} ${javamail.system-property7} ${javamail.system-property8}
-            ${javamail.system-property9} ${javamail.system-property10}</javamail.system-properties>
+            ${javamail.system-property9} ${javamail.system-property10} ${javamail.system-property11}
+            ${javamail.system-property12}
+        </javamail.system-properties>
 
         <!-- JMX system properties -->
         <!-- For more details see -->
@@ -506,8 +510,17 @@
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-api</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.xbean</groupId>
@@ -847,6 +860,23 @@
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Copy runtime dependency log4j-core to appassembler/lib -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <includeArtifactIds>log4j-core</includeArtifactIds>
+                    <includeScope>runtime</includeScope>
+                    <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <phase>prepare-package</phase>
                     </execution>
                 </executions>
             </plugin>

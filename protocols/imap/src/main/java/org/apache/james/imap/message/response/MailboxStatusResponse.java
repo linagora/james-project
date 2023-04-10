@@ -19,15 +19,22 @@
 
 package org.apache.james.imap.message.response;
 
+import java.util.Optional;
+
 import org.apache.james.imap.api.message.response.ImapResponseMessage;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.ModSeq;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.UidValidity;
 
 /**
  * Represents a <code>STATUS</code> response. See <code>RFC3501 7.2.4</code>.
  */
 public class MailboxStatusResponse implements ImapResponseMessage {
+    private final Optional<Long> appendLimit;
+    private final Long size;
+    private final Long deleted;
+    private final Long deletedStorage;
     private final Long messages;
     private final Long recent;
     private final MessageUid uidNext;
@@ -35,9 +42,13 @@ public class MailboxStatusResponse implements ImapResponseMessage {
     private final Long unseen;
     private final String mailbox;
     private final ModSeq highestModSeq;
+    private final MailboxId mailboxId;
 
-    public MailboxStatusResponse(Long messages, Long recent, MessageUid uidNext, ModSeq highestModSeq, UidValidity uidValidity, Long unseen, String mailbox) {
-        super();
+    public MailboxStatusResponse(Optional<Long> appendLimit, Long size, Long deleted, Long deletedStorage, Long messages, Long recent, MessageUid uidNext, ModSeq highestModSeq, UidValidity uidValidity, Long unseen, String mailbox, MailboxId mailboxId) {
+        this.appendLimit = appendLimit;
+        this.size = size;
+        this.deleted = deleted;
+        this.deletedStorage = deletedStorage;
         this.messages = messages;
         this.recent = recent;
         this.uidNext = uidNext;
@@ -45,8 +56,24 @@ public class MailboxStatusResponse implements ImapResponseMessage {
         this.unseen = unseen;
         this.mailbox = mailbox;
         this.highestModSeq = highestModSeq;
+        this.mailboxId = mailboxId;
     }
-    
+
+    public Optional<Long> getAppendLimit() {
+        return appendLimit;
+    }
+
+    public Long getSize() {
+        return size;
+    }
+
+    public Long getDeleted() {
+        return deleted;
+    }
+
+    public Long getDeletedStorage() {
+        return deletedStorage;
+    }
 
     /**
      * Gets the <code>MESSAGES</code> count for the mailbox.
@@ -109,6 +136,10 @@ public class MailboxStatusResponse implements ImapResponseMessage {
      */
     public final ModSeq getHighestModSeq() {
         return highestModSeq;
+    }
+
+    public MailboxId getMailboxId() {
+        return mailboxId;
     }
 
     public String toString() {

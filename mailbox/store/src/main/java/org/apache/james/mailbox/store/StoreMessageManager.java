@@ -19,17 +19,18 @@
 
 package org.apache.james.mailbox.store;
 
+import static org.apache.james.mailbox.events.MailboxEvents.Added.IS_DELIVERY;
 import static org.apache.james.mailbox.extension.PreDeletionHook.DeleteOperation;
 import static org.apache.james.mailbox.store.mail.AbstractMessageMapper.UNLIMITED;
 import static org.apache.james.util.ReactorUtils.DEFAULT_CONCURRENCY;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
@@ -106,6 +107,7 @@ import org.apache.james.mime4j.stream.MimeTokenStream;
 import org.apache.james.mime4j.stream.RecursionMode;
 import org.apache.james.util.io.BodyOffsetInputStream;
 import org.apache.james.util.io.InputStreamConsummer;
+import org.apache.james.util.io.UnsynchronizedBufferedInputStream;
 import org.apache.james.util.streams.Iterators;
 import org.reactivestreams.Publisher;
 
@@ -289,6 +291,12 @@ public class StoreMessageManager implements MessageManager {
         dispatchExpungeEvent(mailboxSession, deletedMessages).block();
     }
 
+    @Override
+    public Mono<Void> deleteReactive(List<MessageUid> uids, MailboxSession mailboxSession) {
+        return deleteMessages(uids, mailboxSession)
+            .flatMap(deleteMessages -> dispatchExpungeEvent(mailboxSession, deleteMessages));
+    }
+
     private Mono<Map<MessageUid, MessageMetaData>> deleteMessages(List<MessageUid> messageUids, MailboxSession session) {
         if (messageUids.isEmpty()) {
             return Mono.just(ImmutableMap.of());
@@ -319,7 +327,8 @@ public class StoreMessageManager implements MessageManager {
             session,
             appendCommand.isRecent(),
             appendCommand.getFlags(),
-            appendCommand.getMaybeParsedMessage()));
+            appendCommand.getMaybeParsedMessage(),
+            appendCommand.isDelivery()));
     }
 
     @Override
@@ -330,7 +339,8 @@ public class StoreMessageManager implements MessageManager {
             session,
             appendCommand.isRecent(),
             appendCommand.getFlags(),
-            appendCommand.getMaybeParsedMessage());
+            appendCommand.getMaybeParsedMessage(),
+            appendCommand.isDelivery());
     }
 
     @Override
@@ -345,11 +355,11 @@ public class StoreMessageManager implements MessageManager {
             // Create a temporary file and copy the message to it. We will work
             // with the file as
             // source for the InputStream
-            file = File.createTempFile("imap", ".msg");
+            file = Files.createTempFile("imap", ".msg").toFile();
             try (FileOutputStream out = new FileOutputStream(file);
-                BufferedOutputStream bufferedOut = new BufferedOutputStream(out);
-                BufferedInputStream tmpMsgIn = new BufferedInputStream(new TeeInputStream(msgIn, bufferedOut));
-                BodyOffsetInputStream bIn = new BodyOffsetInputStream(tmpMsgIn)) {
+                 BufferedOutputStream bufferedOut = new BufferedOutputStream(out);
+                 UnsynchronizedBufferedInputStream tmpMsgIn = new UnsynchronizedBufferedInputStream(new TeeInputStream(msgIn, bufferedOut));
+                 BodyOffsetInputStream bIn = new BodyOffsetInputStream(tmpMsgIn)) {
                 Pair<PropertyBuilder, HeaderImpl> pair = parseProperties(bIn);
                 PropertyBuilder propertyBuilder = pair.getLeft();
                 HeaderImpl headers = pair.getRight();
@@ -371,7 +381,7 @@ public class StoreMessageManager implements MessageManager {
                             return finalFile.length();
                         }
                     }, propertyBuilder,
-                    getFlags(mailboxSession, isRecent, flagsToBeSet), bodyStartOctet, unparsedMimeMessqage, headers));
+                    getFlags(mailboxSession, isRecent, flagsToBeSet), bodyStartOctet, unparsedMimeMessqage, headers, !IS_DELIVERY));
             }
         } catch (IOException | MimeException e) {
             throw new MailboxException("Unable to parse message", e);
@@ -387,14 +397,15 @@ public class StoreMessageManager implements MessageManager {
         }
     }
 
-    private Mono<AppendResult> appendMessage(Content msgIn, Date internalDate, final MailboxSession mailboxSession, boolean isRecent, Flags flagsToBeSet, Optional<Message> maybeMessage) {
+    private Mono<AppendResult> appendMessage(Content msgIn, Date internalDate, final MailboxSession mailboxSession, boolean isRecent, Flags flagsToBeSet,
+                                             Optional<Message> maybeMessage, boolean isDelivery) {
         return Mono.fromCallable(() -> {
             if (!isWriteable(mailboxSession)) {
                 throw new ReadOnlyException(getMailboxPath());
             }
 
             try (InputStream contentStream = msgIn.getInputStream();
-                    BufferedInputStream bufferedContentStream = new BufferedInputStream(contentStream);
+                 UnsynchronizedBufferedInputStream bufferedContentStream = new UnsynchronizedBufferedInputStream(contentStream);
                     BodyOffsetInputStream bIn = new BodyOffsetInputStream(bufferedContentStream)) {
                 Pair<PropertyBuilder, HeaderImpl> pair = parseProperties(bIn);
                 PropertyBuilder propertyBuilder = pair.getLeft();
@@ -403,7 +414,7 @@ public class StoreMessageManager implements MessageManager {
 
                 return createAndDispatchMessage(computeInternalDate(internalDate),
                     mailboxSession, msgIn, propertyBuilder,
-                    getFlags(mailboxSession, isRecent, flagsToBeSet), bodyStartOctet, maybeMessage, headers);
+                    getFlags(mailboxSession, isRecent, flagsToBeSet), bodyStartOctet, maybeMessage, headers, isDelivery);
             } catch (IOException | MimeException e) {
                 throw new MailboxException("Unable to parse message", e);
             }
@@ -505,7 +516,9 @@ public class StoreMessageManager implements MessageManager {
         return bodyStartOctet;
     }
 
-    private Mono<AppendResult> createAndDispatchMessage(Date internalDate, MailboxSession mailboxSession, Content content, PropertyBuilder propertyBuilder, Flags flags, int bodyStartOctet, Optional<Message> maybeMessage, HeaderImpl headers) throws MailboxException {
+    private Mono<AppendResult> createAndDispatchMessage(Date internalDate, MailboxSession mailboxSession, Content content, PropertyBuilder propertyBuilder,
+                                                        Flags flags, int bodyStartOctet, Optional<Message> maybeMessage, HeaderImpl headers,
+                                                        boolean isDelivery) throws MailboxException {
         int size = (int) content.size();
         QuotaRoot quotaRoot = quotaRootResolver.getQuotaRoot(mailbox);
         return Mono.from(quotaManager.getQuotasReactive(quotaRoot))
@@ -518,6 +531,7 @@ public class StoreMessageManager implements MessageManager {
                             .mailboxSession(mailboxSession)
                             .mailbox(mailbox)
                             .addMetaData(data.getLeft())
+                            .isDelivery(isDelivery)
                             .build(),
                         new MailboxIdRegistrationKey(mailbox.getMailboxId()))
                         .thenReturn(computeAppendResult(data, mailbox))),
@@ -561,85 +575,59 @@ public class StoreMessageManager implements MessageManager {
     }
 
     @Override
-    public Mono<MailboxMetaData> getMetaDataReactive(RecentMode recentMode, MailboxSession mailboxSession, MailboxMetaData.FetchGroup fetchGroup) throws MailboxException {
+    public Mono<MailboxMetaData> getMetaDataReactive(RecentMode recentMode, MailboxSession mailboxSession, EnumSet<MailboxMetaData.Item> items) throws MailboxException {
         MailboxACL resolvedAcl = getResolvedAcl(mailboxSession);
-        boolean hasReadRight = storeRightManager.hasRight(mailbox, MailboxACL.Right.Read, mailboxSession);
-        if (!hasReadRight) {
+        if (!storeRightManager.hasRight(mailbox, MailboxACL.Right.Read, mailboxSession)) {
             return Mono.just(MailboxMetaData.sensibleInformationFree(resolvedAcl, getMailboxEntity().getUidValidity(), isWriteable(mailboxSession)));
         }
         Flags permanentFlags = getPermanentFlags(mailboxSession);
         UidValidity uidValidity = getMailboxEntity().getUidValidity();
         MessageMapper messageMapper = mapperFactory.getMessageMapper(mailboxSession);
 
-        return messageMapper.executeReactive(Mono.zip(messageMapper.getLastUidReactive(mailbox)
+        return messageMapper.executeReactive(
+                Mono.zip(nextUid(messageMapper, items),
+                highestModSeq(messageMapper, items),
+                firstUnseen(messageMapper, items),
+                mailboxCounters(messageMapper, items),
+                recent(recentMode, mailboxSession))
+            .map(t5 -> new MailboxMetaData(t5.getT5(), permanentFlags, uidValidity, t5.getT1(), t5.getT2(), t5.getT4().getCount(),
+                t5.getT4().getUnseen(), t5.getT3().orElse(null), isWriteable(mailboxSession), resolvedAcl)));
+    }
+
+    private Mono<ModSeq> highestModSeq(MessageMapper messageMapper, EnumSet<MailboxMetaData.Item> items) {
+        if (items.contains(MailboxMetaData.Item.HighestModSeq)) {
+            return messageMapper.getHighestModSeqReactive(mailbox);
+        }
+        return Mono.just(ModSeq.first());
+    }
+
+    private Mono<MessageUid> nextUid(MessageMapper messageMapper, EnumSet<MailboxMetaData.Item> items) {
+        if (items.contains(MailboxMetaData.Item.NextUid)) {
+            return messageMapper.getLastUidReactive(mailbox)
                 .map(optional -> optional
                     .map(MessageUid::next)
-                    .orElse(MessageUid.MIN_VALUE)),
-            messageMapper.getHighestModSeqReactive(mailbox))
-            .flatMap(t2 -> toMetadata(messageMapper, recentMode, mailboxSession, fetchGroup, resolvedAcl, permanentFlags, uidValidity, t2.getT1(), t2.getT2())));
+                    .orElse(MessageUid.MIN_VALUE));
+        }
+        return Mono.just(MessageUid.MIN_VALUE);
+    }
+
+    private Mono<Optional<MessageUid>> firstUnseen(MessageMapper messageMapper, EnumSet<MailboxMetaData.Item> items) {
+        if (items.contains(MailboxMetaData.Item.FirstUnseen)) {
+            return messageMapper.findFirstUnseenMessageUidReactive(getMailboxEntity());
+        }
+        return Mono.just(Optional.empty());
+    }
+
+    private Mono<MailboxCounters> mailboxCounters(MessageMapper messageMapper, EnumSet<MailboxMetaData.Item> items) {
+        if (items.contains(MailboxMetaData.Item.MailboxCounters)) {
+            return messageMapper.getMailboxCountersReactive(getMailboxEntity());
+        }
+        return Mono.just(MailboxCounters.empty(getId()));
     }
 
     @Override
-    public MailboxMetaData getMetaData(RecentMode resetRecent, MailboxSession mailboxSession, MailboxMetaData.FetchGroup fetchGroup) throws MailboxException {
-        return MailboxReactorUtils.block(getMetaDataReactive(resetRecent, mailboxSession, fetchGroup));
-    }
-
-    private Mono<MailboxMetaData> toMetadata(MessageMapper messageMapper, RecentMode resetRecent, MailboxSession mailboxSession, MailboxMetaData.FetchGroup fetchGroup, MailboxACL resolvedAcl, Flags permanentFlags, UidValidity uidValidity, MessageUid uidNext, ModSeq highestModSeq) {
-        try {
-            switch (fetchGroup) {
-                case UNSEEN_COUNT:
-                    return metadataUnseenCount(messageMapper, resetRecent, mailboxSession, resolvedAcl, permanentFlags, uidValidity, uidNext, highestModSeq);
-                case FIRST_UNSEEN:
-                    return metadataFirstUnseen(messageMapper, resetRecent, mailboxSession, resolvedAcl, permanentFlags, uidValidity, uidNext, highestModSeq);
-                case NO_UNSEEN:
-                    return metadataNoUnseen(messageMapper, resetRecent, mailboxSession, resolvedAcl, permanentFlags, uidValidity, uidNext, highestModSeq);
-                default:
-                    return metadataDefault(resetRecent, mailboxSession, resolvedAcl, permanentFlags, uidValidity, uidNext, highestModSeq);
-            }
-        } catch (MailboxException e) {
-            return Mono.error(e);
-        }
-    }
-
-    private Mono<MailboxMetaData> metadataDefault(RecentMode recentMode, MailboxSession mailboxSession, MailboxACL resolvedAcl, Flags permanentFlags, UidValidity uidValidity, MessageUid uidNext, ModSeq highestModSeq) throws MailboxException {
-        MessageUid firstUnseen = null;
-        long unseenCount = 0;
-        long messageCount = -1;
-        List<MessageUid> recent = new ArrayList<>();
-        final MailboxMetaData metaData = new MailboxMetaData(recent, permanentFlags, uidValidity, uidNext, highestModSeq, messageCount, unseenCount, firstUnseen, isWriteable(mailboxSession), resolvedAcl);
-
-        // just reset the recent but not include them in the metadata
-        if (recentMode == RecentMode.RESET) {
-            return recent(recentMode, mailboxSession)
-                .thenReturn(metaData);
-        }
-        return Mono.just(metaData);
-    }
-
-    private Mono<MailboxMetaData> metadataNoUnseen(MessageMapper messageMapper, RecentMode recentMode, MailboxSession mailboxSession, MailboxACL resolvedAcl, Flags permanentFlags, UidValidity uidValidity, MessageUid uidNext, ModSeq highestModSeq) throws MailboxException {
-        MessageUid firstUnseen = null;
-        long unseenCount = 0;
-        return Mono.zip(
-            messageMapper.getMailboxCountersReactive(mailbox).map(MailboxCounters::getUnseen),
-            recent(recentMode, mailboxSession))
-            .map(Throwing.function(t2 -> new MailboxMetaData(t2.getT2(), permanentFlags, uidValidity, uidNext, highestModSeq, t2.getT1(), unseenCount, firstUnseen, isWriteable(mailboxSession), resolvedAcl)));
-    }
-
-    private Mono<MailboxMetaData> metadataFirstUnseen(MessageMapper messageMapper, RecentMode recentMode, MailboxSession mailboxSession, MailboxACL resolvedAcl, Flags permanentFlags, UidValidity uidValidity, MessageUid uidNext, ModSeq highestModSeq) throws MailboxException {
-        long unseenCount = 0;
-        return Mono.zip(
-            messageMapper.getMailboxCountersReactive(mailbox).map(MailboxCounters::getCount),
-            recent(recentMode, mailboxSession),
-            messageMapper.findFirstUnseenMessageUidReactive(getMailboxEntity()))
-            .map(Throwing.function(t3 -> new MailboxMetaData(t3.getT2(), permanentFlags, uidValidity, uidNext, highestModSeq, t3.getT1(), unseenCount, t3.getT3().orElse(null), isWriteable(mailboxSession), resolvedAcl)));
-    }
-
-    private Mono<MailboxMetaData> metadataUnseenCount(MessageMapper messageMapper, RecentMode recentMode, MailboxSession mailboxSession, MailboxACL resolvedAcl, Flags permanentFlags, UidValidity uidValidity, MessageUid uidNext, ModSeq highestModSeq) throws MailboxException {
-        MessageUid firstUnseen = null;
-        return Mono.zip(
-            messageMapper.getMailboxCountersReactive(mailbox),
-            recent(recentMode, mailboxSession))
-            .map(Throwing.function(t2 -> new MailboxMetaData(t2.getT2(), permanentFlags, uidValidity, uidNext, highestModSeq, t2.getT1().getCount(), t2.getT1().getUnseen(), firstUnseen, isWriteable(mailboxSession), resolvedAcl)));
+    public MailboxMetaData getMetaData(RecentMode resetRecent, MailboxSession mailboxSession, EnumSet<MailboxMetaData.Item> items) throws MailboxException {
+        return MailboxReactorUtils.block(getMetaDataReactive(resetRecent, mailboxSession, items));
     }
 
     @Override
@@ -899,6 +887,7 @@ public class StoreMessageManager implements MessageManager {
                             .mailboxSession(session)
                             .mailbox(to.getMailboxEntity())
                             .metaData(copiedUids)
+                            .isDelivery(!IS_DELIVERY)
                             .build(),
                         new MailboxIdRegistrationKey(to.getMailboxEntity().getMailboxId())),
                     eventBus.dispatch(EventFactory.moved()
@@ -933,6 +922,7 @@ public class StoreMessageManager implements MessageManager {
                             .mailboxSession(session)
                             .mailbox(to.getMailboxEntity())
                             .metaData(moveUids)
+                            .isDelivery(!IS_DELIVERY)
                             .build(),
                         new MailboxIdRegistrationKey(to.getMailboxEntity().getMailboxId())),
                     eventBus.dispatch(EventFactory.expunged()

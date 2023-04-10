@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import org.apache.james.jmap.api.model.AccountId;
+import org.apache.james.mailbox.events.MailboxEvents;
 import org.apache.james.mailbox.events.MailboxEvents.MailboxACLUpdated;
 import org.apache.james.mailbox.events.MailboxEvents.MailboxAdded;
 import org.apache.james.mailbox.events.MailboxEvents.MailboxDeletion;
@@ -158,6 +159,26 @@ public class MailboxChange implements JmapChange {
                 .collect(ImmutableList.toImmutableList());
         }
 
+        public JmapChange fromMailboxSubscribed(MailboxEvents.MailboxSubscribedEvent mailboxSubscribedEvent, ZonedDateTime now) {
+            return MailboxChange.builder()
+                .accountId(AccountId.fromUsername(mailboxSubscribedEvent.getUsername()))
+                .state(stateFactory.generate())
+                .date(now)
+                .isCountChange(false)
+                .updated(ImmutableList.of(mailboxSubscribedEvent.getMailboxId()))
+                .build();
+        }
+
+        public JmapChange fromMailboxUnSubscribed(MailboxEvents.MailboxUnsubscribedEvent mailboxUnsubscribedEvent, ZonedDateTime now) {
+            return MailboxChange.builder()
+                .accountId(AccountId.fromUsername(mailboxUnsubscribedEvent.getUsername()))
+                .state(stateFactory.generate())
+                .date(now)
+                .isCountChange(false)
+                .updated(ImmutableList.of(mailboxUnsubscribedEvent.getMailboxId()))
+                .build();
+        }
+
         public List<JmapChange> fromMailboxACLUpdated(MailboxACLUpdated mailboxACLUpdated, ZonedDateTime now, List<AccountId> sharees) {
             MailboxChange ownerChange = MailboxChange.builder()
                 .accountId(AccountId.fromUsername(mailboxACLUpdated.getUsername()))
@@ -177,7 +198,21 @@ public class MailboxChange implements JmapChange {
                     .delegated()
                     .build());
 
-            return Stream.concat(Stream.of(ownerChange), shareeChanges)
+            Stream<MailboxChange> deletionChanges = mailboxACLUpdated.getAclDiff()
+                .removedEntries()
+                .filter(entry -> entry.getKey().getNameType().equals(MailboxACL.NameType.user))
+                .filter(entry -> !entry.getKey().isNegative())
+                .map(entry -> MailboxChange.builder()
+                    .accountId(AccountId.fromString(entry.getKey().getName()))
+                    .state(stateFactory.generate())
+                    .date(now)
+                    .isCountChange(false)
+                    .updated(ImmutableList.of(mailboxACLUpdated.getMailboxId()))
+                    .delegated()
+                    .build());
+
+            return Stream.of(Stream.of(ownerChange), shareeChanges, deletionChanges)
+                .flatMap(e -> e)
                 .collect(ImmutableList.toImmutableList());
         }
 

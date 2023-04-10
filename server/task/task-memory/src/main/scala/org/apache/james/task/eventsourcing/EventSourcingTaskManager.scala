@@ -18,28 +18,29 @@
  * ***************************************************************/
 package org.apache.james.task.eventsourcing
 
-import java.io.Closeable
-import java.time.Duration
-import java.util
-
 import com.google.common.annotations.VisibleForTesting
-import javax.annotation.PreDestroy
-import javax.inject.Inject
 import org.apache.james.eventsourcing.eventstore.{EventStore, History}
 import org.apache.james.eventsourcing.{AggregateId, EventSourcingSystem, Subscriber}
 import org.apache.james.lifecycle.api.Startable
 import org.apache.james.task.TaskManager.ReachedTimeoutException
 import org.apache.james.task._
 import org.apache.james.task.eventsourcing.TaskCommand._
+import org.slf4j.{Logger, LoggerFactory}
 import reactor.core.publisher.{Flux, Mono}
 import reactor.core.scala.publisher.SMono
 
-class EventSourcingTaskManager @Inject @VisibleForTesting private[eventsourcing](
-                                                                                  workQueueSupplier: WorkQueueSupplier,
-                                                                                  val eventStore: EventStore,
-                                                                                  val executionDetailsProjection: TaskExecutionDetailsProjection,
-                                                                                  val hostname: Hostname,
-                                                                                  val terminationSubscriber: TerminationSubscriber) extends TaskManager with Closeable with Startable {
+import java.io.Closeable
+import java.time.Duration
+import java.util
+import javax.annotation.PreDestroy
+import javax.inject.Inject
+
+class EventSourcingTaskManager @Inject @VisibleForTesting private[eventsourcing](workQueueSupplier: WorkQueueSupplier,
+                                                                                 val eventStore: EventStore,
+                                                                                 val executionDetailsProjection: TaskExecutionDetailsProjection,
+                                                                                 val hostname: Hostname,
+                                                                                 val terminationSubscriber: TerminationSubscriber) extends TaskManager with Closeable with Startable {
+  val LOGGER: Logger = LoggerFactory.getLogger(classOf[EventSourcingTaskManager])
 
   private def workDispatcher: Subscriber = {
     case Created(aggregateId, _, task, _) =>
@@ -84,6 +85,9 @@ class EventSourcingTaskManager @Inject @VisibleForTesting private[eventsourcing]
   override def getExecutionDetails(id: TaskId): TaskExecutionDetails = executionDetailsProjection.load(id)
     .getOrElse(throw new TaskNotFoundException())
 
+  private def getExecutionDetailsReactive(id: TaskId): SMono[TaskExecutionDetails] = SMono(executionDetailsProjection.loadReactive(id))
+    .switchIfEmpty(SMono.error(new TaskNotFoundException()))
+
   override def list: util.List[TaskExecutionDetails] = listScala.asJava
 
   override def list(status: TaskManager.Status): util.List[TaskExecutionDetails] = listScala
@@ -102,7 +106,7 @@ class EventSourcingTaskManager @Inject @VisibleForTesting private[eventsourcing]
   @throws(classOf[ReachedTimeoutException])
   override def await(id: TaskId, timeout: Duration): TaskExecutionDetails = {
     try {
-      val details = Mono.fromSupplier[TaskExecutionDetails](() => getExecutionDetails(id))
+      val details = Mono.from(getExecutionDetailsReactive(id))
         .filter(_.getStatus.isFinished)
 
       val findEvent = Flux.from(terminationSubscriber.listenEvents)

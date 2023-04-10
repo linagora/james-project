@@ -19,6 +19,8 @@
 
 package org.apache.james.mailbox.store.search;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.List;
 
 import org.apache.james.mailbox.inmemory.InMemoryMessageId;
@@ -26,7 +28,9 @@ import org.apache.james.mailbox.inmemory.manager.InMemoryIntegrationResources;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
 import org.apache.james.mailbox.model.SearchQuery;
+import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest {
 
@@ -68,147 +72,157 @@ class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest {
         return InMemoryMessageId.of(1000);
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void flagIsSetShouldReturnUidOfMessageMarkedAsRecentWhenUsedWithFlagRecent() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void uidShouldreturnEveryThing() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void sortOnCcShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void sortOnFromShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void addressShouldReturnUidHavingRightRecipientWhenBccIsSpecified() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void orShouldReturnResultsMatchinganyRequests() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void internalDateBeforeShouldReturnMessagesBeforeAGivenDate() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
+    @Override
+    public void saveDateBeforeShouldReturnMessagesBeforeAGivenDate() {
+    }
+
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
+    @Override
+    public void saveDateAfterShouldReturnMessagesAfterAGivenDate() {
+    }
+
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void headerContainsShouldReturnUidsOfMessageHavingThisHeaderWithTheSpecifiedValue() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void internalDateAfterShouldReturnMessagesAfterAGivenDate() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void youShouldBeAbleToSpecifySeveralCriterionOnASingleQuery() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void headerExistsShouldReturnUidsOfMessageHavingThisHeader() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void modSeqLessThanShouldReturnUidsOfMessageHavingAGreaterModSeq() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void addressShouldReturnUidHavingRightRecipientWhenCcIsSpecified() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void andShouldReturnResultsMatchingBothRequests() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void addressShouldReturnUidHavingRightExpeditorWhenFromIsSpecified() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void flagIsUnSetShouldReturnUidOfMessageNotMarkedAsRecentWhenUsedWithFlagRecent() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void bodyContainsShouldReturnUidOfMessageContainingTheApproximativeText() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void headerDateBeforeShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void addressShouldReturnUidHavingRightRecipientWhenToIsSpecified() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void sortOnToShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void revertSortingShouldReturnElementsInAReversedOrder() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void headerDateAfterShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void mailsContainsShouldIncludeMailHavingAttachmentsMatchingTheRequest() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void sortOnSubjectShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void modSeqGreaterThanShouldReturnUidsOfMessageHavingAGreaterModSeq() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void notShouldReturnResultsThatDoNotMatchAQuery() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void headerDateOnShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void sortOnSizeShouldWork() {
     }
 
-    @Disabled("JAMES-1799: ignoring failing test after generalizing ElasticSearch test suite to other mailbox search backends")
+    @Disabled("JAMES-1799: ignoring failing test after generalizing OpenSearch test suite to other mailbox search backends")
     @Override
     public void sortShouldOrderMessages() {
     }
@@ -221,5 +235,20 @@ class SimpleMessageSearchIndexTest extends AbstractMessageSearchIndexTest {
     @Disabled("JAMES-2241: memory does not handle header with dots indexation (intended for ES)")
     @Override
     public void headerWithDotsShouldBeIndexed() {
+    }
+    
+    @Test
+    public void canCompareFetchTypes() {
+        assertThat(FetchType.values()).containsExactly(FetchType.METADATA, FetchType.HEADERS, FetchType.ATTACHMENTS_METADATA, FetchType.FULL);
+        
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.METADATA, FetchType.METADATA)).isEqualTo(FetchType.METADATA);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.METADATA, FetchType.HEADERS)).isEqualTo(FetchType.HEADERS);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.METADATA, FetchType.FULL)).isEqualTo(FetchType.FULL);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.HEADERS, FetchType.HEADERS)).isEqualTo(FetchType.HEADERS);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.HEADERS, FetchType.FULL)).isEqualTo(FetchType.FULL);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.FULL, FetchType.FULL)).isEqualTo(FetchType.FULL);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.HEADERS, FetchType.METADATA)).isEqualTo(FetchType.HEADERS);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.FULL, FetchType.METADATA)).isEqualTo(FetchType.FULL);
+        assertThat(SimpleMessageSearchIndex.maxFetchType(FetchType.FULL, FetchType.HEADERS)).isEqualTo(FetchType.FULL);
     }
 }

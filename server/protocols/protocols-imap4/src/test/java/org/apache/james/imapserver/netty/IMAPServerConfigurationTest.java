@@ -21,6 +21,7 @@ package org.apache.james.imapserver.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration2.BaseHierarchicalConfiguration;
@@ -40,6 +41,9 @@ class IMAPServerConfigurationTest {
                 .enableIdle(ImapConfiguration.DEFAULT_ENABLE_IDLE)
                 .idleTimeInterval(ImapConfiguration.DEFAULT_HEARTBEAT_INTERVAL_IN_SECONDS)
                 .idleTimeIntervalUnit(ImapConfiguration.DEFAULT_HEARTBEAT_INTERVAL_UNIT)
+                .maxQueueSize(ImapConfiguration.DEFAULT_QUEUE_SIZE)
+                .concurrentRequests(ImapConfiguration.DEFAULT_CONCURRENT_REQUESTS)
+                .isProvisionDefaultMailboxes(ImapConfiguration.DEFAULT_PROVISION_DEFAULT_MAILBOXES)
                 .disabledCaps(ImmutableSet.<String>of())
                 .build();
 
@@ -51,15 +55,27 @@ class IMAPServerConfigurationTest {
         HierarchicalConfiguration<ImmutableNode> configurationBuilder = new BaseHierarchicalConfiguration();
         configurationBuilder.addProperty("enableIdle", "false");
         configurationBuilder.addProperty("idleTimeInterval", "1");
+        configurationBuilder.addProperty("maxQueueSize", "12");
+        configurationBuilder.addProperty("concurrentRequests", "42");
         configurationBuilder.addProperty("idleTimeIntervalUnit", "MINUTES");
         configurationBuilder.addProperty("disabledCaps", "ACL | MOVE");
+        configurationBuilder.addProperty("provisionDefaultMailboxes", "false");
+        configurationBuilder.addProperty("customProperties", "abc=def");
+        configurationBuilder.addProperty("customProperties", "ghi=jkl");
         ImapConfiguration imapConfiguration = IMAPServer.getImapConfiguration(configurationBuilder);
 
+        Properties customProperties = new Properties();
+        customProperties.put("abc", "def");
+        customProperties.put("ghi", "jkl");
         ImapConfiguration expectImapConfiguration = ImapConfiguration.builder()
                 .enableIdle(false)
                 .idleTimeInterval(1)
                 .idleTimeIntervalUnit(TimeUnit.MINUTES)
                 .disabledCaps(ImmutableSet.of("ACL", "MOVE"))
+                .maxQueueSize(12)
+                .concurrentRequests(42)
+                .isProvisionDefaultMailboxes(false)
+                .withCustomProperties(customProperties)
                 .build();
 
         assertThat(imapConfiguration).isEqualTo(expectImapConfiguration);

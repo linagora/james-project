@@ -22,10 +22,10 @@ package org.apache.james.imap.processor;
 import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode.IGNORE;
 import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode.RESET;
 import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode.RETRIEVE;
-import static org.apache.james.util.ReactorUtils.logOnError;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -56,15 +56,16 @@ import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MessageManager;
 import org.apache.james.mailbox.MessageManager.MailboxMetaData;
-import org.apache.james.mailbox.MessageManager.MailboxMetaData.FetchGroup;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.ModSeq;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.MailboxNotFoundException;
+import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.mailbox.model.MessageRange;
 import org.apache.james.mailbox.model.UidValidity;
 import org.apache.james.metrics.api.MetricFactory;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +74,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import io.vavr.Tuple;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequest> extends AbstractMailboxProcessor<R> implements PermitEnableCapabilityProcessor {
@@ -82,7 +84,7 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
     private final StatusResponseFactory statusResponseFactory;
     private final boolean openReadOnly;
     private final EventBus eventBus;
-    
+
     public AbstractSelectionProcessor(Class<R> acceptableClass, MailboxManager mailboxManager, StatusResponseFactory statusResponseFactory, boolean openReadOnly,
                                       MetricFactory metricFactory, EventBus eventBus) {
         super(acceptableClass, mailboxManager, statusResponseFactory, metricFactory);
@@ -98,15 +100,13 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
         MailboxPath fullMailboxPath = PathConverter.forSession(session).buildFullPath(mailboxName);
 
         return respond(session, fullMailboxPath, request, responder)
-            .doOnEach(logOnError(MailboxNotFoundException.class, e -> LOGGER.debug("Select failed as mailbox does not exist {}", mailboxName, e)))
             .onErrorResume(MailboxNotFoundException.class, e -> {
                 responder.respond(statusResponseFactory.taggedNo(request.getTag(), request.getCommand(), HumanReadableText.FAILURE_NO_SUCH_MAILBOX));
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.debug("Select failed as mailbox does not exist {}", mailboxName, e));
             })
-            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("Select failed for mailbox {}", mailboxName, e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.SELECT);
-                return Mono.empty();
+                return ReactorUtils.logAsMono(() -> LOGGER.error("Select failed for mailbox {}", mailboxName, e));
             });
     }
 
@@ -131,31 +131,18 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
 
         return selectMailbox(fullMailboxPath, session, responder)
             .doOnNext(metaData -> {
+                    SelectedMailbox selected = session.getSelected();
 
-                final SelectedMailbox selected = session.getSelected();
-                MessageUid firstUnseen = metaData.getFirstUnseen();
-
-                flags(responder, selected);
-                exists(responder, metaData);
-                recent(responder, selected);
-                uidValidity(responder, metaData);
-
-
-                // try to write the UNSEEN message to the client and retry if we fail because of concurrent sessions.
-                //
-                // See IMAP-345
-                int retryCount = 0;
-                while (unseen(responder, firstUnseen, selected) == false) {
-                    // if we not was able to get find the unseen within 5 retries we should just not send it
-                    if (retryCount == 5) {
-                        LOGGER.info("Unable to uid for unseen message {} in mailbox {}", firstUnseen, selected.getMailboxId().serialize());
-                        break;
-                    }
-                    firstUnseen = selectMailbox(fullMailboxPath, session, responder).block().getFirstUnseen();
-                    retryCount++;
-
-                }
-
+                    mailboxId(responder, selected.getMailboxId());
+                    flags(responder, selected);
+                    exists(responder, metaData);
+                    recent(responder, selected);
+                    uidValidity(responder, metaData);
+                })
+            .flatMap(metadata -> firstUnseen(session, fullMailboxPath, responder, metadata.getFirstUnseen(), session.getSelected())
+            .thenReturn(metadata))
+            .doOnNext(metaData -> {
+                SelectedMailbox selected = session.getSelected();
                 permanentFlags(responder, metaData.getPermanentFlags(), selected);
                 highestModSeq(responder, metaData);
                 uidNext(responder, metaData);
@@ -197,6 +184,32 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
                 SearchResUtil.resetSavedSequenceSet(session);
             })
             .then();
+    }
+
+    private Mono<MessageUid> firstUnseen(ImapSession session, MailboxPath fullMailboxPath, Responder responder, MessageUid firstUnseen, SelectedMailbox selected) {
+        // try to write the UNSEEN message to the client and retry if we fail because of concurrent sessions.
+        // See IMAP-345
+
+        if (firstUnseen == null) {
+            return Mono.empty();
+        }
+
+        return Flux.<MessageUid>concat(
+            Flux.just(firstUnseen),
+            Flux.range(0, 5)
+                .concatMap(i -> retrieveFirstUnseen(session, fullMailboxPath, responder)))
+            .filter(unseenUid -> unseen(responder, firstUnseen, selected))
+            .next()
+            .switchIfEmpty(Mono.fromCallable(() -> {
+                // if we not was able to get find the unseen within 5 retries we should just not send it
+                LOGGER.info("Unable to uid for unseen message {} in mailbox {}", firstUnseen, selected.getMailboxId().serialize());
+                return firstUnseen;
+            }));
+    }
+
+    private Mono<MessageUid> retrieveFirstUnseen(ImapSession session, MailboxPath fullMailboxPath, Responder responder) {
+        return selectMailbox(fullMailboxPath, session, responder)
+            .map(MailboxMetaData::getFirstUnseen);
     }
 
     private Optional<UidRange[]> uidSet(AbstractMailboxSelectionRequest request, MailboxMetaData metaData) {
@@ -372,6 +385,11 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
         responder.respond(existsResponse);
     }
 
+    private void mailboxId(Responder responder, MailboxId mailboxId) {
+        StatusResponse untaggedOk = statusResponseFactory.untaggedOk(HumanReadableText.OK, ResponseCode.mailboxId(mailboxId));
+        responder.respond(untaggedOk);
+    }
+
     private Mono<MailboxMetaData> selectMailbox(MailboxPath mailboxPath, ImapSession session, Responder responder) {
         final MailboxManager mailboxManager = getMailboxManager();
         final MailboxSession mailboxSession = session.getMailboxSession();
@@ -380,7 +398,7 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
         return Mono.from(mailboxManager.getMailboxReactive(mailboxPath, mailboxSession))
             .flatMap(Throwing.function(mailbox -> selectMailbox(session, responder, mailbox, currentMailbox)
                 .flatMap(Throwing.function(sessionMailbox ->
-                    mailbox.getMetaDataReactive(recentMode(!openReadOnly), mailboxSession, FetchGroup.FIRST_UNSEEN)
+                    mailbox.getMetaDataReactive(recentMode(!openReadOnly), mailboxSession, EnumSet.of(MailboxMetaData.Item.FirstUnseen, MailboxMetaData.Item.HighestModSeq, MailboxMetaData.Item.NextUid, MailboxMetaData.Item.MailboxCounters))
                         .doOnNext(next -> addRecent(next, sessionMailbox))))));
     }
 
@@ -442,7 +460,7 @@ abstract class AbstractSelectionProcessor<R extends AbstractMailboxSelectionRequ
                     boolean send = true;
                     return getSelectedMailboxReactive(session,
                             Mono.error(() -> new EnableException("Unable to enable " + capability.asString(), new MailboxException("Session not in SELECTED state"))))
-                        .flatMap(Throwing.function(mailbox -> mailbox.getMetaDataReactive(IGNORE, session.getMailboxSession(), FetchGroup.NO_COUNT)))
+                        .flatMap(Throwing.function(mailbox -> mailbox.getMetaDataReactive(IGNORE, session.getMailboxSession(), EnumSet.of(MailboxMetaData.Item.HighestModSeq))))
                         .doOnNext(metaData -> condstoreEnablingCommand(session, responder, metaData, send))
                         .then();
                 }

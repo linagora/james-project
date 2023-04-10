@@ -20,15 +20,16 @@
 package org.apache.james.imap.processor;
 
 import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode.IGNORE;
-import static org.apache.james.util.ReactorUtils.logOnError;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
+import javax.inject.Inject;
 import javax.mail.Flags.Flag;
 
 import org.apache.james.imap.api.ImapConstants;
@@ -62,6 +63,7 @@ import org.apache.james.mailbox.model.SearchQuery;
 import org.apache.james.mailbox.model.SearchQuery.AddressType;
 import org.apache.james.mailbox.model.SearchQuery.Criterion;
 import org.apache.james.mailbox.model.SearchQuery.DateResolution;
+import org.apache.james.mailbox.model.ThreadId;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
 import org.apache.james.util.ReactorUtils;
@@ -81,9 +83,10 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
 
     protected static final String SEARCH_MODSEQ = "SEARCH_MODSEQ";
     private static final List<Capability> CAPS = ImmutableList.of(Capability.of("WITHIN"), Capability.of("ESEARCH"), Capability.of("SEARCHRES"));
-    
+
+    @Inject
     public SearchProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
+                           MetricFactory metricFactory) {
         super(SearchRequest.class, mailboxManager, factory, metricFactory);
     }
 
@@ -105,10 +108,11 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
                             responder.respond(response);
                         }))
                     .then(unsolicitedResponses(session, responder, omitExpunged, useUids))))
-                .then(Mono.fromRunnable(() -> okComplete(request, responder)))
+                .then(Mono.fromRunnable(() -> {
+                    okComplete(request, responder);
+                    session.setAttribute(SEARCH_MODSEQ, null);
+                }))
                 .then()
-                .doFinally(type -> session.setAttribute(SEARCH_MODSEQ, null))
-                .doOnEach(logOnError(MessageRangeException.class, e -> LOGGER.error("Search failed in mailbox {}", session.getSelected().getMailboxId(), e)))
                 .onErrorResume(MessageRangeException.class, e -> {
                     no(request, responder, HumanReadableText.SEARCH_FAILED);
 
@@ -118,7 +122,7 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
                         // See RFC5182 2.1.Normative Description of the SEARCHRES Extension
                         SearchResUtil.resetSavedSequenceSet(session);
                     }
-                    return Mono.empty();
+                    return ReactorUtils.logAsMono(() -> LOGGER.error("Search failed in mailbox {}", session.getSelected().getMailboxId(), e));
                 });
         } catch (MessageRangeException e) {
             return ReactorUtils.logAsMono(() -> LOGGER.debug("Search failed in mailbox {} because of an invalid sequence-set ", session.getSelected().getMailboxId(), e))
@@ -132,7 +136,7 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
         // See RFC4551: 3.4. MODSEQ Search Criterion in SEARCH
         if (session.getAttribute(SEARCH_MODSEQ) != null) {
             try {
-                return mailbox.getMetaDataReactive(IGNORE, msession, MailboxMetaData.FetchGroup.NO_COUNT)
+                return mailbox.getMetaDataReactive(IGNORE, msession, EnumSet.of(MailboxMetaData.Item.HighestModSeq))
                     .flatMap(metaData -> {
                         // Enable CONDSTORE as this is a CONDSTORE enabling command
                         condstoreEnablingCommand(session, responder,  metaData, true);
@@ -343,7 +347,7 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
         case TYPE_SMALLER:
             return SearchQuery.sizeLessThan(key.getSize());
         case TYPE_SUBJECT:
-            return SearchQuery.headerContains(ImapConstants.RFC822_SUBJECT, key.getValue());
+            return SearchQuery.subject(key.getValue());
         case TYPE_TEXT:
             return SearchQuery.mailContains(key.getValue());
         case TYPE_TO:
@@ -372,6 +376,18 @@ public class SearchProcessor extends AbstractMailboxProcessor<SearchRequest> imp
             session.setAttribute(SEARCH_MODSEQ, true);
             long modSeq = key.getModSeq();
             return SearchQuery.or(SearchQuery.modSeqEquals(modSeq), SearchQuery.modSeqGreaterThan(modSeq));
+        case TYPE_THREADID:
+            return SearchQuery.threadId(ThreadId.fromBaseMessageId(getMailboxManager().getMessageIdFactory().fromString(key.getThreadId())));
+        case TYPE_EMAILID:
+            return SearchQuery.hasMessageId(getMailboxManager().getMessageIdFactory().fromString(key.getMessageId()));
+        case TYPE_SAVEDBEFORE:
+            return SearchQuery.saveDateBefore(date.toDate(), DateResolution.Day);
+        case TYPE_SAVEDON:
+            return SearchQuery.saveDateOn(date.toDate(), DateResolution.Day);
+        case TYPE_SAVEDSINCE:
+            return SearchQuery.or(SearchQuery.saveDateOn(date.toDate(), DateResolution.Day), SearchQuery.saveDateAfter(date.toDate(), DateResolution.Day));
+        case TYPE_SAVEDATESUPPORTED:
+            return SearchQuery.saveDateSupported();
         default:
             LOGGER.warn("Ignoring unknown search key {}", type);
             return SearchQuery.all();

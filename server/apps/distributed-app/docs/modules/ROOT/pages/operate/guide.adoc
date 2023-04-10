@@ -40,6 +40,10 @@ all mails in a mail repository] or
 xref:operate/webadmin.adoc#_reprocessing_a_specific_mail_from_a_mail_repository[reprocessing
 a single mail in a mail repository].
 
+In order to prevent unbounded processing that could consume unbounded resources. We can provide a CRON with `limit` parameter.
+Ex: 10 reprocessed per minute
+Note that it only support the reprocessing all mails.
+
 Also, one can decide to
 xref:operate/webadmin.adoc#_removing_all_mails_from_a_mail_repository[delete
 all the mails of a mail repository] or
@@ -60,7 +64,7 @@ to emails being stored in `cassandra://var/mail/rrt-error/`.
 We recommend monitoring the content of this mail repository to be empty.
 
 If it is not empty, we recommend
-verifying user mappings via xref:operate/webadmin.adoc#_user_mappings[User Mappings webadmin API] then once identified break the loop by removing
+verifying user mappings via xref:operate/webadmin.adoc#_listing_user_mappings_[User Mappings webadmin API] then once identified break the loop by removing
 some Recipient Rewrite Table entry via the
 xref:operate/webadmin.adoc#_removing_an_alias_of_an_user[Delete Alias],
 xref:operate/webadmin.adoc#_removing_a_group_member[Delete Group member],
@@ -114,19 +118,22 @@ xref:operate/webadmin.adoc#_redeliver_all_events[redeliver all events]
 task. It will start reprocessing all the failed events registered in
 event dead letters.
 
+In order to prevent unbounded processing that could consume unbounded resources. We can provide a CRON with `limit` parameter.
+Ex: 10 redelivery per minute
+
 If for some other reason you don’t need to redeliver all events, you
 have more fine-grained operations allowing you to
 xref:operate/webadmin.adoc#_redeliver_group_events[redeliver group events]
 or even just
 xref:operate/webadmin.adoc#_redeliver_a_single_event[redeliver a single event].
 
-== ElasticSearch Indexing
+== OpenSearch Indexing
 
-A projection of messages is maintained in ElasticSearch via a listener
+A projection of messages is maintained in OpenSearch via a listener
 plugged into the mailbox event bus in order to enable search features.
 
-You can find more information about ElasticSearch configuration
-link:config-elasticsearch.html[here].
+You can find more information about OpenSearch configuration
+link:config-opensearch.html[here].
 
 === Usual troubleshooting procedures
 
@@ -137,7 +144,7 @@ Currently, an administrator can monitor indexation failures through
 `ERROR` log review. You can as well
 xref:operate/webadmin.adoc#_listing_failed_events[list failed events] by
 looking with the group called
-`org.apache.james.mailbox.elasticsearch.v7.events.ElasticSearchListeningMessageSearchIndex$ElasticSearchListeningMessageSearchIndexGroup`.
+`org.apache.james.mailbox.opensearch.events.OpenSearchListeningMessageSearchIndex$OpenSearchListeningMessageSearchIndexGroup`.
 A first on-the-fly solution could be to just
 link:#_mailbox_event_bus[redeliver those group events with event dead letter].
 
@@ -154,7 +161,7 @@ When checking the result of a reIndexing task, you might have failed
 reprocessed mails. You can still use the task ID to
 xref:operate/webadmin.adoc#_fixing_previously_failed_reindexing[reprocess previously failed reIndexing mails].
 
-=== On the fly ElasticSearch Index setting update
+=== On the fly OpenSearch Index setting update
 
 Sometimes you might need to update index settings. Cases when an
 administrator might want to update index settings include:
@@ -182,8 +189,8 @@ field being present)
 https://www.elastic.co/guide/en/elasticsearch/reference/7.10/indices-delete-index.html[drop
 the old index]
 * You might want as well modify the James configuration file
-https://github.com/apache/james-project/blob/master/server/apps/distributed-app/sample-configuration/elasticsearch.properties[elasticsearch.properties]
-by setting the parameter `elasticsearch.index.mailbox.name` to the name
+https://github.com/apache/james-project/blob/master/server/apps/distributed-app/sample-configuration/opensearch.properties[elasticsearch.properties]
+by setting the parameter `opensearch.index.mailbox.name` to the name
 of your new index. This is to avoid that James re-creates index upon
 restart
 
@@ -208,7 +215,7 @@ When you read a Jmap message, some calculated properties are expected to
 be fast to retrieve, like `preview`, `hasAttachment`. James achieves it
 by pre-calculating and storing them into a caching table
 (`message_fast_view_projection`). Missing caches are populated on
-message reads and will temporary decrease the performance.
+message reads and will temporarily decrease the performance.
 
 ==== How to detect the outdated projections
 
@@ -421,7 +428,7 @@ http://cassandra.apache.org/doc/3.11.11/cql/security.html[cassandra documentatio
 Except for the case above, the permissions are not auto available for a
 specific role unless they are granted by `GRANT` command. Therefore, if
 you didn’t provide more permissions than
-link:#Grant_permissions_on_created_keyspace_to_the_role[granting
+link:#_grant_permissions_on_created_keyspace_to_the_role[granting
 section], there’s no need to revoke.
 
 == Cassandra table level configuration
@@ -434,7 +441,7 @@ These options are:
 * The https://cassandra.apache.org/doc/latest/operating/compaction.html[compaction algorithms]
 * The https://cassandra.apache.org/doc/latest/operating/bloom_filters.html[bloom filter sizing]
 * The https://cassandra.apache.org/doc/latest/operating/compression.html?highlight=chunk%20size[chunk size]
-* Thehttps://www.datastax.com/blog/2011/04/maximizing-cache-benefit-cassandra[cachingoptions]
+* The https://www.datastax.com/blog/2011/04/maximizing-cache-benefit-cassandra[cachingoptions]
 
 The compaction algorithms allow a tradeoff between background IO upon
 writes and reads. We recommend:
@@ -595,7 +602,7 @@ by default if not defined).
 === Restore deleted messages after deletion
 
 After users deleted their mails and emptied the trash, the admin can use
-xref:operate/webadmin.adoc#_restore_deleted_messagest[Restore Deleted Messages]
+xref:operate/webadmin.adoc#_restore_deleted_messages[Restore Deleted Messages]
 to restore all the deleted mails.
 
 === Cleaning expired deleted messages

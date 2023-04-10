@@ -17,7 +17,7 @@
 # under the License.                                           #
 ################################################################
 C: a1 CREATE copied
-S: a1 OK CREATE completed.
+S: a1 OK \[MAILBOXID \(.+\)\] CREATE completed.
 
 C: a2 STATUS copied (MESSAGES)
 S: \* STATUS "copied" \(MESSAGES 0\)
@@ -43,6 +43,7 @@ S: \* 2 FETCH \(FLAGS \(\\Flagged \\Recent\)\)
 S: a6 OK STORE completed.
 
 C: a7 SELECT copied
+S: \* OK \[MAILBOXID \(.+\)\] Ok
 S: \* FLAGS \(\\Answered \\Deleted \\Draft \\Flagged \\Seen\)
 S: \* 3 EXISTS
 S: \* 3 RECENT

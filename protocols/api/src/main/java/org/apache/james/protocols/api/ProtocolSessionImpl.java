@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.net.ssl.SSLSession;
+
 import org.apache.james.core.Username;
 import org.apache.james.protocols.api.handler.LineHandler;
 
@@ -42,6 +44,7 @@ public class ProtocolSessionImpl implements ProtocolSession {
     private final Map<AttachmentKey<?>, Object> connectionState;
     private final Map<AttachmentKey<?>, Object> sessionState;
     private Username username;
+    private ProxyInformation proxyInformation = null;
     protected final ProtocolConfiguration config;
     private boolean needsCommandInjectionDetection;
     private static final String DELIMITER = "\r\n";
@@ -76,7 +79,20 @@ public class ProtocolSessionImpl implements ProtocolSession {
 
     @Override
     public InetSocketAddress getRemoteAddress() {
+        if (proxyInformation != null) {
+            return proxyInformation.getSource();
+        }
         return transport.getRemoteAddress();
+    }
+
+    @Override
+    public Optional<ProxyInformation> getProxyInformation() {
+        return Optional.of(proxyInformation);
+    }
+
+    @Override
+    public void setProxyInformation(ProxyInformation proxyInformation) {
+        this.proxyInformation = proxyInformation;
     }
 
     @Override
@@ -107,11 +123,15 @@ public class ProtocolSessionImpl implements ProtocolSession {
     }
 
     @Override
+    public Optional<SSLSession> getSSLSession() {
+        return transport.getSSLSession();
+    }
+
+    @Override
     public String getSessionID() {
         return transport.getId();
     }
-    
-    
+
     @Override
     public Map<AttachmentKey<?>, Object> getConnectionState() {
         return connectionState;

@@ -40,6 +40,13 @@ case object InMailboxFilter extends MailboxFilter {
   override def toQuery(builder: MultimailboxesSearchQuery.Builder, request: EmailQueryRequest): MultimailboxesSearchQuery.Builder =
     request.filter.flatMap {
       case filterCondition: FilterCondition => Some(filterCondition)
+      // Extract mailbox condition from simple AND
+      case filterOperator: FilterOperator if filterOperator.operator == And &&
+        filterOperator.countMailboxFilter == 1 =>
+        filterOperator.conditions.flatMap {
+          case filterCondition: FilterCondition if filterCondition.inMailbox.isDefined => Some(filterCondition)
+          case _ => None
+        }.lastOption
       case _ => None
     }.flatMap(_.inMailbox) match {
       case Some(mailboxId) => builder.inMailboxes(mailboxId)
@@ -51,6 +58,13 @@ case object NotInMailboxFilter extends MailboxFilter {
   override def toQuery(builder: MultimailboxesSearchQuery.Builder, request: EmailQueryRequest): MultimailboxesSearchQuery.Builder =
     request.filter.flatMap {
       case filterCondition: FilterCondition => Some(filterCondition)
+      // Extract mailbox condition from simple AND
+      case filterOperator: FilterOperator if filterOperator.operator == And &&
+        filterOperator.countMailboxFilter == 1 =>
+        filterOperator.conditions.flatMap {
+          case filterCondition: FilterCondition if filterCondition.inMailboxOtherThan.isDefined => Some(filterCondition)
+          case _ => None
+        }.lastOption
       case _ => None
     }.flatMap(_.inMailboxOtherThan) match {
       case Some(mailboxIds) => builder.notInMailboxes(mailboxIds.asJava)
@@ -235,7 +249,7 @@ object MailboxFilter {
               SearchQuery.address(AddressType.Cc, text.value),
               SearchQuery.address(AddressType.Bcc, text.value),
               SearchQuery.address(AddressType.From, text.value),
-              SearchQuery.headerContains("Subject", text.value),
+              SearchQuery.subject(text.value),
               SearchQuery.bodyContains(text.value))
             .asJava)))
         case None => Right(Nil)
@@ -273,7 +287,7 @@ object MailboxFilter {
   case object Subject extends ConditionFilter {
     override def toQuery(filterCondition: FilterCondition): Either[UnsupportedFilterException, List[Criterion]] =
       filterCondition.subject match {
-        case Some(subject) => Right(List(SearchQuery.headerContains("Subject", subject.value)))
+        case Some(subject) => Right(List(SearchQuery.subject(subject.value)))
         case None => Right(Nil)
       }
   }

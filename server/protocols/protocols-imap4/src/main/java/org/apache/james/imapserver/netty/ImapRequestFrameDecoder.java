@@ -21,10 +21,12 @@ package org.apache.james.imapserver.netty;
 
 import static reactor.core.publisher.Sinks.EmitFailureHandler.FAIL_FAST;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -203,11 +205,11 @@ public class ImapRequestFrameDecoder extends ByteToMessageDecoder implements Net
         if (attachment.containsKey(STORED_DATA)) {
             sink = (Sinks.Many<byte[]>) attachment.get(SINK);
         } else {
-            f = File.createTempFile("imap-literal", ".tmp");
+            f = Files.createTempFile("imap-literal", ".tmp").toFile();
             attachment.put(STORED_DATA, f);
             final AtomicInteger written = new AtomicInteger(0);
             attachment.put(WRITTEN_DATA, written);
-            outputStream = new FileOutputStream(f, true);
+            outputStream = new BufferedOutputStream(new FileOutputStream(f, true));
             attachment.put(OUTPUT_STREAM, outputStream);
             sink = Sinks.many().unicast().onBackpressureBuffer();
             attachment.put(SINK, sink);

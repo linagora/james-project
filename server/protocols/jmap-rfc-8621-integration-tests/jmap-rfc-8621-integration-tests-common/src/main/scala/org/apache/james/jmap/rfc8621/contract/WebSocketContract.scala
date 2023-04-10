@@ -20,21 +20,28 @@ package org.apache.james.jmap.rfc8621.contract
 
 import java.net.{ProtocolException, URI}
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.apache.james.GuiceJamesServer
+import org.apache.james.core.Username
 import org.apache.james.jmap.api.change.State
 import org.apache.james.jmap.api.model.AccountId
 import org.apache.james.jmap.core.{PushState, UuidState}
 import org.apache.james.jmap.draft.JmapGuiceProbe
 import org.apache.james.jmap.rfc8621.contract.Fixture._
+import org.apache.james.jmap.rfc8621.contract.probe.DelegationProbe
 import org.apache.james.mailbox.MessageManager.AppendCommand
 import org.apache.james.mailbox.model.MailboxACL.Right
 import org.apache.james.mailbox.model.{MailboxACL, MailboxPath}
 import org.apache.james.mime4j.dom.Message
+import org.apache.james.modules.protocols.SmtpGuiceProbe
 import org.apache.james.modules.{ACLProbeImpl, MailboxProbeImpl}
-import org.apache.james.utils.DataProbeImpl
+import org.apache.james.utils.{DataProbeImpl, SMTPMessageSender, SpoolerProbe}
 import org.assertj.core.api.Assertions.{assertThat, assertThatThrownBy}
+import org.awaitility.Awaitility
+import org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS
+import org.awaitility.core.ConditionFactory
 import org.junit.jupiter.api.{BeforeEach, Test, Timeout}
 import play.api.libs.json.{JsString, Json}
 import reactor.core.scala.publisher.SMono
@@ -50,8 +57,14 @@ import sttp.ws.WebSocketFrame.Text
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.jdk.CollectionConverters._
+import scala.util.Try
 
 trait WebSocketContract {
+  private lazy val awaitAtMostTenSeconds: ConditionFactory = Awaitility.`with`
+    .pollInterval(ONE_HUNDRED_MILLISECONDS)
+    .and.`with`.pollDelay(ONE_HUNDRED_MILLISECONDS)
+    .await
+    .atMost(10, TimeUnit.SECONDS)
   private lazy val backend: SttpBackend[Identity, WebSockets] = OkHttpSyncBackend()
   private lazy implicit val monadError: MonadError[Identity] = IdMonad
 
@@ -62,6 +75,7 @@ trait WebSocketContract {
       .addDomain(DOMAIN.asString())
       .addUser(ANDRE.asString(), ANDRE_PASSWORD)
       .addUser(BOB.asString(), BOB_PASSWORD)
+      .addUser(DAVID.asString(), "secret")
   }
 
   @Test
@@ -477,6 +491,160 @@ trait WebSocketContract {
 
   @Test
   @Timeout(180)
+  def shouldPushChangesToDelegatedUser(server: GuiceJamesServer): Unit = {
+    val davidPath = MailboxPath.inbox(DAVID)
+    server.getProbe(classOf[MailboxProbeImpl]).createMailbox(davidPath)
+
+    // DAVID delegates BOB to access his account
+    server.getProbe(classOf[DelegationProbe]).addAuthorizedUser(DAVID, BOB)
+
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["EmailDelivery"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            // DAVID has a new mail therefore EmailDelivery change
+            sendEmailTo(server, DAVID)
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    // Bob should receive DAVID's EmailDelivery state change
+    assertThat(response.toOption.get.asJava)
+      .hasSize(1)
+
+    assertThatJson(response.toOption.get.asJava.get(0))
+      .isEqualTo(s"""{"@type":"StateChange","changed":{"$DAVID_ACCOUNT_ID":{"EmailDelivery":"$${json-unit.ignore}"}},"pushState":"$${json-unit.ignore}"}""".stripMargin)
+  }
+
+  @Test
+  @Timeout(180)
+  def ownerUserShouldStillReceiveHisChangesWhenHeDelegatesHisAccountToOtherUsers(server: GuiceJamesServer): Unit = {
+    val bobPath = MailboxPath.inbox(BOB)
+    server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
+
+    // BOB delegates DAVID to access his account
+    server.getProbe(classOf[DelegationProbe]).addAuthorizedUser(BOB, DAVID)
+
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["EmailDelivery"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            // BOB has a new mail therefore EmailDelivery change
+            sendEmailTo(server, BOB)
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    // Bob should receive his EmailDelivery state change
+    assertThat(response.toOption.get.asJava)
+      .hasSize(1)
+
+    assertThatJson(response.toOption.get.asJava.get(0))
+      .isEqualTo(s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"EmailDelivery":"$${json-unit.ignore}"}},"pushState":"$${json-unit.ignore}"}""".stripMargin)
+  }
+
+  @Test
+  @Timeout(180)
+  def bobShouldReceiveHisChangesAndHisDelegatedAccountChanges(server: GuiceJamesServer): Unit = {
+    val davidPath = MailboxPath.inbox(DAVID)
+    server.getProbe(classOf[MailboxProbeImpl]).createMailbox(davidPath)
+
+    // DAVID delegates BOB to access his account
+    server.getProbe(classOf[DelegationProbe]).addAuthorizedUser(DAVID, BOB)
+
+    Thread.sleep(100)
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": ["EmailDelivery"]
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            sendEmailTo(server, DAVID)
+            sendEmailTo(server, BOB)
+            sendEmailTo(server, DAVID)
+            sendEmailTo(server, BOB)
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    Thread.sleep(100)
+
+    // Bob should receive DAVID's change and his changes
+    assertThat(response.toOption.get.asJava)
+      .hasSize(4)
+    assertThatJson(response.toOption.get.asJava.get(0))
+      .isEqualTo(s"""{"@type":"StateChange","changed":{"$DAVID_ACCOUNT_ID":{"EmailDelivery":"$${json-unit.ignore}"}},"pushState":"$${json-unit.ignore}"}""".stripMargin)
+    assertThatJson(response.toOption.get.asJava.get(1))
+      .isEqualTo(s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"EmailDelivery":"$${json-unit.ignore}"}},"pushState":"$${json-unit.ignore}"}""".stripMargin)
+    assertThatJson(response.toOption.get.asJava.get(2))
+      .isEqualTo(s"""{"@type":"StateChange","changed":{"$DAVID_ACCOUNT_ID":{"EmailDelivery":"$${json-unit.ignore}"}},"pushState":"$${json-unit.ignore}"}""".stripMargin)
+    assertThatJson(response.toOption.get.asJava.get(1))
+      .isEqualTo(s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"EmailDelivery":"$${json-unit.ignore}"}},"pushState":"$${json-unit.ignore}"}""".stripMargin)
+  }
+
+  @Test
+  @Timeout(180)
   def mixingPushAndResponsesShouldBeSupported(server: GuiceJamesServer): Unit = {
     val bobPath = MailboxPath.inbox(BOB)
     val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(bobPath)
@@ -645,7 +813,7 @@ trait WebSocketContract {
     val emailState: State = jmapGuiceProbe.getLatestEmailState(accountId)
 
     val globalState: String = PushState.fromOption(Some(UuidState.fromJava(mailboxState)), Some(UuidState.fromJava(emailState))).get.value
-    val stateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"${emailState.getValue}","EmailDelivery":"${emailState.getValue}","Mailbox":"${mailboxState.getValue}"}},"pushState":"$globalState"}""".stripMargin
+    val stateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"${emailState.getValue}","Mailbox":"${mailboxState.getValue}"}},"pushState":"$globalState"}""".stripMargin
 
     assertThat(response.toOption.get.asJava)
       .hasSize(2) // state change notification + API response
@@ -829,11 +997,99 @@ trait WebSocketContract {
     val mailboxState: State = jmapGuiceProbe.getLatestMailboxState(accountId)
 
     val globalState: String = PushState.fromOption(Some(UuidState.fromJava(mailboxState)), Some(UuidState.fromJava(emailState))).get.value
-    val stateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"${emailState.getValue}","EmailDelivery":"${emailState.getValue}","Mailbox":"${mailboxState.getValue}"}},"pushState":"$globalState"}""".stripMargin
+    val stateChange: String = s"""{"@type":"StateChange","changed":{"$ACCOUNT_ID":{"Email":"${emailState.getValue}","Mailbox":"${mailboxState.getValue}"}},"pushState":"$globalState"}""".stripMargin
 
     assertThat(response.toOption.get.asJava)
       .hasSize(2) // state change notification + API response
       .contains(stateChange)
+  }
+
+  @Test
+  @Timeout(180)
+  def shouldPushEmailDeliveryChangeWhenUserReceivesEmail(server: GuiceJamesServer): Unit = {
+    server.getProbe(classOf[MailboxProbeImpl]).createMailbox(MailboxPath.inbox(BOB))
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": null
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            // Andre send mail to Bob
+            sendEmailTo(server, BOB)
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    // Bob should receive EmailDelivery state change
+    assertThat(response.toOption.get.asJava)
+      .hasSize(1) // state change notification
+      .allMatch(s => s.contains("EmailDelivery"))
+  }
+
+  @Test
+  @Timeout(180)
+  def shouldNotPushEmailDeliveryChangeWhenCreateDraftMail(server: GuiceJamesServer): Unit = {
+    val mailboxId = server.getProbe(classOf[MailboxProbeImpl]).createMailbox(MailboxPath.inbox(BOB))
+
+    val response: Either[String, List[String]] =
+      authenticatedRequest(server)
+        .response(asWebSocket[Identity, List[String]] {
+          ws =>
+            ws.send(WebSocketFrame.text(
+              """{
+                |  "@type": "WebSocketPushEnable",
+                |  "dataTypes": null
+                |}""".stripMargin))
+
+            Thread.sleep(100)
+
+            ws.send(WebSocketFrame.text(
+              s"""{
+                 |  "@type": "Request",
+                 |  "id": "req-36",
+                 |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+                 |  "methodCalls": [
+                 |    ["Email/set", {
+                 |      "accountId": "$ACCOUNT_ID",
+                 |      "create": {
+                 |        "aaaaaa":{
+                 |          "mailboxIds": {
+                 |             "${mailboxId.serialize}": true
+                 |          }
+                 |        }
+                 |      }
+                 |    }, "c1"]]
+                 |}""".stripMargin))
+
+            List(
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                },
+              ws.receive()
+                .map { case t: Text =>
+                  t.payload
+                })
+        })
+        .send(backend)
+        .body
+
+    assertThat(response.toOption.get.asJava)
+      .hasSize(2) // state change notification + API response
+      .noneMatch(s => s.contains("EmailDelivery"))
   }
 
   @Test
@@ -1015,14 +1271,14 @@ trait WebSocketContract {
                 t.payload
               }
 
-            val maybeNotification: String = SMono.fromCallable(() =>
+            val maybeNotification: String = Try(SMono.fromCallable(() =>
             ws.receive()
               .map { case t: Text =>
                 t.payload
               })
-              .timeout(scala.concurrent.duration.Duration.fromNanos(100000000), Some(SMono.just("No notification received")))
-              .subscribeOn(Schedulers.boundedElastic())
-              .block()
+              .subscribeOn(Schedulers.newSingle("test"))
+              .block(scala.concurrent.duration.Duration.fromNanos(100000000)))
+              .fold(e => "No notification received", s => s)
 
           List(response, maybeNotification)
         })
@@ -1123,5 +1379,15 @@ trait WebSocketContract {
 
     basicRequest.get(Uri.apply(new URI(s"ws://127.0.0.1:$port/jmap/ws")))
       .header("Accept", ACCEPT_RFC8621_VERSION_HEADER)
+  }
+
+  private def sendEmailTo(server: GuiceJamesServer, recipient: Username): Unit = {
+    val smtpMessageSender: SMTPMessageSender = new SMTPMessageSender(DOMAIN.asString())
+    smtpMessageSender.connect("127.0.0.1", server.getProbe(classOf[SmtpGuiceProbe]).getSmtpPort)
+      .authenticate(ANDRE.asString, ANDRE_PASSWORD)
+      .sendMessage(ANDRE.asString, recipient.asString())
+    smtpMessageSender.close()
+
+    awaitAtMostTenSeconds.until(() => server.getProbe(classOf[SpoolerProbe]).processingFinished())
   }
 }

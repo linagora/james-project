@@ -33,7 +33,6 @@ import org.apache.james.blob.api.BlobStore;
 import org.apache.james.mailbox.cassandra.ids.CassandraMessageId;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentDAOV2.DAOAttachment;
 import org.apache.james.mailbox.exception.AttachmentNotFoundException;
-import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.AttachmentId;
 import org.apache.james.mailbox.model.AttachmentMetadata;
 import org.apache.james.mailbox.model.MessageAttachmentMetadata;
@@ -74,6 +73,13 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
     }
 
     @Override
+    public Mono<AttachmentMetadata> getAttachmentReactive(AttachmentId attachmentId) {
+        Preconditions.checkArgument(attachmentId != null);
+        return getAttachmentInternal(attachmentId)
+            .switchIfEmpty(Mono.error(() -> new AttachmentNotFoundException(attachmentId.getId())));
+    }
+
+    @Override
     public List<AttachmentMetadata> getAttachments(Collection<AttachmentId> attachmentIds) {
         Preconditions.checkArgument(attachmentIds != null);
         return Flux.fromIterable(attachmentIds)
@@ -83,11 +89,18 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
     }
 
     @Override
-    public InputStream loadAttachmentContent(AttachmentId attachmentId) throws AttachmentNotFoundException, IOException {
+    public InputStream loadAttachmentContent(AttachmentId attachmentId) throws AttachmentNotFoundException {
         return attachmentDAOV2.getAttachment(attachmentId, messageIdFallback(attachmentId))
             .map(daoAttachment -> blobStore.read(blobStore.getDefaultBucketName(), daoAttachment.getBlobId(), LOW_COST))
             .blockOptional()
             .orElseThrow(() -> new AttachmentNotFoundException(attachmentId.toString()));
+    }
+
+    @Override
+    public Mono<InputStream> loadAttachmentContentReactive(AttachmentId attachmentId) {
+        return attachmentDAOV2.getAttachment(attachmentId, messageIdFallback(attachmentId))
+            .flatMap(daoAttachment -> Mono.from(blobStore.readReactive(blobStore.getDefaultBucketName(), daoAttachment.getBlobId(), LOW_COST)))
+            .switchIfEmpty(Mono.error(() -> new AttachmentNotFoundException(attachmentId.toString())));
     }
 
     private Mono<CassandraMessageId> messageIdFallback(AttachmentId attachmentId) {
@@ -107,7 +120,7 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
     }
 
     @Override
-    public List<MessageAttachmentMetadata> storeAttachments(Collection<ParsedAttachment> parsedAttachments, MessageId ownerMessageId) throws MailboxException {
+    public List<MessageAttachmentMetadata> storeAttachments(Collection<ParsedAttachment> parsedAttachments, MessageId ownerMessageId) {
         return storeAttachmentsReactive(parsedAttachments, ownerMessageId)
             .block();
     }
@@ -120,7 +133,7 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
     }
 
     @Override
-    public Collection<MessageId> getRelatedMessageIds(AttachmentId attachmentId) throws MailboxException {
+    public Collection<MessageId> getRelatedMessageIds(AttachmentId attachmentId) {
         return attachmentMessageIdDAO.getOwnerMessageIds(attachmentId)
             .collect(ImmutableList.toImmutableList())
             .block();

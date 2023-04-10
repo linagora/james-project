@@ -6,5 +6,6 @@
   "gcedBlobCount": 3,
   "errorCount": 4,
   "bloomFilterExpectedBlobCount": 5,
-  "bloomFilterAssociatedProbability": 0.8
+  "bloomFilterAssociatedProbability": 0.8,
+  "deletionWindowSize": 100
 }

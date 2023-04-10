@@ -20,15 +20,20 @@ package org.apache.james.imap.decode.parser;
 
 import static org.apache.james.imap.api.message.FetchData.Item.BODY;
 import static org.apache.james.imap.api.message.FetchData.Item.BODY_STRUCTURE;
+import static org.apache.james.imap.api.message.FetchData.Item.EMAILID;
 import static org.apache.james.imap.api.message.FetchData.Item.ENVELOPE;
 import static org.apache.james.imap.api.message.FetchData.Item.FLAGS;
 import static org.apache.james.imap.api.message.FetchData.Item.INTERNAL_DATE;
 import static org.apache.james.imap.api.message.FetchData.Item.MODSEQ;
+import static org.apache.james.imap.api.message.FetchData.Item.SAVEDATE;
 import static org.apache.james.imap.api.message.FetchData.Item.SIZE;
+import static org.apache.james.imap.api.message.FetchData.Item.THREADID;
 import static org.apache.james.imap.api.message.FetchData.Item.UID;
 
 import java.util.List;
 import java.util.Locale;
+
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
@@ -57,6 +62,7 @@ public class FetchCommandParser extends AbstractUidCommandParser {
     private static final CharMatcher CLOSING_BRACKET = CharMatcher.is(']');
     private static final CharMatcher NEXT_ELEMENT_END = CharMatcher.anyOf(" [)\r\n");
 
+    @Inject
     public FetchCommandParser(StatusResponseFactory statusResponseFactory) {
         super(ImapConstants.FETCH_COMMAND, statusResponseFactory);
     }
@@ -185,6 +191,12 @@ public class FetchCommandParser extends AbstractUidCommandParser {
                 return fetch.add(BodyFetchElement.createRFC822Text(), false);
             case "MODSEQ":
                 return fetch.fetch(MODSEQ);
+            case "EMAILID":
+                return fetch.fetch(EMAILID);
+            case "THREADID":
+                return fetch.fetch(THREADID);
+            case "SAVEDATE":
+                return fetch.fetch(SAVEDATE);
             default:
                 throw new DecodingException(HumanReadableText.ILLEGAL_ARGUMENTS, "Invalid fetch attribute: " + name);
         }

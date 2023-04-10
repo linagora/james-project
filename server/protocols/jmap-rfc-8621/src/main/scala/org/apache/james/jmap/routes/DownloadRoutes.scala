@@ -29,7 +29,7 @@ import eu.timepit.refined.refineV
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.HttpHeaderNames.{CONTENT_LENGTH, CONTENT_TYPE}
 import io.netty.handler.codec.http.HttpResponseStatus._
-import io.netty.handler.codec.http.{HttpMethod, HttpResponseStatus, QueryStringDecoder}
+import io.netty.handler.codec.http.{HttpHeaderValidationUtil, HttpMethod, HttpResponseStatus, QueryStringDecoder}
 import javax.inject.{Inject, Named}
 import org.apache.commons.io.output.UnsynchronizedByteArrayOutputStream
 import org.apache.james.jmap.HttpConstants.JSON_CONTENT_TYPE
@@ -37,12 +37,13 @@ import org.apache.james.jmap.api.model.Size.{Size, sanitizeSize}
 import org.apache.james.jmap.api.model.{Upload, UploadId, UploadNotFoundException}
 import org.apache.james.jmap.api.upload.UploadRepository
 import org.apache.james.jmap.core.Id.Id
-import org.apache.james.jmap.core.{AccountId, Id, ProblemDetails}
+import org.apache.james.jmap.core.{AccountId, Id, ProblemDetails, SessionTranslator}
 import org.apache.james.jmap.exceptions.UnauthorizedException
 import org.apache.james.jmap.http.Authenticator
 import org.apache.james.jmap.http.rfc8621.InjectionKeys
 import org.apache.james.jmap.json.ResponseSerializer
 import org.apache.james.jmap.mail.{BlobId, EmailBodyPart, PartId}
+import org.apache.james.jmap.method.{AccountNotFoundException, ZoneIdProvider}
 import org.apache.james.jmap.routes.DownloadRoutes.{BUFFER_SIZE, LOGGER}
 import org.apache.james.jmap.{Endpoint, JMAPRoute, JMAPRoutes}
 import org.apache.james.mailbox.model.ContentType.{MediaType, MimeType, SubType}
@@ -177,8 +178,9 @@ class AttachmentBlobResolver @Inject()(val attachmentManager: AttachmentManager)
     AttachmentId.from(blobId.value.value) match {
       case attachmentId: AttachmentId =>
         Try(attachmentManager.getAttachment(attachmentId, mailboxSession)) match {
-          case Success(attachmentMetadata) => Applicable(
-            SMono.fromCallable(() => AttachmentBlob(attachmentMetadata, attachmentManager.load(attachmentMetadata, mailboxSession))))
+          case Success(attachmentMetadata) =>
+            Applicable(SMono(attachmentManager.loadReactive(attachmentMetadata, mailboxSession))
+              .map(content => AttachmentBlob(attachmentMetadata, content)))
           case Failure(_) => NonApplicable
         }
       case _ => NonApplicable
@@ -186,7 +188,8 @@ class AttachmentBlobResolver @Inject()(val attachmentManager: AttachmentManager)
 }
 
 class MessagePartBlobResolver @Inject()(val messageIdFactory: MessageId.Factory,
-                                        val messageIdManager: MessageIdManager) extends BlobResolver {
+                                        val messageIdManager: MessageIdManager,
+                                        val zoneIdSupplier: ZoneIdProvider) extends BlobResolver {
   private def asMessageAndPartId(blobId: BlobId): Try[(MessageId, PartId)] = {
     blobId.value.value.split('_').toList match {
       case List(messageIdString, partIdString) => for {
@@ -206,7 +209,7 @@ class MessagePartBlobResolver @Inject()(val messageIdFactory: MessageId.Factory,
         Applicable(SMono.fromPublisher(
           messageIdManager.getMessagesReactive(List(messageId).asJava, FetchGroup.FULL_CONTENT, mailboxSession))
           .handle[EmailBodyPart] {
-            case (message, sink) => EmailBodyPart.of(messageId, message)
+            case (message, sink) => EmailBodyPart.of(None, zoneIdSupplier.get(), messageId, message)
               .fold(sink.error, sink.next)
           }
           .handle[EmailBodyPart] {
@@ -235,7 +238,8 @@ class BlobResolvers(blobResolvers: Set[BlobResolver]) {
 }
 
 class DownloadRoutes @Inject()(@Named(InjectionKeys.RFC_8621) val authenticator: Authenticator,
-                               val blobResolvers: BlobResolvers) extends JMAPRoutes {
+                               val blobResolvers: BlobResolvers,
+                               val sessionTranslator: SessionTranslator) extends JMAPRoutes {
 
   private val accountIdParam: String = "accountId"
   private val blobIdParam: String = "blobId"
@@ -257,7 +261,7 @@ class DownloadRoutes @Inject()(@Named(InjectionKeys.RFC_8621) val authenticator:
     SMono(authenticator.authenticate(request))
       .flatMap(mailboxSession => getIfOwner(request, response, mailboxSession))
       .onErrorResume {
-        case e: ForbiddenException =>
+        case _: ForbiddenException | _: AccountNotFoundException =>
           respondDetails(response,
             ProblemDetails(status = FORBIDDEN, detail = "You cannot download in others accounts"),
             FORBIDDEN)
@@ -295,16 +299,8 @@ class DownloadRoutes @Inject()(@Named(InjectionKeys.RFC_8621) val authenticator:
 
   private def getIfOwner(request: HttpServerRequest, response: HttpServerResponse, mailboxSession: MailboxSession): SMono[Unit] =
     Id.validate(request.param(accountIdParam)) match {
-      case Right(id: Id) =>
-        val targetAccountId: AccountId = AccountId(id)
-        AccountId.from(mailboxSession.getUser).map(accountId => accountId.equals(targetAccountId))
-          .fold[SMono[Unit]](
-            e => SMono.error(e),
-            value => if (value) {
-              get(request, response, mailboxSession)
-            } else {
-              SMono.error(ForbiddenException())
-            })
+      case Right(id: Id) => sessionTranslator.delegateIfNeeded(mailboxSession, AccountId(id))
+          .flatMap(session => get(request, response, session))
       case Left(throwable: Throwable) => SMono.error(throwable)
     }
 
@@ -317,7 +313,7 @@ class DownloadRoutes @Inject()(@Named(InjectionKeys.RFC_8621) val authenticator:
       (stream: InputStream) => addContentDispositionHeader(optionalName)
         .compose(addContentLengthHeader(blob.size))
         .apply(response)
-        .header(CONTENT_TYPE, blobContentType.asString)
+        .header(CONTENT_TYPE, sanitizeHeaderValue(blobContentType.asString))
         .status(OK)
         .send(ReactorUtils.toChunks(stream, BUFFER_SIZE)
           .map(Unpooled.wrappedBuffer(_))
@@ -329,6 +325,13 @@ class DownloadRoutes @Inject()(@Named(InjectionKeys.RFC_8621) val authenticator:
   private def addContentDispositionHeader(optionalName: Option[String]): HttpServerResponse => HttpServerResponse =
     resp => optionalName.map(addContentDispositionHeaderRegardingEncoding(_, resp))
       .getOrElse(resp)
+
+  private def sanitizeHeaderValue(s: String): String =
+    if (HttpHeaderValidationUtil.validateValidHeaderValue(s) == -1) {
+      s
+    } else {
+      "application/octet-stream"
+    }
 
   private def addContentLengthHeader(sizeTry: Try[Size]): HttpServerResponse => HttpServerResponse =
     resp => sizeTry

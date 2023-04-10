@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.mail.Flags;
@@ -435,6 +436,11 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     }
 
     @Override
+    public void setSaveDate(Date saveDate) {
+
+    }
+
+    @Override
     public long getHeaderOctets() {
         return bodyStartOctet;
     }
@@ -500,6 +506,11 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
         return new ThreadId(getMessageId());
     }
 
+    @Override
+    public Optional<Date> getSaveDate() {
+        return Optional.empty();
+    }
+
     public String toString() {
         return "message("
                 + "mailboxId = " + this.getMailboxId() + TOSTRING_SEPARATOR
@@ -518,12 +529,16 @@ public abstract class AbstractJPAMailboxMessage implements MailboxMessage {
     public List<MessageAttachmentMetadata> getAttachments() {
         try {
             AtomicInteger counter = new AtomicInteger(0);
-            return new MessageParser().retrieveAttachments(getFullContent())
+            MessageParser.ParsingResult parsingResult = new MessageParser().retrieveAttachments(getFullContent());
+            ImmutableList<MessageAttachmentMetadata> result = parsingResult
+                .getAttachments()
                 .stream()
                 .map(Throwing.<ParsedAttachment, MessageAttachmentMetadata>function(
                     attachmentMetadata -> attachmentMetadata.asMessageAttachment(generateFixedAttachmentId(counter.incrementAndGet()), getMessageId()))
                     .sneakyThrow())
                 .collect(ImmutableList.toImmutableList());
+            parsingResult.dispose();
+            return result;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

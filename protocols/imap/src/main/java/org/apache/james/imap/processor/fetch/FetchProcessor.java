@@ -23,8 +23,12 @@ import static org.apache.james.mailbox.MessageManager.MailboxMetaData.RecentMode
 import static org.apache.james.util.ReactorUtils.logOnError;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.display.HumanReadableText;
@@ -62,6 +66,7 @@ import reactor.core.publisher.Mono;
 public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
     private static final Logger LOGGER = LoggerFactory.getLogger(FetchProcessor.class);
 
+    @Inject
     public FetchProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
                           MetricFactory metricFactory) {
         super(FetchRequest.class, mailboxManager, factory, metricFactory);
@@ -69,13 +74,15 @@ public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
 
     @Override
     protected Mono<Void> processRequestReactive(FetchRequest request, ImapSession session, Responder responder) {
-        boolean useUids = request.isUseUids();
         IdRange[] idSet = request.getIdSet();
         FetchData fetch = computeFetchData(request, session);
         long changedSince = fetch.getChangedSince();
-        final MailboxSession mailboxSession = session.getMailboxSession();
+        MailboxSession mailboxSession = session.getMailboxSession();
+        SelectedMailbox selected = session.getSelected();
 
-        return getSelectedMailboxReactive(session)
+        return Optional.ofNullable(selected)
+            .map(s -> Mono.from(getMailboxManager().getMailboxReactive(s.getMailboxId(), mailboxSession)))
+            .orElseGet(() -> Mono.error(new MailboxException("Session not in SELECTED state")))
             .flatMap(Throwing.<MessageManager, Mono<Void>>function(mailbox -> {
                 boolean vanished = fetch.getVanished();
                 if (vanished && !EnableProcessor.getEnabledCapabilities(session).contains(ImapConstants.SUPPORTS_QRESYNC)) {
@@ -92,21 +99,21 @@ public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
                 Set<Capability> enabled = EnableProcessor.getEnabledCapabilities(session);
                 if (constoreCommand && !enabled.contains(ImapConstants.SUPPORTS_CONDSTORE)) {
                     // Enable CONDSTORE as this is a CONDSTORE enabling command
-                    return mailbox.getMetaDataReactive(IGNORE, mailboxSession, MailboxMetaData.FetchGroup.NO_COUNT)
+                    return mailbox.getMetaDataReactive(IGNORE, mailboxSession, EnumSet.of(MailboxMetaData.Item.HighestModSeq))
                         .doOnNext(metaData -> condstoreEnablingCommand(session, responder, metaData, true))
                         .flatMap(Throwing.<MailboxMetaData, Mono<Void>>function(
-                            any -> doFetch(request, responder, useUids, idSet, fetch, mailboxSession, mailbox, vanished, session))
+                            any -> doFetch(selected, request, responder, fetch, mailboxSession, mailbox, session))
                             .sneakyThrow());
                 }
 
-                return doFetch(request, responder, useUids, idSet, fetch, mailboxSession, mailbox, vanished, session);
+                return doFetch(selected, request, responder, fetch, mailboxSession, mailbox, session);
             }).sneakyThrow())
-            .doOnEach(logOnError(MessageRangeException.class, e -> LOGGER.debug("Fetch failed for mailbox {} because of invalid sequence-set {}", session.getSelected().getMailboxId(), idSet, e)))
+            .doOnEach(logOnError(MessageRangeException.class, e -> LOGGER.debug("Fetch failed for mailbox {} because of invalid sequence-set {}", selected.getMailboxId(), idSet, e)))
             .onErrorResume(MessageRangeException.class, e -> {
                 taggedBad(request, responder, HumanReadableText.INVALID_MESSAGESET);
                 return Mono.empty();
             })
-            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("Fetch failed for mailbox {} and sequence-set {}", session.getSelected().getMailboxId(), idSet, e)))
+            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("Fetch failed for mailbox {} and sequence-set {}", selected.getMailboxId(), idSet, e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.SEARCH_FAILED);
                 return Mono.empty();
@@ -114,28 +121,28 @@ public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
             .then();
     }
 
-    private Mono<Void> doFetch(FetchRequest request, Responder responder, boolean useUids, IdRange[] idSet, FetchData fetch, MailboxSession mailboxSession, MessageManager mailbox, boolean vanished, ImapSession session) throws MailboxException {
+    private Mono<Void> doFetch(SelectedMailbox selected, FetchRequest request, Responder responder, FetchData fetch, MailboxSession mailboxSession, MessageManager mailbox, ImapSession session) throws MailboxException {
         List<MessageRange> ranges = new ArrayList<>();
 
-        for (IdRange range : idSet) {
-            MessageRange messageSet = messageRange(session.getSelected(), range, useUids);
+        for (IdRange range : request.getIdSet()) {
+            MessageRange messageSet = messageRange(session.getSelected(), range, request.isUseUids());
             if (messageSet != null) {
-                MessageRange normalizedMessageSet = normalizeMessageRange(session.getSelected(), messageSet);
+                MessageRange normalizedMessageSet = normalizeMessageRange(selected, messageSet);
                 MessageRange batchedMessageSet = MessageRange.range(normalizedMessageSet.getUidFrom(), normalizedMessageSet.getUidTo());
                 ranges.add(batchedMessageSet);
             }
         }
 
-        if (vanished) {
+        if (fetch.getVanished()) {
             // TODO: From the QRESYNC RFC it seems ok to send the VANISHED responses after the FETCH Responses.
             //       If we do so we could prolly save one mailbox access which should give use some more speed up
-            respondVanished(session.getSelected(), ranges, responder);
+            respondVanished(selected, ranges, responder);
         }
-        boolean omitExpunged = (!useUids);
-        return processMessageRanges(session, mailbox, ranges, fetch, mailboxSession, responder)
+        boolean omitExpunged = (!request.isUseUids());
+        return processMessageRanges(selected, mailbox, ranges, fetch, mailboxSession, responder)
             // Don't send expunge responses if FETCH is used to trigger this
             // processor. See IMAP-284
-            .then(unsolicitedResponses(session, responder, omitExpunged, useUids))
+            .then(unsolicitedResponses(session, responder, omitExpunged, request.isUseUids()))
             .then(Mono.fromRunnable(() -> okComplete(request, responder)));
     }
 
@@ -153,23 +160,22 @@ public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
      * Process the given message ranges by fetch them and pass them to the
      * {@link org.apache.james.imap.api.process.ImapProcessor.Responder}
      */
-    private Mono<Void> processMessageRanges(ImapSession session, MessageManager mailbox, List<MessageRange> ranges, FetchData fetch, MailboxSession mailboxSession, Responder responder) throws MailboxException {
+    private Mono<Void> processMessageRanges(SelectedMailbox selected, MessageManager mailbox, List<MessageRange> ranges, FetchData fetch, MailboxSession mailboxSession, Responder responder) throws MailboxException {
         FetchResponseBuilder builder = new FetchResponseBuilder(new EnvelopeBuilder());
         FetchGroup resultToFetch = FetchDataConverter.getFetchGroup(fetch);
 
         return Flux.fromIterable(ranges)
             .concatMap(range -> {
                 if (fetch.isOnlyFlags()) {
-                    return processMessageRangeForFlags(session, mailbox, fetch, mailboxSession, responder, builder, range);
+                    return processMessageRangeForFlags(selected, mailbox, fetch, mailboxSession, responder, builder, range);
                 } else {
-                    return processMessageRange(session, mailbox, fetch, mailboxSession, responder, builder, resultToFetch, range);
+                    return processMessageRange(selected, mailbox, fetch, mailboxSession, responder, builder, resultToFetch, range);
                 }
             })
             .then();
     }
 
-    private Mono<Void> processMessageRangeForFlags(ImapSession session, MessageManager mailbox, FetchData fetch, MailboxSession mailboxSession, Responder responder, FetchResponseBuilder builder, MessageRange range) {
-        SelectedMailbox selected = session.getSelected();
+    private Mono<Void> processMessageRangeForFlags(SelectedMailbox selected, MessageManager mailbox, FetchData fetch, MailboxSession mailboxSession, Responder responder, FetchResponseBuilder builder, MessageRange range) {
         return Flux.from(mailbox.listMessagesMetadata(range, mailboxSession))
             .filter(ids -> !fetch.contains(Item.MODSEQ) || ids.getModSeq().asLong() > fetch.getChangedSince())
             .concatMap(result -> toResponse(mailbox, fetch, mailboxSession, builder, selected, result))
@@ -214,8 +220,7 @@ public class FetchProcessor extends AbstractMailboxProcessor<FetchRequest> {
         }
     }
 
-    private Mono<Void> processMessageRange(ImapSession session, MessageManager mailbox, FetchData fetch, MailboxSession mailboxSession, Responder responder, FetchResponseBuilder builder, FetchGroup resultToFetch, MessageRange range) {
-        SelectedMailbox selected = session.getSelected();
+    private Mono<Void> processMessageRange(SelectedMailbox selected, MessageManager mailbox, FetchData fetch, MailboxSession mailboxSession, Responder responder, FetchResponseBuilder builder, FetchGroup resultToFetch, MessageRange range) {
         return Flux.from(mailbox.getMessagesReactive(range, resultToFetch, mailboxSession))
             .filter(ids -> !fetch.contains(Item.MODSEQ) || ids.getModSeq().asLong() > fetch.getChangedSince())
             .concatMap(result -> toResponse(mailbox, fetch, mailboxSession, builder, selected, result))

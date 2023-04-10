@@ -19,9 +19,9 @@
 
 package org.apache.james.imap.processor;
 
-import static org.apache.james.util.ReactorUtils.logOnError;
-
 import java.util.List;
+
+import javax.inject.Inject;
 
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.display.HumanReadableText;
@@ -42,6 +42,7 @@ import org.apache.james.mailbox.model.MailboxACL.Rfc4314Rights;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.apache.james.util.ReactorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,8 +59,9 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
 
     private static final List<Capability> CAPABILITIES = ImmutableList.of(ImapConstants.SUPPORTS_ACL);
 
+    @Inject
     public ListRightsProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
-            MetricFactory metricFactory) {
+                               MetricFactory metricFactory) {
         super(ListRightsRequest.class, mailboxManager, factory, metricFactory);
     }
 
@@ -114,16 +116,15 @@ public class ListRightsProcessor extends AbstractMailboxProcessor<ListRightsRequ
                     okComplete(request, responder);
                 }
             }).sneakyThrow())
+            .then()
             .onErrorResume(MailboxNotFoundException.class, e -> {
                 no(request, responder, HumanReadableText.MAILBOX_NOT_FOUND);
                 return Mono.empty();
             })
-            .doOnEach(logOnError(MailboxException.class, e -> LOGGER.error("{} failed for mailbox {}", request.getCommand().getName(), mailboxName, e)))
             .onErrorResume(MailboxException.class, e -> {
                 no(request, responder, HumanReadableText.GENERIC_FAILURE_DURING_PROCESSING);
-                return Mono.empty();
-            })
-            .then();
+                return ReactorUtils.logAsMono(() -> LOGGER.error("{} failed for mailbox {}", request.getCommand().getName(), mailboxName, e));
+            });
     }
 
     @Override

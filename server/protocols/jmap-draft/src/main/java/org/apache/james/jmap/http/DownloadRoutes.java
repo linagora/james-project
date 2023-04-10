@@ -48,7 +48,6 @@ import org.apache.james.jmap.draft.exceptions.BlobNotFoundException;
 import org.apache.james.jmap.draft.exceptions.InternalErrorException;
 import org.apache.james.jmap.draft.methods.BlobManager;
 import org.apache.james.jmap.draft.model.AttachmentAccessToken;
-import org.apache.james.jmap.draft.model.Blob;
 import org.apache.james.jmap.draft.model.BlobId;
 import org.apache.james.jmap.draft.utils.DownloadPath;
 import org.apache.james.jmap.exceptions.UnauthorizedException;
@@ -65,9 +64,12 @@ import org.slf4j.LoggerFactory;
 import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
+import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.handler.codec.http.HttpMethod;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
@@ -184,59 +186,62 @@ public class DownloadRoutes implements JMAPRoutes {
 
     private Mono<Void> respondAttachmentAccessToken(MailboxSession mailboxSession, DownloadPath downloadPath, HttpServerResponse resp) {
         String blobId = downloadPath.getBlobId();
-        try {
-            if (!attachmentExists(mailboxSession, blobId)) {
-                return resp.status(NOT_FOUND).send();
-            }
-            AttachmentAccessToken attachmentAccessToken = simpleTokenFactory.generateAttachmentAccessToken(mailboxSession.getUser().asString(), blobId);
-            byte[] bytes = attachmentAccessToken.serialize().getBytes(StandardCharsets.UTF_8);
-            return resp.header(CONTENT_TYPE, TEXT_PLAIN_CONTENT_TYPE)
-                .status(OK)
-                .header(CONTENT_LENGTH, Integer.toString(bytes.length))
-                .sendByteArray(Mono.just(bytes))
-                .then();
-        } catch (MailboxException e) {
-            throw new InternalErrorException("Error while asking attachment access token", e);
-        }
+
+        return attachmentExists(mailboxSession, blobId)
+            .flatMap(exists -> {
+                if (exists) {
+                    AttachmentAccessToken attachmentAccessToken = simpleTokenFactory.generateAttachmentAccessToken(mailboxSession.getUser().asString(), blobId);
+                    byte[] bytes = attachmentAccessToken.serialize().getBytes(StandardCharsets.UTF_8);
+                    return resp.header(CONTENT_TYPE, TEXT_PLAIN_CONTENT_TYPE)
+                        .status(OK)
+                        .header(CONTENT_LENGTH, Integer.toString(bytes.length))
+                        .sendByteArray(Mono.just(bytes))
+                        .then();
+                } else {
+                    return resp.status(NOT_FOUND).send();
+                }
+            });
     }
 
-    private boolean attachmentExists(MailboxSession mailboxSession, String blobId) throws MailboxException {
-        try {
-            blobManager.retrieve(BlobId.of(blobId), mailboxSession);
-            return true;
-        } catch (BlobNotFoundException e) {
-            return false;
-        }
+    private Mono<Boolean> attachmentExists(MailboxSession mailboxSession, String blobId) {
+        return Flux.from(blobManager.retrieve(ImmutableList.of(BlobId.of(blobId)), mailboxSession))
+            .hasElements();
     }
 
     @VisibleForTesting
     Mono<Void> download(MailboxSession mailboxSession, DownloadPath downloadPath, HttpServerResponse response) {
         String blobId = downloadPath.getBlobId();
-        try {
-            Blob blob = blobManager.retrieve(BlobId.of(blobId), mailboxSession);
 
-            return Mono.usingWhen(
-                Mono.fromCallable(blob::getStream),
+        return Mono.from(blobManager.retrieve(ImmutableList.of(BlobId.of(blobId)), mailboxSession))
+            .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER)
+            .switchIfEmpty(Mono.error(() -> new BlobNotFoundException(BlobId.of(blobId))))
+            .flatMap(blob -> Mono.usingWhen(
+                blob.getStreamReactive(),
                 stream -> downloadBlob(downloadPath.getName(), response, blob.getSize(), blob.getContentType(), stream),
-                stream -> Mono.fromRunnable(Throwing.runnable(stream::close).sneakyThrow())
-            );
-        } catch (BlobNotFoundException e) {
-            LOGGER.info("Attachment '{}' not found", blobId, e);
-            return response.status(NOT_FOUND).send();
-        } catch (MailboxException e) {
-            throw new InternalErrorException("Error while downloading", e);
-        }
+                stream -> Mono.fromRunnable(Throwing.runnable(stream::close).sneakyThrow()))
+                .subscribeOn(ReactorUtils.BLOCKING_CALL_WRAPPER))
+            .onErrorResume(BlobNotFoundException.class, e -> {
+                LOGGER.info("Attachment '{}' not found", blobId, e);
+                return response.status(NOT_FOUND).send();
+            }).onErrorResume(MailboxException.class, e -> Mono.error(new InternalErrorException("Error while downloading", e)));
     }
 
     private Mono<Void> downloadBlob(Optional<String> optionalName, HttpServerResponse response, long blobSize, ContentType blobContentType, InputStream stream) {
         return addContentDispositionHeader(optionalName, response)
             .header("Content-Length", String.valueOf(blobSize))
-            .header(CONTENT_TYPE, blobContentType.asString())
+            .header(CONTENT_TYPE, sanitizeHeaderValue(blobContentType.asString()))
             .status(OK)
             .send(ReactorUtils.toChunks(stream, BUFFER_SIZE)
                 .map(Unpooled::wrappedBuffer)
                 .subscribeOn(Schedulers.boundedElastic()))
             .then();
+    }
+
+    public String sanitizeHeaderValue(String s) {
+        if (HttpHeaderValidationUtil.validateValidHeaderValue(s) == -1) {
+            return s;
+        }
+        return "application/octet-stream";
     }
 
     private HttpServerResponse addContentDispositionHeader(Optional<String> optionalName, HttpServerResponse resp) {

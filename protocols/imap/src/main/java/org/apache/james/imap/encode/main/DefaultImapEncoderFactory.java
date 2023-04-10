@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.display.Localizer;
 import org.apache.james.imap.encode.ACLResponseEncoder;
-import org.apache.james.imap.encode.AnnotationResponseEncoder;
 import org.apache.james.imap.encode.AuthenticateResponseEncoder;
 import org.apache.james.imap.encode.CapabilityResponseEncoder;
 import org.apache.james.imap.encode.ContinuationResponseEncoder;
@@ -37,6 +36,7 @@ import org.apache.james.imap.encode.ExistsResponseEncoder;
 import org.apache.james.imap.encode.ExpungeResponseEncoder;
 import org.apache.james.imap.encode.FetchResponseEncoder;
 import org.apache.james.imap.encode.FlagsResponseEncoder;
+import org.apache.james.imap.encode.IdResponseEncoder;
 import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.imap.encode.ImapEncoderFactory;
 import org.apache.james.imap.encode.ImapResponseComposer;
@@ -45,6 +45,7 @@ import org.apache.james.imap.encode.LSubResponseEncoder;
 import org.apache.james.imap.encode.ListResponseEncoder;
 import org.apache.james.imap.encode.ListRightsResponseEncoder;
 import org.apache.james.imap.encode.MailboxStatusResponseEncoder;
+import org.apache.james.imap.encode.MetadataResponseEncoder;
 import org.apache.james.imap.encode.MyRightsResponseEncoder;
 import org.apache.james.imap.encode.NamespaceResponseEncoder;
 import org.apache.james.imap.encode.QuotaResponseEncoder;
@@ -62,11 +63,11 @@ import com.google.common.collect.ImmutableMap;
  * TODO: perhaps a POJO would be better
  */
 public class DefaultImapEncoderFactory implements ImapEncoderFactory {
-    static class DefaultImapEncoder implements ImapEncoder {
+    public static class DefaultImapEncoder implements ImapEncoder {
         private final Map<Class<? extends ImapMessage>, ImapResponseEncoder> encoders;
         private final EndImapEncoder endImapEncoder;
 
-        DefaultImapEncoder(Stream<ImapResponseEncoder> encoders, EndImapEncoder endImapEncoder) {
+        public DefaultImapEncoder(Stream<ImapResponseEncoder> encoders, EndImapEncoder endImapEncoder) {
             this.encoders = encoders
                 .collect(ImmutableMap.toImmutableMap(
                     ImapResponseEncoder::acceptableMessages,
@@ -98,7 +99,7 @@ public class DefaultImapEncoderFactory implements ImapEncoderFactory {
      */
     public static ImapEncoder createDefaultEncoder(Localizer localizer, boolean neverAddBodyStructureExtensions) {
         return new DefaultImapEncoder(Stream.of(
-            new AnnotationResponseEncoder(),
+            new MetadataResponseEncoder(),
             new MyRightsResponseEncoder(),
             new ListRightsResponseEncoder(),
             new ListResponseEncoder(),
@@ -109,6 +110,7 @@ public class DefaultImapEncoderFactory implements ImapEncoderFactory {
             new FetchResponseEncoder(neverAddBodyStructureExtensions),
             new ExpungeResponseEncoder(),
             new ExistsResponseEncoder(),
+            new IdResponseEncoder(),
             new MailboxStatusResponseEncoder(),
             new SearchResponseEncoder(),
             new LSubResponseEncoder(),

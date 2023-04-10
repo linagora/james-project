@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.inject.Inject;
+
 import org.apache.james.events.Event;
 import org.apache.james.events.EventListener;
 import org.apache.james.imap.api.ImapConfiguration;
@@ -44,6 +46,7 @@ import org.apache.james.mailbox.events.MailboxEvents.Expunged;
 import org.apache.james.mailbox.events.MailboxEvents.FlagsUpdated;
 import org.apache.james.metrics.api.MetricFactory;
 import org.apache.james.util.MDCBuilder;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +63,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
     private Duration heartbeatInterval;
     private boolean enableIdle;
 
+    @Inject
     public IdleProcessor(MailboxManager mailboxManager, StatusResponseFactory factory,
                          MetricFactory metricFactory) {
         super(IdleRequest.class, mailboxManager, factory, metricFactory);
@@ -93,7 +97,6 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
             if (sm != null) {
                 sm.unregisterIdle();
             }
-            session1.popLineHandler();
             if (!DONE.equals(line.toUpperCase(Locale.US))) {
                 String message = String.format("Continuation for IMAP IDLE was not understood. Expected 'DONE', got '%s'.", line);
                 StatusResponse response = getStatusResponseFactory()
@@ -102,9 +105,12 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
                             "failed. " + message));
                 LOGGER.info(message);
                 responder.respond(response);
+                responder.flush();
             } else {
                 okComplete(request, responder);
+                responder.flush();
             }
+            session1.popLineHandler();
             idleActive.set(false);
         });
 
@@ -146,7 +152,7 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
         return CAPS;
     }
 
-    private class IdleMailboxListener implements EventListener {
+    private class IdleMailboxListener implements EventListener.ReactiveEventListener {
 
         private final Responder responder;
         private final ImapSession session;
@@ -162,8 +168,9 @@ public class IdleProcessor extends AbstractMailboxProcessor<IdleRequest> impleme
         }
 
         @Override
-        public void event(Event event) {
-            unsolicitedResponses(session, responder, false).block();
+        public Publisher<Void> reactiveEvent(Event event) {
+            return unsolicitedResponses(session, responder, false)
+                .then(Mono.fromRunnable(responder::flush));
         }
 
         @Override

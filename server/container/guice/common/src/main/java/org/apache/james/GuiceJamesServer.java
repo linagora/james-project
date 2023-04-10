@@ -44,6 +44,7 @@ import com.google.inject.util.Modules;
 
 public class GuiceJamesServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(GuiceJamesServer.class);
+    private static final boolean SHOULD_EXIT_ON_STARTUP_ERROR = Boolean.valueOf(System.getProperty("james.exit.on.startup.error", "true"));
 
     protected final Module module;
     private final IsStartedProbe isStartedProbe;
@@ -84,17 +85,21 @@ public class GuiceJamesServer {
     public void start() throws Exception {
         try {
             Injector injector = Guice.createInjector(module);
+            guiceProbeProvider = injector.getInstance(GuiceProbeProvider.class);
             preDestroy = injector.getInstance(Key.get(new TypeLiteral<Stager<PreDestroy>>() {
             }));
             injector.getInstance(StartUpChecksPerformer.class)
                 .performCheck();
             injector.getInstance(InitializationOperations.class).initModules();
-            guiceProbeProvider = injector.getInstance(GuiceProbeProvider.class);
             isStartedProbe.notifyStarted();
             LOGGER.info("JAMES server started");
         } catch (Throwable e) {
             LOGGER.error("Fatal error while starting James", e);
-            throw e;
+            if (SHOULD_EXIT_ON_STARTUP_ERROR) {
+                System.exit(1);
+            } else {
+                throw e;
+            }
         }
     }
 

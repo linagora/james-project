@@ -19,41 +19,39 @@
 
 package org.apache.james.jmap.cassandra.upload;
 
-import static com.datastax.driver.core.DataType.bigint;
-import static com.datastax.driver.core.DataType.text;
-import static com.datastax.driver.core.DataType.timeuuid;
-import static com.datastax.driver.core.schemabuilder.TableOptions.CompactionOptions.TimeWindowCompactionStrategyOptions.CompactionWindowUnit.DAYS;
+import static com.datastax.oss.driver.api.querybuilder.SchemaBuilder.RowsPerPartition.rows;
+import static com.datastax.oss.driver.api.querybuilder.schema.compaction.TimeWindowCompactionStrategy.CompactionWindowUnit.DAYS;
 import static org.apache.james.backends.cassandra.utils.CassandraConstants.DEFAULT_CACHED_ROW_PER_PARTITION;
 
 import org.apache.james.backends.cassandra.components.CassandraModule;
 
-import com.datastax.driver.core.schemabuilder.SchemaBuilder;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.type.DataTypes;
+import com.datastax.oss.driver.api.querybuilder.SchemaBuilder;
 
 public interface UploadModule {
 
     String TABLE_NAME = "uploads";
 
-    String ID = "id";
-    String CONTENT_TYPE = "content_type";
-    String SIZE = "size";
-    String BUCKET_ID = "bucket_id";
-    String BLOB_ID = "blob_id";
-    String USER = "user";
+    CqlIdentifier ID = CqlIdentifier.fromCql("id");
+    CqlIdentifier CONTENT_TYPE = CqlIdentifier.fromCql("content_type");
+    CqlIdentifier SIZE = CqlIdentifier.fromCql("size");
+    CqlIdentifier BUCKET_ID = CqlIdentifier.fromCql("bucket_id");
+    CqlIdentifier BLOB_ID = CqlIdentifier.fromCql("blob_id");
+    CqlIdentifier USER = CqlIdentifier.fromCql("user");
 
     CassandraModule MODULE = CassandraModule.table(TABLE_NAME)
         .comment("Holds JMAP uploads")
         .options(options -> options
-            .compactionOptions(SchemaBuilder.timeWindowCompactionStrategy()
-                .compactionWindowSize(7)
-                .compactionWindowUnit(DAYS))
-            .caching(SchemaBuilder.KeyCaching.ALL, SchemaBuilder.rows(DEFAULT_CACHED_ROW_PER_PARTITION)))
-        .statement(statement -> statement
-            .addPartitionKey(ID, timeuuid())
-            .addColumn(CONTENT_TYPE, text())
-            .addColumn(SIZE, bigint())
-            .addColumn(BUCKET_ID, text())
-            .addColumn(BLOB_ID, text())
-            .addColumn(USER, text()))
-
+            .withCompaction(SchemaBuilder.timeWindowCompactionStrategy()
+                .withCompactionWindow(7, DAYS))
+            .withCaching(true, rows(DEFAULT_CACHED_ROW_PER_PARTITION)))
+        .statement(statement -> types -> statement
+            .withPartitionKey(ID, DataTypes.TIMEUUID)
+            .withColumn(CONTENT_TYPE, DataTypes.TEXT)
+            .withColumn(SIZE, DataTypes.BIGINT)
+            .withColumn(BUCKET_ID, DataTypes.TEXT)
+            .withColumn(BLOB_ID, DataTypes.TEXT)
+            .withColumn(USER, DataTypes.TEXT))
         .build();
 }

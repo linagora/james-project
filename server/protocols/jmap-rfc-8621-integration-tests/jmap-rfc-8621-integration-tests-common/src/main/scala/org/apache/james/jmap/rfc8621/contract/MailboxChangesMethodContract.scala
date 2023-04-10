@@ -19,14 +19,10 @@
 
 package org.apache.james.jmap.rfc8621.contract
 
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeUnit
-
 import io.netty.handler.codec.http.HttpHeaderNames.ACCEPT
 import io.restassured.RestAssured.{`given`, requestSpecification}
 import io.restassured.builder.ResponseSpecBuilder
 import io.restassured.http.ContentType.JSON
-import javax.mail.Flags
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER
 import net.javacrumbs.jsonunit.core.internal.Options
@@ -49,6 +45,10 @@ import org.awaitility.Awaitility
 import org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS
 import org.junit.jupiter.api.{BeforeEach, Nested, Test}
 import play.api.libs.json.{JsArray, JsString, Json}
+
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
+import javax.mail.Flags
 
 trait MailboxChangesMethodContract {
 
@@ -171,6 +171,182 @@ trait MailboxChangesMethodContract {
       val response = `given`
         .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
         .body(request)
+      .when
+        .post
+      .`then`
+        .statusCode(SC_OK)
+        .contentType(JSON)
+        .extract
+        .body
+        .asString
+
+      assertThatJson(response)
+        .whenIgnoringPaths("methodResponses[0][1].newState")
+        .withOptions(new Options(IGNORING_ARRAY_ORDER))
+        .isEqualTo(
+          s"""{
+             |    "sessionState": "${SESSION_STATE.value}",
+             |    "methodResponses": [
+             |      [ "Mailbox/changes", {
+             |        "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+             |        "oldState": "${oldState.getValue}",
+             |        "hasMoreChanges": false,
+             |        "updatedProperties": null,
+             |        "created": [],
+             |        "updated": ["$mailboxId"],
+             |        "destroyed": []
+             |      }, "c1"]
+             |    ]
+             |}""".stripMargin)
+    }
+  }
+
+  @Test
+  def mailboxChangesShouldReturnUpdatedChangesWhenSubscribed(server: GuiceJamesServer): Unit = {
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val provisioningState: State = provisionSystemMailboxes(server)
+
+    // create mailbox with isSubscribed = false
+    val mailboxId: String = `given`
+      .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+    .body(
+      """
+        |{
+        |   "using": [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail" ],
+        |   "methodCalls": [
+        |       [
+        |           "Mailbox/set",
+        |           {
+        |                "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+        |                "create": {
+        |                    "C42": {
+        |                      "name": "myMailbox",
+        |                      "isSubscribed": false
+        |                    }
+        |                }
+        |           },
+        |    "c1"
+        |       ]
+        |   ]
+        |}
+        |""".stripMargin)
+    .when
+      .post
+    .`then`
+      .log().ifValidationFails()
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .jsonPath()
+      .get("methodResponses[0][1].created.C42.id");
+
+    val oldState: State = waitForNextState(server, accountId, provisioningState)
+
+    // change subscription
+    JmapRequests.subscribe(mailboxId)
+
+    awaitAtMostTenSeconds.untilAsserted { () =>
+      val response = `given`
+        .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+        .body(
+          s"""{
+             |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+             |  "methodCalls": [[
+             |    "Mailbox/changes",
+             |    {
+             |      "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+             |      "sinceState": "${oldState.getValue}"
+             |    },
+             |    "c1"]]
+             |}""".stripMargin)
+      .when
+        .post
+      .`then`
+        .statusCode(SC_OK)
+        .contentType(JSON)
+        .extract
+        .body
+        .asString
+
+      assertThatJson(response)
+        .whenIgnoringPaths("methodResponses[0][1].newState")
+        .withOptions(new Options(IGNORING_ARRAY_ORDER))
+        .isEqualTo(
+          s"""{
+             |    "sessionState": "${SESSION_STATE.value}",
+             |    "methodResponses": [
+             |      [ "Mailbox/changes", {
+             |        "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+             |        "oldState": "${oldState.getValue}",
+             |        "hasMoreChanges": false,
+             |        "updatedProperties": null,
+             |        "created": [],
+             |        "updated": ["$mailboxId"],
+             |        "destroyed": []
+             |      }, "c1"]
+             |    ]
+             |}""".stripMargin)
+    }
+  }
+
+  @Test
+  def mailboxChangesShouldReturnUpdatedChangesWhenUnSubscribed(server: GuiceJamesServer): Unit = {
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val provisioningState: State = provisionSystemMailboxes(server)
+
+    // create mailbox with isSubscribed = true
+    val mailboxId: String = `given`
+      .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+      .body(
+        """
+          |{
+          |   "using": [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail" ],
+          |   "methodCalls": [
+          |       [
+          |           "Mailbox/set",
+          |           {
+          |                "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+          |                "create": {
+          |                    "C42": {
+          |                      "name": "myMailbox",
+          |                      "isSubscribed": true
+          |                    }
+          |                }
+          |           },
+          |    "c1"
+          |       ]
+          |   ]
+          |}
+          |""".stripMargin)
+    .when
+      .post
+    .`then`
+      .log().ifValidationFails()
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .jsonPath()
+      .get("methodResponses[0][1].created.C42.id");
+
+    val oldState: State = waitForNextState(server, accountId, provisioningState)
+
+    // change subscription
+    JmapRequests.unSubscribe(mailboxId)
+
+    awaitAtMostTenSeconds.untilAsserted { () =>
+      val response = `given`
+        .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+        .body(
+          s"""{
+             |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+             |  "methodCalls": [[
+             |    "Mailbox/changes",
+             |    {
+             |      "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+             |      "sinceState": "${oldState.getValue}"
+             |    },
+             |    "c1"]]
+             |}""".stripMargin)
       .when
         .post
       .`then`
@@ -848,6 +1024,228 @@ trait MailboxChangesMethodContract {
     }
 
     @Test
+    def mailboxChangesShouldReturnUpdatedChangesWhenSubscribedOnlyPerUser(server: GuiceJamesServer): Unit = {
+      val accountId: AccountId = AccountId.fromUsername(BOB)
+      val mailboxProbe: MailboxProbeImpl = server.getProbe(classOf[MailboxProbeImpl])
+      val provisioningState: State = provisionSystemMailboxes(server)
+
+      val path = MailboxPath.forUser(BOB, "mailbox1")
+      val mailboxId: String = mailboxProbe
+        .createMailbox(path)
+        .serialize
+
+      server.getProbe(classOf[ACLProbeImpl])
+        .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights(Right.Lookup, Right.Read))
+
+      val oldStateBob: State = waitForNextState(server, accountId, provisioningState)
+      val oldStateAndre: State = waitForNextStateWithDelegation(server, AccountId.fromUsername(ANDRE), State.INITIAL)
+
+      // change subscription
+      JmapRequests.subscribe(mailboxId)
+
+      awaitAtMostTenSeconds.untilAsserted { () =>
+        val response = `given`
+          .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+          .body(
+            s"""{
+               |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", "urn:apache:james:params:jmap:mail:shares"],
+               |  "methodCalls": [[
+               |    "Mailbox/changes",
+               |    {
+               |      "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+               |      "sinceState": "${oldStateBob.getValue}"
+               |    },
+               |    "c1"]]
+               |}""".stripMargin)
+        .when
+          .post
+        .`then`
+          .statusCode(SC_OK)
+          .contentType(JSON)
+          .extract
+          .body
+          .asString
+
+        assertThatJson(response)
+          .whenIgnoringPaths("methodResponses[0][1].newState")
+          .withOptions(new Options(IGNORING_ARRAY_ORDER))
+          .isEqualTo(
+            s"""{
+               |    "sessionState": "${SESSION_STATE.value}",
+               |    "methodResponses": [
+               |      [ "Mailbox/changes", {
+               |        "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+               |        "oldState": "${oldStateBob.getValue}",
+               |        "hasMoreChanges": false,
+               |        "updatedProperties": null,
+               |        "created": [],
+               |        "updated": ["$mailboxId"],
+               |        "destroyed": []
+               |      }, "c1"]
+               |    ]
+               |}""".stripMargin)
+      }
+
+      val request =
+        s"""{
+           |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", "urn:apache:james:params:jmap:mail:shares"],
+           |  "methodCalls": [[
+           |    "Mailbox/changes",
+           |    {
+           |      "accountId": "$ANDRE_ACCOUNT_ID",
+           |      "sinceState": "${oldStateAndre.getValue}"
+           |    },
+           |    "c1"]]
+           |}""".stripMargin
+
+      Thread.sleep(1000)
+
+      val responseAndre = `given`(
+        baseRequestSpecBuilder(server)
+          .setAuth(authScheme(UserCredential(ANDRE, ANDRE_PASSWORD)))
+          .addHeader(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+          .setBody(request)
+          .build, new ResponseSpecBuilder().build)
+        .post
+      .`then`
+        .statusCode(SC_OK)
+        .contentType(JSON)
+        .extract
+        .body
+        .asString
+
+      assertThatJson(responseAndre)
+        .whenIgnoringPaths("methodResponses[0][1].newState")
+        .withOptions(new Options(IGNORING_ARRAY_ORDER))
+        .isEqualTo(
+          s"""{
+             |    "sessionState": "${SESSION_STATE.value}",
+             |    "methodResponses": [
+             |      [ "Mailbox/changes", {
+             |        "accountId": "$ANDRE_ACCOUNT_ID",
+             |        "oldState": "${oldStateAndre.getValue}",
+             |        "hasMoreChanges": false,
+             |        "updatedProperties": null,
+             |        "created": [],
+             |        "updated": [],
+             |        "destroyed": []
+             |      }, "c1"]
+             |    ]
+             |}""".stripMargin)
+    }
+
+    @Test
+    def mailboxChangesShouldReturnUpdatedChangesWhenUnsubscribedOnlyPerUser(server: GuiceJamesServer): Unit = {
+      val accountId: AccountId = AccountId.fromUsername(BOB)
+      val mailboxProbe: MailboxProbeImpl = server.getProbe(classOf[MailboxProbeImpl])
+      val provisioningState: State = provisionSystemMailboxes(server)
+
+      val path = MailboxPath.forUser(BOB, "mailbox1")
+      val mailboxId: String = mailboxProbe
+        .createMailbox(path)
+        .serialize
+
+      server.getProbe(classOf[ACLProbeImpl])
+        .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights(Right.Lookup, Right.Read))
+
+      val oldStateBob: State = waitForNextState(server, accountId, provisioningState)
+      val oldStateAndre: State = waitForNextStateWithDelegation(server, AccountId.fromUsername(ANDRE), State.INITIAL)
+
+      // change subscription
+      JmapRequests.unSubscribe(mailboxId)
+
+      awaitAtMostTenSeconds.untilAsserted { () =>
+        val response = `given`
+          .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+          .body(
+            s"""{
+               |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", "urn:apache:james:params:jmap:mail:shares"],
+               |  "methodCalls": [[
+               |    "Mailbox/changes",
+               |    {
+               |      "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+               |      "sinceState": "${oldStateBob.getValue}"
+               |    },
+               |    "c1"]]
+               |}""".stripMargin)
+        .when
+          .post
+        .`then`
+          .statusCode(SC_OK)
+          .contentType(JSON)
+          .extract
+          .body
+          .asString
+
+        assertThatJson(response)
+          .whenIgnoringPaths("methodResponses[0][1].newState")
+          .withOptions(new Options(IGNORING_ARRAY_ORDER))
+          .isEqualTo(
+            s"""{
+               |    "sessionState": "${SESSION_STATE.value}",
+               |    "methodResponses": [
+               |      [ "Mailbox/changes", {
+               |        "accountId": "29883977c13473ae7cb7678ef767cbfbaffc8a44a6e463d971d23a65c1dc4af6",
+               |        "oldState": "${oldStateBob.getValue}",
+               |        "hasMoreChanges": false,
+               |        "updatedProperties": null,
+               |        "created": [],
+               |        "updated": ["$mailboxId"],
+               |        "destroyed": []
+               |      }, "c1"]
+               |    ]
+               |}""".stripMargin)
+      }
+
+      val request =
+        s"""{
+           |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", "urn:apache:james:params:jmap:mail:shares"],
+           |  "methodCalls": [[
+           |    "Mailbox/changes",
+           |    {
+           |      "accountId": "$ANDRE_ACCOUNT_ID",
+           |      "sinceState": "${oldStateAndre.getValue}"
+           |    },
+           |    "c1"]]
+           |}""".stripMargin
+
+      Thread.sleep(1000)
+
+      val responseAndre = `given`(
+        baseRequestSpecBuilder(server)
+          .setAuth(authScheme(UserCredential(ANDRE, ANDRE_PASSWORD)))
+          .addHeader(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+          .setBody(request)
+          .build, new ResponseSpecBuilder().build)
+        .post
+      .`then`
+        .statusCode(SC_OK)
+        .contentType(JSON)
+        .extract
+        .body
+        .asString
+
+      assertThatJson(responseAndre)
+        .whenIgnoringPaths("methodResponses[0][1].newState")
+        .withOptions(new Options(IGNORING_ARRAY_ORDER))
+        .isEqualTo(
+          s"""{
+             |    "sessionState": "${SESSION_STATE.value}",
+             |    "methodResponses": [
+             |      [ "Mailbox/changes", {
+             |        "accountId": "$ANDRE_ACCOUNT_ID",
+             |        "oldState": "${oldStateAndre.getValue}",
+             |        "hasMoreChanges": false,
+             |        "updatedProperties": null,
+             |        "created": [],
+             |        "updated": [],
+             |        "destroyed": []
+             |      }, "c1"]
+             |    ]
+             |}""".stripMargin)
+    }
+
+    @Test
     def mailboxChangesShouldNotReturnUpdatedChangesWhenMissingSharesCapability(server: GuiceJamesServer): Unit = {
       val mailboxProbe: MailboxProbeImpl = server.getProbe(classOf[MailboxProbeImpl])
 
@@ -1041,6 +1439,145 @@ trait MailboxChangesMethodContract {
              |        "created": [],
              |        "updated": [],
              |        "destroyed": ["$mailboxId"]
+             |      }, "c1"]
+             |    ]
+             |}""".stripMargin)
+    }
+  }
+
+  @Test
+  def mailboxChangesShouldReturnUpdatedChangeWhenOwnerRevokingMailboxShareeRights(server: GuiceJamesServer): Unit = {
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val mailboxProbe: MailboxProbeImpl = server.getProbe(classOf[MailboxProbeImpl])
+    val provisioningState: State = provisionSystemMailboxes(server)
+
+    val path = MailboxPath.forUser(BOB, "mailbox1")
+    val mailboxId: String = mailboxProbe
+      .createMailbox(path)
+      .serialize
+
+    server.getProbe(classOf[ACLProbeImpl])
+      .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights(Right.Lookup, Right.Read))
+
+    waitForNextState(server, accountId, provisioningState)
+    val oldStateAndre: State = waitForNextStateWithDelegation(server, AccountId.fromUsername(ANDRE), State.INITIAL)
+
+    server.getProbe(classOf[ACLProbeImpl])
+      .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights())
+
+    val request =
+      s"""{
+         |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", "urn:apache:james:params:jmap:mail:shares"],
+         |  "methodCalls": [[
+         |    "Mailbox/changes",
+         |    {
+         |      "accountId": "$ANDRE_ACCOUNT_ID",
+         |      "sinceState": "${oldStateAndre.getValue}"
+         |    },
+         |    "c1"]]
+         |}""".stripMargin
+
+    awaitAtMostTenSeconds.untilAsserted { () =>
+      val response = `given`(
+        baseRequestSpecBuilder(server)
+          .setAuth(authScheme(UserCredential(ANDRE, ANDRE_PASSWORD)))
+          .addHeader(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+          .setBody(request)
+          .build, new ResponseSpecBuilder().build)
+        .post
+      .`then`
+        .statusCode(SC_OK)
+        .contentType(JSON)
+        .extract
+        .body
+        .asString
+
+      assertThatJson(response)
+        .whenIgnoringPaths("methodResponses[0][1].newState")
+        .withOptions(new Options(IGNORING_ARRAY_ORDER))
+        .isEqualTo(
+          s"""{
+             |    "sessionState": "${SESSION_STATE.value}",
+             |    "methodResponses": [
+             |      [ "Mailbox/changes", {
+             |        "accountId": "$ANDRE_ACCOUNT_ID",
+             |        "oldState": "${oldStateAndre.getValue}",
+             |        "hasMoreChanges": false,
+             |        "updatedProperties": null,
+             |        "created": [],
+             |        "updated": ["$mailboxId"],
+             |        "destroyed": []
+             |      }, "c1"]
+             |    ]
+             |}""".stripMargin)
+    }
+  }
+
+  @Test
+  def mailboxChangesShouldReturnUpdatedChangeWhenOwnerRevokingThenReEnablingMailboxShareeRights(server: GuiceJamesServer): Unit = {
+    val accountId: AccountId = AccountId.fromUsername(BOB)
+    val mailboxProbe: MailboxProbeImpl = server.getProbe(classOf[MailboxProbeImpl])
+    val provisioningState: State = provisionSystemMailboxes(server)
+
+    val path = MailboxPath.forUser(BOB, "mailbox1")
+    val mailboxId: String = mailboxProbe
+      .createMailbox(path)
+      .serialize
+
+    server.getProbe(classOf[ACLProbeImpl])
+      .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights(Right.Lookup, Right.Read))
+
+    waitForNextState(server, accountId, provisioningState)
+    val oldStateAndre: State = waitForNextStateWithDelegation(server, AccountId.fromUsername(ANDRE), State.INITIAL)
+
+    server.getProbe(classOf[ACLProbeImpl])
+      .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights())
+
+    server.getProbe(classOf[ACLProbeImpl])
+      .replaceRights(path, ANDRE.asString, new MailboxACL.Rfc4314Rights(Right.Lookup, Right.Read))
+
+    val request =
+      s"""{
+         |  "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", "urn:apache:james:params:jmap:mail:shares"],
+         |  "methodCalls": [[
+         |    "Mailbox/changes",
+         |    {
+         |      "accountId": "$ANDRE_ACCOUNT_ID",
+         |      "sinceState": "${oldStateAndre.getValue}"
+         |    },
+         |    "c1"]]
+         |}""".stripMargin
+
+    awaitAtMostTenSeconds.untilAsserted { () =>
+      val response = `given`(
+        baseRequestSpecBuilder(server)
+          .setAuth(authScheme(UserCredential(ANDRE, ANDRE_PASSWORD)))
+          .addHeader(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+          .setBody(request)
+          .build, new ResponseSpecBuilder().build)
+        .post
+      .`then`
+        .statusCode(SC_OK)
+        .contentType(JSON)
+        .extract
+        .body
+        .asString
+
+      assertThatJson(response)
+        .whenIgnoringPaths("methodResponses[0][1].newState")
+        .withOptions(new Options(IGNORING_ARRAY_ORDER))
+        .isEqualTo(
+          s"""{
+             |    "sessionState": "${SESSION_STATE.value}",
+             |    "methodResponses": [
+             |      [ "Mailbox/changes", {
+             |        "accountId": "$ANDRE_ACCOUNT_ID",
+             |        "oldState": "${oldStateAndre.getValue}",
+             |        "hasMoreChanges": false,
+             |        "updatedProperties": null,
+             |        "created": [],
+             |        "updated": ["$mailboxId"],
+             |        "destroyed": []
              |      }, "c1"]
              |    ]
              |}""".stripMargin)

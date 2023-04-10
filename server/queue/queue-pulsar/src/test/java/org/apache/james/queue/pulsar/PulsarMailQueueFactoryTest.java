@@ -26,6 +26,7 @@ import java.util.Optional;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.backends.pulsar.DockerPulsarExtension;
+import org.apache.james.backends.pulsar.PulsarClients;
 import org.apache.james.backends.pulsar.PulsarConfiguration;
 import org.apache.james.blob.api.BucketName;
 import org.apache.james.blob.api.HashBlobId;
@@ -33,6 +34,7 @@ import org.apache.james.blob.api.Store;
 import org.apache.james.blob.mail.MimeMessagePartsId;
 import org.apache.james.blob.mail.MimeMessageStore;
 import org.apache.james.blob.memory.MemoryBlobStoreDAO;
+import org.apache.james.junit.categories.Unstable;
 import org.apache.james.queue.api.MailQueueFactory;
 import org.apache.james.queue.api.MailQueueFactoryContract;
 import org.apache.james.queue.api.MailQueueItemDecoratorFactory;
@@ -44,9 +46,11 @@ import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@Tag(Unstable.TAG)
 @ExtendWith(MailQueueMetricExtension.class)
 @ExtendWith(DockerPulsarExtension.class)
 class PulsarMailQueueFactoryTest implements MailQueueFactoryContract<PulsarMailQueue>, ManageableMailQueueFactoryContract<PulsarMailQueue> {
@@ -57,6 +61,7 @@ class PulsarMailQueueFactoryTest implements MailQueueFactoryContract<PulsarMailQ
     private MailQueueItemDecoratorFactory factory;
     private PulsarConfiguration config;
     private MailQueueMetricExtension.MailQueueMetricTestSystem metricTestSystem;
+    private PulsarClients pulsarClients;
 
     @BeforeEach
     void setUp(DockerPulsarExtension.DockerPulsar dockerPulsar, MailQueueMetricExtension.MailQueueMetricTestSystem metricTestSystem) throws PulsarClientException, PulsarAdminException {
@@ -70,17 +75,20 @@ class PulsarMailQueueFactoryTest implements MailQueueFactoryContract<PulsarMailQ
         mimeMessageStore = mimeMessageStoreFactory.mimeMessageStore();
         factory = new RawMailQueueItemDecoratorFactory();
         config = dockerPulsar.getConfiguration();
+        pulsarClients = PulsarClients.create(config);
         mailQueueFactory = newInstance();
     }
 
     @AfterEach
     void tearDown() {
         mailQueueFactory.stop();
+        pulsarClients.stop();
     }
 
     private PulsarMailQueueFactory newInstance() {
         return new PulsarMailQueueFactory(
                 config,
+                pulsarClients,
                 blobIdFactory,
                 mimeMessageStore,
                 factory,

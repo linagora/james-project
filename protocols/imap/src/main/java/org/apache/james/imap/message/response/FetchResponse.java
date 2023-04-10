@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.mail.Flags;
 
@@ -30,30 +31,38 @@ import org.apache.james.imap.message.Literal;
 import org.apache.james.mailbox.MessageSequenceNumber;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.ModSeq;
+import org.apache.james.mailbox.model.MessageId;
+import org.apache.james.mailbox.model.ThreadId;
 
 public final class FetchResponse implements ImapResponseMessage {
     private final MessageSequenceNumber messageNumber;
     private final Flags flags;
     private final MessageUid uid;
     private final Date internalDate;
+    private final Optional<Date> saveDate;
     private final Long size;
     private final List<BodyElement> elements;
     private final Envelope envelope;
     private final Structure body;
     private final Structure bodystructure;
     private final ModSeq modSeq;
+    private final MessageId emailId;
+    private final ThreadId threadId;
 
-    public FetchResponse(MessageSequenceNumber messageNumber, Flags flags, MessageUid uid, ModSeq modSeq, Date internalDate, Long size, Envelope envelope, Structure body, Structure bodystructure, List<BodyElement> elements) {
+    public FetchResponse(MessageSequenceNumber messageNumber, Flags flags, MessageUid uid, Optional<Date> saveDate, ModSeq modSeq, Date internalDate, Long size, Envelope envelope, Structure body, Structure bodystructure, List<BodyElement> elements, MessageId emailId, ThreadId threadId) {
         this.messageNumber = messageNumber;
         this.flags = flags;
         this.uid = uid;
         this.internalDate = internalDate;
+        this.saveDate = saveDate;
         this.size = size;
         this.envelope = envelope;
         this.elements = elements;
         this.body = body;
         this.bodystructure = bodystructure;
         this.modSeq = modSeq;
+        this.emailId = emailId;
+        this.threadId = threadId;
     }
 
     /**
@@ -153,6 +162,18 @@ public final class FetchResponse implements ImapResponseMessage {
      */
     public ModSeq getModSeq() {
         return modSeq;
+    }
+
+    public MessageId getEmailId() {
+        return emailId;
+    }
+
+    public ThreadId getThreadId() {
+        return threadId;
+    }
+
+    public Optional<Date> getSaveDate() {
+        return saveDate;
     }
 
     /**

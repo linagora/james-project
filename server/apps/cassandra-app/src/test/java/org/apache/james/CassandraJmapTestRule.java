@@ -39,16 +39,16 @@ public class CassandraJmapTestRule implements TestRule {
     }
 
     private final GuiceModuleTestRule guiceModuleTestRule;
-    private final DockerElasticSearchRule dockerElasticSearchRule;
+    private final DockerOpenSearchRule dockerOpenSearchRule;
 
     public CassandraJmapTestRule(GuiceModuleTestRule... guiceModuleTestRule) {
         TempFilesystemTestRule tempFilesystemTestRule = new TempFilesystemTestRule();
-        this.dockerElasticSearchRule = new DockerElasticSearchRule();
+        this.dockerOpenSearchRule = new DockerOpenSearchRule();
         this.temporaryFolder = tempFilesystemTestRule.getTemporaryFolder();
         this.guiceModuleTestRule =
                 AggregateGuiceModuleTestRule
                     .of(guiceModuleTestRule)
-                    .aggregate(dockerElasticSearchRule)
+                    .aggregate(dockerOpenSearchRule)
                     .aggregate(tempFilesystemTestRule);
     }
 
@@ -56,7 +56,7 @@ public class CassandraJmapTestRule implements TestRule {
         CassandraJamesServerConfiguration configuration = CassandraJamesServerConfiguration.builder()
             .workingDirectory(temporaryFolder.newFolder())
             .configurationFromClasspath()
-            .searchConfiguration(SearchConfiguration.elasticSearch())
+            .searchConfiguration(SearchConfiguration.openSearch())
             .build();
 
         return CassandraJamesServerMain.createServer(configuration)
@@ -74,9 +74,5 @@ public class CassandraJmapTestRule implements TestRule {
 
     public void await() {
         guiceModuleTestRule.await();
-    }
-
-    public DockerElasticSearchRule getDockerElasticSearchRule() {
-        return dockerElasticSearchRule;
     }
 }

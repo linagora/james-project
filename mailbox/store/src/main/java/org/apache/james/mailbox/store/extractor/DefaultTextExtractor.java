@@ -22,13 +22,13 @@ package org.apache.james.mailbox.store.extractor;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.james.mailbox.extractor.ParsedContent;
 import org.apache.james.mailbox.extractor.TextExtractor;
 import org.apache.james.mailbox.model.ContentType;
+
+import com.github.fge.lambdas.Throwing;
 
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -36,21 +36,23 @@ import reactor.core.scheduler.Schedulers;
 /**
  * A default text extractor that is directly based on the input file provided.
  * 
- * Costs less calculations that TikaTextExtractor, but result is not that good.
+ * Costs fewer calculations than TikaTextExtractor, but result is not that good.
  */
 public class DefaultTextExtractor implements TextExtractor {
     @Override
     public boolean applicable(ContentType contentType) {
-        return contentType != null && contentType.asString().startsWith("text/");
+        return contentType != null && contentType.mediaType().equals(ContentType.MediaType.TEXT);
     }
 
     @Override
     public ParsedContent extractContent(InputStream inputStream, ContentType contentType) throws Exception {
-        if (applicable(contentType)) {
-            Charset charset = contentType.charset().orElse(StandardCharsets.UTF_8);
-            return new ParsedContent(Optional.ofNullable(IOUtils.toString(inputStream, charset)), new HashMap<>());
-        } else {
-            return new ParsedContent(Optional.empty(), new HashMap<>());
+        try (var input = inputStream) {
+            if (applicable(contentType)) {
+                Charset charset = contentType.charset().orElse(StandardCharsets.UTF_8);
+                return ParsedContent.of(IOUtils.toString(input, charset));
+            } else {
+                return ParsedContent.empty();
+            }
         }
     }
 
@@ -58,10 +60,12 @@ public class DefaultTextExtractor implements TextExtractor {
     public Mono<ParsedContent> extractContentReactive(InputStream inputStream, ContentType contentType) {
         if (applicable(contentType)) {
             Charset charset = contentType.charset().orElse(StandardCharsets.UTF_8);
-            return Mono.fromCallable(() -> new ParsedContent(Optional.ofNullable(IOUtils.toString(inputStream, charset)), new HashMap<>()))
-                .subscribeOn(Schedulers.boundedElastic());
+            return Mono.using(() -> inputStream,
+                    stream -> Mono.fromCallable(() -> ParsedContent.of(IOUtils.toString(stream, charset)))
+                            .subscribeOn(Schedulers.boundedElastic()),
+                    Throwing.consumer(InputStream::close).orDoNothing());
         } else {
-            return Mono.just(new ParsedContent(Optional.empty(), new HashMap<>()));
+            return Mono.just(ParsedContent.empty());
         }
     }
 }

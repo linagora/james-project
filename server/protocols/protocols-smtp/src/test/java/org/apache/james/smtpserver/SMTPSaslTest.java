@@ -19,6 +19,8 @@
 package org.apache.james.smtpserver;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.james.jwt.OidcTokenFixture.INTROSPECTION_RESPONSE;
+import static org.apache.james.jwt.OidcTokenFixture.USERINFO_RESPONSE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,6 +45,7 @@ import org.apache.james.domainlist.lib.DomainListConfiguration;
 import org.apache.james.domainlist.memory.MemoryDomainList;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.jwt.OidcTokenFixture;
+import org.apache.james.mailbox.Authorizator;
 import org.apache.james.mailrepository.api.MailRepositoryStore;
 import org.apache.james.mailrepository.api.Protocol;
 import org.apache.james.mailrepository.memory.MailRepositoryStoreConfiguration;
@@ -90,9 +93,11 @@ import com.google.inject.TypeLiteral;
 class SMTPSaslTest {
     public static final String LOCAL_DOMAIN = "domain.org";
     public static final Username USER = Username.of("user@domain.org");
+    public static final Username USER2 = Username.of("user2@domain.org");
     public static final String PASSWORD = "userpassword";
     public static final String JWKS_URI_PATH = "/jwks";
     public static final String INTROSPECT_TOKEN_URI_PATH = "/introspect";
+    public static final String USERINFO_URI_PATH = "/userinfo";
     public static final String OIDC_URL = "https://example.com/jwks";
     public static final String SCOPE = "scope";
     public static final String FAIL_RESPONSE_TOKEN = Base64.getEncoder().encodeToString(
@@ -122,6 +127,7 @@ class SMTPSaslTest {
         domainList.addDomain(Domain.of(LOCAL_DOMAIN));
         usersRepository = MemoryUsersRepository.withVirtualHosting(domainList);
         usersRepository.addUser(USER, PASSWORD);
+        usersRepository.addUser(USER2, PASSWORD);
 
         createMailRepositoryStore();
 
@@ -186,6 +192,13 @@ class SMTPSaslTest {
         queueFactory = new MemoryMailQueueFactory(new RawMailQueueItemDecoratorFactory());
         queue = queueFactory.createQueue(MailQueueFactory.SPOOL);
 
+        Authorizator authorizator = (userId, otherUserId) -> {
+            if (userId.equals(USER) && otherUserId.equals(USER2)) {
+                return Authorizator.AuthorizationState.ALLOWED;
+            }
+            return Authorizator.AuthorizationState.FORBIDDEN;
+        };
+
         chain = MockProtocolHandlerLoader.builder()
             .put(binder -> binder.bind(DomainList.class).toInstance(domainList))
             .put(binder -> binder.bind(new TypeLiteral<MailQueueFactory<?>>() {}).toInstance(queueFactory))
@@ -197,6 +210,7 @@ class SMTPSaslTest {
             .put(binder -> binder.bind(UsersRepository.class).toInstance(usersRepository))
             .put(binder -> binder.bind(MetricFactory.class).to(RecordingMetricFactory.class))
             .put(binder -> binder.bind(UserEntityValidator.class).toInstance(UserEntityValidator.NOOP))
+            .put(binder -> binder.bind(Authorizator.class).toInstance(authorizator))
             .build();
     }
 
@@ -406,13 +420,13 @@ class SMTPSaslTest {
     }
 
     @Test
-    void oauthShouldFailWhenIntrospectTokenReturnActiveIsTrue() throws Exception {
+    void oauthShouldSuccessWhenIntrospectTokenReturnActiveIsTrue() throws Exception {
         smtpServer.destroy();
         authServer
             .when(HttpRequest.request().withPath(INTROSPECT_TOKEN_URI_PATH))
             .respond(HttpResponse.response().withStatusCode(200)
                 .withHeader("Content-Type", "application/json")
-                .withBody("{\"active\": true}", StandardCharsets.UTF_8));
+                .withBody(INTROSPECTION_RESPONSE, StandardCharsets.UTF_8));
 
         HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("smtpserver-advancedSecurity.xml"));
         config.addProperty("auth.oidc.jwksURL", String.format("http://127.0.0.1:%s%s", authServer.getLocalPort(), JWKS_URI_PATH));
@@ -455,4 +469,90 @@ class SMTPSaslTest {
         assertThat(client.getReplyString()).contains("451 Unable to process request");
     }
 
+    @Test
+    void oauthShouldSuccessWhenCheckTokenByUserInfoIsPassed() throws Exception {
+        smtpServer.destroy();
+        authServer
+            .when(HttpRequest.request().withPath(USERINFO_URI_PATH))
+            .respond(HttpResponse.response().withStatusCode(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(USERINFO_RESPONSE, StandardCharsets.UTF_8));
+
+        HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("smtpserver-advancedSecurity.xml"));
+        config.addProperty("auth.oidc.jwksURL", String.format("http://127.0.0.1:%s%s", authServer.getLocalPort(), JWKS_URI_PATH));
+        config.addProperty("auth.oidc.claim", OidcTokenFixture.CLAIM);
+        config.addProperty("auth.oidc.oidcConfigurationURL", OIDC_URL);
+        config.addProperty("auth.oidc.scope", SCOPE);
+        config.addProperty("auth.oidc.userinfo.url", String.format("http://127.0.0.1:%s%s", authServer.getLocalPort(), USERINFO_URI_PATH));
+        smtpServer.configure(config);
+        smtpServer.init();
+
+        SMTPSClient client = initSMTPSClient();
+
+        client.sendCommand("AUTH OAUTHBEARER " + VALID_TOKEN);
+
+        assertThat(client.getReplyString()).contains("235 Authentication successful.");
+    }
+
+    @Test
+    void oauthShouldFailWhenCheckTokenByUserInfoIsFailed() throws Exception {
+        smtpServer.destroy();
+        authServer
+            .when(HttpRequest.request().withPath(USERINFO_URI_PATH))
+            .respond(HttpResponse.response().withStatusCode(401)
+                .withHeader("Content-Type", "application/json"));
+
+        HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("smtpserver-advancedSecurity.xml"));
+        config.addProperty("auth.oidc.jwksURL", String.format("http://127.0.0.1:%s%s", authServer.getLocalPort(), JWKS_URI_PATH));
+        config.addProperty("auth.oidc.claim", OidcTokenFixture.CLAIM);
+        config.addProperty("auth.oidc.oidcConfigurationURL", OIDC_URL);
+        config.addProperty("auth.oidc.scope", SCOPE);
+        config.addProperty("auth.oidc.userinfo.url", String.format("http://127.0.0.1:%s%s", authServer.getLocalPort(), USERINFO_URI_PATH));
+        smtpServer.configure(config);
+        smtpServer.init();
+
+        SMTPSClient client = initSMTPSClient();
+
+        client.sendCommand("AUTH OAUTHBEARER " + VALID_TOKEN);
+
+        assertThat(client.getReplyString()).contains("451 Unable to process request");
+    }
+
+    @Test
+    void oauthShouldImpersonateFailWhenNOTDelegated() throws Exception {
+        SMTPSClient client = initSMTPSClient();
+        String tokenWithImpersonation = OIDCSASLHelper.generateOauthBearer("another@domain.org", OidcTokenFixture.VALID_TOKEN);
+        client.sendCommand("AUTH OAUTHBEARER " + tokenWithImpersonation);
+
+        assertThat(client.getReplyString()).contains("334 ");
+
+        client.sendCommand("AQ==");
+        assertThat(client.getReplyString()).contains("535 Authentication Failed");
+    }
+    @Test
+    void oauthShouldImpersonateSuccessWhenDelegated() throws Exception {
+        SMTPSClient client = initSMTPSClient();
+        String tokenWithImpersonation = OIDCSASLHelper.generateOauthBearer(USER2.asString(), OidcTokenFixture.VALID_TOKEN);
+        client.sendCommand("AUTH OAUTHBEARER " + tokenWithImpersonation);
+
+        assertThat(client.getReplyString()).contains("235 Authentication successful.");
+    }
+
+    @Test
+    void impersonationShouldWorkWhenDelegated() throws Exception {
+        SMTPSClient client = initSMTPSClient();
+
+        client.sendCommand("EHLO localhost");
+
+        client.sendCommand("AUTH OAUTHBEARER " + OIDCSASLHelper.generateOauthBearer(USER2.asString(), OidcTokenFixture.VALID_TOKEN));
+
+        client.setSender(USER2.asString());
+        client.addRecipient("mail@domain.org");
+        client.sendShortMessageData("Subject: test\r\n\r\nTest body testAuth\r\n");
+        client.quit();
+
+        assertThat(queue.getLastMail())
+            .as("mail received by mail server")
+            .isNotNull();
+    }
 }

@@ -34,13 +34,13 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.mail.internet.MimeMessage;
@@ -63,11 +63,18 @@ import com.google.common.base.Strings;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 public interface MailQueueContract {
+    ExecutorService EXECUTOR = Executors.newCachedThreadPool();
+    Scheduler SCHEDULER = Schedulers.fromExecutor(EXECUTOR);
 
     MailQueue getMailQueue();
+
+    default int getMailQueueMaxConcurrency() {
+        return Integer.MAX_VALUE;
+    }
 
     default void enQueue(Mail mail) throws MailQueue.MailQueueException {
         getMailQueue().enQueue(mail);
@@ -357,11 +364,11 @@ public interface MailQueueContract {
             .name(secondExpectedName)
             .build());
 
-        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem mailQueueItem1 = items.next();
-        mailQueueItem1.done(true);
+        mailQueueItem1.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         MailQueue.MailQueueItem mailQueueItem2 = items.next();
-        mailQueueItem2.done(true);
+        mailQueueItem2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo(firstExpectedName);
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo(secondExpectedName);
     }
@@ -376,11 +383,11 @@ public interface MailQueueContract {
             .build());
 
         Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue())
-            .subscribeOn(Schedulers.elastic()).toIterable().iterator();
+            .subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem mailQueueItem1 = items.next();
         MailQueue.MailQueueItem mailQueueItem2 = items.next();
-        mailQueueItem1.done(true);
-        mailQueueItem2.done(true);
+        mailQueueItem1.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
+        mailQueueItem2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo("name2");
     }
@@ -395,11 +402,11 @@ public interface MailQueueContract {
             .name("name2")
             .build());
 
-        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem mailQueueItem1 = items.next();
         MailQueue.MailQueueItem mailQueueItem2 = items.next();
-        mailQueueItem2.done(true);
-        mailQueueItem1.done(true);
+        mailQueueItem2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
+        mailQueueItem1.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo("name2");
     }
@@ -411,11 +418,11 @@ public interface MailQueueContract {
             .name("name1")
             .build());
 
-        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem mailQueueItem1 = items.next();
-        mailQueueItem1.done(false);
+        mailQueueItem1.done(MailQueue.MailQueueItem.CompletionStatus.RETRY);
         MailQueue.MailQueueItem mailQueueItem2 = items.next();
-        mailQueueItem2.done(true);
+        mailQueueItem2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo("name1");
     }
@@ -426,23 +433,27 @@ public interface MailQueueContract {
         enQueue(defaultMail()
             .name("name1")
             .build());
+        Thread.sleep(1);
         enQueue(defaultMail()
             .name("name2")
             .build());
+        Thread.sleep(1);
         enQueue(defaultMail()
             .name("name3")
             .build());
 
-        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).toIterable().iterator();
+        Iterator<MailQueue.MailQueueItem> items = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).toIterable().iterator();
         MailQueue.MailQueueItem mailQueueItem1 = items.next();
         MailQueue.MailQueueItem mailQueueItem2 = items.next();
-        mailQueueItem2.done(true);
-        mailQueueItem1.done(false);
+        mailQueueItem2.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
+        mailQueueItem1.done(MailQueue.MailQueueItem.CompletionStatus.RETRY);
         MailQueue.MailQueueItem mailQueueItem1bis = items.next();
         MailQueue.MailQueueItem mailQueueItem3 = items.next();
+
         assertThat(mailQueueItem1.getMail().getName()).isEqualTo("name1");
         assertThat(mailQueueItem2.getMail().getName()).isEqualTo("name2");
-        assertThat(List.of(mailQueueItem1bis, mailQueueItem3).stream().map(item -> item.getMail().getName())).containsOnly("name1", "name3");
+        assertThat(Stream.of(mailQueueItem1bis, mailQueueItem3).map(item -> item.getMail().getName()))
+            .containsOnly("name1", "name3");
     }
 
     @Test
@@ -452,7 +463,7 @@ public interface MailQueueContract {
             .build());
 
         LinkedBlockingQueue<MailQueue.MailQueueItem> queue = new LinkedBlockingQueue<>(1);
-        Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).subscribe(Throwing.consumer(queue::put));
+        Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).subscribe(Throwing.consumer(queue::put));
         queue.take();
 
         assertThat(queue.poll(2, TimeUnit.SECONDS)).isNull();
@@ -460,7 +471,7 @@ public interface MailQueueContract {
 
     @Test
     default void deQueueShouldBlockWhenNoMail() {
-        Mono<MailQueue.MailQueueItem> item = Flux.from(getMailQueue().deQueue()).subscribeOn(Schedulers.elastic()).next();
+        Mono<MailQueue.MailQueueItem> item = Flux.from(getMailQueue().deQueue()).subscribeOn(SCHEDULER).next();
 
         assertThatThrownBy(() -> item.block(Duration.ofSeconds(2)))
             .isInstanceOf(RuntimeException.class);
@@ -491,7 +502,7 @@ public interface MailQueueContract {
         LinkedBlockingQueue<MailQueue.MailQueueItem> itemQueue = new LinkedBlockingQueue<>(1);
         Flux.from(testee
             .deQueue())
-            .subscribeOn(Schedulers.elastic())
+            .subscribeOn(SCHEDULER)
             .flatMap(e -> {
                 try {
                     itemQueue.put(e);
@@ -509,7 +520,7 @@ public interface MailQueueContract {
                 } else {
                     MailQueue.MailQueueItem mailQueueItem = itemQueue.take();
                     dequeuedMails.add(mailQueueItem.getMail());
-                    mailQueueItem.done(true);
+                    mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
                 }
             })
             .threadCount(threadCount)
@@ -533,7 +544,7 @@ public interface MailQueueContract {
         int operationCount = 15;
         int totalDequeuedMessages = 50;
         LinkedBlockingDeque<MailQueue.MailQueueItem> deque = new LinkedBlockingDeque<>();
-        Flux.from(testee.deQueue()).subscribeOn(Schedulers.elastic()).doOnNext(deque::addFirst).subscribe();
+        Flux.from(testee.deQueue()).subscribeOn(SCHEDULER).doOnNext(deque::addFirst).subscribe();
         ConcurrentTestRunner.builder()
             .operation((threadNumber, step) -> {
                 if (step % 3 == 0) {
@@ -543,12 +554,12 @@ public interface MailQueueContract {
                 }
                 if (step % 3 == 1) {
                     MailQueue.MailQueueItem mailQueueItem = deque.takeLast();
-                    mailQueueItem.done(false);
+                    mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.RETRY);
                 }
                 if (step % 3 == 2) {
                     MailQueue.MailQueueItem mailQueueItem = deque.takeLast();
                     dequeuedMails.add(mailQueueItem.getMail());
-                    mailQueueItem.done(true);
+                    mailQueueItem.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS);
                 }
             })
             .threadCount(threadCount)
@@ -566,32 +577,25 @@ public interface MailQueueContract {
     default void dequeueShouldBeConcurrent() {
         MailQueue testee = getMailQueue();
         int nbMails = 1000;
-        IntStream.range(0, nbMails)
-            .forEach(Throwing.intConsumer(i -> testee.enQueue(defaultMail()
+        Flux.range(0, nbMails)
+            .flatMap(Throwing.function(i -> testee.enqueueReactive(defaultMail()
                 .name("name" + i)
-                .build())));
+                .build())), getMailQueueMaxConcurrency())
+            .blockLast();
 
         ConcurrentLinkedDeque<Mail> dequeuedMails = new ConcurrentLinkedDeque<>();
 
         Flux.from(testee.deQueue())
-            .flatMap(item -> Mono.defer(() -> {
-                    dequeuedMails.add(item.getMail());
-                    try {
-                        Thread.sleep(100);
-                        item.done(true);
-                        return Mono.empty();
-                    } catch (MailQueue.MailQueueException | InterruptedException e) {
-                        return Mono.error(e);
-                    }
-                }).subscribeOn(Schedulers.elastic()), 1000
-            )
+            .flatMap(item -> Mono.fromRunnable(() -> dequeuedMails.add(item.getMail()))
+                .delayElement(Duration.ofMillis(100))
+                .then(Mono.fromRunnable(Throwing.runnable(() -> item.done(MailQueue.MailQueueItem.CompletionStatus.SUCCESS))))
+                .subscribeOn(SCHEDULER), 1000)
             .subscribeOn(Schedulers.newSingle("foo"))
             .subscribe();
 
         Awaitility.await()
             .atMost(ONE_MINUTE)
             .until(() -> dequeuedMails.size() >= nbMails);
-
     }
 
     class SerializableAttribute implements Serializable {

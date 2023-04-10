@@ -19,8 +19,6 @@
 
 package org.apache.james.task.eventsourcing
 
-import java.util.Optional
-
 import com.google.common.base.Throwables
 import org.apache.james.eventsourcing.EventSourcingSystem
 import org.apache.james.task.Task.Result
@@ -29,27 +27,31 @@ import org.apache.james.task.{TaskExecutionDetails, TaskId, TaskManagerWorker}
 import org.reactivestreams.Publisher
 import reactor.core.scala.publisher.SMono
 
-import scala.compat.java8.OptionConverters._
+import java.util.Optional
+import scala.jdk.OptionConverters._
 
 case class WorkerStatusListener(eventSourcingSystem: EventSourcingSystem) extends TaskManagerWorker.Listener {
 
   override def started(taskId: TaskId): Publisher[Void] = SMono(eventSourcingSystem.dispatch(Start(taskId))).`then`()
 
-  override def completed(taskId: TaskId, result: Result, additionalInformation: Optional[TaskExecutionDetails.AdditionalInformation]): Publisher[Void] =
-    SMono(eventSourcingSystem.dispatch(Complete(taskId, result, additionalInformation.asScala))).`then`()
+  override def completed(taskId: TaskId, result: Result, additionalInformationPublisher: Publisher[Optional[TaskExecutionDetails.AdditionalInformation]]): Publisher[Void] =
+    SMono.fromPublisher(additionalInformationPublisher)
+      .flatMap(additionalInformation => SMono(eventSourcingSystem.dispatch(Complete(taskId, result, additionalInformation.toScala))))
+      .`then`()
 
-  override def failed(taskId: TaskId, additionalInformation: Optional[TaskExecutionDetails.AdditionalInformation], errorMessage: String, t: Throwable): Publisher[Void] =
-    SMono(eventSourcingSystem.dispatch(Fail(taskId, additionalInformation.asScala, Some(errorMessage), Some(Throwables.getStackTraceAsString(t))))).`then`()
+  override def failed(taskId: TaskId, additionalInformationPublisher: Publisher[Optional[TaskExecutionDetails.AdditionalInformation]], errorMessage: Optional[String], t: Optional[Throwable]): Publisher[Void] =
+    SMono.fromPublisher(additionalInformationPublisher)
+    .flatMap(additionalInformation => SMono(eventSourcingSystem.dispatch(Fail(taskId, additionalInformation.toScala, errorMessage.toScala, t.toScala.map(t => Throwables.getStackTraceAsString(t))))))
+    .`then`()
 
-  override def failed(taskId: TaskId, additionalInformation: Optional[TaskExecutionDetails.AdditionalInformation], t: Throwable): Publisher[Void] =
-    SMono(eventSourcingSystem.dispatch(Fail(taskId, additionalInformation.asScala, None, Some(Throwables.getStackTraceAsString(t))))).`then`()
+  override def cancelled(taskId: TaskId, additionalInformationPublisher: Publisher[Optional[TaskExecutionDetails.AdditionalInformation]]): Publisher[Void] =
+    SMono.fromPublisher(additionalInformationPublisher)
+      .flatMap(additionalInformation => SMono(eventSourcingSystem.dispatch(Cancel(taskId, additionalInformation.toScala))))
+      .`then`()
 
-  override def failed(taskId: TaskId, additionalInformation: Optional[TaskExecutionDetails.AdditionalInformation]): Publisher[Void] =
-    SMono(eventSourcingSystem.dispatch(Fail(taskId, additionalInformation.asScala, None, None))).`then`()
+  override def updated(taskId: TaskId, additionalInformationPublisher: Publisher[TaskExecutionDetails.AdditionalInformation]): Publisher[Void] =
+    SMono.fromPublisher(additionalInformationPublisher)
+      .flatMap(additionalInformation => SMono(eventSourcingSystem.dispatch(UpdateAdditionalInformation(taskId, additionalInformation))))
+      .`then`()
 
-  override def cancelled(taskId: TaskId, additionalInformation: Optional[TaskExecutionDetails.AdditionalInformation]): Publisher[Void] =
-    SMono(eventSourcingSystem.dispatch(Cancel(taskId, additionalInformation.asScala ))).`then`()
-
-  override def updated(taskId: TaskId, additionalInformation: TaskExecutionDetails.AdditionalInformation): Publisher[Void] =
-    SMono(eventSourcingSystem.dispatch(UpdateAdditionalInformation(taskId, additionalInformation))).`then`()
 }

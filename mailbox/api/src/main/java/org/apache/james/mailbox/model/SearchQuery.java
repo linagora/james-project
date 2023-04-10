@@ -264,6 +264,10 @@ public class SearchQuery {
         return new ModSeqCriterion(new NumericOperator(value, NumericComparator.EQUALS));
     }
 
+    public static Criterion hasMessageId(MessageId messageId) {
+        return new MessageIdCriterion(messageId);
+    }
+
     /**
      * Creates a filter matching messages with internal date after the given
      * date.
@@ -312,6 +316,24 @@ public class SearchQuery {
      */
     public static Criterion internalDateBefore(Date date, DateResolution dateResolution) {
         return new InternalDateCriterion(new DateOperator(DateComparator.BEFORE, date, dateResolution));
+    }
+
+    public static Criterion saveDateAfter(Date date, DateResolution dateResolution) {
+        return new SaveDateCriterion(new DateOperator(DateComparator.AFTER, date, dateResolution));
+    }
+
+    public static Criterion saveDateOn(Date date, DateResolution dateResolution) {
+        return new SaveDateCriterion(new DateOperator(DateComparator.ON, date, dateResolution));
+    }
+
+    public static Criterion saveDateBefore(Date date, DateResolution dateResolution) {
+        return new SaveDateCriterion(new DateOperator(DateComparator.BEFORE, date, dateResolution));
+    }
+
+    // Matches all messages in the mailbox when the underlying storage of
+    // that mailbox supports the save date attribute. RF: https://www.rfc-editor.org/rfc/rfc8514.html#page-4
+    public static Criterion saveDateSupported() {
+        return AllCriterion.all();
     }
 
     /**
@@ -728,6 +750,10 @@ public class SearchQuery {
         return new MimeMessageIDCriterion(messageId);
     }
 
+    public static Criterion subject(String subject) {
+        return new SubjectCriterion(subject);
+    }
+
     public static Criterion threadId(ThreadId threadId) {
         return new ThreadIdCriterion(threadId);
     }
@@ -1134,6 +1160,44 @@ public class SearchQuery {
         }
     }
 
+    public static class SubjectCriterion extends Criterion {
+        private final String subject;
+
+        public SubjectCriterion(String subject) {
+            this.subject = subject;
+        }
+
+        public String getSubject() {
+            return subject;
+        }
+
+        public HeaderCriterion asHeaderCriterion() {
+            return new HeaderCriterion("Subject", new ContainsOperator(subject));
+        }
+
+        @Override
+        public final boolean equals(Object o) {
+            if (o instanceof SubjectCriterion) {
+                SubjectCriterion that = (SubjectCriterion) o;
+
+                return java.util.Objects.equals(this.subject, that.subject);
+            }
+            return false;
+        }
+
+        @Override
+        public final int hashCode() {
+            return java.util.Objects.hash(subject);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("subject", subject)
+                .toString();
+        }
+    }
+
     /**
      * Filters on the threadId of the messages.
      */
@@ -1260,6 +1324,49 @@ public class SearchQuery {
         public boolean equals(Object obj) {
             if (obj instanceof InternalDateCriterion) {
                 InternalDateCriterion that = (InternalDateCriterion) obj;
+
+                return Objects.equal(this.operator, that.operator);
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("operator", operator)
+                .toString();
+        }
+    }
+
+    /**
+     * Filters on the save date.
+     */
+    public static class SaveDateCriterion extends Criterion {
+
+        private final DateOperator operator;
+
+        public SaveDateCriterion(DateOperator operator) {
+            this.operator = operator;
+        }
+
+        /**
+         * Gets the search operation and value to be evaluated.
+         *
+         * @return the <code>Operator</code>, not null
+         */
+        public DateOperator getOperator() {
+            return operator;
+        }
+
+        @Override
+        public final int hashCode() {
+            return Objects.hashCode(operator);
+        }
+
+        @Override
+        public final boolean equals(Object obj) {
+            if (obj instanceof SaveDateCriterion) {
+                SaveDateCriterion that = (SaveDateCriterion) obj;
 
                 return Objects.equal(this.operator, that.operator);
             }
@@ -1562,6 +1669,41 @@ public class SearchQuery {
         public String toString() {
             return MoreObjects.toStringHelper(this)
                 .add("operator", operator)
+                .toString();
+        }
+    }
+
+    public static class MessageIdCriterion extends Criterion {
+        private final MessageId messageId;
+
+        public MessageIdCriterion(MessageId messageId) {
+            this.messageId = messageId;
+        }
+
+        public MessageId getMessageId() {
+            return messageId;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(messageId);
+        }
+
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof MessageIdCriterion) {
+                MessageIdCriterion that = (MessageIdCriterion) obj;
+
+                return Objects.equal(this.messageId, that.messageId);
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                .add("messageId", messageId)
                 .toString();
         }
     }

@@ -23,7 +23,7 @@ import org.apache.james.backends.cassandra.init.CassandraTypesProvider;
 import org.apache.james.core.Username;
 import org.apache.james.mailbox.cassandra.table.CassandraMailboxTable;
 
-import com.datastax.driver.core.UDTValue;
+import com.datastax.oss.driver.api.core.data.UdtValue;
 
 public class MailboxBaseTupleUtil {
     private final CassandraTypesProvider typesProvider;
@@ -32,8 +32,8 @@ public class MailboxBaseTupleUtil {
         this.typesProvider = typesProvider;
     }
 
-    public UDTValue createMailboxBaseUDT(String namespace, Username user) {
-        return typesProvider.getDefinedUserType(CassandraMailboxTable.MAILBOX_BASE)
+    public UdtValue createMailboxBaseUDT(String namespace, Username user) {
+        return typesProvider.getDefinedUserType(CassandraMailboxTable.MAILBOX_BASE.asCql(true))
             .newValue()
             .setString(CassandraMailboxTable.MailboxBase.NAMESPACE, namespace)
             .setString(CassandraMailboxTable.MailboxBase.USER, user.asString());

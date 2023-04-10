@@ -18,11 +18,11 @@
  ****************************************************************/
 package org.apache.james.mailbox.cassandra.mail;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.apache.james.backends.cassandra.CassandraCluster;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
-import org.apache.james.backends.cassandra.init.configuration.CassandraConsistenciesConfiguration;
 import org.apache.james.core.Username;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.MailboxSessionUtil;
@@ -42,6 +42,7 @@ import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
 import org.apache.james.mailbox.store.mail.model.MessageUidProvider;
+import org.apache.james.utils.UpdatableTickingClock;
 
 import com.google.common.collect.ImmutableList;
 
@@ -52,19 +53,19 @@ public class CassandraMapperProvider implements MapperProvider {
     private final CassandraCluster cassandra;
     private final MessageUidProvider messageUidProvider;
     private final CassandraModSeqProvider cassandraModSeqProvider;
+    private final UpdatableTickingClock updatableTickingClock;
     private final MailboxSession mailboxSession = MailboxSessionUtil.create(Username.of("benwa"));
     private CassandraMailboxSessionMapperFactory mapperFactory;
 
     public CassandraMapperProvider(CassandraCluster cassandra,
-                                   CassandraConsistenciesConfiguration cassandraConsistenciesConfiguration,
                                    CassandraConfiguration cassandraConfiguration) {
         this.cassandra = cassandra;
         messageUidProvider = new MessageUidProvider();
         cassandraModSeqProvider = new CassandraModSeqProvider(
                 this.cassandra.getConf(),
-                cassandraConfiguration,
-                cassandraConsistenciesConfiguration);
-        mapperFactory = createMapperFactory(cassandraConfiguration);
+                cassandraConfiguration);
+        updatableTickingClock = new UpdatableTickingClock(Instant.now());
+        mapperFactory = createMapperFactory(cassandraConfiguration, updatableTickingClock);
     }
 
     @Override
@@ -87,10 +88,11 @@ public class CassandraMapperProvider implements MapperProvider {
         return mapperFactory.getMessageIdMapper(mailboxSession);
     }
 
-    private CassandraMailboxSessionMapperFactory createMapperFactory(CassandraConfiguration cassandraConfiguration) {
+    private CassandraMailboxSessionMapperFactory createMapperFactory(CassandraConfiguration cassandraConfiguration, UpdatableTickingClock updatableTickingClock) {
         return TestCassandraMailboxSessionMapperFactory.forTests(cassandra,
             new CassandraMessageId.Factory(),
-            cassandraConfiguration);
+            cassandraConfiguration,
+            updatableTickingClock);
     }
 
     @Override
@@ -128,4 +130,7 @@ public class CassandraMapperProvider implements MapperProvider {
         return cassandraModSeqProvider.highestModSeq(mailbox);
     }
 
+    public UpdatableTickingClock getUpdatableTickingClock() {
+        return updatableTickingClock;
+    }
 }

@@ -31,12 +31,16 @@ import org.apache.james.junit.categories.Unstable;
 import org.apache.james.lifecycle.api.LifecycleUtil;
 import org.apache.james.mailrepository.MailRepositoryContract;
 import org.apache.james.mailrepository.api.MailRepository;
+import org.apache.james.mailrepository.api.MailRepositoryPath;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-
+/**
+ * @Deprecated Will be dropped in 3.9.0. See https://www.mail-archive.com/server-dev@james.apache.org/msg72460.html
+ */
+@Deprecated
 public class JDBCMailRepositoryTest implements MailRepositoryContract {
 
     private JDBCMailRepository mailRepository;
@@ -64,6 +68,11 @@ public class JDBCMailRepositoryTest implements MailRepositoryContract {
     }
 
     @Override
+    public MailRepository retrieveRepository(MailRepositoryPath url) throws Exception {
+        return mailRepository;
+    }
+
+    @Override
     public MailRepository retrieveRepository() {
         return mailRepository;
     }
@@ -75,6 +84,12 @@ public class JDBCMailRepositoryTest implements MailRepositoryContract {
         ds.setUsername("james");
         ds.setPassword("james");
         return ds;
+    }
+
+    @Override
+    @Disabled
+    public void mailRepositoriesShouldBeURLIsolated() throws Exception {
+        MailRepositoryContract.super.storeRegularMailShouldNotFailWhenNullSender();
     }
 
     @Override

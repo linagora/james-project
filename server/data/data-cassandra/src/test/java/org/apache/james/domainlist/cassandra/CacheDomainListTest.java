@@ -74,7 +74,7 @@ class CacheDomainListTest {
             .blockLast();
 
         assertThat(statementRecorder.listExecutedStatements(
-            StatementRecorder.Selector.preparedStatement("SELECT domain FROM domains WHERE domain=:domain;")))
+            StatementRecorder.Selector.preparedStatement("SELECT domain FROM domains WHERE domain=:domain")))
             .hasSize(1);
     }
 
@@ -87,13 +87,13 @@ class CacheDomainListTest {
 
         Flux.range(0, 6)
             .delayElements(Duration.ofMillis(500))
-            .flatMap(Throwing.function(i -> Mono.fromCallable(() ->domainList.containsDomain(DOMAIN_1)).subscribeOn(Schedulers.elastic())))
-            .subscribeOn(Schedulers.elastic())
+            .flatMap(Throwing.function(i -> Mono.fromCallable(() ->domainList.containsDomain(DOMAIN_1)).subscribeOn(Schedulers.boundedElastic())))
+            .subscribeOn(Schedulers.newSingle("test"))
             .blockLast();
 
         assertThat(statementRecorder.listExecutedStatements(
-            StatementRecorder.Selector.preparedStatement("SELECT domain FROM domains WHERE domain=:domain;")))
-            .hasSize(2);
+            StatementRecorder.Selector.preparedStatement("SELECT domain FROM domains WHERE domain=:domain")))
+            .hasSizeBetween(2, 3);
     }
 
     @Test

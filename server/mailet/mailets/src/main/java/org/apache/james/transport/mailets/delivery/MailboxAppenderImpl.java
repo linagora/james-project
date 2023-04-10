@@ -88,6 +88,7 @@ public class MailboxAppenderImpl implements MailboxAppender {
             .flatMap(mailbox -> Mono.from(mailbox.appendMessageReactive(
                 MessageManager.AppendCommand.builder()
                     .recent()
+                    .delivery()
                     .build(extractContent(mail)),
                 session)));
     }
@@ -117,7 +118,7 @@ public class MailboxAppenderImpl implements MailboxAppender {
     private Mono<MessageManager> createMailboxIfNotExist(MailboxSession session, MailboxPath path) {
         return Mono.from(mailboxManager.getMailboxReactive(path, session))
             .onErrorResume(MailboxNotFoundException.class, e ->
-                Mono.from(mailboxManager.createMailboxReactive(path, session))
+                Mono.from(mailboxManager.createMailboxReactive(path, MailboxManager.CreateOption.CREATE_SUBSCRIPTION, session))
                     .then(Mono.from(mailboxManager.getMailboxReactive(path, session)))
                     .onErrorResume(MailboxExistsException.class, e2 -> {
                         LOGGER.info("Mailbox {} have been created concurrently", path);
@@ -130,12 +131,7 @@ public class MailboxAppenderImpl implements MailboxAppender {
     }
 
     private void closeProcessing(MailboxSession session) {
-        session.close();
-        try {
-            mailboxManager.logout(session);
-        } finally {
-            mailboxManager.endProcessingRequest(session);
-        }
+        mailboxManager.endProcessingRequest(session);
     }
 
 }
