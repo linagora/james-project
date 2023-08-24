@@ -18,6 +18,22 @@ Changes to apply between 3.8.x and 3.9.0 will be reported here.
 Change list:
 
  - [Imap Packages](#imap-packages)
+ - [Mutualize quota table](#mutualize-quota-table)
+
+### Mutualize quota table
+
+Date: 24/08/2023
+JIRA: https://issues.apache.org/jira/projects/JAMES/issues/JAMES-3926
+
+In order to upgrade to the latest Quota data model, one need to enable quota compatibility mode in `cassandra.properties`:
+
+```
+quota.compatibility.mode=true
+```
+
+This is required for going from Cassandra schema version 12 -> 13.
+
+then run the migration: https://james.apache.org/server/manage-webadmin.html#Cassandra_Schema_upgrades
 
 ### Imap Packages
 
