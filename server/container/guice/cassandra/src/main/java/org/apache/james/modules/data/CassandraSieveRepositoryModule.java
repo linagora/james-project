@@ -41,5 +41,6 @@ public class CassandraSieveRepositoryModule extends AbstractModule {
 
         Multibinder<CassandraModule> cassandraDataDefinitions = Multibinder.newSetBinder(binder(), CassandraModule.class);
         cassandraDataDefinitions.addBinding().toInstance(org.apache.james.sieve.cassandra.CassandraSieveRepositoryModule.MODULE);
+        cassandraDataDefinitions.addBinding().toInstance(org.apache.james.sieve.cassandra.CassandraSieveQuotaModule.MODULE);
     }
 }
