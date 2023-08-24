@@ -21,9 +21,9 @@ package org.apache.james.modules.mailbox;
 
 import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.components.CassandraMutualizedQuotaModule;
-import org.apache.james.events.EventListener;
 import org.apache.james.backends.cassandra.components.CassandraQuotaCurrentValueDao;
 import org.apache.james.backends.cassandra.components.CassandraQuotaLimitDao;
+import org.apache.james.events.EventListener;
 import org.apache.james.mailbox.cassandra.quota.CassandraCurrentQuotaManager;
 import org.apache.james.mailbox.cassandra.quota.CassandraGlobalMaxQuotaDao;
 import org.apache.james.mailbox.cassandra.quota.CassandraPerDomainMaxQuotaDao;

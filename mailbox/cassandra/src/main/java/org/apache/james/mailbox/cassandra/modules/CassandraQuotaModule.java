@@ -30,8 +30,6 @@ import org.apache.james.mailbox.cassandra.table.CassandraCurrentQuota;
 import org.apache.james.mailbox.cassandra.table.CassandraDomainMaxQuota;
 import org.apache.james.mailbox.cassandra.table.CassandraGlobalMaxQuota;
 import org.apache.james.mailbox.cassandra.table.CassandraMaxQuota;
-import org.apache.james.backends.cassandra.components.CassandraQuotaCurrentValueTable;
-import org.apache.james.backends.cassandra.components.CassandraQuotaLimitTable;
 
 public interface CassandraQuotaModule {
     CassandraModule MODULE = CassandraModule.builder()
