@@ -20,26 +20,34 @@
 package org.apache.james.jmap.method
 
 import com.google.common.collect.ImmutableMap
+
 import javax.inject.Inject
 import org.apache.james.core.Username
 import org.apache.james.jmap.core.SetError
 import org.apache.james.jmap.core.SetError.SetErrorDescription
 import org.apache.james.jmap.delegation.{DelegatedAccountSetRequest, DelegationId, UnparsedDelegateId}
+import org.apache.james.jmap.method.DelegateSetDeletePerformer.LOGGER
 import org.apache.james.jmap.method.DelegatedAccountDeletePerformer.{DelegatedAccountDeletionFailure, DelegatedAccountDeletionResult, DelegatedAccountDeletionResults, DelegatedAccountDeletionSuccess}
 import org.apache.james.mailbox.MailboxSession
 import org.apache.james.user.api.DelegationStore
 import org.apache.james.util.{AuditTrail, ReactorUtils}
+import org.slf4j.LoggerFactory
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 object DelegatedAccountDeletePerformer {
+  private val LOGGER = LoggerFactory.getLogger(classOf[DelegatedAccountDeletePerformer])
   sealed trait DelegatedAccountDeletionResult
 
   case class DelegatedAccountDeletionSuccess(delegationId: DelegationId) extends DelegatedAccountDeletionResult
 
   case class DelegatedAccountDeletionFailure(unparsedDelegateId: UnparsedDelegateId, exception: Throwable) extends DelegatedAccountDeletionResult {
     def asSetError: SetError = exception match {
-      case e: IllegalArgumentException => SetError.invalidArguments(SetErrorDescription(s"${unparsedDelegateId.id} is not a DelegationId: ${e.getMessage}"))
-      case _ => SetError.serverFail(SetErrorDescription(exception.getMessage))
+      case e: IllegalArgumentException =>
+        LOGGER.info("Illegal arguments while updating a delegation", exception)
+        SetError.invalidArguments(SetErrorDescription(s"${unparsedDelegateId.id} is not a DelegationId: ${e.getMessage}"))
+      case _ =>
+        LOGGER.error("Failed to delete a delegation", exception)
+        SetError.serverFail(SetErrorDescription(exception.getMessage))
     }
   }
 
