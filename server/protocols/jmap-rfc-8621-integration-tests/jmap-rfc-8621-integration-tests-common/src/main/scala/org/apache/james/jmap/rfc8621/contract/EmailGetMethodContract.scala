@@ -22,12 +22,13 @@ package org.apache.james.jmap.rfc8621.contract
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import java.time.{Duration, ZonedDateTime}
-import java.util.Date
 import java.util.concurrent.TimeUnit
+import java.util.{Date, Optional}
 
 import io.netty.handler.codec.http.HttpHeaderNames.ACCEPT
 import io.restassured.RestAssured.{`given`, requestSpecification}
 import io.restassured.http.ContentType.JSON
+import jakarta.inject.Inject
 import jakarta.mail.Flags
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import net.javacrumbs.jsonunit.core.Option
@@ -37,12 +38,14 @@ import org.apache.james.GuiceJamesServer
 import org.apache.james.jmap.JmapGuiceProbe
 import org.apache.james.jmap.api.change.State
 import org.apache.james.jmap.api.model.AccountId
+import org.apache.james.jmap.api.projections.{MessageFastViewPrecomputedProperties, MessageFastViewProjection}
 import org.apache.james.jmap.core.ResponseObject.SESSION_STATE
 import org.apache.james.jmap.core.UuidState.INSTANCE
 import org.apache.james.jmap.http.UserCredential
 import org.apache.james.jmap.rfc8621.contract.EmailGetMethodContract.createTestMessage
 import org.apache.james.jmap.rfc8621.contract.Fixture.{ACCEPT_RFC8621_VERSION_HEADER, ALICE, ANDRE, ANDRE_ACCOUNT_ID, ANDRE_PASSWORD, BOB, BOB_PASSWORD, DOMAIN, authScheme, baseRequestSpecBuilder}
 import org.apache.james.jmap.rfc8621.contract.probe.DelegationProbe
+import org.apache.james.mailbox.DefaultMailboxes
 import org.apache.james.mailbox.MessageManager.AppendCommand
 import org.apache.james.mailbox.model.MailboxACL.Right
 import org.apache.james.mailbox.model.{ComposedMessageId, MailboxACL, MailboxId, MailboxPath, MessageId}
@@ -51,11 +54,16 @@ import org.apache.james.mime4j.message.MultipartBuilder
 import org.apache.james.mime4j.stream.RawField
 import org.apache.james.modules.{ACLProbeImpl, MailboxProbeImpl}
 import org.apache.james.util.ClassLoaderUtils
-import org.apache.james.utils.DataProbeImpl
+import org.apache.james.utils.{DataProbeImpl, GuiceProbe}
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.{BeforeEach, Test}
 import play.api.libs.json.Json
+import reactor.core.scala.publisher.SMono
+
+import scala.jdk.OptionConverters._
+
+
 
 object EmailGetMethodContract {
   private def createTestMessage: Message = Message.Builder
@@ -8220,6 +8228,8 @@ trait EmailGetMethodContract {
            |    "c1"]]
            |}""".stripMargin)
   }
+
+
 
   private def waitForNextState(server: GuiceJamesServer, accountId: AccountId, initialState: State): State = {
     val jmapGuiceProbe: JmapGuiceProbe = server.getProbe(classOf[JmapGuiceProbe])
