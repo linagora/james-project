@@ -59,6 +59,7 @@ import org.assertj.core.api.SoftAssertions;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.github.fge.lambdas.Throwing;
@@ -67,6 +68,8 @@ import io.restassured.RestAssured;
 
 public class RunRulesOnMailboxRoutesTest {
     private static final Username USERNAME = Username.of("username");
+    private static final Username BOB = Username.of("bob");
+    private static final Username ALICE = Username.of("alice");
     private static final String MAILBOX_NAME = "myMailboxName";
     private static final String OTHER_MAILBOX_NAME = "myOtherMailboxName";
     private static final String ERROR_TYPE_NOTFOUND = "notFound";
@@ -107,8 +110,7 @@ public class RunRulesOnMailboxRoutesTest {
     private InMemoryMailboxManager mailboxManager;
     MessageIdManager messageIdManager;
 
-    @BeforeEach
-    void setUp() throws Exception {
+    private void createServer(String path) throws Exception {
         InMemoryIntegrationResources resources = InMemoryIntegrationResources.builder()
             .preProvisionnedFakeAuthenticator()
             .fakeAuthorizator()
@@ -136,7 +138,7 @@ public class RunRulesOnMailboxRoutesTest {
             .start();
 
         RestAssured.requestSpecification = WebAdminUtils.buildRequestSpecification(webAdminServer)
-            .setBasePath(USERS_BASE + SEPARATOR + USERNAME.asString() + SEPARATOR + UserMailboxesRoutes.MAILBOXES)
+            .setBasePath(path)
             .setUrlEncodingEnabled(false) // no further automatically encoding by Rest Assured client. rf: https://issues.apache.org/jira/projects/JAMES/issues/JAMES-3936
             .build();
     }
@@ -147,334 +149,353 @@ public class RunRulesOnMailboxRoutesTest {
         taskManager.stop();
     }
 
-    @Test
-    void runRulesOnMailboxShouldReturnErrorWhenUserIsNotFound() throws UsersRepositoryException {
-        when(usersRepository.contains(USERNAME)).thenReturn(false);
+    @Nested
+    class RunRulesOnMailbox {
+        @BeforeEach
+        void setUp() throws Exception {
+            createServer(USERS_BASE + SEPARATOR + USERNAME.asString() + SEPARATOR + UserMailboxesRoutes.MAILBOXES);
+        }
 
-        Map<String, Object> errors = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted("2"))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(NOT_FOUND_404)
-            .contentType(JSON)
-            .extract()
-            .body()
-            .jsonPath()
-            .getMap(".");
+        @Test
+        void runRulesOnMailboxShouldReturnErrorWhenUserIsNotFound() throws UsersRepositoryException {
+            when(usersRepository.contains(USERNAME)).thenReturn(false);
 
-        assertThat(errors)
-            .containsEntry("statusCode", NOT_FOUND_404)
-            .containsEntry("type", ERROR_TYPE_NOTFOUND)
-            .containsEntry("message", "Invalid argument on user mailboxes")
-            .containsEntry("details", "User does not exist");
-    }
+            Map<String, Object> errors = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted("2"))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(NOT_FOUND_404)
+                .contentType(JSON)
+                .extract()
+                .body()
+                .jsonPath()
+                .getMap(".");
 
-    @Test
-    void runRulesOnMailboxShouldReturnErrorWhenMailboxDoesNotExist() throws UsersRepositoryException {
-        Map<String, Object> errors = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted("2"))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(NOT_FOUND_404)
-            .contentType(JSON)
-            .extract()
-            .body()
-            .jsonPath()
-            .getMap(".");
+            assertThat(errors)
+                .containsEntry("statusCode", NOT_FOUND_404)
+                .containsEntry("type", ERROR_TYPE_NOTFOUND)
+                .containsEntry("message", "Invalid argument on user mailboxes")
+                .containsEntry("details", "User does not exist");
+        }
 
-        assertThat(errors)
-            .containsEntry("statusCode", NOT_FOUND_404)
-            .containsEntry("type", ERROR_TYPE_NOTFOUND)
-            .containsEntry("message", "Invalid argument on user mailboxes")
-            .containsEntry("details", String.format("Mailbox does not exist. #private:%s:%s", USERNAME.asString(), MAILBOX_NAME));
-    }
+        @Test
+        void runRulesOnMailboxShouldReturnErrorWhenMailboxDoesNotExist() throws UsersRepositoryException {
+            Map<String, Object> errors = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted("2"))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(NOT_FOUND_404)
+                .contentType(JSON)
+                .extract()
+                .body()
+                .jsonPath()
+                .getMap(".");
 
-    @Test
-    void runRulesOnMailboxShouldReturnErrorWhenNoPayload() throws MailboxException {
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        mailboxManager.createMailbox(mailboxPath, systemSession);
+            assertThat(errors)
+                .containsEntry("statusCode", NOT_FOUND_404)
+                .containsEntry("type", ERROR_TYPE_NOTFOUND)
+                .containsEntry("message", "Invalid argument on user mailboxes")
+                .containsEntry("details", String.format("Mailbox does not exist. #private:%s:%s", USERNAME.asString(), MAILBOX_NAME));
+        }
 
-        Map<String, Object> errors = given()
-            .queryParam("action", "triage")
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(BAD_REQUEST_400)
-            .contentType(JSON)
-            .extract()
-            .body()
-            .jsonPath()
-            .getMap(".");
+        @Test
+        void runRulesOnMailboxShouldReturnErrorWhenNoPayload() throws MailboxException {
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            mailboxManager.createMailbox(mailboxPath, systemSession);
 
-        assertThat(errors)
-            .containsEntry("statusCode", BAD_REQUEST_400)
-            .containsEntry("type", ERROR_TYPE_INVALIDARGUMENT)
-            .containsEntry("message", "JSON payload of the request is not valid");
-    }
+            Map<String, Object> errors = given()
+                .queryParam("action", "triage")
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(BAD_REQUEST_400)
+                .contentType(JSON)
+                .extract()
+                .body()
+                .jsonPath()
+                .getMap(".");
 
-    @Test
-    void runRulesOnMailboxShouldReturnErrorWhenBadPayload() throws MailboxException {
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        mailboxManager.createMailbox(mailboxPath, systemSession);
+            assertThat(errors)
+                .containsEntry("statusCode", BAD_REQUEST_400)
+                .containsEntry("type", ERROR_TYPE_INVALIDARGUMENT)
+                .containsEntry("message", "JSON payload of the request is not valid");
+        }
 
-        Map<String, Object> errors = given()
-            .queryParam("action", "triage")
-            .body("""
+        @Test
+        void runRulesOnMailboxShouldReturnErrorWhenBadPayload() throws MailboxException {
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            mailboxManager.createMailbox(mailboxPath, systemSession);
+
+            Map<String, Object> errors = given()
+                .queryParam("action", "triage")
+                .body("""
                     {
                       "id": "1",
                       "name": "rule 1",
                       "condition": bad condition",
                       "action": "bad action"
                     }""")
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(BAD_REQUEST_400)
-            .contentType(JSON)
-            .extract()
-            .body()
-            .jsonPath()
-            .getMap(".");
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(BAD_REQUEST_400)
+                .contentType(JSON)
+                .extract()
+                .body()
+                .jsonPath()
+                .getMap(".");
 
-        assertThat(errors)
-            .containsEntry("statusCode", BAD_REQUEST_400)
-            .containsEntry("type", ERROR_TYPE_INVALIDARGUMENT)
-            .containsEntry("message", "JSON payload of the request is not valid");
-    }
+            assertThat(errors)
+                .containsEntry("statusCode", BAD_REQUEST_400)
+                .containsEntry("type", ERROR_TYPE_INVALIDARGUMENT)
+                .containsEntry("message", "JSON payload of the request is not valid");
+        }
 
-    @Test
-    void runRulesOnMailboxShouldReturnTaskId() throws MailboxException {
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        mailboxManager.createMailbox(mailboxPath, systemSession);
+        @Test
+        void runRulesOnMailboxShouldReturnTaskId() throws MailboxException {
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            mailboxManager.createMailbox(mailboxPath, systemSession);
 
-        String taskId = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted("2"))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(CREATED_201)
-            .extract()
-            .jsonPath()
-            .get("taskId");
+            String taskId = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted("2"))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(CREATED_201)
+                .extract()
+                .jsonPath()
+                .get("taskId");
 
-        assertThat(taskId)
-            .isNotEmpty();
-    }
+            assertThat(taskId)
+                .isNotEmpty();
+        }
 
-    @Test
-    void runRulesOnMailboxShouldMoveMatchingMessage() throws Exception {
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+        @Test
+        void runRulesOnMailboxShouldMoveMatchingMessage() throws Exception {
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
 
-        mailboxManager.createMailbox(mailboxPath, systemSession);
-        mailboxManager.createMailbox(otherMailboxPath, systemSession);
+            mailboxManager.createMailbox(mailboxPath, systemSession);
+            mailboxManager.createMailbox(otherMailboxPath, systemSession);
 
-        mailboxManager.getMailbox(mailboxPath, systemSession)
-            .appendMessage(MessageManager.AppendCommand.builder()
+            mailboxManager.getMailbox(mailboxPath, systemSession)
+                .appendMessage(MessageManager.AppendCommand.builder()
+                        .build(Message.Builder.of()
+                            .setSubject("plop")
+                            .setFrom("alice@example.com")
+                            .setBody("body", StandardCharsets.UTF_8)),
+                    systemSession);
+
+            MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
+
+            String taskId = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(CREATED_201)
+                .extract()
+                .jsonPath()
+                .get("taskId");
+
+            given()
+                .basePath(TasksRoutes.BASE)
+            .when()
+                .get(taskId + "/await");
+
+            SoftAssertions.assertSoftly(
+                softly -> {
+                    softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
+                        .isEqualTo(0);
+                    softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(otherMailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
+                        .isEqualTo(1);
+                }
+            );
+        }
+
+        @Test
+        void runRulesOnMailboxShouldNotMoveNonMatchingMessage() throws Exception {
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+
+            mailboxManager.createMailbox(mailboxPath, systemSession);
+            mailboxManager.createMailbox(otherMailboxPath, systemSession);
+
+            mailboxManager.getMailbox(mailboxPath, systemSession)
+                .appendMessage(MessageManager.AppendCommand.builder()
+                        .build(Message.Builder.of()
+                            .setSubject("hello")
+                            .setFrom("alice@example.com")
+                            .setBody("body", StandardCharsets.UTF_8)),
+                    systemSession);
+
+            MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
+
+            String taskId = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(CREATED_201)
+                .extract()
+                .jsonPath()
+                .get("taskId");
+
+            given()
+                .basePath(TasksRoutes.BASE)
+            .when()
+                .get(taskId + "/await");
+
+            SoftAssertions.assertSoftly(
+                softly -> {
+                    softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
+                        .isEqualTo(1);
+                    softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(otherMailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
+                        .isEqualTo(0);
+                }
+            );
+        }
+
+        @Test
+        void runRulesOnMailboxShouldManageMixedCase() throws Exception {
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+
+            mailboxManager.createMailbox(mailboxPath, systemSession);
+            mailboxManager.createMailbox(otherMailboxPath, systemSession);
+
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, systemSession);
+
+            messageManager.appendMessage(
+                MessageManager.AppendCommand.builder()
                     .build(Message.Builder.of()
                         .setSubject("plop")
                         .setFrom("alice@example.com")
                         .setBody("body", StandardCharsets.UTF_8)),
                 systemSession);
 
-        MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
-
-        String taskId = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(CREATED_201)
-            .extract()
-            .jsonPath()
-            .get("taskId");
-
-        given()
-            .basePath(TasksRoutes.BASE)
-        .when()
-            .get(taskId + "/await");
-
-        SoftAssertions.assertSoftly(
-            softly -> {
-                softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
-                    .isEqualTo(0);
-                softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(otherMailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
-                    .isEqualTo(1);
-            }
-        );
-    }
-
-    @Test
-    void runRulesOnMailboxShouldNotMoveNonMatchingMessage() throws Exception {
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
-
-        mailboxManager.createMailbox(mailboxPath, systemSession);
-        mailboxManager.createMailbox(otherMailboxPath, systemSession);
-
-        mailboxManager.getMailbox(mailboxPath, systemSession)
-            .appendMessage(MessageManager.AppendCommand.builder()
+            messageManager.appendMessage(
+                MessageManager.AppendCommand.builder()
                     .build(Message.Builder.of()
                         .setSubject("hello")
                         .setFrom("alice@example.com")
                         .setBody("body", StandardCharsets.UTF_8)),
                 systemSession);
 
-        MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
+            messageManager.appendMessage(
+                MessageManager.AppendCommand.builder()
+                    .build(Message.Builder.of()
+                        .setSubject("hello")
+                        .setFrom("bob@example.com")
+                        .setBody("body", StandardCharsets.UTF_8)),
+                systemSession);
 
-        String taskId = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(CREATED_201)
-            .extract()
-            .jsonPath()
-            .get("taskId");
+            MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
 
-        given()
-            .basePath(TasksRoutes.BASE)
-        .when()
-            .get(taskId + "/await");
+            String taskId = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(CREATED_201)
+                .extract()
+                .jsonPath()
+                .get("taskId");
 
-        SoftAssertions.assertSoftly(
-            softly -> {
-                softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
-                    .isEqualTo(1);
-                softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(otherMailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
-                    .isEqualTo(0);
-            }
-        );
+            given()
+                .basePath(TasksRoutes.BASE)
+            .when()
+                .get(taskId + "/await");
+
+            SoftAssertions.assertSoftly(
+                softly -> {
+                    softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
+                        .isEqualTo(1);
+                    softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(otherMailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
+                        .isEqualTo(2);
+                }
+            );
+        }
+
+        @Test
+        void runRulesOnMailboxShouldReturnTaskDetails() throws Exception {
+            MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
+            MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
+            MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+
+            mailboxManager.createMailbox(mailboxPath, systemSession);
+            mailboxManager.createMailbox(otherMailboxPath, systemSession);
+
+            MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, systemSession);
+
+            messageManager.appendMessage(
+                MessageManager.AppendCommand.builder()
+                    .build(Message.Builder.of()
+                        .setSubject("plop")
+                        .setFrom("alice@example.com")
+                        .setBody("body", StandardCharsets.UTF_8)),
+                systemSession);
+
+            messageManager.appendMessage(
+                MessageManager.AppendCommand.builder()
+                    .build(Message.Builder.of()
+                        .setSubject("hello")
+                        .setFrom("alice@example.com")
+                        .setBody("body", StandardCharsets.UTF_8)),
+                systemSession);
+
+            messageManager.appendMessage(
+                MessageManager.AppendCommand.builder()
+                    .build(Message.Builder.of()
+                        .setSubject("hello")
+                        .setFrom("bob@example.com")
+                        .setBody("body", StandardCharsets.UTF_8)),
+                systemSession);
+
+            MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
+
+            String taskId = given()
+                .queryParam("action", "triage")
+                .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
+                .post(MAILBOX_NAME + "/messages")
+            .then()
+                .statusCode(CREATED_201)
+                .extract()
+                .jsonPath()
+                .get("taskId");
+
+            given()
+                .basePath(TasksRoutes.BASE)
+            .when()
+                .get(taskId + "/await")
+            .then()
+                .body("status", Matchers.is("completed"))
+                .body("taskId", Matchers.is(notNullValue()))
+                .body("type", Matchers.is(RunRulesOnMailboxTask.TASK_TYPE.asString()))
+                .body("startedDate", Matchers.is(notNullValue()))
+                .body("submitDate", Matchers.is(notNullValue()))
+                .body("completedDate", Matchers.is(notNullValue()))
+                .body("additionalInformation.username", Matchers.is(USERNAME.asString()))
+                .body("additionalInformation.mailboxName", Matchers.is(MAILBOX_NAME))
+                .body("additionalInformation.rulesOnMessagesApplySuccessfully", Matchers.is(2))
+                .body("additionalInformation.rulesOnMessagesApplyFailed", Matchers.is(0));
+        }
     }
 
-    @Test
-    void runRulesOnMailboxShouldManageMixedCase() throws Exception {
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
+    @Nested
+    class runRulesOnAllUsersMailbox {
+        @BeforeEach
+        void setUp() throws Exception {
+            createServer("/messages");
 
-        mailboxManager.createMailbox(mailboxPath, systemSession);
-        mailboxManager.createMailbox(otherMailboxPath, systemSession);
-
-        MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, systemSession);
-
-        messageManager.appendMessage(
-            MessageManager.AppendCommand.builder()
-                .build(Message.Builder.of()
-                    .setSubject("plop")
-                    .setFrom("alice@example.com")
-                    .setBody("body", StandardCharsets.UTF_8)),
-            systemSession);
-
-        messageManager.appendMessage(
-            MessageManager.AppendCommand.builder()
-                .build(Message.Builder.of()
-                    .setSubject("hello")
-                    .setFrom("alice@example.com")
-                    .setBody("body", StandardCharsets.UTF_8)),
-            systemSession);
-
-        messageManager.appendMessage(
-            MessageManager.AppendCommand.builder()
-                .build(Message.Builder.of()
-                    .setSubject("hello")
-                    .setFrom("bob@example.com")
-                    .setBody("body", StandardCharsets.UTF_8)),
-            systemSession);
-
-        MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
-
-        String taskId = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(CREATED_201)
-            .extract()
-            .jsonPath()
-            .get("taskId");
-
-        given()
-            .basePath(TasksRoutes.BASE)
-        .when()
-            .get(taskId + "/await");
-
-        SoftAssertions.assertSoftly(
-            softly -> {
-                softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(mailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
-                    .isEqualTo(1);
-                softly.assertThat(Throwing.supplier(() -> mailboxManager.getMailbox(otherMailboxPath, systemSession).getMailboxCounters(systemSession).getCount()).get())
-                    .isEqualTo(2);
-            }
-        );
-    }
-
-    @Test
-    void runRulesOnMailboxShouldReturnTaskDetails() throws Exception {
-        MailboxPath mailboxPath = MailboxPath.forUser(USERNAME, MAILBOX_NAME);
-        MailboxPath otherMailboxPath = MailboxPath.forUser(USERNAME, OTHER_MAILBOX_NAME);
-        MailboxSession systemSession = mailboxManager.createSystemSession(USERNAME);
-
-        mailboxManager.createMailbox(mailboxPath, systemSession);
-        mailboxManager.createMailbox(otherMailboxPath, systemSession);
-
-        MessageManager messageManager = mailboxManager.getMailbox(mailboxPath, systemSession);
-
-        messageManager.appendMessage(
-            MessageManager.AppendCommand.builder()
-                .build(Message.Builder.of()
-                    .setSubject("plop")
-                    .setFrom("alice@example.com")
-                    .setBody("body", StandardCharsets.UTF_8)),
-            systemSession);
-
-        messageManager.appendMessage(
-            MessageManager.AppendCommand.builder()
-                .build(Message.Builder.of()
-                    .setSubject("hello")
-                    .setFrom("alice@example.com")
-                    .setBody("body", StandardCharsets.UTF_8)),
-            systemSession);
-
-        messageManager.appendMessage(
-            MessageManager.AppendCommand.builder()
-                .build(Message.Builder.of()
-                    .setSubject("hello")
-                    .setFrom("bob@example.com")
-                    .setBody("body", StandardCharsets.UTF_8)),
-            systemSession);
-
-        MailboxId otherMailboxId = mailboxManager.getMailbox(otherMailboxPath, systemSession).getId();
-
-        String taskId = given()
-            .queryParam("action", "triage")
-            .body(RULE_PAYLOAD.formatted(otherMailboxId.serialize()))
-            .post(MAILBOX_NAME + "/messages")
-        .then()
-            .statusCode(CREATED_201)
-            .extract()
-            .jsonPath()
-            .get("taskId");
-
-        given()
-            .basePath(TasksRoutes.BASE)
-        .when()
-            .get(taskId + "/await")
-        .then()
-            .body("status", Matchers.is("completed"))
-            .body("taskId", Matchers.is(notNullValue()))
-            .body("type", Matchers.is(RunRulesOnMailboxTask.TASK_TYPE.asString()))
-            .body("startedDate", Matchers.is(notNullValue()))
-            .body("submitDate", Matchers.is(notNullValue()))
-            .body("completedDate", Matchers.is(notNullValue()))
-            .body("additionalInformation.username", Matchers.is(USERNAME.asString()))
-            .body("additionalInformation.mailboxName", Matchers.is(MAILBOX_NAME))
-            .body("additionalInformation.rulesOnMessagesApplySuccessfully", Matchers.is(2))
-            .body("additionalInformation.rulesOnMessagesApplyFailed", Matchers.is(0));
+            when(usersRepository.contains(BOB)).thenReturn(true);
+            when(usersRepository.contains(ALICE)).thenReturn(true);
+        }
     }
 }

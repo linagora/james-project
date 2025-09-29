@@ -21,12 +21,15 @@ package org.apache.james.webadmin.data.jmap;
 
 import static org.apache.james.webadmin.Constants.SEPARATOR;
 
+import java.util.Optional;
+
 import jakarta.inject.Inject;
 
 import org.apache.james.core.Username;
 import org.apache.james.jmap.api.filtering.RuleDTO;
 import org.apache.james.jmap.api.filtering.Rules;
 import org.apache.james.jmap.api.filtering.Version;
+import org.apache.james.mailbox.DefaultMailboxes;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -52,6 +55,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import spark.Request;
 import spark.Route;
@@ -61,13 +65,15 @@ public class RunRulesOnMailboxRoutes implements Routes {
     private static final Logger LOGGER = LoggerFactory.getLogger(RunRulesOnMailboxRoutes.class);
 
     private static final TaskRegistrationKey TRIAGE = TaskRegistrationKey.of("triage");
+    private static final String MAILBOX_NAME_QUERY_PARAM = "mailboxName";
     private static final String MAILBOX_NAME = ":mailboxName";
     private static final String MAILBOXES = "mailboxes";
     private static final String USER_NAME = ":userName";
     private static final String USERS_BASE = "/users";
     public static final String USER_MAILBOXES_BASE = USERS_BASE + SEPARATOR + USER_NAME + SEPARATOR + MAILBOXES;
     public static final String SPECIFIC_MAILBOX = USER_MAILBOXES_BASE + SEPARATOR + MAILBOX_NAME;
-    public static final String MESSAGES_PATH = SPECIFIC_MAILBOX + "/messages";
+    public static final String MESSAGES_BASE = "/messages";
+    public static final String MESSAGES_PATH = SPECIFIC_MAILBOX + MESSAGES_BASE;
 
     private final UsersRepository usersRepository;
     private final MailboxManager mailboxManager;
@@ -100,6 +106,8 @@ public class RunRulesOnMailboxRoutes implements Routes {
     @Override
     public void define(Service service) {
         service.post(MESSAGES_PATH, runRulesOnMailboxRoute(), jsonTransformer);
+
+        service.post(MESSAGES_BASE, runRulesOnAllUsersMailboxRoute(), jsonTransformer);
     }
 
     public Route runRulesOnMailboxRoute() {
@@ -137,6 +145,44 @@ public class RunRulesOnMailboxRoutes implements Routes {
         }
     }
 
+    public Route runRulesOnAllUsersMailboxRoute() {
+        return TaskFromRequestRegistry.builder()
+            .parameterName("action")
+            .register(TRIAGE, this::runRulesOnAllUsers)
+            .buildAsRoute(taskManager);
+    }
+
+    public Task runRulesOnAllUsers(Request request) {
+        MailboxName mailboxName = getMailboxNameQueryParam(request);
+        try {
+            RuleDTO ruleDTO = jsonDeserialize.readValue(request.body(), RuleDTO.class);
+            Rules rules = new Rules(RuleDTO.toRules(ImmutableList.of(ruleDTO)), Version.INITIAL);
+
+            return runRulesOnAllUsersMailbox(mailboxName, rules);
+        } catch (IllegalStateException e) {
+            LOGGER.info("Invalid argument on /messages", e);
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.NOT_FOUND_404)
+                .type(ErrorResponder.ErrorType.NOT_FOUND)
+                .message("Invalid argument on /messages")
+                .cause(e)
+                .haltError();
+        } catch (JsonProcessingException e) {
+            throw ErrorResponder.builder()
+                .statusCode(HttpStatus.BAD_REQUEST_400)
+                .type(ErrorResponder.ErrorType.INVALID_ARGUMENT)
+                .message("JSON payload of the request is not valid")
+                .cause(e)
+                .haltError();
+        }
+    }
+
+    private Task runRulesOnAllUsersMailbox(MailboxName mailboxName, Rules rules) {
+        return Flux.from(usersRepository.listReactive())
+            .map(username -> new RunRulesOnMailboxTask(username, mailboxName, rules, runRulesOnMailboxService))
+            .blockLast();
+    }
+
     private Username getUsernameParam(Request request) {
         return Username.of(request.params(USER_NAME));
     }
@@ -152,5 +198,11 @@ public class RunRulesOnMailboxRoutes implements Routes {
         Preconditions.checkState(Boolean.TRUE.equals(Mono.from(mailboxManager.mailboxExists(mailboxPath, mailboxSession)).block()),
             "Mailbox does not exist. " + mailboxPath.asString());
         mailboxManager.endProcessingRequest(mailboxSession);
+    }
+
+    private MailboxName getMailboxNameQueryParam(Request request) {
+            return Optional.ofNullable(request.queryParams(MAILBOX_NAME_QUERY_PARAM))
+                .map(MailboxName::new)
+                .orElse(new MailboxName(DefaultMailboxes.INBOX));
     }
 }
