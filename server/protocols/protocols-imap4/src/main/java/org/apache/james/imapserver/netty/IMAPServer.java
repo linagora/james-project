@@ -223,10 +223,9 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
             trafficShaping = Optional.ofNullable(configuration.configurationAt("trafficShaping"))
                 .map(TrafficShapingConfiguration::from);
         }
-        if (configuration.getKeys("perSessionCommandThrottling").hasNext()) {
-            throttlerConfiguration = Optional.ofNullable(configuration.configurationAt("perSessionCommandThrottling"))
-                .map(IMAPCommandsThrottler.ThrottlerConfiguration::from);
-        }
+        throttlerConfiguration = Optional.of(IMAPCommandsThrottler.ThrottlerConfiguration.from(
+            ImmutableMap.of("SELECT", new IMAPCommandsThrottler.ThrottlerConfigurationEntry(Optional.of("APPEND"),
+                25, Duration.ofMillis(2), Duration.ofMinutes(10), Duration.ofSeconds(1)))));
     }
 
     @Override
