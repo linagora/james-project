@@ -37,6 +37,12 @@ import org.apache.james.modules.AwsS3BlobStoreExtension;
 import org.apache.james.modules.RabbitMQExtension;
 import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
+import org.apache.james.CleanupTasksPerformerProbe;
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.utils.GuiceProbe;
+import org.junit.jupiter.api.AfterEach;
+
+import com.google.inject.multibindings.Multibinder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.inject.name.Names;
@@ -60,7 +66,10 @@ public class DistributedMailboxChangeMethodTest implements MailboxChangesMethodC
         .server(configuration -> CassandraRabbitMQJamesServerMain.createServer(configuration)
             .overrideWith(new TestJMAPServerModule())
             .overrideWith(binder -> binder.bind(Limit.class).annotatedWith(Names.named(CassandraMailboxChangeRepository.LIMIT_NAME)).toInstance(Limit.of(5)))
-            .overrideWith(binder -> binder.bind(Limit.class).annotatedWith(Names.named(CassandraEmailChangeRepository.LIMIT_NAME)).toInstance(Limit.of(5))))
+            .overrideWith(binder -> binder.bind(Limit.class).annotatedWith(Names.named(CassandraEmailChangeRepository.LIMIT_NAME)).toInstance(Limit.of(5)))
+            .overrideWith(binder -> Multibinder.newSetBinder(binder, GuiceProbe.class).addBinding().to(CleanupTasksPerformerProbe.class)))
+        .lifeCycle(JamesServerExtension.Lifecycle.PER_CLASS)
+
         .build();
 
     @Override
@@ -71,5 +80,10 @@ public class DistributedMailboxChangeMethodTest implements MailboxChangesMethodC
     @Override
     public MailboxId generateMailboxId() {
         return CassandraId.timeBased();
+    }
+
+    @AfterEach
+    void cleanUp(GuiceJamesServer server) {
+        server.getProbe(CleanupTasksPerformerProbe.class).clean();
     }
 }

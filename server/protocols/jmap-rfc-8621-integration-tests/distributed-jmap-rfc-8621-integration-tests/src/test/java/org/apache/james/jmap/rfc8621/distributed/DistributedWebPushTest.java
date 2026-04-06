@@ -34,6 +34,12 @@ import org.apache.james.modules.AwsS3BlobStoreExtension;
 import org.apache.james.modules.RabbitMQExtension;
 import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
+import org.apache.james.CleanupTasksPerformerProbe;
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.utils.GuiceProbe;
+import org.junit.jupiter.api.AfterEach;
+
+import com.google.inject.multibindings.Multibinder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 class DistributedWebPushTest implements WebPushContract {
@@ -58,9 +64,17 @@ class DistributedWebPushTest implements WebPushContract {
         .extension(new ClockExtension())
         .server(configuration -> CassandraRabbitMQJamesServerMain.createServer(configuration)
             .overrideWith(new TestJMAPServerModule(), new PushSubscriptionProbeModule())
-            .overrideWith(binder -> binder.bind(PushClientConfiguration.class).toInstance(PushClientConfiguration.UNSAFE_DEFAULT())))
+            .overrideWith(binder -> binder.bind(PushClientConfiguration.class).toInstance(PushClientConfiguration.UNSAFE_DEFAULT()))
+            .overrideWith(binder -> Multibinder.newSetBinder(binder, GuiceProbe.class).addBinding().to(CleanupTasksPerformerProbe.class)))
+        .lifeCycle(JamesServerExtension.Lifecycle.PER_CLASS)
+
         .build();
 
     @RegisterExtension
     static PushServerExtension pushServerExtension = new PushServerExtension();
+
+    @AfterEach
+    void cleanUp(GuiceJamesServer server) {
+        server.getProbe(CleanupTasksPerformerProbe.class).clean();
+    }
 }

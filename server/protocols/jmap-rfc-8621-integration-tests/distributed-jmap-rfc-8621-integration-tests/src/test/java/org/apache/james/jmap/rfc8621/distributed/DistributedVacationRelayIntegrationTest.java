@@ -36,6 +36,12 @@ import org.apache.james.modules.AwsS3BlobStoreExtension;
 import org.apache.james.modules.RabbitMQExtension;
 import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
+import org.apache.james.CleanupTasksPerformerProbe;
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.utils.GuiceProbe;
+import org.junit.jupiter.api.AfterEach;
+
+import com.google.inject.multibindings.Multibinder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class DistributedVacationRelayIntegrationTest implements VacationRelayIntegrationTest {
@@ -63,7 +69,10 @@ public class DistributedVacationRelayIntegrationTest implements VacationRelayInt
         .extension(new AwsS3BlobStoreExtension())
         .server(configuration -> CassandraRabbitMQJamesServerMain.createServer(configuration)
             .overrideWith(new TestJMAPServerModule(), new DelegationProbeModule(), new IdentityProbeModule())
-            .overrideWith((binder -> binder.bind(DNSService.class).toInstance(inMemoryDNSService))))
+            .overrideWith((binder -> binder.bind(DNSService.class).toInstance(inMemoryDNSService)))
+            .overrideWith(binder -> Multibinder.newSetBinder(binder, GuiceProbe.class).addBinding().to(CleanupTasksPerformerProbe.class)))
+        .lifeCycle(JamesServerExtension.Lifecycle.PER_CLASS)
+
         .build();
 
     @Override
@@ -74,5 +83,10 @@ public class DistributedVacationRelayIntegrationTest implements VacationRelayInt
     @Override
     public InMemoryDNSService getInMemoryDns() {
         return inMemoryDNSService;
+    }
+
+    @AfterEach
+    void cleanUp(GuiceJamesServer server) {
+        server.getProbe(CleanupTasksPerformerProbe.class).clean();
     }
 }

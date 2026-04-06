@@ -31,6 +31,12 @@ import org.apache.james.modules.AwsS3BlobStoreExtension;
 import org.apache.james.modules.RabbitMQExtension;
 import org.apache.james.modules.TestJMAPServerModule;
 import org.apache.james.modules.blobstore.BlobStoreConfiguration;
+import org.apache.james.CleanupTasksPerformerProbe;
+import org.apache.james.GuiceJamesServer;
+import org.apache.james.utils.GuiceProbe;
+import org.junit.jupiter.api.AfterEach;
+
+import com.google.inject.multibindings.Multibinder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class DistributedCustomNamespaceTest implements CustomNamespaceContract {
@@ -52,5 +58,12 @@ public class DistributedCustomNamespaceTest implements CustomNamespaceContract {
         .server(configuration -> CassandraRabbitMQJamesServerMain.createServer(configuration)
             .overrideWith(new TestJMAPServerModule())
             .overrideWith(new CustomNamespaceModule()))
+            .overrideWith(binder -> Multibinder.newSetBinder(binder, GuiceProbe.class).addBinding().to(CleanupTasksPerformerProbe.class)))
+        .lifeCycle(JamesServerExtension.Lifecycle.PER_CLASS)
         .build();
+
+    @AfterEach
+    void cleanUp(GuiceJamesServer server) {
+        server.getProbe(CleanupTasksPerformerProbe.class).clean();
+    }
 }
