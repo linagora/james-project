@@ -457,6 +457,32 @@ public abstract class WebAdminServerIntegrationTest {
     }
 
     @Test
+    void mailboxesRestoreTasksShouldBeExposed() throws Exception {
+        dataProbe.addUser(USERNAME, "anyPassword");
+
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
+            // empty zip
+        }
+        byte[] emptyZip = baos.toByteArray();
+
+        String taskId = with()
+            .queryParam("task", "restore")
+            .body(emptyZip)
+            .post("/users/" + USERNAME + "/mailboxes")
+            .jsonPath()
+            .get("taskId");
+
+        given()
+            .basePath(TasksRoutes.BASE)
+        .when()
+            .get(taskId + "/await")
+        .then()
+            .body("status", is("completed"))
+            .body("type", is("MailboxesRestoreTask"));
+    }
+
+    @Test
     void createMissParentsTasksShouldBeExposed() {
         String taskId = with()
             .queryParam("task", "createMissingParents")
