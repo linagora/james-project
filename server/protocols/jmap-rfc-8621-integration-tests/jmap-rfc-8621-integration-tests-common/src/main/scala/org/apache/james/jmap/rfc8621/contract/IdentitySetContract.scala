@@ -179,6 +179,7 @@ trait IdentitySetContract {
            |						"mayDelete": true
            |					},
            |					{
+           |						"bcc": null, "replyTo": null,
            |						"id": "${UUID.nameUUIDFromBytes(bobUsername.asString.getBytes(StandardCharsets.UTF_8))}",
            |						"name": "${bobUsername.asString}",
            |						"email": "${bobUsername.asString}",
@@ -1234,6 +1235,7 @@ trait IdentitySetContract {
                     |                        "id": "$identityId",
                     |                        "bcc": [
                     |                            {
+                    |                                "name": null,
                     |                                "email": "david2@domain.tld"
                     |                            }
                     |                        ],
@@ -1246,6 +1248,308 @@ trait IdentitySetContract {
                     |                                "email": "alice@domain.tld"
                     |                            }
                     |                        ]
+                    |                    }
+                    |                ]
+                    |            },
+                    |            "c2"
+                    |        ]
+                    |    ]
+                    |}""".stripMargin)
+  }
+
+  @Test
+  def updateWithNullReplyToAndBccShouldResetThem(): Unit = {
+    val identityId: String = createNewIdentity()
+    val response: String = `given`
+      .body(
+        s"""{
+           |    "using": [
+           |        "urn:ietf:params:jmap:core",
+           |        "urn:ietf:params:jmap:submission"
+           |    ],
+           |    "methodCalls": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "update": {
+           |                    "$identityId": {
+           |                        "replyTo": null,
+           |                        "bcc": null
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ],
+           |        [
+           |            "Identity/get",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "ids": [
+           |                    "$identityId"
+           |                ]
+           |            },
+           |            "c2"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .isEqualTo(s"""{
+                    |    "sessionState": "${SESSION_STATE.value}",
+                    |    "methodResponses": [
+                    |        [
+                    |            "Identity/set",
+                    |            {
+                    |                "accountId": "$bobAccountId",
+                    |                "newState": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+                    |                "updated": {
+                    |                    "$identityId": { }
+                    |                }
+                    |            },
+                    |            "c1"
+                    |        ],
+                    |        [
+                    |            "Identity/get",
+                    |            {
+                    |                "accountId": "$bobAccountId",
+                    |                "state": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+                    |                "list": [
+                    |                    {
+                    |                        "name": "Bob",
+                    |                        "htmlSignature": "<p>Some html signature</p>",
+                    |                        "id": "$identityId",
+                    |                        "bcc": null,
+                    |                        "textSignature": "Some text signature",
+                    |                        "mayDelete": true,
+                    |                        "email": "${bobUsername.asString}",
+                    |                        "replyTo": null
+                    |                    }
+                    |                ]
+                    |            },
+                    |            "c2"
+                    |        ]
+                    |    ]
+                    |}""".stripMargin)
+  }
+
+  @Test
+  def updateWithNullNameAndSignaturesShouldResetThemToEmpty(): Unit = {
+    val identityId: String = createNewIdentity()
+    val response: String = `given`
+      .body(
+        s"""{
+           |    "using": [
+           |        "urn:ietf:params:jmap:core",
+           |        "urn:ietf:params:jmap:submission"
+           |    ],
+           |    "methodCalls": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "update": {
+           |                    "$identityId": {
+           |                        "name": null,
+           |                        "textSignature": null,
+           |                        "htmlSignature": null
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ],
+           |        [
+           |            "Identity/get",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "ids": [
+           |                    "$identityId"
+           |                ]
+           |            },
+           |            "c2"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .isEqualTo(s"""{
+                    |    "sessionState": "${SESSION_STATE.value}",
+                    |    "methodResponses": [
+                    |        [
+                    |            "Identity/set",
+                    |            {
+                    |                "accountId": "$bobAccountId",
+                    |                "newState": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+                    |                "updated": {
+                    |                    "$identityId": { }
+                    |                }
+                    |            },
+                    |            "c1"
+                    |        ],
+                    |        [
+                    |            "Identity/get",
+                    |            {
+                    |                "accountId": "$bobAccountId",
+                    |                "state": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+                    |                "list": [
+                    |                    {
+                    |                        "name": "",
+                    |                        "htmlSignature": "",
+                    |                        "id": "$identityId",
+                    |                        "bcc": [
+                    |                            {
+                    |                                "name": "David",
+                    |                                "email": "david@domain.tld"
+                    |                            }
+                    |                        ],
+                    |                        "textSignature": "",
+                    |                        "mayDelete": true,
+                    |                        "email": "${bobUsername.asString}",
+                    |                        "replyTo": [
+                    |                            {
+                    |                                "name": "Alice",
+                    |                                "email": "alice@domain.tld"
+                    |                            }
+                    |                        ]
+                    |                    }
+                    |                ]
+                    |            },
+                    |            "c2"
+                    |        ]
+                    |    ]
+                    |}""".stripMargin)
+  }
+
+  @Test
+  def updateWithNullSortOrderShouldResetItToDefault(): Unit = {
+    val identityId: String = createNewIdentity()
+    `given`
+      .body(
+        s"""{
+           |    "using": [
+           |        "urn:ietf:params:jmap:core",
+           |        "urn:ietf:params:jmap:submission",
+           |        "urn:apache:james:params:jmap:mail:identity:sortorder"
+           |    ],
+           |    "methodCalls": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "update": {
+           |                    "$identityId": {
+           |                        "sortOrder": 125
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+
+    val response: String = `given`
+      .body(
+        s"""{
+           |    "using": [
+           |        "urn:ietf:params:jmap:core",
+           |        "urn:ietf:params:jmap:submission",
+           |        "urn:apache:james:params:jmap:mail:identity:sortorder"
+           |    ],
+           |    "methodCalls": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "update": {
+           |                    "$identityId": {
+           |                        "sortOrder": null
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ],
+           |        [
+           |            "Identity/get",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "ids": [
+           |                    "$identityId"
+           |                ]
+           |            },
+           |            "c2"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .isEqualTo(s"""{
+                    |    "sessionState": "${SESSION_STATE.value}",
+                    |    "methodResponses": [
+                    |        [
+                    |            "Identity/set",
+                    |            {
+                    |                "accountId": "$bobAccountId",
+                    |                "newState": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+                    |                "updated": {
+                    |                    "$identityId": { }
+                    |                }
+                    |            },
+                    |            "c1"
+                    |        ],
+                    |        [
+                    |            "Identity/get",
+                    |            {
+                    |                "accountId": "$bobAccountId",
+                    |                "state": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+                    |                "list": [
+                    |                    {
+                    |                        "name": "Bob",
+                    |                        "htmlSignature": "<p>Some html signature</p>",
+                    |                        "id": "$identityId",
+                    |                        "bcc": [
+                    |                            {
+                    |                                "name": "David",
+                    |                                "email": "david@domain.tld"
+                    |                            }
+                    |                        ],
+                    |                        "textSignature": "Some text signature",
+                    |                        "mayDelete": true,
+                    |                        "email": "${bobUsername.asString}",
+                    |                        "replyTo": [
+                    |                            {
+                    |                                "name": "Alice",
+                    |                                "email": "alice@domain.tld"
+                    |                            }
+                    |                        ],
+                    |                        "sortOrder": 100
                     |                    }
                     |                ]
                     |            },
@@ -1411,6 +1715,60 @@ trait IdentitySetContract {
            |                        "properties": [
            |                            "email"
            |                        ]
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+  }
+
+  @Test
+  def updateShouldNotUpdatedWhenInvalidPropertyValue(): Unit = {
+    val identityId: String = createNewIdentity()
+    val response: String = `given`
+      .body(
+        s"""{
+           |    "using": [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:submission" ],
+           |    "methodCalls": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "update": {
+           |                    "$identityId": {
+           |                        "name": 123
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .isEqualTo(
+        s"""{
+           |    "sessionState": "${SESSION_STATE.value}",
+           |    "methodResponses": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "newState": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+           |                "notUpdated": {
+           |                    "$identityId": {
+           |                        "type": "invalidArguments",
+           |                        "description": "'/name' property is not valid: error.expected.jsstring"
            |                    }
            |                }
            |            },
@@ -1985,6 +2343,111 @@ trait IdentitySetContract {
            |                        ],
            |                        "textSignature": "Difference text signature",
            |                        "htmlSignature": "<p>Difference html signature</p>",
+           |                        "mayDelete": false
+           |                    }
+           |                ]
+           |            },
+           |            "c2"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+  }
+
+  @Test
+  def firstUpdateOfServerSetIdentityShouldKeepUnpatchedProperties(): Unit = {
+    val identityId: String = `given`
+      .body(
+        s"""{
+           |	"using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:submission"],
+           |	"methodCalls": [
+           |		["Identity/get",
+           |			{
+           |				"accountId": "$bobAccountId",
+           |				"ids": null
+           |			}, "c2"
+           |		]
+           |
+           |	]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .extract()
+      .jsonPath()
+      .get("methodResponses[0][1].list[0].id")
+
+    val response: String = `given`
+      .body(
+        s"""{
+           |    "using": [
+           |        "urn:ietf:params:jmap:core",
+           |        "urn:ietf:params:jmap:submission"
+           |    ],
+           |    "methodCalls": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "update": {
+           |                    "$identityId": {
+           |                        "textSignature": "Bob"
+           |                    }
+           |                }
+           |            },
+           |            "c1"
+           |        ],
+           |        [
+           |            "Identity/get",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "ids": [
+           |                    "$identityId"
+           |                ]
+           |            },
+           |            "c2"
+           |        ]
+           |    ]
+           |}""".stripMargin)
+    .when
+      .post
+    .`then`
+      .statusCode(SC_OK)
+      .contentType(JSON)
+      .extract
+      .body
+      .asString
+
+    assertThatJson(response)
+      .isEqualTo(
+        s"""{
+           |    "sessionState": "${SESSION_STATE.value}",
+           |    "methodResponses": [
+           |        [
+           |            "Identity/set",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "newState": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+           |                "updated": {
+           |                    "$identityId": { }
+           |                }
+           |            },
+           |            "c1"
+           |        ],
+           |        [
+           |            "Identity/get",
+           |            {
+           |                "accountId": "$bobAccountId",
+           |                "state": "2c9f1b12-b35a-43e6-9af2-0106fb53a943",
+           |                "list": [
+           |                    {
+           |                        "id": "$identityId",
+           |                        "name": "${bobUsername.asString}",
+           |                        "email": "${bobUsername.asString}",
+           |                        "replyTo": null,
+           |                        "bcc": null,
+           |                        "textSignature": "Bob",
+           |                        "htmlSignature": "",
            |                        "mayDelete": false
            |                    }
            |                ]

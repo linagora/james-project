@@ -10,8 +10,8 @@ An **EmailSubmission** object represents the submission of an Email for delivery
 - **identityId**: `Id` (immutable)
   The id of the Identity to associate with this submission.
 
-> :warning:
-> Not implemented. Submissions cannot be created with identityId. This field should be omitted.
+> :information_source:
+> James validates this field. A submission whose identityId is not one of the user's identities is rejected with an `invalidProperties` SetError. A submission without identityId is accepted, unless the `james.jmap.email.submission.missing.identity.compatibility` JVM property is set to `false`.
 
 - **emailId**: `Id` (immutable)
   The id of the Email to send. The Email being sent does not have to be a draft, for example, when "redirecting" an existing Email to a different address.

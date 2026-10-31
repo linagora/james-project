@@ -20,12 +20,50 @@ Change list:
  - [Adding thread_id column to Postgresql email_query_view table](#adding-thread_id-column-to-postgresql-email_query_view-table)
  - [Lucene mailbox index schema update for collapseThreads support](#lucene-mailbox-index-schema-update-for-collapsethreads-support)
  - [JAMES-4210 SMTP AuthHook deprecation](#james-4210-smtp-authhook-deprecation)
+ - [JAMES-4210 SMTP PLAIN/LOGIN authentication honors auth.requireSSL](#james-4210-smtp-plainlogin-authentication-honors-authrequiressl)
  - [JAMES-4210 POP3 USER/PASS requires TLS by default](#james-4210-pop3-userpass-requires-tls-by-default)
  - [JAMES-4210 ManageSieve SASL adoption](#james-4210-managesieve-sasl-adoption)
  - [JAMES-4225 Blob ids default to 128 bits of entropy](#james-4225-blob-ids-default-to-128-bits-of-entropy)
  - [Dropping unneeded Cassandra schema columns](#dropping-unneeded-cassandra-schema-columns)
  - [Cassandra schema version 16: mandatory message denormalization migration](#cassandra-schema-version-16-mandatory-message-denormalization-migration)
  - [Migration of embedded mail queue broker from ActiveMQ Classic to ActiveMQ Artemis](#migration-of-embedded-mail-queue-broker-from-activemq-classic-to-activemq-artemis)
+ - [JAMES-4236 JMAP EmailSubmission/set validates identityId](#james-4236-jmap-emailsubmissionset-validates-identityid)
+ - [JAMES-4236 populateEmailQueryView task reports mailbox counters](#james-4236-populateemailqueryview-task-reports-mailbox-counters)
+
+### JAMES-4236 populateEmailQueryView task reports mailbox counters
+
+Date: 26/10/2026
+
+Concerned products: all products exposing the WebAdmin JMAP tasks
+
+`POST /mailboxes?task=populateEmailQueryView` now walks every mailbox rather than every user, so mailboxes whose owner
+is not a registered user are populated too. With virtual hosting, mailboxes are listed domain by domain, so only the
+mailboxes of the domains registered in the domain list are processed.
+
+The `additionalInformation` type stays `PopulateEmailQueryViewTask`, but new runs report `processedMailboxCount` and
+`failedMailboxCount` instead of `processedUserCount` and `failedUserCount`. Tools reading these details need to be
+updated.
+
+Details of tasks run before the upgrade stay readable: they report `processedMailboxCount` and `failedMailboxCount` as
+0, and their user counters are dropped.
+
+During a rolling upgrade, nodes not yet upgraded cannot read the details of a task run by an upgraded node. Upgrade
+every node before running this task.
+
+### JAMES-4236 JMAP EmailSubmission/set validates identityId
+
+Date: 14/10/2026
+
+Concerned products: all products exposing JMAP (RFC 8621)
+
+`EmailSubmission/set` now validates `identityId`, as required by RFC 8621. A creation with an id that is not one of
+the user's identities (see `Identity/get`) is rejected with an `invalidProperties` SetError on `identityId`, and the
+email is not sent.
+
+JMAP clients that send a stale or foreign `identityId` must be updated to send one listed by `Identity/get`.
+
+A creation without `identityId` is still accepted by default. Set
+`james.jmap.email.submission.missing.identity.compatibility=false` in `jvm.properties` to reject it as well.
 
 ### Migration of embedded mail queue broker from ActiveMQ Classic to ActiveMQ Artemis
 
@@ -102,6 +140,26 @@ against its shorter counterpart until it is rewritten. To keep the previous beha
 
 ```
 james.blobid.entropy=256
+```
+
+### JAMES-4210 SMTP PLAIN/LOGIN authentication honors auth.requireSSL
+
+Date: 20/10/2026
+
+Concerned products: SMTP servers configured with `auth.requireSSL` set to `true` on ports accepting clear-text connections
+
+`auth.requireSSL` used to only control the announcement of SMTP authentication capabilities: clients explicitly
+sending `AUTH PLAIN` or `AUTH LOGIN` over a clear-text connection were still authenticated. These mechanisms now
+reject authentication attempts over insecure connections when `auth.requireSSL` is `true`, answering
+`504 Unrecognized Authentication Type`. Clients have to issue `STARTTLS` (or use implicit TLS) prior to authenticating.
+
+Deployments that intentionally allow clear-text SMTP authentication must add the following to each concerned
+`smtpserver.xml` entry:
+
+```xml
+<auth>
+    <requireSSL>false</requireSSL>
+</auth>
 ```
 
 ### JAMES-4210 POP3 USER/PASS requires TLS by default
