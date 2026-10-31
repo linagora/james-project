@@ -64,8 +64,9 @@ public class ReceivedDataLineFilter extends SeparatingDataLineFilter {
 
     @Override
     protected Response onSeparatorLine(SMTPSession session, byte[] line, LineHandler<SMTPSession> next) {
-        if (getLocation() == Location.SUFFIX && !session.getAttachment(headersSuffixAdded, State.Transaction).isPresent()) {
-            session.setAttachment(headersSuffixAdded, Boolean.TRUE, State.Transaction);
+        // An empty header block means no header line was seen: the prefix headers still need to be added
+        if (markAddedIfNeeded(session, Location.PREFIX, headersPrefixAdded)
+            || markAddedIfNeeded(session, Location.SUFFIX, headersSuffixAdded)) {
             return addHeaders(session, line, next);
         }
         return super.onSeparatorLine(session, line, next);
@@ -73,11 +74,21 @@ public class ReceivedDataLineFilter extends SeparatingDataLineFilter {
 
     @Override
     protected Response onHeadersLine(SMTPSession session, byte[] line, LineHandler<SMTPSession> next) {
-        if (getLocation() == Location.PREFIX && !session.getAttachment(headersPrefixAdded, State.Transaction).isPresent()) {
-            session.setAttachment(headersPrefixAdded, Boolean.TRUE, State.Transaction);
+        if (markAddedIfNeeded(session, Location.PREFIX, headersPrefixAdded)) {
             return addHeaders(session, line, next);
         }
         return super.onHeadersLine(session, line, next);
+    }
+
+    /**
+     * @return true if the headers need to be added at this location, in which case they are marked as added for the transaction
+     */
+    private boolean markAddedIfNeeded(SMTPSession session, Location location, ProtocolSession.AttachmentKey<Boolean> addedKey) {
+        if (getLocation() == location && session.getAttachment(addedKey, State.Transaction).isEmpty()) {
+            session.setAttachment(addedKey, Boolean.TRUE, State.Transaction);
+            return true;
+        }
+        return false;
     }
 
     /**

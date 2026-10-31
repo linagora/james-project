@@ -32,7 +32,7 @@ import org.apache.james.jmap.mail.Mailbox.idProperty
 import org.apache.james.jmap.mail._
 import org.apache.james.jmap.method.IdentitySetUpdatePerformer.IdentitySetUpdateResponse
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.json.{Format, JsArray, JsError, JsObject, JsPath, JsResult, JsString, JsSuccess, JsValue, Json, OWrites, Reads, Writes, __}
+import play.api.libs.json.{Format, JsArray, JsError, JsNull, JsObject, JsPath, JsResult, JsString, JsSuccess, JsValue, Json, OWrites, Reads, Writes, __}
 
 object IdentitySerializer {
   private implicit val emailerNameReads: Format[EmailerName] = Json.valueFormat[EmailerName]
@@ -47,12 +47,14 @@ object IdentitySerializer {
   }
   private implicit val identityIdUnparsedFormat: Format[UnparsedIdentityId] = Json.valueFormat[UnparsedIdentityId]
   private implicit val identityIdsFormat: Format[IdentityIds] = Json.valueFormat[IdentityIds]
-  private implicit val emailAddressReads: Format[EmailAddress] = Json.format[EmailAddress]
+  private implicit val emailAddressReads: Format[EmailAddress] = Format(
+    Json.reads[EmailAddress],
+    writesNull.writes[EmailAddress])
   private implicit val nameWrites: Format[IdentityName] = Json.valueFormat[IdentityName]
   private implicit val textSignatureWrites: Format[TextSignature] = Json.valueFormat[TextSignature]
   private implicit val htmlSignatureWrites: Format[HtmlSignature] = Json.valueFormat[HtmlSignature]
   private implicit val mayDeleteWrites: Writes[MayDeleteIdentity] = Json.valueWrites[MayDeleteIdentity]
-  private implicit val identityWrites: Writes[Identity] = Json.writes[Identity]
+  private implicit val identityWrites: Writes[Identity] = writesNull.writes[Identity]
   private implicit val identityGetRequestReads: Reads[IdentityGetRequest] = Json.reads[IdentityGetRequest]
   private implicit val stateWrites: Writes[UuidState] = Json.valueWrites[UuidState]
   private implicit val identityGetResponseWrites: OWrites[IdentityGetResponse] = Json.writes[IdentityGetResponse]
@@ -108,7 +110,24 @@ object IdentitySerializer {
       )(IdentityCreationRequest.from _)
   }
 
-  private implicit val identityUpdateRequest: Reads[IdentityUpdateRequest]= Json.reads[IdentityUpdateRequest]
+  // RFC 8620 PatchObject: an absent key keeps the value, a null key resets it to its default
+  private def patchProperty[T](key: String, onNull: T)(implicit reads: Reads[T]): Reads[Option[T]] = json =>
+    (json \ key).toOption match {
+      case None => JsSuccess(None)
+      case Some(JsNull) => JsSuccess(Some(onNull))
+      case Some(value) => reads.reads(value).map(Some(_)).repath(JsPath \ key)
+    }
+
+  private implicit val identityUpdateRequest: Reads[IdentityUpdateRequest] = {
+    (
+      patchProperty("name", IdentityNameUpdate(IdentityName.DEFAULT)) and
+        patchProperty("replyTo", IdentityReplyToUpdate(None)) and
+        patchProperty("sortOrder", IdentitySortOrderUpdate(Identity.DEFAULT_SORTORDER)) and
+        patchProperty("bcc", IdentityBccUpdate(None)) and
+        patchProperty("textSignature", IdentityTextSignatureUpdate(TextSignature.DEFAULT)) and
+        patchProperty("htmlSignature", IdentityHtmlSignatureUpdate(HtmlSignature.DEFAULT))
+      )(IdentityUpdateRequest.apply _)
+  }
 
   def serialize(response: IdentityGetResponse, properties: Properties, capabilities: Set[CapabilityIdentifier]): JsObject = Json.toJsObject(response)
     .transform((__ \ "list").json.update {

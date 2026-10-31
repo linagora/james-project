@@ -313,7 +313,10 @@ public class SMTPServerTest {
 
         assertThat(capabilitieslist)
             .as("capabilities")
-            .hasSize(3);
+            .hasSize(4);
+        assertThat(capabilitieslist.contains("SMTPUTF8"))
+            .as("capabilities present SMTPUTF8")
+            .isTrue();
         assertThat(capabilitieslist.contains("PIPELINING"))
             .as("capabilities present PIPELINING")
             .isTrue();
@@ -457,10 +460,10 @@ public class SMTPServerTest {
 
         assertThat(capabilitieslist)
             .as("capabilities")
-            .hasSize(4);
+            .hasSize(5);
         assertThat(capabilitieslist)
-            .as("capabilities present PIPELINING ENHANCEDSTATUSCODES 8BITMIME STARTTLS")
-            .containsOnly("PIPELINING", "ENHANCEDSTATUSCODES", "8BITMIME", "STARTTLS");
+            .as("capabilities present PIPELINING ENHANCEDSTATUSCODES 8BITMIME SMTPUTF8 STARTTLS")
+            .containsOnly("PIPELINING", "ENHANCEDSTATUSCODES", "8BITMIME", "SMTPUTF8", "STARTTLS");
 
         smtpProtocol.quit();
         smtpProtocol.disconnect();
@@ -663,6 +666,24 @@ public class SMTPServerTest {
 
         assertThat(smtp.getReplyString())
             .startsWith("501 5.5.2 Invalid domain name or ip supplied as HELO argument");
+    }
+
+    @Test
+    void messageWithEmptyHeaderBlockShouldGetAReceivedHeader() throws Exception {
+        init(smtpConfiguration);
+        SMTPClient smtp = newSMTPClient();
+
+        smtp.helo("localhost");
+        smtp.setSender("mail@localhost");
+        smtp.addRecipient("mail@localhost");
+        smtp.sendShortMessageData("\r\nbody\r\n");
+
+        smtp.quit();
+        smtp.disconnect();
+
+        assertThat(testSystem.queue.getLastMail().getMessage().getHeader("Received"))
+            .isNotNull()
+            .hasSize(1);
     }
 
     // FIXME
