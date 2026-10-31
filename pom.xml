@@ -626,7 +626,7 @@
         <apache.openjpa.version>4.1.1</apache.openjpa.version>
         <!-- Align with EE10 Persistence 3.1 & Transactions 2.0: https://openjpa.apache.org/ -->
         <h2.version>2.3.232</h2.version>
-        <log4j2.version>2.25.5</log4j2.version>
+        <log4j2.version>2.26.1</log4j2.version>
 
         <!-- Align with Jakarta EE 10
              https://jakarta.ee/release/10/ -->
@@ -637,12 +637,12 @@
 
         <jsieve.version>0.8</jsieve.version>
         <spring.version>6.2.8</spring.version>
-        <activmq-artemis.version>2.56.0</activmq-artemis.version>
+        <activmq-artemis.version>2.57.0</activmq-artemis.version>
         <apache-jspf-resolver.version>1.0.5</apache-jspf-resolver.version>
         <angus-mail.version>2.0.5</angus-mail.version>
-        <angus-activation.version>2.0.2</angus-activation.version><!-- Align with EE10 Activation 2.1: https://eclipse-ee4j.github.io/angus-activation/ -->
-        <slf4j.version>2.0.17</slf4j.version>
-        <circe.version>0.14.14</circe.version>
+        <angus-activation.version>2.0.3</angus-activation.version><!-- Align with EE10 Activation 2.1: https://eclipse-ee4j.github.io/angus-activation/ -->
+        <slf4j.version>2.0.20</slf4j.version>
+        <circe.version>0.14.17</circe.version>
         <dnsjava.version>3.6.3</dnsjava.version>
         <junit.jupiter.version>5.13.1</junit.jupiter.version>
         <junit.platform.version>1.13.1</junit.platform.version>
@@ -655,7 +655,7 @@
         <feign.version>13.6</feign.version>
         <feign-form.version>3.8.0</feign-form.version>
         <jjwt.version>0.12.6</jjwt.version>
-        <metrics.version>4.2.32</metrics.version>
+        <metrics.version>4.2.40</metrics.version>
         <testcontainers.version>2.0.2</testcontainers.version>
         <testcontainers.modules.version>1.21.1</testcontainers.modules.version>
         <es-reporter.version>6.0.0-RC3</es-reporter.version>
@@ -675,24 +675,24 @@
 
         <qdox.version>2.2.0</qdox.version>
         <jaxb.version>4.0.5</jaxb.version>
-        <lucene.version>10.2.1</lucene.version>
+        <lucene.version>10.5.2</lucene.version>
         <jasypt.version>1.9.3</jasypt.version>
         <guice.version>7.0.0</guice.version>
-        <logback.version>1.5.38</logback.version>
+        <logback.version>1.6.6</logback.version>
         <tink.version>1.17.0</tink.version>
         <zstd-jni.version>1.5.7-7</zstd-jni.version>
         <lettuce.core.version>6.8.2.RELEASE</lettuce.core.version>
-        <io.micrometer.core.version>1.16.7</io.micrometer.core.version>
-        <io.micrometer.tracing.version>1.6.7</io.micrometer.tracing.version>
+        <io.micrometer.core.version>1.17.2</io.micrometer.core.version>
+        <io.micrometer.tracing.version>1.7.2</io.micrometer.tracing.version>
 
-        <bouncycastle.version>1.85</bouncycastle.version>
+        <bouncycastle.version>1.86</bouncycastle.version>
         <scala.base>2.13</scala.base>
         <scala.version>${scala.base}.16</scala.version>
         <doclint>none</doclint>
         <mockito.version>5.18.0</mockito.version>
-        <ical4j.version>4.2.5</ical4j.version>
+        <ical4j.version>4.4.0</ical4j.version>
         <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
-        <javacrumbs.json-unit.version>4.1.1</javacrumbs.json-unit.version>
+        <javacrumbs.json-unit.version>6.4.0</javacrumbs.json-unit.version>
         <fastutil-core.version>8.5.15</fastutil-core.version>
         <git.useNativeGit>true</git.useNativeGit>
     </properties>
@@ -2344,7 +2344,7 @@
             <dependency>
                 <groupId>com.rabbitmq</groupId>
                 <artifactId>amqp-client</artifactId>
-                <version>5.35.0</version>
+                <version>5.37.0</version>
             </dependency>
             <dependency>
                 <groupId>com.sun.xml.bind</groupId>
@@ -2873,7 +2873,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.85.2</version>
+                <version>1.86</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>

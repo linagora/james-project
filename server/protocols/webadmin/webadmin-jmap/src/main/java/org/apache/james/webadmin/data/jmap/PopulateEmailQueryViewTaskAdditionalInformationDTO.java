@@ -44,9 +44,9 @@ public class PopulateEmailQueryViewTaskAdditionalInformationDTO implements Addit
             dto.getRunningOptions()
                 .map(RunningOptionsDTO::asDomainObject)
                 .orElse(RunningOptions.DEFAULT),
-            dto.getProcessedUserCount(),
+            dto.getProcessedMailboxCount().orElse(0L),
             dto.getProcessedMessageCount(),
-            dto.getFailedUserCount(),
+            dto.getFailedMailboxCount().orElse(0L),
             dto.getFailedMessageCount(),
             dto.timestamp);
     }
@@ -55,34 +55,39 @@ public class PopulateEmailQueryViewTaskAdditionalInformationDTO implements Addit
         return new PopulateEmailQueryViewTaskAdditionalInformationDTO(
             type,
             details.timestamp(),
-            details.getProcessedUserCount(),
+            Optional.of(details.getProcessedMailboxCount()),
             details.getProcessedMessageCount(),
-            details.getFailedUserCount(),
+            Optional.of(details.getFailedMailboxCount()),
             details.getFailedMessageCount(),
-            Optional.of(RunningOptionsDTO.asDTO(details.getRunningOptions())));
+            Optional.of(RunningOptionsDTO.asDTO(details.getRunningOptions())),
+            Optional.empty(),
+            Optional.empty());
     }
 
     private final String type;
     private final Instant timestamp;
-    private final long processedUserCount;
+    private final Optional<Long> processedMailboxCount;
     private final long processedMessageCount;
-    private final long failedUserCount;
+    private final Optional<Long> failedMailboxCount;
     private final long failedMessageCount;
     private final Optional<RunningOptionsDTO> runningOptions;
 
     @VisibleForTesting
     PopulateEmailQueryViewTaskAdditionalInformationDTO(@JsonProperty("type") String type,
                                                        @JsonProperty("timestamp") Instant timestamp,
-                                                       @JsonProperty("processedUserCount") long processedUserCount,
+                                                       @JsonProperty("processedMailboxCount") Optional<Long> processedMailboxCount,
                                                        @JsonProperty("processedMessageCount") long processedMessageCount,
-                                                       @JsonProperty("failedUserCount") long failedUserCount,
+                                                       @JsonProperty("failedMailboxCount") Optional<Long> failedMailboxCount,
                                                        @JsonProperty("failedMessageCount") long failedMessageCount,
-                                                       @JsonProperty("runningOptions") Optional<RunningOptionsDTO> runningOptions) {
+                                                       @JsonProperty("runningOptions") Optional<RunningOptionsDTO> runningOptions,
+                                                       // Written by the runs that walked users: accepted, not kept
+                                                       @JsonProperty("processedUserCount") Optional<Long> processedUserCount,
+                                                       @JsonProperty("failedUserCount") Optional<Long> failedUserCount) {
         this.type = type;
         this.timestamp = timestamp;
-        this.processedUserCount = processedUserCount;
+        this.processedMailboxCount = processedMailboxCount;
         this.processedMessageCount = processedMessageCount;
-        this.failedUserCount = failedUserCount;
+        this.failedMailboxCount = failedMailboxCount;
         this.failedMessageCount = failedMessageCount;
         this.runningOptions = runningOptions;
     }
@@ -97,16 +102,16 @@ public class PopulateEmailQueryViewTaskAdditionalInformationDTO implements Addit
         return timestamp;
     }
 
-    public long getProcessedUserCount() {
-        return processedUserCount;
+    public Optional<Long> getProcessedMailboxCount() {
+        return processedMailboxCount;
     }
 
     public long getProcessedMessageCount() {
         return processedMessageCount;
     }
 
-    public long getFailedUserCount() {
-        return failedUserCount;
+    public Optional<Long> getFailedMailboxCount() {
+        return failedMailboxCount;
     }
 
     public long getFailedMessageCount() {
