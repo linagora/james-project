@@ -668,6 +668,24 @@ public class SMTPServerTest {
             .startsWith("501 5.5.2 Invalid domain name or ip supplied as HELO argument");
     }
 
+    @Test
+    void messageWithEmptyHeaderBlockShouldGetAReceivedHeader() throws Exception {
+        init(smtpConfiguration);
+        SMTPClient smtp = newSMTPClient();
+
+        smtp.helo("localhost");
+        smtp.setSender("mail@localhost");
+        smtp.addRecipient("mail@localhost");
+        smtp.sendShortMessageData("\r\nbody\r\n");
+
+        smtp.quit();
+        smtp.disconnect();
+
+        assertThat(testSystem.queue.getLastMail().getMessage().getHeader("Received"))
+            .isNotNull()
+            .hasSize(1);
+    }
+
     // FIXME
     @Disabled
     @Test
