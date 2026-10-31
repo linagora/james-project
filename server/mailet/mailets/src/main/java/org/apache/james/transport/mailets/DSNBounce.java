@@ -170,9 +170,10 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
     private static final List<InternetAddress> TO_INTERNET_ADDRESSES = ImmutableList.of(SpecialAddress.REVERSE_PATH.toInternetAddress().get());
 
     private static final String LOCALHOST = "127.0.0.1";
-    private static final Pattern DIAG_PATTERN = Patterns.compilePatternUncheckedException("^\\d{3}\\s.*$");
+    private static final Pattern DIAG_PATTERN = Patterns.compilePatternUncheckedException("^\\d{3}[\\s-].*$");
     private static final String MACHINE_PATTERN = "[machine]";
     private static final String LINE_BREAK = "\n";
+    private static final Pattern FIELD_BREAKING_LINE_BREAKS = Patterns.compilePatternUncheckedException("\\r\\n|\\r|\\n");
 
     private final DNSService dns;
     private final DateTimeFormatter dateFormatter;
@@ -479,13 +480,13 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
         boolean anyNonAsciiAddress = false;
 
         appendReportingMTA(buffer);
-        buffer.append("Received-From-MTA: dns; " + originalMail.getRemoteHost())
+        buffer.append("Received-From-MTA: dns; ").append(unfold(originalMail.getRemoteHost()))
             .append(LINE_BREAK);
 
         originalMail.dsnParameters()
             .flatMap(DsnParameters::getEnvIdParameter)
             .ifPresent(envId -> buffer.append("Original-Envelope-Id: ")
-                .append(envId.asString())
+                .append(unfold(envId.asString()))
                 .append(LINE_BREAK));
         originalMail.getAttribute(AttributeName.of("dsn-arrival-date"))
             .map(Attribute::getValue)
@@ -532,7 +533,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
         // RFC 6533 §3.2: addr-type is "utf-8" when the address contains
         // non-ASCII octets, otherwise the legacy "rfc822".
         buffer.append("Final-Recipient: ").append(addrType(mailAddress)).append("; ")
-            .append(mailAddress.toString()).append(LINE_BREAK);
+            .append(unfold(mailAddress.toString())).append(LINE_BREAK);
         buffer.append("Action: ").append(action.asString().toLowerCase(Locale.US)).append(LINE_BREAK);
         buffer.append("Status: " + deliveryError).append(LINE_BREAK);
         if (action.shouldIncludeDiagnostic()) {
@@ -542,6 +543,11 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
             .append(LINE_BREAK);
     }
 
+    // RFC 3464 §2.1: a value copied into the status part must not break its field into several lines or blocks
+    private static String unfold(String fieldValue) {
+        return FIELD_BREAKING_LINE_BREAKS.matcher(String.valueOf(fieldValue)).replaceAll(" ");
+    }
+
     private static String addrType(MailAddress mailAddress) {
         return mailAddress.isAscii() ? "rfc822" : "utf-8";
     }
@@ -549,6 +555,7 @@ public class DSNBounce extends GenericMailet implements RedirectNotify {
     private String getDeliveryError(Mail originalMail) {
         return AttributeUtils
             .getValueAndCastFromMail(originalMail, DELIVERY_ERROR, String.class)
+            .map(DSNBounce::unfold)
             .orElse(defaultStatus);
     }
 

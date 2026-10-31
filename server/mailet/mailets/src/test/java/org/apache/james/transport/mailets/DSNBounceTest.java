@@ -60,6 +60,8 @@ import org.apache.mailet.base.test.FakeMailetConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class DSNBounceTest {
 
@@ -1579,5 +1581,70 @@ public class DSNBounceTest {
             String body = IOUtils.toString((SharedByteArrayInputStream) dsnPart.getContent(), StandardCharsets.UTF_8);
             assertThat(body).contains("Final-Recipient: utf-8; arnt@grå.org");
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "550-5.1.1 first line\n550 5.1.1 second line",
+        "550 5.1.1 first line\r\n\r\nFinal-Recipient: rfc822; other@example.com",
+        "550 5.1.1 first line\rsecond line"})
+    void lineBreaksInTheDeliveryErrorShouldNotCreateFieldsOrBlocks(String deliveryError) throws Exception {
+        String body = dsnStatusPart(mailBuilder()
+            .attribute(new Attribute(AttributeName.of("delivery-error"), AttributeValue.of(deliveryError)))
+            .build());
+
+        assertSingleFieldPerLine(body);
+    }
+
+    @Test
+    void lineBreaksInTheRemoteHostShouldNotCreateFields() throws Exception {
+        String body = dsnStatusPart(mailBuilder()
+            .attribute(DELIVERY_ERROR_ATTRIBUTE)
+            .remoteHost("remote.example.com\r\nContent-Type: text/plain")
+            .build());
+
+        assertSingleFieldPerLine(body);
+    }
+
+    @Test
+    void multiLineSmtpReplyShouldBeUnfoldedAndTypedAsSmtp() throws Exception {
+        String body = dsnStatusPart(mailBuilder()
+            .attribute(new Attribute(AttributeName.of("delivery-error"),
+                AttributeValue.of("550-5.1.1 first line\n550 5.1.1 second line")))
+            .build());
+
+        assertThat(body).contains("Status: 550-5.1.1 first line 550 5.1.1 second line\n" +
+            "Diagnostic-Code: smtp; 550-5.1.1 first line 550 5.1.1 second line\n");
+    }
+
+    private FakeMail.Builder mailBuilder() throws Exception {
+        return FakeMail.builder()
+            .name(MAILET_NAME)
+            .sender(new MailAddress("sender@domain.com"))
+            .mimeMessage(MimeMessageBuilder.mimeMessageBuilder().setText("body"))
+            .recipient("recipient@domain.com")
+            .lastUpdated(Date.from(Instant.parse("2016-09-08T14:25:52.000Z")))
+            .remoteAddr("remoteHost");
+    }
+
+    private String dsnStatusPart(Mail mail) throws Exception {
+        dsnBounce.init(FakeMailetConfig.builder()
+            .mailetName(MAILET_NAME)
+            .mailetContext(fakeMailContext)
+            .build());
+
+        dsnBounce.service(mail);
+
+        BodyPart dsnPart = ((MimeMultipart) fakeMailContext.getSentMails().get(0).getMsg().getContent()).getBodyPart(1);
+        return IOUtils.toString((SharedByteArrayInputStream) dsnPart.getContent(), StandardCharsets.UTF_8);
+    }
+
+    private void assertSingleFieldPerLine(String body) {
+        // one per-message block and one recipient block, every line is a field or a folded continuation
+        assertThat(body.split("\r?\n\r?\n")).hasSize(2);
+        assertThat(body.lines().filter(line -> !line.isEmpty()))
+            .allMatch(line -> line.startsWith(" ") || line.matches("[A-Za-z-]+: .*"));
+        assertThat(body.lines().filter(line -> line.startsWith("Final-Recipient:"))).hasSize(1);
+        assertThat(body.lines().filter(line -> line.startsWith("Content-Type:"))).isEmpty();
     }
 }
