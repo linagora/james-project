@@ -48,7 +48,7 @@ public interface Pop3MetadataStore {
 
         @Override
         public boolean equals(Object o) {
-            if (o instanceof StatMetadata) {
+            if (o != null && o.getClass() == StatMetadata.class) {
                 StatMetadata that = (StatMetadata) o;
 
                 return this.size == that.size
