@@ -37,7 +37,7 @@ public class JamesServerApplicationContext extends ClassPathXmlApplicationContex
      * The resourceloader to use. This must be defined as static, otherwise it
      * will fail to startup..
      */
-    private static final JamesResourceLoader resourceLoader = new DefaultJamesResourceLoader(new JamesServerResourceLoader("../"));
+    private static final DefaultJamesResourceLoader resourceLoader = new DefaultJamesResourceLoader(new JamesServerResourceLoader("../"));
 
     public JamesServerApplicationContext(String[] configs) {
         super(configs);
@@ -51,18 +51,15 @@ public class JamesServerApplicationContext extends ClassPathXmlApplicationContex
     /**
      * Protected accessor for the resource loader.
      */
-    protected JamesResourceLoader getResourceLoader() {
+    protected DefaultJamesResourceLoader getResourceLoader() {
         return resourceLoader;
     }
     
     @Override
     public Resource getResource(String fileURL) {
         // delegate the loading to the resourceloader
-        Resource r = getResourceLoader().getResource(fileURL);
-        if (r == null) {
-            r = super.getResource(fileURL);
-        }
-        return r;
+        return getResourceLoader().getJamesResource(fileURL)
+            .orElseGet(() -> super.getResource(fileURL));
     }
 
     @Override

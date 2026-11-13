@@ -37,7 +37,7 @@ public class JamesServerWebApplicationContext extends XmlWebApplicationContext i
     /**
      * The resourceloader to use
      */
-    private final JamesResourceLoader resourceLoader = new DefaultJamesResourceLoader(new JamesDirectoriesProvider() {
+    private final DefaultJamesResourceLoader resourceLoader = new DefaultJamesResourceLoader(new JamesDirectoriesProvider() {
         
         @Override
         public String getAbsoluteDirectory() {
@@ -88,11 +88,8 @@ public class JamesServerWebApplicationContext extends XmlWebApplicationContext i
     @Override
     public Resource getResource(String fileURL) {
         // delegate the loading to the resourceloader
-        Resource r = resourceLoader.getResource(fileURL);
-        if (r == null) {
-            r = super.getResource(fileURL);
-        }
-        return r;
+        return resourceLoader.getJamesResource(fileURL)
+            .orElseGet(() -> super.getResource(fileURL));
     }
 
     public void setRootDirectory(String rootDirectory) {

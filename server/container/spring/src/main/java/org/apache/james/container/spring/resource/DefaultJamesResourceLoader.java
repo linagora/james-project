@@ -20,6 +20,7 @@ package org.apache.james.container.spring.resource;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.filesystem.api.JamesDirectoriesProvider;
@@ -50,32 +51,41 @@ public class DefaultJamesResourceLoader extends DefaultResourceLoader implements
     }
     
     /**
-     * Return the {@link Resource} for the given url. If the resource can not be
-     * found null get returned
+     * Return the {@link Resource} for the given url. URLs which are not handled by JAMES
+     * (neither classpath nor file protocol) are resolved by the default Spring resource loading.
      */
     @Override
     public Resource getResource(String fileURL) {
-        Resource r;
+        return getJamesResource(fileURL)
+            .orElseGet(() -> super.getResource(fileURL));
+    }
+
+    /**
+     * Return the {@link Resource} for the given url if it uses a protocol handled by JAMES
+     * (classpath or file), empty otherwise.
+     */
+    public Optional<Resource> getJamesResource(String fileURL) {
         if (fileURL.startsWith(FileSystem.CLASSPATH_PROTOCOL)) {
-            String resourceName = fileURL.substring(FileSystem.CLASSPATH_PROTOCOL.length());
-            r = new ClassPathResource(resourceName);
-        } else if (fileURL.startsWith(FileSystem.FILE_PROTOCOL)) {
-            File file;
-            if (fileURL.startsWith(FileSystem.FILE_PROTOCOL_AND_CONF)) {
-                file = new File(jamesDirectoriesProvider.getConfDirectory() + "/" + fileURL.substring(FileSystem.FILE_PROTOCOL_AND_CONF.length()));
-            } else if (fileURL.startsWith(FileSystem.FILE_PROTOCOL_AND_VAR)) {
-                file = new File(jamesDirectoriesProvider.getVarDirectory() + "/" + fileURL.substring(FileSystem.FILE_PROTOCOL_AND_VAR.length()));
-            } else if (fileURL.startsWith(FileSystem.FILE_PROTOCOL_ABSOLUTE)) {
-                file = new File(jamesDirectoriesProvider.getAbsoluteDirectory() + fileURL.substring(FileSystem.FILE_PROTOCOL_ABSOLUTE.length()));
-            } else {
-                // move to the root folder of the spring deployment
-                file = new File(jamesDirectoriesProvider.getRootDirectory() + "/" + fileURL.substring(FileSystem.FILE_PROTOCOL.length()));
-            }
-            r = new FileSystemResource(file);
-        } else {
-            return null;
+            return Optional.of(new ClassPathResource(fileURL.substring(FileSystem.CLASSPATH_PROTOCOL.length())));
         }
-        return r;
+        if (fileURL.startsWith(FileSystem.FILE_PROTOCOL)) {
+            return Optional.of(new FileSystemResource(resolveFile(fileURL)));
+        }
+        return Optional.empty();
+    }
+
+    private File resolveFile(String fileURL) {
+        if (fileURL.startsWith(FileSystem.FILE_PROTOCOL_AND_CONF)) {
+            return new File(jamesDirectoriesProvider.getConfDirectory() + "/" + fileURL.substring(FileSystem.FILE_PROTOCOL_AND_CONF.length()));
+        }
+        if (fileURL.startsWith(FileSystem.FILE_PROTOCOL_AND_VAR)) {
+            return new File(jamesDirectoriesProvider.getVarDirectory() + "/" + fileURL.substring(FileSystem.FILE_PROTOCOL_AND_VAR.length()));
+        }
+        if (fileURL.startsWith(FileSystem.FILE_PROTOCOL_ABSOLUTE)) {
+            return new File(jamesDirectoriesProvider.getAbsoluteDirectory() + fileURL.substring(FileSystem.FILE_PROTOCOL_ABSOLUTE.length()));
+        }
+        // move to the root folder of the spring deployment
+        return new File(jamesDirectoriesProvider.getRootDirectory() + "/" + fileURL.substring(FileSystem.FILE_PROTOCOL.length()));
     }
 
     @Override
