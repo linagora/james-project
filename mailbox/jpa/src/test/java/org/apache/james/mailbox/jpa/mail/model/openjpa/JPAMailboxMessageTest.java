@@ -23,11 +23,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.james.core.Username;
+import org.apache.james.mailbox.MessageUid;
+import org.apache.james.mailbox.jpa.mail.model.JPAMailbox;
+import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.jupiter.api.Test;
 
 class JPAMailboxMessageTest {
 
     private static final byte[] EMPTY = new byte[]{};
+    private static final long MAILBOX_ID = 42L;
+    private static final long UID_VALIDITY = 1L;
+    private static final MessageUid UID = MessageUid.of(7);
 
     /**
      * Even though there should never be a null body, it does happen. See JAMES-2384
@@ -54,4 +61,34 @@ class JPAMailboxMessageTest {
         assertThat(IOUtils.toByteArray(message.getFullContent())).containsExactly(EMPTY);
     }
 
+    @Test
+    void messagesWithSameMailboxAndUidShouldBeEqual() {
+        JPAMailboxMessage message = message(MAILBOX_ID, UID);
+        JPAMailboxMessage sameMessage = message(MAILBOX_ID, UID);
+
+        assertThat(message)
+            .isEqualTo(sameMessage)
+            .hasSameHashCodeAs(sameMessage);
+    }
+
+    @Test
+    void messagesWithDifferentUidShouldNotBeEqual() {
+        assertThat(message(MAILBOX_ID, UID))
+            .isNotEqualTo(message(MAILBOX_ID, UID.next()));
+    }
+
+    @Test
+    void messagesWithDifferentMailboxShouldNotBeEqual() {
+        assertThat(message(MAILBOX_ID, UID))
+            .isNotEqualTo(message(MAILBOX_ID + 1, UID));
+    }
+
+    private static JPAMailboxMessage message(long mailboxId, MessageUid uid) {
+        JPAMailbox mailbox = new JPAMailbox(MailboxPath.inbox(Username.of("bob")), UID_VALIDITY);
+        mailbox.setMailboxId(mailboxId);
+        JPAMailboxMessage message = new JPAMailboxMessage(EMPTY, EMPTY);
+        message.setMailbox(mailbox);
+        message.setUid(uid);
+        return message;
+    }
 }
