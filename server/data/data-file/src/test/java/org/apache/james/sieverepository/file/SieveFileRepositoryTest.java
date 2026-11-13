@@ -27,15 +27,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.james.core.Username;
+import org.apache.james.core.quota.QuotaSizeLimit;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.sieverepository.api.ScriptContent;
 import org.apache.james.sieverepository.api.ScriptName;
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.james.sieverepository.lib.SieveRepositoryContract;
+import org.apache.james.util.concurrency.ConcurrentTestRunner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -169,6 +172,52 @@ class SieveFileRepositoryTest implements SieveRepositoryContract {
 
         assertThat(new File(fileSystem.getFile(SIEVE_ROOT), "victim/evil")).doesNotExist();
         assertThat(new File(fileSystem.getFile(SIEVE_ROOT), "victim/.active")).doesNotExist();
+    }
+
+    @Test
+    void getDefaultQuotaShouldNeverSeeAPartiallyWrittenQuotaFile() throws Exception {
+        QuotaSizeLimit quota = QuotaSizeLimit.size(1048576L);
+        sieveRepository().setDefaultQuota(quota);
+
+        ConcurrentTestRunner.builder()
+            .operation((threadNumber, step) -> {
+                if (threadNumber % 2 == 0) {
+                    sieveRepository().setDefaultQuota(quota);
+                } else {
+                    assertThat(sieveRepository().getDefaultQuota()).isEqualTo(quota);
+                }
+            })
+            .threadCount(4)
+            .operationCount(500)
+            .runSuccessfullyWithin(Duration.ofMinutes(1));
+    }
+
+    @Test
+    void getQuotaShouldNeverSeeAPartiallyWrittenQuotaFile() throws Exception {
+        Username username = Username.of("test");
+        QuotaSizeLimit quota = QuotaSizeLimit.size(1048576L);
+        sieveRepository().setQuota(username, quota);
+
+        ConcurrentTestRunner.builder()
+            .operation((threadNumber, step) -> {
+                if (threadNumber % 2 == 0) {
+                    sieveRepository().setQuota(username, quota);
+                } else {
+                    assertThat(sieveRepository().getQuota(username)).isEqualTo(quota);
+                }
+            })
+            .threadCount(4)
+            .operationCount(500)
+            .runSuccessfullyWithin(Duration.ofMinutes(1));
+    }
+
+    @Test
+    void setDefaultQuotaShouldNotLeaveTemporaryFiles() throws Exception {
+        sieveRepository().setDefaultQuota(QuotaSizeLimit.size(1L));
+        sieveRepository().setDefaultQuota(QuotaSizeLimit.size(2L));
+
+        assertThat(fileSystem.getFile(SIEVE_ROOT).list())
+            .containsExactly(".quota");
     }
 
     @Test
