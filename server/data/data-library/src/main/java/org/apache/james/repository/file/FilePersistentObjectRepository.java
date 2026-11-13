@@ -19,6 +19,7 @@
 
 package org.apache.james.repository.file;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -42,23 +43,9 @@ public class FilePersistentObjectRepository extends AbstractFileRepository imple
 
     @Override
     public synchronized Object get(String key) {
-        try {
-            final InputStream inputStream = getInputStream(key);
-
-            if (inputStream == null) {
-                throw new NullPointerException("Null input stream returned for key: " + key);
-            }
-            try {
-                final ObjectInputStream stream = new ObjectInputStream(inputStream);
-
-                final Object object = stream.readObject();
-                if (DEBUG) {
-                    LOGGER.debug("returning object {} for key {}", object, key);
-                }
-                return object;
-            } finally {
-                inputStream.close();
-            }
+        try (InputStream inputStream = getInputStream(key);
+             ObjectInputStream stream = new ObjectInputStream(inputStream)) {
+            return readObject(key, stream);
         } catch (Throwable e) {
             throw new RuntimeException("Exception caught while retrieving an object", e);
         }
@@ -66,29 +53,20 @@ public class FilePersistentObjectRepository extends AbstractFileRepository imple
 
     @Override
     public synchronized Object get(String key, ClassLoader classLoader) {
-        try {
-            final InputStream inputStream = getInputStream(key);
-
-            if (inputStream == null) {
-                throw new NullPointerException("Null input stream returned for key: " + key);
-            }
-
-            final ObjectInputStream stream = new ClassLoaderObjectInputStream(classLoader, inputStream);
-            try {
-                final Object object = stream.readObject();
-
-                if (DEBUG) {
-                    LOGGER.debug("returning object {} for key {}", object, key);
-                }
-                return object;
-            } finally {
-                stream.close();
-                inputStream.close();
-            }
+        try (InputStream inputStream = getInputStream(key);
+             ObjectInputStream stream = new ClassLoaderObjectInputStream(classLoader, inputStream)) {
+            return readObject(key, stream);
         } catch (Throwable e) {
             throw new RuntimeException("Exception caught while retrieving an object", e);
         }
+    }
 
+    private Object readObject(String key, ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        Object object = stream.readObject();
+        if (DEBUG) {
+            LOGGER.debug("returning object {} for key {}", object, key);
+        }
+        return object;
     }
 
     @Override
