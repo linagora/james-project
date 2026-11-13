@@ -59,14 +59,13 @@ public abstract class AbstractLineHandlerResultJMXMonitor<R extends Response, S 
     }
 
     @Override
-    @SuppressWarnings("unlikely-arg-type")
     public void wireExtensions(Class<?> interfaceName, List<?> extension) throws WiringException {
 
         if (interfaceName.equals(LineHandler.class)) {
             // add stats for all hooks
             for (Object anExtension : extension) {
                 LineHandler<?> c = (LineHandler<?>) anExtension;
-                if (!equals(c)) {
+                if (!isSelf(c)) {
                     String cName = c.getClass().getName();
                     try {
                         lStats.put(cName, new LineHandlerStats(jmxName, cName));
@@ -76,6 +75,10 @@ public abstract class AbstractLineHandlerResultJMXMonitor<R extends Response, S 
                 }
             }
         }
+    }
+
+    private boolean isSelf(LineHandler<?> handler) {
+        return handler == this;
     }
 
     @Override
