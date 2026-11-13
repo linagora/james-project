@@ -252,11 +252,7 @@ public class MimeMessageWrapper extends MimeMessage implements Disposable {
                 saved = true;
 
             } catch (IOException ioe) {
-                try {
-                    sourceIn.close();
-                } catch (IOException e) {
-                    //ignore exception during close
-                }
+                // Only source.getInputStream() can throw IOException: sourceIn was never opened, nothing to close
                 sourceIn = null;
                 throw new MessagingException("Unable to parse stream: " + ioe.getMessage(), ioe);
             }

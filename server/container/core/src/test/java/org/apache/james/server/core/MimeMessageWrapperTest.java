@@ -513,4 +513,26 @@ public class MimeMessageWrapperTest extends MimeMessageFromStreamTest {
         assertThat(result).contains("Received: from relay1.example.com");
         assertThat(result).contains("Received: from relay2.example.com");
     }
+
+    @Test
+    void loadMessageShouldThrowMessagingExceptionWhenSourceCannotBeOpened() {
+        IOException sourceFailure = new IOException("boom");
+        MimeMessageSource failingSource = new MimeMessageSource() {
+            @Override
+            public String getSourceId() {
+                return "failing-source";
+            }
+
+            @Override
+            public InputStream getInputStream() throws IOException {
+                throw sourceFailure;
+            }
+        };
+        MimeMessageWrapper wrapper = new MimeMessageWrapper(failingSource);
+
+        assertThatThrownBy(wrapper::loadMessage)
+            .isInstanceOf(MessagingException.class)
+            .hasMessageContaining("boom")
+            .hasCause(sourceFailure);
+    }
 }
