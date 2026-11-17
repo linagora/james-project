@@ -27,6 +27,7 @@ import java.util.{Optional, UUID}
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
 import org.apache.commons.configuration2.Configuration
+import org.apache.james.core.Username
 import org.apache.james.jmap.core.CapabilityIdentifier.CapabilityIdentifier
 import org.apache.james.jmap.core.JmapRfc8621Configuration.{JMAP_EMAIL_GET_FULL_MAX_SIZE_DEFAULT, JMAP_MAX_OBJECT_IN_GET, JMAP_MAX_OBJECT_IN_SET, JMAP_UPLOAD_QUOTA_LIMIT_DEFAULT, MAX_SIZE_ATTACHMENTS_PER_MAIL_DEFAULT, UPLOAD_LIMIT_DEFAULT}
 import org.apache.james.jmap.pushsubscription.{PushClientConfiguration, VapidConfiguration}
@@ -168,6 +169,16 @@ case class JmapRfc8621Configuration(urlPrefixString: String,
   val sessionState: UuidState = advertisedVapid
     .map(vapid => UuidState(UUID.nameUUIDFromBytes(vapid.applicationServerKey.getBytes(StandardCharsets.UTF_8))))
     .getOrElse(UuidState.INSTANCE)
+
+  // RFC 8620 section 2: the session state changes whenever the session changes, including its accounts.
+  // A user without delegated accounts keeps the server-wide state.
+  def sessionStateFor(delegatedUsers: Set[Username]): UuidState =
+    if (delegatedUsers.isEmpty) {
+      sessionState
+    } else {
+      val stateSeed: String = (sessionState.serialize +: delegatedUsers.toSeq.map(_.asString()).sorted).mkString("\n")
+      UuidState(UUID.nameUUIDFromBytes(stateSeed.getBytes(StandardCharsets.UTF_8)))
+    }
 
   def urlPrefixes(): UrlPrefixes = UrlPrefixes(new URI(urlPrefixString), new URI(websocketPrefixString))
 

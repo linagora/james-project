@@ -33,7 +33,7 @@ import org.apache.james.core.Username
 import org.apache.james.jmap.core.ResponseObject.SESSION_STATE
 import org.apache.james.jmap.delegation.DelegationId
 import org.apache.james.jmap.http.UserCredential
-import org.apache.james.jmap.rfc8621.contract.Fixture.{ACCEPT_RFC8621_VERSION_HEADER, ANDRE_PASSWORD, BOB_PASSWORD, DOMAIN, authScheme, baseRequestSpecBuilder}
+import org.apache.james.jmap.rfc8621.contract.Fixture.{ACCEPT_RFC8621_VERSION_HEADER, ANDRE_PASSWORD, BOB_PASSWORD, DOMAIN, authScheme, baseRequestSpecBuilder, sessionStateWithDelegatedAccounts}
 import org.apache.james.jmap.rfc8621.contract.probe.DelegationProbe
 import org.apache.james.utils.DataProbeImpl
 import org.assertj.core.api.Assertions.assertThat
@@ -164,7 +164,7 @@ trait DelegatedAccountSetContract {
     assertThatJson(response)
       .isEqualTo(
         s"""{
-           |    "sessionState": "${SESSION_STATE.value}",
+           |    "sessionState": "${sessionStateWithDelegatedAccounts(cedricUsername).value}",
            |    "methodResponses": [
            |        [
            |            "DelegatedAccount/set",
@@ -216,7 +216,7 @@ trait DelegatedAccountSetContract {
     assertThatJson(response)
       .isEqualTo(
         s"""{
-           |	"sessionState": "${SESSION_STATE.value}",
+           |	"sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
            |	"methodResponses": [
            |		[
            |			"error",

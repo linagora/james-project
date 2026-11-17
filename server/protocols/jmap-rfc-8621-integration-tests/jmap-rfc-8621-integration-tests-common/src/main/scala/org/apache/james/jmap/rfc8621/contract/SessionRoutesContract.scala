@@ -40,6 +40,7 @@ import org.apache.james.jmap.rfc8621.contract.Fixture._
 import org.apache.james.jmap.rfc8621.contract.SessionRoutesContract.{EXPECTED_BASE_PATH, expected_session_object}
 import org.apache.james.jmap.rfc8621.contract.tags.CategoryTags
 import org.apache.james.utils.DataProbeImpl
+import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.{BeforeEach, Tag, Test}
 
@@ -365,6 +366,28 @@ trait SessionRoutesContract {
         .replace("bob@domain.tld", bobUsername.asString)
         .replace("andre@domain.tld", andreUsername.asString))
   }
+
+  @Test
+  def sessionStateShouldChangeWhenDelegatedAccountsChange(server: GuiceJamesServer): Unit = {
+    val stateWithoutDelegation: String = sessionState()
+
+    server.getProbe(classOf[DataProbeImpl]).addAuthorizedUser(andreUsername, bobUsername)
+
+    assertThat(sessionState())
+      .isNotEqualTo(stateWithoutDelegation)
+      .isEqualTo(sessionStateWithDelegatedAccounts(andreUsername).serialize)
+  }
+
+  private def sessionState(): String =
+    `given`()
+      .header(ACCEPT.toString, ACCEPT_RFC8621_VERSION_HEADER)
+    .when()
+      .get("/session")
+    .`then`
+      .statusCode(SC_OK)
+    .extract()
+      .jsonPath()
+      .getString("state")
 
   @Test
   def getResponseShouldNotReturnDelegatedUsersWhenNotDelegated(server: GuiceJamesServer): Unit = {

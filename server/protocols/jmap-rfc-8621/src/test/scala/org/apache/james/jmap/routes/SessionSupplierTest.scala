@@ -90,6 +90,21 @@ class SessionSupplierTest extends AnyWordSpec with Matchers {
       state(rotated) should not equal state(configuration)
     }
 
+    "change the session state when delegated accounts change" in {
+      val configuration = JmapRfc8621Configuration.LOCALHOST_CONFIGURATION
+      val alice = Username.of("alice@james.org")
+      val bob = Username.of("bob@james.org")
+
+      def state(delegatedUsers: Set[Username]): UuidState =
+        new SessionSupplier(DefaultCapabilities.supported(configuration), configuration)
+          .generate(USERNAME, delegatedUsers, configuration.urlPrefixes()).blockOption().get.state
+
+      state(Set(alice)) should not equal state(Set())
+      state(Set(alice, bob)) should not equal state(Set(alice))
+      state(Set(alice, bob)) should equal(state(Set(bob, alice)))
+      state(Set(alice)) should equal(state(Set(alice)))
+    }
+
     "return correct account" which {
       val accounts = new SessionSupplier(DefaultCapabilities.supported(JmapRfc8621Configuration.LOCALHOST_CONFIGURATION), JmapRfc8621Configuration.LOCALHOST_CONFIGURATION)
         .generate(USERNAME, Set(), JmapRfc8621Configuration.LOCALHOST_CONFIGURATION.urlPrefixes()).blockOption().get.accounts

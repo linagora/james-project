@@ -34,6 +34,7 @@ import org.apache.james.core.{Domain, Username}
 import org.apache.james.jmap.JMAPUrls.JMAP
 import org.apache.james.jmap.JmapGuiceProbe
 import org.apache.james.jmap.core.ResponseObject.SESSION_STATE
+import org.apache.james.jmap.core.{JmapRfc8621Configuration, UuidState}
 import org.apache.james.jmap.http.UserCredential
 import org.apache.james.mime4j.dom.Message
 
@@ -94,6 +95,10 @@ object Fixture {
   val DAVID_IDENTITY_ID: String = UUID.nameUUIDFromBytes(ANDRE.asString().getBytes(StandardCharsets.UTF_8)).toString
   val ANDRE_IDENTITY_ID: String = "1d684cf0-101b-300b-82c0-8e17f8d464bc"
   val IDENTITY_ID: String = UUID.nameUUIDFromBytes(BOB.asString().getBytes(StandardCharsets.UTF_8)).toString
+
+  // Session state of a user to whom the given users delegated their account
+  def sessionStateWithDelegatedAccounts(delegatedUsers: Username*): UuidState =
+    JmapRfc8621Configuration.LOCALHOST_CONFIGURATION.sessionStateFor(delegatedUsers.toSet)
 
   def identityIdOf(username: Username): String = UUID.nameUUIDFromBytes(username.asString().getBytes(StandardCharsets.UTF_8)).toString
   val BOB_PASSWORD: String = "bobpassword"

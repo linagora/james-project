@@ -26,6 +26,7 @@ import org.apache.james.jmap.core.{ClientId, Id, Invocation, JmapRfc8621Configur
 import org.apache.james.jmap.json.ResponseSerializer
 import org.apache.james.jmap.method.{CoreEchoMethod, Method}
 import org.apache.james.mailbox.MailboxSession
+import org.apache.james.user.memory.MemoryDelegationStore
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.{Nested, Test}
 import org.junit.jupiter.params.ParameterizedTest
@@ -436,7 +437,7 @@ class ProcessingContextTest {
     def apiShouldRejectCollisionWithoutDispatchAndContinueUsingEarlierResults(arguments: String): Unit = {
       val echo = spy(new CoreEchoMethod)
       val configuration = JmapRfc8621Configuration("http://localhost", "ws://localhost")
-      val api = new JMAPApi(Set[Method](echo), Set(JMAP_CORE), configuration)
+      val api = new JMAPApi(Set[Method](echo), Set(JMAP_CORE), configuration, new MemoryDelegationStore())
       val request = ResponseSerializer.deserializeRequestObject(
         s"""{
           |  "using":["urn:ietf:params:jmap:core"],
@@ -490,7 +491,7 @@ class ProcessingContextTest {
     def apiShouldKeepInvalidResultReferenceForNonCollidingReferenceErrors(reference: String): Unit = {
       val echo = spy(new CoreEchoMethod)
       val configuration = JmapRfc8621Configuration("http://localhost", "ws://localhost")
-      val api = new JMAPApi(Set[Method](echo), Set(JMAP_CORE), configuration)
+      val api = new JMAPApi(Set[Method](echo), Set(JMAP_CORE), configuration, new MemoryDelegationStore())
       val request = ResponseSerializer.deserializeRequestObject(
         s"""{
            |  "using":["urn:ietf:params:jmap:core"],

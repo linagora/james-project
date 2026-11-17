@@ -154,7 +154,7 @@ trait DelegatedAccountGetMethodContract {
       .withOptions(IGNORING_ARRAY_ORDER)
       .isEqualTo(
         s"""{
-           |    "sessionState": "${SESSION_STATE.value}",
+           |    "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
            |    "methodResponses": [
            |        [
            |            "DelegatedAccount/get",
@@ -204,7 +204,7 @@ trait DelegatedAccountGetMethodContract {
 
     assertThatJson(response).isEqualTo(
       s"""{
-         |  "sessionState": "${SESSION_STATE.value}",
+         |  "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
          |  "methodResponses": [[
          |    "DelegatedAccount/get",
          |    {
@@ -246,7 +246,7 @@ trait DelegatedAccountGetMethodContract {
 
     assertThatJson(response).isEqualTo(
       s"""{
-         |  "sessionState": "${SESSION_STATE.value}",
+         |  "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
          |  "methodResponses": [[
          |    "DelegatedAccount/get",
          |    {
@@ -294,7 +294,7 @@ trait DelegatedAccountGetMethodContract {
       .withOptions(IGNORING_ARRAY_ORDER)
       .isEqualTo(
       s"""{
-         |  "sessionState": "${SESSION_STATE.value}",
+         |  "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername, cedricUsername).value}",
          |  "methodResponses": [[
          |    "DelegatedAccount/get",
          |    {
@@ -434,7 +434,7 @@ trait DelegatedAccountGetMethodContract {
       .withOptions(IGNORING_ARRAY_ORDER)
       .isEqualTo(
       s"""{
-         |  "sessionState": "${SESSION_STATE.value}",
+         |  "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
          |  "methodResponses": [
          |        [
          |            "error",
@@ -479,7 +479,7 @@ trait DelegatedAccountGetMethodContract {
 
     assertThatJson(response).isEqualTo(
       s"""{
-         |  "sessionState": "${SESSION_STATE.value}",
+         |  "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
          |  "methodResponses": [[
          |    "DelegatedAccount/get",
          |    {
@@ -524,7 +524,7 @@ trait DelegatedAccountGetMethodContract {
 
     assertThatJson(response).isEqualTo(
       s"""{
-         |    "sessionState": "${SESSION_STATE.value}",
+         |    "sessionState": "${sessionStateWithDelegatedAccounts(andreUsername).value}",
          |    "methodResponses": [
          |        [
          |            "error",
